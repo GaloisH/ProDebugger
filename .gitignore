@@ -1,0 +1,32 @@
+# Local configuration and environments
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Private trajectories, experiment outputs, and generated pages
+core/data/
+core/unpacked/
+core/sessions/
+core/submissions/
+experiments/four_stage/runs/
+experiments/four_stage/analysis/
+frontend/case_browser/output/
+artifacts/
+*.parquet
+*.jsonl
+
+# Tests, examples, and internal documentation
+**/tests/
+test.sh
+core/test_run.py
+toy_examples/
+demo.sh
+specs/
+*.zh-CN.md
+*_zh.md
+REVIEW_TOY_EXAMPLE.md
+experiments/four_stage/README.md

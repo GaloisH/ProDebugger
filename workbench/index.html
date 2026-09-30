@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>轨迹调试台 · ProDebugger</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">P<span>·</span></span><span>PRODEBUGGER <small>证据工作台</small></span></div>
+      <div class="top-actions"><span class="local-badge"><span class="live-dot"></span>本地只读</span><span class="top-version">TRAJECTORY / IR v3</span></div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">TRACE EXPLORER <span class="eyebrow-line"></span> GOAL · INTENTION · ENTITY · FACT</div>
+        <h1>从目标出发，沿证据回溯</h1>
+        <p>查看智能体每一步看到什么、打算做什么、实际做了什么，以及记录中的事实如何支撑判断。</p>
+      </div>
+      <div class="trace-picker">
+        <label for="domain-select">领域</label>
+        <div class="picker-row">
+          <select id="domain-select" aria-label="选择领域"><option value="all">全部领域</option><option value="webshop">WebShop</option><option value="alfworld">ALFWorld</option></select>
+          <select id="trace-select" aria-label="选择轨迹"><option>正在加载轨迹…</option></select>
+        </div>
+        <div class="picker-meta" id="picker-meta">从本地演示数据读取</div>
+      </div>
+    </section>
+
+    <section class="summary" id="summary" aria-live="polite"></section>
+
+    <main class="workspace" id="workspace">
+      <aside class="panel goals-panel" aria-label="目标列表">
+        <div class="panel-head"><div><span class="kicker">01 / CONTRACT</span><h2>目标与约束</h2></div><span class="count" id="goal-count">0</span></div>
+        <div class="contract" id="contract"></div>
+        <div class="goal-tools"><span>逐项查看记录状态</span><button class="text-button" type="button" data-action="clear-goal" id="clear-goal" hidden>清除聚焦</button></div>
+        <div class="goal-list" id="goal-list"></div>
+        <div class="panel-foot">状态表示编译记录能够证明的内容，不代表隐藏的环境真相。</div>
+      </aside>
+
+      <section class="panel timeline-panel" aria-label="轨迹时间线">
+        <div class="panel-head"><div><span class="kicker">02 / TRAJECTORY</span><h2>步骤时间线</h2></div><span class="count" id="step-count">0</span></div>
+        <div class="timeline-intro" id="timeline-intro">选择一个目标可突出相关步骤；点击步骤查看当时的计划与证据。</div>
+        <div class="timeline" id="timeline"></div>
+      </section>
+
+      <section class="panel detail-panel" aria-label="详情" id="detail-panel">
+        <div class="panel-head detail-head"><div><span class="kicker">03 / INSPECTOR</span><h2 id="detail-title">证据详情</h2></div><button class="icon-button" type="button" data-action="back" id="detail-back" aria-label="返回上一个详情" title="返回上一个详情" hidden>←</button></div>
+        <div id="detail" class="detail-body"><div class="empty"><span class="empty-icon">⌁</span><strong>选择左侧目标或中间步骤</strong><p>详细证据将在这里展开。</p></div></div>
+      </section>
+    </main>
+    <footer class="footer"><span>PRODEBUGGER / LOCAL EVIDENCE VIEW</span><span>事实 ID 可追溯 · 页面不修改调试会话</span></footer>
+  </div>
+</body>
+</html>

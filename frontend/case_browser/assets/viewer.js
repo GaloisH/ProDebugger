@@ -1,16 +1,28 @@
 "use strict";
 
+(() => {
 const NAV = JSON.parse(document.getElementById("nav-data").textContent);
 const CASE = JSON.parse(document.getElementById("case-data").textContent);
 const CURRENT = JSON.parse(document.getElementById("current-id").textContent);
 const ARMS = ["baseline", "four_stage"];
 const GOLD = Number(CASE.gold.critical_step);
+const params = new URLSearchParams(location.search);
+const requestedTrace = params.get("trace");
+const requestedRun = params.get("run");
+const matches = NAV.cases.filter(item => (!requestedTrace || item.tid === requestedTrace) &&
+  (!requestedRun || item.run === requestedRun)).sort((a, b) => b.run.localeCompare(a.run));
+const requested = requestedTrace || requestedRun;
+if (requested && matches.length && matches[0].id !== CURRENT) {
+  location.replace(`${matches[0].href}?${params}`);
+  return;
+}
+window.WorkbenchShell?.setContext({ trace: CASE.trajectory_id, run: CASE.run, domain: CASE.task_type });
 const state = {
   event: { kind: "original", arm: null, index: Number.isInteger(GOLD) && GOLD >= 1 && GOLD <= CASE.original.length ? GOLD - 1 : 0 },
   selectedOriginalStep: Number.isInteger(GOLD) && GOLD >= 1 && GOLD <= CASE.original.length ? GOLD : 1,
   tab: "summary",
-  runFilter: CASE.run,
-  search: "",
+  runFilter: params.get("filter") || (requested && !matches.length ? "*" : CASE.run),
+  search: params.get("search") || "",
 };
 
 function escapeHtml(value) {
@@ -49,10 +61,20 @@ function armStatus(arm) {
 }
 
 document.getElementById("app").innerHTML = `
+<section class="experiment-hero">
+  <div><div class="eyebrow">EXPERIMENT EXPLORER <span>BASELINE / FOUR-STAGE</span></div>
+    <h1>沿调试过程，追溯归因依据</h1>
+    <p>对照原始轨迹、局部判断与调试命令，查看两种方案如何形成最终结论。</p></div>
+  <div class="experiment-context"><span class="eyebrow">当前实验</span><strong>${escapeHtml(CASE.run)}</strong>
+    <span>${escapeHtml(CASE.task_type || "—")} · ${escapeHtml(CASE.llm_model || "—")}</span></div>
+</section>
+<p id="case-notice" class="wb-context-note" hidden></p>
+<section class="wb-summary" id="experiment-summary" aria-label="实验概览"></section>
 <div class="shell">
   <aside class="sidebar">
-    <div class="brand">Run Navigator</div>
-    <div class="hint">离线浏览所有实验与 case</div>
+    <div class="eyebrow">01 / CASE NAVIGATOR</div>
+    <h2 class="navigator-brand">实验与案例</h2>
+    <div class="hint">浏览已保存的实验与轨迹</div>
     <label class="minor" for="run-select">实验运行</label>
     <select class="control" id="run-select"></select>
     <input class="control" id="case-search" type="search" placeholder="搜索轨迹 ID / 模型…" aria-label="搜索案例">
@@ -87,6 +109,22 @@ const eventHeader = document.getElementById("event-header");
 const eventContent = document.getElementById("event-content");
 const inspector = document.getElementById("inspector");
 const attributionPanel = document.getElementById("attribution-panel");
+searchInput.value = state.search;
+if (state.runFilter !== "*" && !NAV.runs.includes(state.runFilter)) state.runFilter = CASE.run;
+if (requested && !matches.length) {
+  const notice = document.getElementById("case-notice");
+  notice.hidden = false;
+  notice.textContent = `未找到匹配的实验记录：${requestedTrace || "全部轨迹"}${requestedRun ? ` / ${requestedRun}` : ""}。下方显示其他可浏览案例，请从左侧选择。`;
+}
+const total = field => ARMS.reduce((sum, arm) => sum + (CASE.arms[arm]?.usage?.[field] || 0), 0);
+const metric = (label, value, tone = "") => `<div class="metric"><div class="metric-label">${escapeHtml(label)}</div><div class="metric-value ${tone}">${escapeHtml(value)}</div></div>`;
+document.getElementById("experiment-summary").innerHTML = metric("原始轨迹步骤", CASE.original.length) +
+  metric("两方案 CLI 命令", ARMS.reduce((sum, arm) => sum + (CASE.arms[arm]?.commands.length || 0), 0)) +
+  metric("已记录 API 调用", total("calls"), "teal") + metric("已记录总成本 / USD", `$${total("usd").toFixed(4)}`, "amber");
+
+function caseHref(item) {
+  return `${item.href}?${new URLSearchParams({ filter: state.runFilter, search: state.search })}`;
+}
 
 function renderRunSelect() {
   runSelect.innerHTML = `<option value="*">全部实验</option>` + NAV.runs.map(run =>
@@ -112,7 +150,7 @@ function renderCases() {
     previousRun = item.run;
     const [status, kind] = caseState(item);
     const commands = ARMS.reduce((sum, arm) => sum + (item.arms[arm]?.commands || 0), 0);
-    return `${heading}<a class="case-link" href="${escapeHtml(item.href)}" ${item.id === CURRENT ? 'aria-current="page"' : ""}>
+    return `${heading}<a class="case-link" href="${escapeHtml(caseHref(item))}" ${item.id === CURRENT ? 'aria-current="page"' : ""}>
       <span class="case-title" title="${escapeHtml(item.tid)}">${escapeHtml(item.tid)}</span>
       <span class="case-meta">${escapeHtml(item.task_type || "—")} · ${escapeHtml(item.llm_model || "—")} ${badge(status, kind)}</span>
       <span class="case-meta">${commands} 条调试命令 · 标注步 #${escapeHtml(item.gold_step ?? "—")}</span>
@@ -165,10 +203,10 @@ function renderOriginalMatrix() {
     }).join("");
     return `<div class="matrix-row"><strong class="matrix-label">${escapeHtml(armLabel(arm))}</strong>${cells}</div>`;
   }).join("");
-  const width = 105 + steps.length * 39;
+  if (!steps.length) return '<div class="empty">没有保存的原始步骤；仍可查看下方调试命令与阶段输出。</div>';
   return `<div class="original-matrix"><h3>原始轨迹与局部错误判断</h3>
     <p class="matrix-help">每列对应一个原始步骤；红色 error、橙色 uncertain、绿色无错误判断、灰色未评估。点击方格查看原始动作和两种方法的判断。</p>
-    <div class="matrix-scroll"><div class="matrix-grid" style="grid-template-columns:105px repeat(${steps.length},minmax(36px,1fr));min-width:${width}px">
+    <div class="matrix-scroll"><div class="matrix-grid">
       <div class="matrix-row ticks"><span class="matrix-label"></span>${ticks}</div>
       <div class="matrix-row"><strong class="matrix-label">原始动作</strong>${actions}</div>
       <div class="matrix-row"><strong class="matrix-label">原始标注</strong>${gold}</div>
@@ -207,6 +245,11 @@ function renderTimeline() {
       `${armLabel(arm)} 阶段输出 · ${event.label}`));
   }
   lanes.innerHTML = output;
+  const grid = lanes.querySelector(".matrix-grid");
+  if (grid) {
+    grid.style.gridTemplateColumns = `105px repeat(${CASE.original.length},minmax(36px,1fr))`;
+    grid.style.minWidth = `${105 + CASE.original.length * 39}px`;
+  }
   renderStepDetail();
   const commands = ARMS.reduce((sum, arm) => sum + (CASE.arms[arm]?.commands.length || 0), 0);
   const failures = ARMS.reduce((sum, arm) => sum + (CASE.arms[arm]?.commands.filter(c => c.exit_code !== 0).length || 0), 0);
@@ -285,7 +328,7 @@ function modelSummary(event) {
   return section("阶段输出", `<pre class="raw">${escapeHtml(short(pretty(event.content), 5000))}</pre>`);
 }
 function relevantStep() {
-  if (state.event.kind === "original") return selectedRecord().n;
+  if (state.event.kind === "original") return selectedRecord()?.n ?? null;
   if (state.event.kind === "command") {
     const command = selectedRecord();
     if (command.operator === "assess" && command.args.length) {
@@ -297,6 +340,7 @@ function relevantStep() {
 }
 function renderHeader() {
   const record = selectedRecord();
+  if (!record) { eventHeader.innerHTML = '<div class="eyebrow">02 / EVENT INSPECTOR</div><div class="event-title">选择一个调试事件</div>'; return; }
   const {kind, arm} = state.event;
   let eyebrow, title, subtitle, tags = "";
   if (kind === "original") {
@@ -325,6 +369,7 @@ function renderHeader() {
 }
 function renderContent() {
   const record = selectedRecord();
+  if (!record) { eventContent.innerHTML = '<div class="empty">没有保存的原始步骤。点击调试泳道节点查看事件内容。</div>'; return; }
   if (state.tab === "raw") {
     eventContent.innerHTML = `<section class="section"><h3>完整保存内容</h3><pre class="raw" id="raw-content"></pre></section>`;
     document.getElementById("raw-content").textContent = pretty(rawData());
@@ -381,7 +426,7 @@ function renderInspector() {
   const step = relevantStep();
   const gold = CASE.gold;
   const annotation = (gold.step_annotations || []).filter(item => item.step === step);
-  let body = `<h2>Diagnosis</h2><div class="eyebrow">本 case 统计 · ${CASE.original.length} 个原始步骤</div>`;
+  let body = `<div class="eyebrow">03 / DIAGNOSIS</div><h2>诊断与标注</h2><div class="minor">本 case 统计 · ${CASE.original.length} 个原始步骤</div>`;
   for (const arm of ARMS) {
     const data = CASE.arms[arm];
     if (!data) { body += `<div class="overview-card">${escapeHtml(armLabel(arm))} · 无日志</div>`; continue; }
@@ -398,13 +443,13 @@ function renderInspector() {
     const maximum = Math.max(1, ...ARMS.flatMap(arm => Object.values(counts[arm])));
     body += `<details class="operator-details"><summary>CLI 操作类型分布</summary>${operators.map(operator =>
       `<div class="operator-row"><b>${escapeHtml(operator)}</b>${ARMS.map(arm =>
-        `<div class="operator-bar ${arm}" title="${escapeHtml(armLabel(arm))}: ${counts[arm][operator]}"><i style="width:${100 * counts[arm][operator] / maximum}%"></i><span>${counts[arm][operator]}</span></div>`
+        `<div class="operator-bar ${arm}" title="${escapeHtml(armLabel(arm))}: ${counts[arm][operator]}"><i data-width="${100 * counts[arm][operator] / maximum}"></i><span>${counts[arm][operator]}</span></div>`
       ).join("")}</div>`).join("")}</details>`;
   }
   body += `<div class="eyebrow gold-heading">原始人工标注</div>
     <h2>${escapeHtml((gold.types || []).join(", ") || "未标注类型")}</h2>
     <div class="kv">${badge(`步骤 #${gold.critical_step ?? "—"}`, "warn")}${badge(gold.module || "—")}</div>
-    <button class="jump" id="jump-gold" type="button">查看标注错误步 #${escapeHtml(gold.critical_step ?? "—")}</button>
+    <button class="jump" id="jump-gold" type="button" ${Number.isInteger(GOLD) && GOLD >= 1 && GOLD <= CASE.original.length ? "" : "disabled"}>查看标注错误步 #${escapeHtml(gold.critical_step ?? "—")}</button>
     ${section("标注理由", paragraph((gold.reasonings || []).join("\n") || "未保存理由"))}`;
   if (annotation.length) body += section("该步完整标注", `<pre class="raw">${escapeHtml(pretty(annotation))}</pre>`);
   body += `<h3>调试结论</h3>`;
@@ -423,6 +468,7 @@ function renderInspector() {
     if (command.exit_code !== 0) body += section("该命令失败", `<pre class="raw">${escapeHtml(short(pretty(command.output), 2200))}</pre>`);
   }
   inspector.innerHTML = body;
+  inspector.querySelectorAll(".operator-bar i").forEach(bar => { bar.style.width = `${bar.dataset.width}%`; });
   syncExpanders(inspector);
   document.getElementById("jump-gold").addEventListener("click", () => {
     if (!Number.isInteger(GOLD) || GOLD < 1 || GOLD > CASE.original.length) return;
@@ -527,3 +573,4 @@ document.getElementById("tab-raw").addEventListener("click", () => { state.tab =
 renderTimeline();
 renderSelected();
 renderAttribution();
+})();

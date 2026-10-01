@@ -2,16 +2,19 @@
 """Local, read-only trajectory workbench.
 
 Run from the package root: .venv/Scripts/python.exe -B core/workbench.py
-The HTTP surface deliberately does not create a Session or read gold labels.
+Evidence APIs do not read gold labels or create a Session. The separate
+experiment surface only serves generated, saved-log browser files.
 """
 
 import argparse
 import json
 import os
+import re
 import sys
 import traceback
 from functools import lru_cache
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +31,31 @@ from views import _episodes_view, _fact, _intention_row, _requirements_view, _sc
 PROFILES = {"webshop": webshop, "alfworld": alfworld}
 STATIC = {"/": ("index.html", "text/html; charset=utf-8"),
           "/app.css": ("app.css", "text/css; charset=utf-8"),
-          "/app.js": ("app.js", "text/javascript; charset=utf-8")}
+          "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+          "/theme.css": ("theme.css", "text/css; charset=utf-8"),
+          "/shell.js": ("shell.js", "text/javascript; charset=utf-8")}
+EXPERIMENTS = Path(ROOT) / "frontend" / "case_browser" / "output"
+EXPERIMENT_ASSETS = {"viewer.css": "text/css; charset=utf-8",
+                     "viewer.js": "text/javascript; charset=utf-8",
+                     "theme.css": "text/css; charset=utf-8",
+                     "shell.js": "text/javascript; charset=utf-8"}
+
+
+def experiment_file(directory, path):
+    """Resolve only browser output files, never arbitrary run logs or symlinks."""
+    name = unquote(path[len("/experiments/"):]) or "index.html"
+    if name not in EXPERIMENT_ASSETS and not re.fullmatch(r"(?:index|case-[0-9]{3,})\.html", name):
+        raise MissingLookup("实验页面不存在")
+    root = Path(directory).resolve()
+    target = root / name
+    if target.resolve().parent != root:
+        raise MissingLookup("实验页面不存在")
+    mime = EXPERIMENT_ASSETS.get(name, "text/html; charset=utf-8")
+    if not target.is_file():
+        if name == "index.html":
+            return Path(WEB) / "experiments-empty.html", mime
+        raise MissingLookup("实验页面不存在")
+    return target, mime
 
 
 class MissingLookup(Exception):
@@ -137,7 +164,7 @@ def route(data, path):
     raise MissingLookup("接口不存在")
 
 
-def make_handler(data):
+def make_handler(data, experiments_dir=EXPERIMENTS):
     class Handler(BaseHTTPRequestHandler):
         def _send(self, status, body, content_type):
             self.send_response(status)
@@ -154,13 +181,23 @@ def make_handler(data):
             self._send(status, body, "application/json; charset=utf-8")
 
         def do_GET(self):
-            path = urlsplit(self.path).path
-            if path in STATIC:
-                name, mime = STATIC[path]
-                with open(os.path.join(WEB, name), "rb") as stream:
-                    self._send(200, stream.read(), mime)
-                return
+            url = urlsplit(self.path)
+            path = url.path
             try:
+                if path == "/experiments":
+                    self.send_response(302)
+                    self.send_header("Location", "/experiments/" + ("?" + url.query if url.query else ""))
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+                if path in STATIC:
+                    name, mime = STATIC[path]
+                    self._send(200, (Path(WEB) / name).read_bytes(), mime)
+                    return
+                if path.startswith("/experiments/"):
+                    target, mime = experiment_file(experiments_dir, path)
+                    self._send(200, target.read_bytes(), mime)
+                    return
                 self._json(200, route(data, path))
             except MissingLookup as exc:
                 self._json(404, {"error": str(exc)})
@@ -176,12 +213,20 @@ def make_handler(data):
     return Handler
 
 
+def make_server(data, port=8765, experiments_dir=EXPERIMENTS):
+    # Browsers can open idle speculative connections before loading assets.
+    # A threaded server keeps those connections from blocking every view.
+    return ThreadingHTTPServer(("127.0.0.1", port), make_handler(data, experiments_dir))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description="本地只读轨迹调试台")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--experiments-dir", type=Path, default=EXPERIMENTS,
+                        help="实验浏览器构建输出目录（只读）")
     args = parser.parse_args(argv)
     data = WorkbenchData()
-    server = HTTPServer(("127.0.0.1", args.port), make_handler(data))
+    server = make_server(data, args.port, args.experiments_dir)
     print("轨迹调试台：http://127.0.0.1:{}/ （{} 条轨迹）".format(
         server.server_port, len(data.rows)), flush=True)
     try:

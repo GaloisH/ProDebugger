@@ -50,8 +50,27 @@ With the corpus in place, start the read-only HTTP service:
 ```
 
 Open `http://127.0.0.1:8765/`. The service uses `workbench/` for its static
-HTML, CSS, and JavaScript. It does not create protocol sessions or read gold
-labels.
+HTML, CSS, and JavaScript. The **Evidence / Experiment Debug** navigation switches
+between the evidence workbench and saved experiment pages at `/experiments/`.
+Evidence APIs do not read gold labels. The experiment view shows saved evaluations
+and annotations separately; browsing either view does not create protocol sessions
+or run a model.
+
+Generate experiment pages with the command below, then refresh the Experiment Debug
+view. With no generated pages, that view displays build instructions. To serve a
+custom build output, start with `--experiments-dir PATH` (matching the builder's
+`--output PATH`). Links between views preserve the trajectory and experiment run;
+if multiple runs match a trajectory, the most recent run is selected.
+
+On Windows, build saved experiment pages and start a hidden background service with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File workbench/start.ps1 -BuildExperiments
+```
+
+The launcher checks both views before printing their URLs and reuses an already
+healthy workbench. It continues serving after the launch command exits. Use
+`-Port 8766` for an alternative port. Logs are kept in `artifacts/workbench/`.
 
 ## Four-stage evaluation and offline case browser
 
@@ -61,7 +80,7 @@ to execute. Install its additional dependencies with
 `pip install -r experiments/four_stage/requirements.txt` when needed. Local
 run outputs are excluded from Git.
 
-The offline browser builder, dashboard generator, and unchanged browser assets
+The offline browser builder, dashboard generator, and browser assets
 live in `frontend/case_browser/`. Once local run logs and the corpus exist,
 generate pages with:
 
@@ -71,7 +90,9 @@ generate pages with:
 
 Use `--source`, `--output`, and `--corpus` to override its defaults. Generated
 pages contain trajectory and evaluation data, so the default output directory
-is excluded from Git.
+is excluded from Git. Pages can still be opened offline: shared styles and
+navigation assets are copied alongside the viewer. Cross-view evidence navigation
+is available when entering through the local workbench service.
 
 ## Source layout
 
@@ -81,6 +102,16 @@ is excluded from Git.
 | `workbench/` | Local read-only workbench page |
 | `frontend/case_browser/` | Offline case browser builder and static assets |
 | `experiments/four_stage/` | Evaluation runner and saved-log analysis code |
+| `docs/DATA_STRUCTURES.md` | Core types, query schemas, and experiment data structures (Chinese) |
+
+## Repository contents
+
+Git tracks source code, prompts, static browser assets, launch scripts, and public
+documentation. Local credentials (`.env`), virtual environments, caches, trajectory
+corpora and exports, protocol sessions, experiment logs and results, generated
+browser pages, temporary scripts, and internal research notes are excluded by
+`.gitignore`. Keep generated data in the ignored output directories when using
+custom paths.
 
 The core exposes evidence; it does not choose a semantic root cause for the
 reasoner. The reasoner must review the trajectory before a submission can be

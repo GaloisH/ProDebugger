@@ -28,6 +28,7 @@ DEFAULT_SOURCE = EXPERIMENT / "runs"
 DEFAULT_OUTPUT = HERE / "output"
 CORPUS = ROOT / "core" / "data" / "train.parquet"
 ASSETS = HERE / "assets"
+SHARED = ROOT / "workbench"
 TAGS = ("memory", "reflection", "plan", "action")
 TASK_RE = re.compile(r"task is(?: to)?:\s*(.*?)\n", re.I)
 OBS_RE = re.compile(r"(?:current )?observation is:\s*(.*?)(?:\nYour admissible|\nPlease |\Z)", re.I | re.S)
@@ -241,12 +242,16 @@ def page_data(run: Path, tid: str, row: dict) -> dict:
 def page_html(data: dict, nav: dict, current: str) -> str:
     return ("<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-            "<title>Agent 调试轨迹浏览器</title><link rel=\"stylesheet\" href=\"viewer.css\">"
-            "</head><body><div id=\"app\"></div>"
+            "<title>实验 Debug · ProDebugger</title><link rel=\"stylesheet\" href=\"theme.css\">"
+            "<link rel=\"stylesheet\" href=\"viewer.css\">"
+            "</head><body data-view=\"experiments\"><div class=\"app-shell\">"
+            "<div id=\"workbench-header\"></div><div id=\"app\"></div>"
+            "<footer class=\"wb-footer\"><span>PRODEBUGGER / EXPERIMENT VIEW</span>"
+            "<span>已保存实验记录 · 不修改调试会话</span></footer></div>"
             f"<script id=\"nav-data\" type=\"application/json\">{write_json_script(nav)}</script>"
             f"<script id=\"case-data\" type=\"application/json\">{write_json_script(data)}</script>"
             f"<script id=\"current-id\" type=\"application/json\">{write_json_script(current)}</script>"
-            "<script src=\"viewer.js\"></script></body></html>\n")
+            "<script src=\"shell.js\"></script><script src=\"viewer.js\"></script></body></html>\n")
 
 
 def build(source: Path, output: Path, corpus: Path) -> tuple[int, int]:
@@ -283,6 +288,8 @@ def build(source: Path, output: Path, corpus: Path) -> tuple[int, int]:
     output.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ASSETS / "viewer.css", output / "viewer.css")
     shutil.copyfile(ASSETS / "viewer.js", output / "viewer.js")
+    for asset in ("theme.css", "shell.js"):
+        shutil.copyfile(SHARED / asset, output / asset)
     for (run, tid, row), item in zip(entries, nav_cases):
         data = page_data(run, tid, row)
         (output / item["href"]).write_text(page_html(data, nav, item["id"]), encoding="utf-8")

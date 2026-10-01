@@ -3,9 +3,21 @@
 .env.*
 !.env.example
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 .DS_Store
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.idea/
+.vscode/
+*.log
+*.tmp
+*.bak
+*_tmp.py
 
 # Private trajectories, experiment outputs, and generated pages
 core/data/
@@ -30,3 +42,4 @@ specs/
 *_zh.md
 REVIEW_TOY_EXAMPLE.md
 experiments/four_stage/README.md
+docs/TRACE_MERGE_RESEARCH.md

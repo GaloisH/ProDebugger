@@ -3,6 +3,9 @@
 const $ = (id) => document.getElementById(id);
 const state = { traces: [], overview: null, trace: null, goal: null, step: null,
   detail: null, history: [], request: 0, domain: "all" };
+const entryParams = new URLSearchParams(location.search);
+const entryTrace = entryParams.get("trace");
+const entryRun = entryParams.get("run");
 const statusText = { satisfied: "已满足", unmet: "未满足", unresolved: "未判定",
   sat: "支持", viol: "冲突", unk: "未知", observed: "已观察", missing: "未观察",
   full: "完整绑定", verb_only: "仅动作绑定", unbound: "未绑定", absent: "无意图",
@@ -66,8 +69,12 @@ async function loadTraces() {
     state.traces = data.traces;
     const options = renderPicker();
     if (!options.length) { clearPage("没有可用的 WebShop 或 ALFWorld 轨迹。"); return; }
-    const saved = new URLSearchParams(location.search).get("trace");
-    await selectTrace(options.find((x) => x.id === saved)?.id || options[0].id);
+    if (entryTrace && !options.some((x) => x.id === entryTrace)) {
+      clearPage("请求的轨迹不存在或该领域暂不支持证据浏览，请选择一条可用轨迹。");
+      $("trace-select").insertAdjacentHTML("afterbegin", '<option value="" selected>请选择可用轨迹</option>');
+      return;
+    }
+    await selectTrace(options.find((x) => x.id === entryTrace)?.id || options[0].id);
   } catch (error) {
     clearPage();
     setError("timeline", error.message, true);
@@ -77,6 +84,11 @@ async function loadTraces() {
 async function selectTrace(tid) {
   if (!tid) return;
   state.trace = tid; state.goal = null; state.step = null; state.detail = null; state.history = [];
+  const run = tid === entryTrace ? entryRun : null;
+  window.WorkbenchShell?.setContext({ trace: tid, run });
+  const params = new URLSearchParams({ trace: tid });
+  if (run) params.set("run", run);
+  history.replaceState(null, "", `?${params}`);
   state.overview = null; state.request++;
   $("trace-select").value = tid;
   clearPage("正在编译轨迹并读取证据…");
@@ -85,7 +97,6 @@ async function selectTrace(tid) {
     const overview = await getJson(`/api/traces/${toUrl(tid)}`);
     if (current !== state.request) return;
     state.overview = overview;
-    history.replaceState(null, "", `?trace=${encodeURIComponent(tid)}`);
     renderOverview();
     if (overview.steps.length) await showStep(overview.steps[0].step, false);
   } catch (error) {

@@ -6,40 +6,15 @@
 venv/
 __pycache__/
 *.py[cod]
-.DS_Store
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-.idea/
-.vscode/
-*.log
 *.tmp
-*.bak
-*_tmp.py
 
-# Private trajectories, experiment outputs, and generated pages
+# Private trajectories, compiled sessions and experiment outputs
 core/data/
-core/unpacked/
-core/sessions/
-core/submissions/
-experiments/four_stage/runs/
-experiments/four_stage/analysis/
-frontend/case_browser/output/
-artifacts/
 *.parquet
-*.jsonl
+artifacts/
+prodebugger/sessions/
 
-# Tests, examples, and internal documentation
+# Local-only tests and editor settings
 **/tests/
-test.sh
-core/test_run.py
-toy_examples/
-demo.sh
-specs/
-*.zh-CN.md
-*_zh.md
-REVIEW_TOY_EXAMPLE.md
-experiments/four_stage/README.md
-docs/TRACE_MERGE_RESEARCH.md
+.vscode/

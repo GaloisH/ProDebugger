@@ -1,1 +1,0 @@
-"""Four-stage benchmark implementation."""

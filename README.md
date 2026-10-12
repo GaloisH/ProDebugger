@@ -1,118 +1,259 @@
 # ProDebugger
 
-ProDebugger compiles agent trajectories into a typed evidence record, exposes
-that record through a query language, and checks a reasoner's review and
-verification protocol. The repository contains the deterministic core, a
-local read-only trajectory workbench, and code for a four-stage evaluation.
+Standalone migration of the DSL debugger experiment (`experiments/dsl` in the original
+OmniDebugger intern repository). Core logic, interfaces, prompts and outputs are unchanged;
+only import and resource paths were adjusted so the project runs on its own.
 
-**No trajectory data, experiment results, test suite, or examples are
-distributed in this repository.** Supply your own authorized Parquet corpus
-to use the CLI, workbench, or evaluation code.
-
-## Requirements and installation
-
-- Python 3.9–3.12
-- Bash or Zsh for the convenience scripts
-- Internet access for the initial `pyarrow` installation
-
-From the repository root, run `./setup.sh`. It creates `.venv` and installs
-the pinned dependency in `requirements.txt`. On Windows, create a virtual
-environment and install that file with your Python package manager instead.
-
-Place your own corpus files at `core/data/train.parquet`,
-`core/data/validation.parquet`, or `core/data/test.parquet`. These paths are
-ignored by Git. The loader in `core/data_io.py` reads the files that exist;
-the input schema is defined by that module and the record compiler. No data is
-downloaded by the setup script.
-
-## Run the debugger
-
-After adding a corpus, get a trajectory ID from your data and run:
-
-```bash
-./run.sh "$TRACE_ID" profile
-./run.sh "$TRACE_ID" view "process_notes | detail:summary"
-./run.sh "$TRACE_ID" view "requirements | state:unmet | section:definition,status,gaps"
+```text
+ProDebugger/
+  core/                 canonical record compiler, profiles, session/operators (copied unchanged)
+    profiles/           alfworld, webshop, base
+    data/train.parquet  benchmark trajectories (private; git-ignored)
+  prodebugger/          the DSL debugger (formerly experiments/dsl)
+    run_experiment.py   MAP -> ROUTE -> TRACE -> SUBMIT entry point
+    run_compile.py      compile one trajectory / the fixed 20-ID sample
+    report.py           offline experiment browser (rebuild)
+    prompts/            map.md, route.md, trace.md, submit.md
+    assets/             browser CSS/JS copied into each run
+    sessions/abstract_rules_n20/   20 compiled trajectories used as saved inputs
+  artifacts/dsl_debugger/          run outputs (created on first run; git-ignored)
 ```
 
-The query grammar and response schema are documented in
-[`core/VIEW_INTERFACE.md`](core/VIEW_INTERFACE.md). The reasoner protocol is
-documented in [`core/REASONER.md`](core/REASONER.md). Model invocation is kept
-outside the deterministic core; [`core/TASK.md`](core/TASK.md) is the task
-prompt for a tool-using reasoner.
+All commands below are run from the `ProDebugger` directory.
 
-## Local trajectory workbench
-
-With the corpus in place, start the read-only HTTP service:
-
-```bash
-.venv/bin/python core/workbench.py
-```
-
-Open `http://127.0.0.1:8765/`. The service uses `workbench/` for its static
-HTML, CSS, and JavaScript. The **Evidence / Experiment Debug** navigation switches
-between the evidence workbench and saved experiment pages at `/experiments/`.
-Evidence APIs do not read gold labels. The experiment view shows saved evaluations
-and annotations separately; browsing either view does not create protocol sessions
-or run a model.
-
-Generate experiment pages with the command below, then refresh the Experiment Debug
-view. With no generated pages, that view displays build instructions. To serve a
-custom build output, start with `--experiments-dir PATH` (matching the builder's
-`--output PATH`). Links between views preserve the trajectory and experiment run;
-if multiple runs match a trajectory, the most recent run is selected.
-
-On Windows, build saved experiment pages and start a hidden background service with:
+## Setup
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File workbench/start.ps1 -BuildExperiments
+python -m venv .venv
+.venv/Scripts/python.exe -m pip install -r requirements.txt
+copy .env.example .env   # then put your key in .env
 ```
 
-The launcher checks both views before printing their URLs and reuses an already
-healthy workbench. It continues serving after the launch command exits. Use
-`-Port 8766` for an alternative port. Logs are kept in `artifacts/workbench/`.
+Python 3.12+ (tested with 3.13). `pyarrow` is needed for Parquet input and `run_compile`;
+`openai` and `python-dotenv` only for online runs.
 
-## Four-stage evaluation and offline case browser
+## LLM debugger entry point
 
-`experiments/four_stage/` contains the model runner, prompts, scoring, and
-saved-log analysis code. It needs a user-supplied corpus and model credentials
-to execute. Install its additional dependencies with
-`pip install -r experiments/four_stage/requirements.txt` when needed. Local
-run outputs are excluded from Git.
+`run_experiment.py` runs **MAP → ROUTE → TRACE → SUBMIT** with four isolated phase
+conversations, four prompts, and independently configurable phase models.
+MAP reads unmet/unresolved requirements. ROUTE follows native evidence and entity
+history to several issue anchors. TRACE directly evaluates original window text
+with only the assess submission tool, without views or pagination. For anchor `t`, a window of size `W` covers
+`[max(1,t-W+1),t]`. W defaults to 5 and includes the anchor. Each window
+receives original prior context, four module texts, admissible commands and recorded
+next environment feedback in an independent conversation; overlapping steps remain
+in each window. Up to two window requests run concurrently; commits remain serial.
+TRACE calls its sole tool `assess` once per window with all plausible error/uncertain
+candidates and exact raw quotes, without selecting a winner. The runner validates
+the entire candidate list and maps it to existing Fact IDs; it creates no new Facts.
+The current TRACE mode is `independent-window-candidates/v2`.
+SUBMIT compares every TRACE candidate, recovery and terminal goal impact in ONE
+plain-JSON response without tools. It selects an existing candidate or returns
+uncertain. The runner validates candidate references and saves `direct_submit.jsonl`.
+The current result policy is `window-candidates-submit/v3`; structural acceptance
+does not prove causal correctness.
+The user-specified benchmark scope contains all core fault classes except
+`format_error` (16 allowed labels); formatting, spelling and quotation marks
+cannot be benchmark root causes in this experiment. Both TRACE and SUBMIT use
+that premise. Raw source text is preserved; excluded causes cannot be relabelled.
+No surviving suspect yields `uncertain` rather than a fabricated alternative.
+Invalid SUBMIT JSON/selection stops uncertain after that response, without retries
+for semantic correction. Provider transport retries retain their normal accounting.
+Current checkpoints require v4 and current source fingerprints. Earlier
+runs are not resumed under the changed protocol.
 
-The offline browser builder, dashboard generator, and browser assets
-live in `frontend/case_browser/`. Once local run logs and the corpus exist,
-generate pages with:
+Validate saved steps without any model or Parquet dependency:
 
-```bash
-.venv/bin/python frontend/case_browser/build.py
+```powershell
+python -B -m prodebugger.run_experiment GPT-4o_018_alfworld_task_018 --compiled-dir prodebugger/sessions/abstract_rules_n20 --dry-run
+python -B -m prodebugger.run_experiment --sample-file prodebugger/sessions/abstract_rules_n20/sample.json --compiled-dir prodebugger/sessions/abstract_rules_n20 --dry-run
 ```
 
-Use `--source`, `--output`, and `--corpus` to override its defaults. Generated
-pages contain trajectory and evaluation data, so the default output directory
-is excluded from Git. Pages can still be opened offline: shared styles and
-navigation assets are copied alongside the viewer. Cross-view evidence navigation
-is available when entering through the local workbench service.
+Direct script execution also works: `python prodebugger/run_experiment.py ...`.
+The sample may be any nonempty unique JSON ID list or object with `trajectory_ids`.
+Without `--compiled-dir`, inputs come from `core/data/{train,validation,test}.parquet`
+(or `--data-dir`), which requires PyArrow. Only trajectory_id, task_type and
+full_trajectory are read; benchmark labels and reference answers are excluded.
 
-## Source layout
+For online execution, use a configured model supporting Chat Completions tool calls.
+Configure credentials locally in `OPENAI_API_KEY`, or select another variable with
+`--api-key-env`; `--env-file` can load a local dotenv file. Credentials are never
+included in manifests or model/tool logs. For an OpenAI-compatible provider:
 
-| Path | Purpose |
-| --- | --- |
-| `core/` | Corpus loader, typed record compiler, query engine, CLI, and protocol state |
-| `workbench/` | Local read-only workbench page |
-| `frontend/case_browser/` | Offline case browser builder and static assets |
-| `experiments/four_stage/` | Evaluation runner and saved-log analysis code |
-| `docs/DATA_STRUCTURES.md` | Core types, query schemas, and experiment data structures (Chinese) |
+```powershell
+python -B -m prodebugger.run_experiment TRAJECTORY_ID --model MODEL_NAME --base-url ENDPOINT --window-size 5 --max-turns 80 --max-tool-calls 240
+```
 
-## Repository contents
+The endpoint is optional when using the SDK's default endpoint. No model is
+hardcoded. `--max-input-tokens`, `--max-output-tokens`, and per-request
+`--max-tokens` bound usage. Input admission uses a conservative UTF-8 byte estimate;
+actual tokens and reserved amounts are recorded separately. Retries are finite
+and metered, including failed requests with unknown usage. Providers omitting usage
+stop the run rather than silently reporting zero usage.
 
-Git tracks source code, prompts, static browser assets, launch scripts, and public
-documentation. Local credentials (`.env`), virtual environments, caches, trajectory
-corpora and exports, protocol sessions, experiment logs and results, generated
-browser pages, temporary scripts, and internal research notes are excluded by
-`.gitignore`. Keep generated data in the ignored output directories when using
-custom paths.
+For the DeepSeek provider (key in `.env` as `DEEPSEEK_API_KEY`), this is the
+configuration used by the original online runs:
 
-The core exposes evidence; it does not choose a semantic root cause for the
-reasoner. The reasoner must review the trajectory before a submission can be
-accepted by the protocol.
+```powershell
+python -B -m prodebugger.run_experiment GPT-4o_018_alfworld_task_018 --compiled-dir prodebugger/sessions/abstract_rules_n20 --env-file .env --api-key-env DEEPSEEK_API_KEY --model deepseek-flash --base-url https://api.deepseek.com --reasoning-effort high --max-input-tokens 8000000 --max-output-tokens 0 --max-tokens 0
+```
+
+`--reasoning-effort none` selects non-thinking mode. Use a provider-supported mode
+when changing `--reasoning-effort`; response `reasoning_content` is retained for
+subsequent tool rounds. Actual token usage, cache hit/miss counts when returned,
+and response model are logged by phase and globally.
+
+`--model` supplies the default for all four phase slots. Override them separately
+with `--map-model`, `--route-model`, `--trace-model`, and `--submit-model`; online
+execution needs either a default model or all four overrides. The endpoint and
+credential configuration are shared. Each phase uses `prompts/<phase>.md`.
+MAP requests the initial requirements view through its model. Phase switches
+pass explicit shared-state handoffs. TRACE receives only original text and goal IDs,
+not prior hypotheses, compiled state claims or audit packets. SUBMIT receives TRACE
+suspects, shared original context at candidate steps (including admissible), and bounded directed source excerpts. Complete `execution_history` is omitted. The `direct-submit-input/v2` packet preserves every candidate ID; window reviews reference IDs instead of duplicating candidate prose. A deterministic selector includes at most 12 related events per candidate, with 280-character related module excerpts and 600-character related observation excerpts. Selection scope/omissions are explicit: retrieval hints do not prove causal dependence, recovery or absence. Other phases' message/reasoning histories are
+excluded. Re-entry preserves only that phase's history and supplies current versions.
+
+Offline replay accepts JSON/JSONL containing recorded assistant messages, including
+the generated `messages.jsonl`, or a directory of `TRAJECTORY_ID.json` scripts:
+
+```powershell
+python -B -m prodebugger.run_experiment TRAJECTORY_ID --compiled-dir prodebugger/sessions/abstract_rules_n20 --replay PATH_TO_MESSAGES
+python -B -m prodebugger.run_experiment --resume PATH_TO_RUN
+python -B -m prodebugger.run_experiment --resume PATH_TO_RUN --max-tool-calls 400
+```
+
+Resume uses the recorded source snapshot and model configuration. Budget ceilings
+may be increased; cumulative usage is retained. Completed tool calls are reconstructed
+from committed events and are not appended a second time. An interrupted model
+request without a durable response cannot be safely replayed and requires a new run.
+Input, compiler, rules, prompt and actual Fact/Goal fingerprints must match. The CLI
+defaults to PYTHONHASHSEED=42 for stable IDs, honors an explicit numeric seed and
+uses the original seed when resuming. Current checkpoints use `debugger-checkpoint/v4`.
+Runs created by the original repository cannot be resumed here: the source
+fingerprint includes the source file set and paths, which changed with the migration.
+
+This mode builds one canonical core Record and a strict same-ID DSL projection,
+then runs the unchanged seven abstract rules. Compilation mode is
+`canonical-core-dsl-projection/v1`.
+
+Available tools include scoped `view`, `view_evidence`, `trace_evidence`,
+`trace_fact`, `trace_window`, window-candidate `assess`,
+`check/span/state/back/up/versions/neighbours`, `hold/drop/contrast`, `reroute`
+and `finish`. Read/routing tools remain available to MAP/ROUTE; TRACE exposes
+only `assess`, while SUBMIT has no tool schemas. Rule candidates, provenance
+links and LLM assessments are separate claims.
+
+TRACE tool calls are recorded in messages/requests/usage and tool_calls; validated
+window conclusions are saved in `window_trace.jsonl`. Each window gets at most
+three validation attempts. Invalid candidate lists cannot partially update coverage.
+Every declared window must have a committed conclusion before SUBMIT. Exact quotes,
+existing Fact mappings and allowed benchmark fault classes are checked. SUBMIT
+compares all candidates once; invalid JSON/selection stops uncertain. Core's
+full-trajectory gate remains unchanged. Finite coverage does not establish the
+globally earliest or unique cause.
+
+Each run has a unique directory; existing runs are never overwritten:
+
+```text
+artifacts/dsl_debugger/<run_id>/
+  manifest.json, results.json, report.md
+  <trajectory_id>/
+    input.json, canonical_record.json, rules.json, evidences.json, evaluations.json
+    goal_map.json, route_candidates.json, trace_windows.json, trace_graph.json
+    window_trace.jsonl, direct_submit.jsonl
+    messages.jsonl, phase_events.jsonl, tool_calls.jsonl, usage.jsonl, usage.json
+    requests/00001.json, ..., checkpoint.json, result.json
+  browser/index.html, case-001.html, ..., theme.css, case-browser.css, viewer.css, viewer.js
+```
+
+Dry-run produces no model transcript/checkpoint or diagnosis. `result.status` is
+diagnosed, uncertain, no_failure, budget_exhausted, error, or dry_run. Only an
+accepted submit produces diagnosed. Resume writes separate resume_manifest/results/report
+and preserves rejected restores in resume_error.json.
+
+Every experiment automatically builds `browser/index.html`, including dry-run,
+replay, error exits and resume attempts. Open it directly without a server. The
+interface provides case selection, phase/event filters, full model requests and
+responses, tool arguments/results, original steps and Facts, window candidate
+conclusions, final candidate comparison, diagnosis and per-phase token/cache
+statistics. It uses only local assets (`prodebugger/assets/`) and escapes source
+text as data. To rebuild:
+
+```powershell
+python -B -m prodebugger.report artifacts/dsl_debugger/RUN_ID
+```
+
+Script execution also works: `python prodebugger/report.py artifacts/dsl_debugger/RUN_ID`.
+
+## Compilation entry point
+
+Compile an exact trajectory ID (needs `pyarrow`):
+
+```powershell
+python -B -m prodebugger.run_compile GPT-4o_003_chat_b000_t00_e02-1e119842
+```
+
+Omit the ID to enter it interactively. Script execution also works:
+`python prodebugger/run_compile.py TRAJECTORY_ID`.
+The runner searches `core/data/{train,validation,test}.parquet` by ID.
+Use `--data-dir PATH` to select another dataset directory.
+Outputs are written to `prodebugger/sessions/TRAJECTORY_ID/`:
+
+- `record.json`: task, kinds, relations, entities, goals, constraints, facts, and evidence groups.
+- Each top-level record field is also saved directly to its own file:
+  `trajectory_id.json`, `task_type.json`, `task.json`, `kinds.json`,
+  `relations.json`, `entities.json`, `goals.json`, `facts.json`, and `evidences.json`.
+- `steps.json`: segmented environment/agent text, module text, and admissible actions.
+- `rules.json` and `evaluations.json`: the seven abstract rules and their four-state evaluations.
+
+The parser reuses the WebShop and ALFWorld profiles. Other task types
+produce an explicit error. Actions use facts with `slot="act"`; module text is
+retained, but intentions, diagnoses, and goal-completion evaluation are omitted.
+Repeated runs replace the generated JSON files for that ID.
+
+Compile the fixed twenty IDs (WebShop 10, ALFWorld 10):
+
+```powershell
+$env:PYTHONHASHSEED = '42'
+python -B -m prodebugger.run_compile --sample-file prodebugger/sessions/abstract_rules_n20/sample.json --output-dir artifacts/compile_n20
+```
+
+Batch outputs: sample.json (IDs and source/data hashes), rules.json, results.json,
+report.md and one compilation directory per ID. PYTHONHASHSEED=42 fixes profile set
+iteration. `prodebugger/sessions/abstract_rules_n20/` is the original committed
+output of this command; its `sample.json` keeps the original source hashes and
+absolute source paths as historical provenance only (they are never read as paths).
+
+## Derived evidence
+
+`Evidence` stores `eid`, `kind`, `t`, a tuple of Fact indices (`refs`), `status`,
+`rule`, and `details`. `Record.evidences` groups items by kind in `Evidences`.
+Each exported group also includes the sorted union of its items' Fact refs.
+All refs must exist and must not point to a step later than the evidence.
+
+All active DSL detection uses `abstract_rules.py`. Each evaluation records
+`satisfied`, `violated`, `unknown`, or `not_applicable`; only `violated` adds
+candidate Evidence of kind `abstract.rule`. Candidates are not confirmed diagnoses.
+`parse_benchmark_instance(..., with_evidence=False)` compiles Facts without detection.
+
+## Seven abstract rules
+
+R1–R5, R7 and R8 are defined in `abstract_rules.py` (R6 is removed). They read existing
+Facts and add no semantic or intention parsing.
+
+| Rule | Existing-Fact check | Unknown boundary |
+|---|---|---|
+| R1 assertion.consistency | Functional key and positive versions/payload | Mutable assertion time, unbound/page placeholder |
+| R2 assertion.grounding | Matching observation history or immutable counterrecord | Missing record does not establish hallucination |
+| R3 information.update | Previously supported value and later invalidation | Current versus historical assertion is not recorded |
+| R4 decision.applicability | Existing admissibility check linked to the action | Missing check/no_tag; no extra task-constraint inference |
+| R5 execution.result | First associated feedback, explicit effect=none | Missing feedback or expected effect model |
+| R7 completion.consistency | Explicit structured mind satisfied Fact and contemporaneous goal status | No completion commitment inferred from domain actions |
+| R8 progress.efficiency | Consecutive equivalent actions, context and nonempty result fingerprint | Retry exceptions, incomplete/changed context; no optimality claim |
+
+## External requirements
+
+- Python packages: `requirements.txt` (pyarrow, openai, python-dotenv).
+- Online runs: an OpenAI-compatible Chat Completions endpoint with tool calls, and its API key
+  in an environment variable or `.env` (see `.env.example`). Dry-run, replay and compilation
+  need no network or credentials.

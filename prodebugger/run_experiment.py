@@ -126,8 +126,6 @@ def report(run, results, prefix=""):
     lines += ["", "Rule candidates and accepted protocol results are not accuracy measurements.",
               "Replay calls are recorded separately from live model calls. See each trajectory's result, usage, and tool event log."]
     (run / f"{prefix}report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    from prodebugger.report import build_report
-    build_report(run, results)
 
 
 def run(args):
@@ -205,7 +203,7 @@ def run(args):
         report(run_dir, results, "resume_" if resume else "")
         print(f"{tid}: {results[-1]['status']}")
     print(f"Artifacts: {run_dir}")
-    print(f"Browser: {run_dir / 'browser' / 'index.html'}")
+    print(f"Workbench: python web/server.py, then open http://127.0.0.1:8770/#/?group={run_dir.name}")
     return 1 if any(r["status"] == "error" for r in results) else 0
 
 

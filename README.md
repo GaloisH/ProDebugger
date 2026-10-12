@@ -12,10 +12,9 @@ ProDebugger/
   prodebugger/          the DSL debugger (formerly experiments/dsl)
     run_experiment.py   MAP -> ROUTE -> TRACE -> SUBMIT entry point
     run_compile.py      compile one trajectory / the fixed 20-ID sample
-    report.py           offline experiment browser (rebuild)
     prompts/            map.md, route.md, trace.md, submit.md
-    assets/             browser CSS/JS copied into each run
     sessions/abstract_rules_n20/   20 compiled trajectories used as saved inputs
+  web/                  workbench: read-only stdlib server + static frontend (no build)
   artifacts/dsl_debugger/          run outputs (created on first run; git-ignored)
 ```
 
@@ -163,7 +162,6 @@ artifacts/dsl_debugger/<run_id>/
     window_trace.jsonl, direct_submit.jsonl
     messages.jsonl, phase_events.jsonl, tool_calls.jsonl, usage.jsonl, usage.json
     requests/00001.json, ..., checkpoint.json, result.json
-  browser/index.html, case-001.html, ..., theme.css, case-browser.css, viewer.css, viewer.js
 ```
 
 Dry-run produces no model transcript/checkpoint or diagnosis. `result.status` is
@@ -171,19 +169,41 @@ diagnosed, uncertain, no_failure, budget_exhausted, error, or dry_run. Only an
 accepted submit produces diagnosed. Resume writes separate resume_manifest/results/report
 and preserves rejected restores in resume_error.json.
 
-Every experiment automatically builds `browser/index.html`, including dry-run,
-replay, error exits and resume attempts. Open it directly without a server. The
-interface provides case selection, phase/event filters, full model requests and
-responses, tool arguments/results, original steps and Facts, window candidate
-conclusions, final candidate comparison, diagnosis and per-phase token/cache
-statistics. It uses only local assets (`prodebugger/assets/`) and escapes source
-text as data. To rebuild:
+## Workbench
+
+Runs and compiled sessions are browsed in the web workbench. It is isolated from the
+debugger: `web/server.py` uses only the Python standard library, imports nothing from
+`prodebugger/` or `core/`, and serves the files above read-only; the frontend is plain
+HTML/CSS/ES modules with no build step.
 
 ```powershell
-python -B -m prodebugger.report artifacts/dsl_debugger/RUN_ID
+python web/server.py            # http://127.0.0.1:8770
 ```
 
-Script execution also works: `python prodebugger/report.py artifacts/dsl_debugger/RUN_ID`.
+Options: `--port`, `--host` (default 127.0.0.1), `--runs-dir`, `--sessions-dir`.
+The page lists every run under `artifacts/dsl_debugger/` and every compiled session
+under `prodebugger/sessions/`. A run that is still being written is marked LIVE and
+followed as it grows (JSON files refetched on change, JSONL logs read from their last
+byte offset), so it can be opened while `run_experiment` is working.
+
+Each case has three tabs:
+
+- **Trajectory**: two linked horizontal lanes, debugger events (handoffs, model turns,
+  tool calls, window assessments, the submit decision) above the original agent steps.
+  Cards expand in place. Hovering or selecting an event draws curves to the steps it
+  cites; selecting a step lights every event that looked at it. Step fields are laid out
+  by role (State / Reasoning / Action / Outcome) inferred from field names, so other
+  benchmarks need no configuration; each step also lists its Facts and rule evaluations.
+- **DSL Graph**: fact dependencies (by step and side, `basis` edges, step-range brush,
+  lineage highlight, debugger attention and ROUTE path overlays), entities and relations
+  (state as of a chosen step), schema (kinds and relation signatures), goals and
+  requirements, and rules → evaluations → facts.
+- **Result**: a diagnosed run shows the root cause with its step chain and evidence;
+  any other status shows the status, reasoning, uncertainty and window coverage.
+
+URLs are shareable (`#/case/<runs|sessions>/<group>/<trajectory>/<tab>/...`).
+`python web/simulate_live.py <run>/<trajectory>` replays a finished run into a new run
+directory at a slow pace, to try the live view without model calls.
 
 ## Compilation entry point
 

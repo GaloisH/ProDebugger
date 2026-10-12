@@ -140,3 +140,19 @@
 .show-sig .edge.sig { opacity: .3; }
 .edge.sig.is-lineage, .edge.sig.is-hover { opacity: .95; stroke-width: 1.8; }
 .sig-chip { padding: .2rem .45rem; border: 1px solid var(--info-line); border-radius: .35rem; background: var(--info-bg); color: var(--info-ink); text-align: left; font-size: .76rem; cursor: pointer; }
+
+/* Goal graph */
+.node.goal-task .node-box { fill: #2f3d47; stroke: var(--accent); stroke-width: 2; }
+.node.goal-task .node-label { font-family: Inter, 'Segoe UI', sans-serif; font-size: 13px; }
+.node.goal-req .node-box { fill: var(--warn-bg); stroke: var(--warn-line); stroke-width: 1.6; }
+.node.goal-req.is-met .node-box { fill: var(--ok-bg); stroke: var(--ok-line); }
+.node.goal-req.is-unmodeled .node-box { fill: #2b3239; stroke: #8794a1; stroke-dasharray: 5 3; }
+.node.goal-req .node-label { font-family: Inter, 'Segoe UI', sans-serif; }
+.node.goal-constraint .node-box { fill: var(--violet-bg); stroke: var(--violet-line); }
+.edge.goal-edge { stroke: #7d8b99; opacity: .6; }
+.edge.goal-edge.evidence { stroke-dasharray: 3 3; opacity: .4; }
+.lg.lg-met { background: var(--ok-bg); border-color: var(--ok-line); }
+.lg.lg-unmet { background: var(--warn-bg); border-color: var(--warn-line); }
+.lg.lg-unmodeled { border-style: dashed; }
+.tone-text-warn { color: var(--warn-ink); }
+.graph-inspector .sig-chip { display: block; width: 100%; margin-bottom: .3rem; }

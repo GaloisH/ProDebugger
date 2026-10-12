@@ -90,17 +90,21 @@ def trajectory_state(source: str, files: dict, now: float) -> dict:
 
 def group_index(sources: Sources, source: str, group: Path, now: float) -> dict:
     trajectories = []
+    chat = read_json(group / "chat.json") if source == "runs" else None
+    ended = (chat or {}).get("state") in ("finished", "failed", "stopped")
     for child in sorted(group.iterdir()):
         if not child.is_dir() or child.name in SKIP_DIRS or not NAME.match(child.name):
             continue
         files = file_table(child)
         state = trajectory_state(source, files, now)
+        # A launched run whose process has exited is not live, whatever the file times say.
+        if ended and state["live"]:
+            state.update(live=False, status="finished" if "result.json" in files else chat["state"])
         if state["status"] == "finished":
             state["status"] = (read_json(child / "result.json", {}) or {}).get("status", "finished")
         trajectories.append({"id": child.name, **state})
     manifest = read_json(group / "manifest.json", {}) or {}
     config = manifest.get("config") or {}
-    chat = read_json(group / "chat.json") if source == "runs" else None
     return {"source": source, "id": group.name, "created_at": manifest.get("created_at"),
             "mode": manifest.get("mode"), "model": config.get("model"),
             "policy": manifest.get("submission_policy"),

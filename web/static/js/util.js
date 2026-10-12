@@ -25,6 +25,7 @@ const STATUS = {
   running: ["live", "Running"], incomplete: ["warn", "Incomplete"], compiled: ["teal", "Compiled"],
   accepted: ["ok", "Accepted"], uncertain: ["warn", "Uncertain"], dry_run: ["", "Dry run"],
   rejected: ["bad", "Rejected"], error: ["bad", "Error"], interrupted: ["bad", "Interrupted"],
+  stopped: ["warn", "Stopped"], failed: ["bad", "Failed"],
 };
 export function statusBadge(status, accepted) {
   const [kind, label] = accepted ? STATUS.accepted : STATUS[status] || ["", status || "unknown"];

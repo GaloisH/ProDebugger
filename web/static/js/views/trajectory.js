@@ -318,7 +318,7 @@ export function createView(root, ctx) {
     if (b?.dataset.pan) { const lane = $(b.dataset.pan); if (lane === dbg) setFollow(false); lane.scrollBy({left: Number(b.dataset.dir) * lane.clientWidth * .8, behavior: "smooth"}); return; }
     if (b?.dataset.jumpStep) { selectStep(Number(b.dataset.jumpStep)); return; }
     if (b?.id === "tj-linked") { state.linkedOnly = !state.linkedOnly; b.setAttribute("aria-pressed", String(state.linkedOnly)); render(); return; }
-    if (b?.id === "tj-follow") { setFollow(!state.follow); if (state.follow) scrollToEnd(); return; }
+    if (b?.id === "tj-follow") { setFollow(!state.follow); if (state.follow) scrollToEnd(true); return; }
     if (b?.dataset.toggleEv != null) {
       const i = Number(b.dataset.toggleEv);
       state.openEvent = state.openEvent === i ? null : i; state.selEvent = i; setFollow(false);
@@ -384,10 +384,12 @@ export function createView(root, ctx) {
   const resize = new ResizeObserver(scheduleLinks);
   resize.observe(lanes);
 
-  function scrollToEnd() {
+  // Auto-follow jumps (a smooth scroll would be cut short by the next live render).
+  function scrollToEnd(smooth = false) {
     programmatic = true;
-    dbg.scrollTo({left: dbg.scrollWidth, behavior: "smooth"});
-    setTimeout(() => { programmatic = false; }, 700);
+    dbg.scrollTo({left: dbg.scrollWidth, behavior: smooth ? "smooth" : "auto"});
+    scheduleLinks();
+    setTimeout(() => { programmatic = false; }, smooth ? 700 : 120);
   }
 
   return {
@@ -402,6 +404,8 @@ export function createView(root, ctx) {
       if ((grew || first) && state.follow && ctx.store.live) scrollToEnd();
     },
     show(route) {
+      // The first live render happens while the tab is still hidden, so follow again once visible.
+      if (state.follow && ctx.store.live && !route.extra.length) requestAnimationFrame(() => scrollToEnd());
       if (route.extra[0] === "step" && route.extra[1]) { state.openStep = Number(route.extra[1]); state.selStep = state.openStep; render(); selectStep(state.selStep); }
       if (route.extra[0] === "event" && route.extra[1]) { const i = Number(route.extra[1]); state.openEvent = state.selEvent = i; setFollow(false); render(); scrollToCard(dbg, dbg.querySelector(`[data-ev="${i}"]`)); }
       scheduleLinks();

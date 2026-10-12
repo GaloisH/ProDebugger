@@ -83,11 +83,14 @@ def main():
             for row in tools:
                 if row.get("tool_call_id") == m.get("tool_call_id"):
                     append(target / "tool_calls.jsonl", row)
+            # Concurrent TRACE windows are keyed by the assess tool call, not by a turn.
+            if m.get("tool_call_id") in windows:
+                append(target / "window_trace.jsonl", windows.pop(m["tool_call_id"]))
         append(target / "messages.jsonl", message)
         if m.get("role") == "assistant":
             turn = message.get("turn")
             if turn in windows:
-                append(target / "window_trace.jsonl", windows[turn])
+                append(target / "window_trace.jsonl", windows.pop(turn))
             if turn in answers:
                 append(target / "direct_submit.jsonl", answers[turn])
         time.sleep(args.delay)

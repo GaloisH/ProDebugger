@@ -1,5 +1,8 @@
 // Chat page: every debugger run reads as a conversation; new runs start from the composer.
-import {getIndex} from "../api.js";
+import {getIndex, getJSON} from "../api.js";
+import {CaseStore} from "../case/store.js";
+import {buildMessages} from "../chat/messages.js";
+import {createStream} from "../chat/stream.js";
 import {chatHref, caseHref} from "../routes.js";
 import {ago, debounce, esc, statusBadge} from "../util.js";
 import {describeTrajectory, domainIcon} from "./runs.js";
@@ -26,6 +29,8 @@ export function mountChat(root, route) {
       </section>
     </div>`;
   const $ = id => root.querySelector("#" + id);
+  const stream = createStream($("chat-stream"), $("chat-scroll"));
+  let conv = null; // {key, ref, store, chat, chatSig}
 
   // Flattened run trajectories; chat-launched ones first, newest first.
   function conversations() {
@@ -70,8 +75,54 @@ export function mountChat(root, route) {
         <a class="btn" href="${caseHref(ref)}">Open in workbench</a></div>`;
   }
 
-  function renderStream() {
-    if (state.route.ref) return;
+  const groupOf = ref => state.index?.groups.find(g => g.source === "runs" && g.id === ref[1]);
+  const known = ref => Boolean(groupOf(ref)?.trajectories.some(t => t.id === ref[2]));
+
+  // One CaseStore per open conversation; it follows the run files while they are written.
+  function openConversation() {
+    const ref = state.route.ref;
+    const key = ref ? ref.join("/") : "";
+    if (conv?.key === key) return;
+    conv?.store.stop();
+    conv = null;
+    stream.reset();
+    if (!ref) { renderWelcome(); return; }
+    if (!known(ref)) {
+      $("chat-stream").innerHTML = `<p class="muted chat-wait">${state.index ? "Waiting for this run to appear…" : "Loading…"}</p>`;
+      return;
+    }
+    $("chat-stream").innerHTML = "";
+    const store = new CaseStore(ref);
+    conv = {key, ref, store, chat: null, chatSig: ""};
+    store.on("change", draw);
+    store.start().catch(error => { $("chat-stream").innerHTML = `<div class="error-box">Could not load this run: ${esc(error.message)}</div>`; });
+    syncChat();
+  }
+
+  // chat.json carries how a chat-launched run ended (exit code, log tail).
+  async function syncChat() {
+    if (!conv) return;
+    const marker = groupOf(conv.ref)?.chat;
+    const sig = JSON.stringify(marker || null);
+    if (sig === conv.chatSig) return;
+    conv.chatSig = sig;
+    const current = conv;
+    const chat = marker ? await getJSON(conv.ref.slice(0, 2), "chat.json", null) : null;
+    if (conv !== current) return;
+    conv.chat = chat;
+    draw();
+  }
+
+  function draw() {
+    if (!conv?.store.model) return;
+    const ended = ["failed", "stopped", "finished"].includes(conv.chat?.state);
+    const live = conv.store.live && !ended;
+    stream.update(buildMessages(conv.store.model, {live, chat: conv.chat}), {caseRef: conv.ref, model: conv.store.model});
+    // A finished run reads from the top; a live one follows the newest message.
+    if (!conv.drawn) { conv.drawn = true; $("chat-scroll").scrollTo({top: live ? $("chat-scroll").scrollHeight : 0}); }
+  }
+
+  function renderWelcome() {
     $("chat-stream").innerHTML = `<div class="chat-welcome">
       <div class="eyebrow">ProDebugger chat</div>
       <h2>Pick a benchmark trajectory and watch the debugger work.</h2>
@@ -91,13 +142,15 @@ export function mountChat(root, route) {
     } catch (error) { state.error = error.message; signature = ""; }
     renderList();
     renderHead();
+    openConversation();
+    syncChat();
   }
 
   function show(routeNow) {
     state.route = routeNow;
     renderList();
     renderHead();
-    renderStream();
+    openConversation();
   }
 
   $("chat-filter").addEventListener("input", debounce(e => { state.filter = e.target.value.trim().toLowerCase(); renderList(); }));
@@ -106,6 +159,6 @@ export function mountChat(root, route) {
   refresh();
   return {
     update: show,
-    unmount() { clearInterval(timer); root.classList.remove("app-chat"); },
+    unmount() { clearInterval(timer); conv?.store.stop(); root.classList.remove("app-chat"); },
   };
 }

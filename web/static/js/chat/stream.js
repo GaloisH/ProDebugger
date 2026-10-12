@@ -141,6 +141,22 @@ function phaseMessage(m, ref) {
   </div>`;
 }
 
+function referenceMessage(m) {
+  const ref = m.reference, root = m.result.root;
+  const rows = [
+    ["Step", root ? S(root.step) : "—", S(ref.step), root?.step === ref.step],
+    ["Module", root?.module || "—", ref.module, root?.module === ref.module],
+    ["Error type", root ? human(root.fault_class) : "—", (ref.types || []).map(human).join(", "), Boolean(root) && (ref.types || []).includes(root.fault_class)],
+  ];
+  const all = rows.every(r => r[3]);
+  return `<div class="msg-body">
+    <div class="msg-meta"><strong>REFERENCE</strong><span>Benchmark label · shown after the run, never given to the debugger</span>
+      <span class="msg-stats">${all ? '<span class="badge ok">all correct</span>' : `<span class="badge ${root ? "bad" : "warn"}">${rows.filter(r => r[3]).length}/3 match</span>`}</span></div>
+    <table class="ref-table"><thead><tr><th></th><th>Debugger</th><th>Reference</th><th></th></tr></thead>
+      <tbody>${rows.map(([k, p, g, ok]) => `<tr class="${ok ? "is-ok" : "is-miss"}"><th>${k}</th><td class="mono">${esc(p)}</td><td class="mono">${esc(g)}</td><td>${ok ? "✓" : "✗"}</td></tr>`).join("")}</tbody></table>
+  </div>`;
+}
+
 function noticeMessage(m) {
   if (m.incomplete) return `<div class="msg-body"><p>This run stopped before SUBMIT wrote a result.</p></div>`;
   const c = m.chat;
@@ -158,6 +174,7 @@ function renderMessage(m, ref) {
   if (m.role === "user") return requestMessage(m);
   if (m.role === "working") return workingMessage(m);
   if (m.role === "system") return noticeMessage(m);
+  if (m.role === "reference") return referenceMessage(m);
   if (m.window) return windowMessage(m);
   return phaseMessage(m, ref);
 }
@@ -165,6 +182,7 @@ function renderMessage(m, ref) {
 function avatar(m) {
   if (m.role === "user" || m.role === "working") return "";
   if (m.role === "system") return `<span class="msg-avatar">!</span>`;
+  if (m.role === "reference") return `<span class="msg-avatar" aria-hidden="true">✓</span>`;
   return `<span class="msg-avatar" aria-hidden="true">${esc((m.phase || "?")[0])}</span>`;
 }
 

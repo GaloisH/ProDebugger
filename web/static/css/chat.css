@@ -83,6 +83,17 @@
 .verdict-line { display: flex; flex-wrap: wrap; align-items: center; gap: .55rem; margin-top: .3rem; font-size: 1.1rem; }
 .verdict-line strong { color: #f5ccca; }
 
+/* Reference comparison */
+.msg-reference { --c: #c9b8f0; }
+.ref-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.ref-table th, .ref-table td { padding: .4rem .55rem; border-bottom: 1px solid #ffffff14; text-align: left; }
+.ref-table thead th { color: var(--faint); font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.ref-table tbody th { width: 7rem; color: var(--muted); font-weight: 600; }
+.ref-table td:last-child { width: 2rem; text-align: center; font-weight: 700; }
+.ref-table .is-ok td:last-child { color: var(--ok-ink); }
+.ref-table .is-miss td:last-child { color: var(--bad-line); }
+.ref-table .is-ok td:nth-child(2) { color: var(--ok-ink); }
+
 /* Activity */
 .msg-activity { margin-top: .6rem; border-top: 1px dashed #ffffff1c; padding-top: .45rem; }
 .msg-activity > summary { color: var(--muted); font-size: .8rem; cursor: pointer; }

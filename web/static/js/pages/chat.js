@@ -1,5 +1,5 @@
 // Chat page: every debugger run reads as a conversation; new runs start from the composer.
-import {getIndex, getJSON} from "../api.js";
+import {getIndex, getJSON, getReference} from "../api.js";
 import {CaseStore} from "../case/store.js";
 import {buildMessages} from "../chat/messages.js";
 import {createStream} from "../chat/stream.js";
@@ -105,7 +105,7 @@ export function mountChat(root, route) {
     }
     $("chat-stream").innerHTML = "";
     const store = new CaseStore(ref);
-    conv = {key, ref, store, chat: null, chatSig: ""};
+    conv = {key, ref, store, chat: null, chatSig: "", reference: undefined};
     store.on("change", draw);
     store.start().catch(error => { $("chat-stream").innerHTML = `<div class="error-box">Could not load this run: ${esc(error.message)}</div>`; });
     syncChat();
@@ -129,9 +129,19 @@ export function mountChat(root, route) {
     if (!conv?.store.model) return;
     const ended = ["failed", "stopped", "finished"].includes(conv.chat?.state);
     const live = conv.store.live && !ended;
-    stream.update(buildMessages(conv.store.model, {live, chat: conv.chat}), {caseRef: conv.ref, model: conv.store.model});
+    if (!live && conv.store.model.debugger?.result && conv.reference === undefined) loadReference(conv);
+    stream.update(buildMessages(conv.store.model, {live, chat: conv.chat, reference: conv.reference}),
+                  {caseRef: conv.ref, model: conv.store.model});
     // A finished run reads from the top; a live one follows the newest message.
     if (!conv.drawn) { conv.drawn = true; $("chat-scroll").scrollTo({top: live ? $("chat-scroll").scrollHeight : 0}); }
+  }
+
+  // Fetched once the run has a result; trajectories outside the catalog have none.
+  async function loadReference(current) {
+    current.reference = null;
+    const tid = current.store.model.trajectoryId || current.ref[2];
+    try { current.reference = await getReference(tid); } catch { return; }
+    if (conv === current) draw();
   }
 
   function renderWelcome() {

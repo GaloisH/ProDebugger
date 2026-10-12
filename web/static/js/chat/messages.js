@@ -30,7 +30,7 @@ function anchors(d) {
   return call?.data.arguments?.candidates || [];
 }
 
-export function buildMessages(model, {live, chat}) {
+export function buildMessages(model, {live, chat, reference}) {
   const d = model.debugger;
   const messages = [{id: "request", role: "user", task: model.task, taskType: model.taskType,
                      trajectoryId: model.trajectoryId, manifest: d?.manifest, chat}];
@@ -55,6 +55,9 @@ export function buildMessages(model, {live, chat}) {
                      candidates: d.windows.reduce((n, w) => n + (w.candidates || []).length, 0)});
     }
   }
+
+  // Benchmark labels only after the run has ended; the launcher never passes them to the debugger.
+  if (!live && d.result && reference) messages.push({id: "reference", role: "reference", reference, result: d.result});
 
   if (live) {
     const waiting = d.events.filter(e => e.kind === "inflight").pop();

@@ -26,7 +26,7 @@
 .bar-seg.status-uncertain, .bar-seg.status-incomplete, .bar-seg.status-stopped { background: var(--warn-line); }
 .bar-seg.status-running { background: #4f9a7a; }
 .bar-seg.status-compiled { background: var(--teal-line); }
-.bar-seg.status-accepted { background: var(--ok-line); }
+.bar-seg.status-accepted, .bar-seg.status-diagnosed { background: var(--ok-line); }
 .bar-seg.status-error, .bar-seg.status-rejected, .bar-seg.status-failed { background: var(--bad-line); }
 
 .traj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: .75rem; padding: 1rem 1.1rem 1.1rem; }

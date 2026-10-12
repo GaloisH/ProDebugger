@@ -23,7 +23,7 @@ export function ago(seconds) {
 // Status vocabulary from result.json plus the server's running/incomplete/compiled.
 const STATUS = {
   running: ["live", "Running"], incomplete: ["warn", "Incomplete"], compiled: ["teal", "Compiled"],
-  accepted: ["ok", "Accepted"], uncertain: ["warn", "Uncertain"], dry_run: ["", "Dry run"],
+  accepted: ["ok", "Accepted"], diagnosed: ["ok", "Diagnosed"], uncertain: ["warn", "Uncertain"], dry_run: ["", "Dry run"],
   rejected: ["bad", "Rejected"], error: ["bad", "Error"], interrupted: ["bad", "Interrupted"],
   stopped: ["warn", "Stopped"], failed: ["bad", "Failed"],
 };

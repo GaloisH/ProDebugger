@@ -3,6 +3,7 @@ import {getIndex, getJSON} from "../api.js";
 import {CaseStore} from "../case/store.js";
 import {buildMessages} from "../chat/messages.js";
 import {createStream} from "../chat/stream.js";
+import {createComposer} from "../chat/composer.js";
 import {chatHref, caseHref} from "../routes.js";
 import {ago, debounce, esc, statusBadge} from "../util.js";
 import {describeTrajectory, domainIcon} from "./runs.js";
@@ -31,6 +32,15 @@ export function mountChat(root, route) {
   const $ = id => root.querySelector("#" + id);
   const stream = createStream($("chat-stream"), $("chat-scroll"));
   let conv = null; // {key, ref, store, chat, chatSig}
+  const composer = createComposer($("chat-composer"), {
+    index: () => state.index,
+    currentRef: () => state.route.ref,
+    onLaunched(run) {
+      location.hash = chatHref(run.run_id, run.trajectory_id);
+      burst(12, ["runs", run.run_id, run.trajectory_id]); // the run directory appears within a second or two
+    },
+    onEnded: () => refresh(),
+  });
 
   // Flattened run trajectories; chat-launched ones first, newest first.
   function conversations() {
@@ -88,7 +98,9 @@ export function mountChat(root, route) {
     stream.reset();
     if (!ref) { renderWelcome(); return; }
     if (!known(ref)) {
-      $("chat-stream").innerHTML = `<p class="muted chat-wait">${state.index ? "Waiting for this run to appear…" : "Loading…"}</p>`;
+      const starting = composer.active()?.run_id === ref[1];
+      $("chat-stream").innerHTML = `<p class="muted chat-wait">${starting ? `<span class="typing"><i></i><i></i><i></i></span> Starting the run…`
+        : state.index ? "Waiting for this run to appear…" : "Loading…"}</p>`;
       return;
     }
     $("chat-stream").innerHTML = "";
@@ -130,6 +142,14 @@ export function mountChat(root, route) {
     </div>`;
   }
 
+  // Quick index polls right after a launch, then back to the normal pace.
+  let burstTimer = null;
+  function burst(times, ref) {
+    clearTimeout(burstTimer);
+    if (times <= 0 || known(ref)) return;
+    burstTimer = setTimeout(() => refresh().then(() => burst(times - 1, ref)), 600);
+  }
+
   let signature = "";
   async function refresh() {
     try {
@@ -144,6 +164,7 @@ export function mountChat(root, route) {
     renderHead();
     openConversation();
     syncChat();
+    composer.update();
   }
 
   function show(routeNow) {
@@ -151,14 +172,17 @@ export function mountChat(root, route) {
     renderList();
     renderHead();
     openConversation();
+    composer.update();
   }
 
   $("chat-filter").addEventListener("input", debounce(e => { state.filter = e.target.value.trim().toLowerCase(); renderList(); }));
   const timer = setInterval(() => { if (!document.hidden) refresh(); }, POLL_MS);
+  const onVisible = () => { if (!document.hidden) refresh(); };
+  document.addEventListener("visibilitychange", onVisible);
   show(route);
   refresh();
   return {
     update: show,
-    unmount() { clearInterval(timer); conv?.store.stop(); root.classList.remove("app-chat"); },
+    unmount() { clearInterval(timer); clearTimeout(burstTimer); document.removeEventListener("visibilitychange", onVisible); conv?.store.stop(); composer.destroy(); root.classList.remove("app-chat"); },
   };
 }

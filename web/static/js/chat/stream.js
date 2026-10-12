@@ -163,7 +163,7 @@ function renderMessage(m, ref) {
 }
 
 function avatar(m) {
-  if (m.role === "user") return "";
+  if (m.role === "user" || m.role === "working") return "";
   if (m.role === "system") return `<span class="msg-avatar">!</span>`;
   return `<span class="msg-avatar" aria-hidden="true">${esc((m.phase || "?")[0])}</span>`;
 }

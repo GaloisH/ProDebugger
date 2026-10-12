@@ -128,3 +128,15 @@
 .tl-now { position: absolute; bottom: -4px; width: 2px; height: 1.6rem; margin-left: -1px; background: var(--accent); pointer-events: none; }
 .lg.lg-new { border: 2px solid #eacb81; }
 .lg.lg-removed { border: 2px dashed var(--bad-line); }
+
+/* Schema graph */
+.node.kind .node-box { fill: color-mix(in srgb, var(--kc) 20%, #262c33); stroke: var(--kc); stroke-width: 1.5; }
+.node.kind.is-abstract .node-box { fill: #262c33; stroke-dasharray: 5 3; }
+.node.kind .node-label { font-family: Inter, 'Segoe UI', sans-serif; }
+.node.relation .node-box { fill: #2b3239; stroke: #6b7a8a; }
+.node.relation .node-label { fill: var(--info-ink); font-size: 11.5px; }
+.edge.isa { stroke: #6b7a8a; opacity: .75; }
+.edge.sig { stroke: var(--info-line); stroke-dasharray: 5 4; opacity: 0; }
+.show-sig .edge.sig { opacity: .3; }
+.edge.sig.is-lineage, .edge.sig.is-hover { opacity: .95; stroke-width: 1.8; }
+.sig-chip { padding: .2rem .45rem; border: 1px solid var(--info-line); border-radius: .35rem; background: var(--info-bg); color: var(--info-ink); text-align: left; font-size: .76rem; cursor: pointer; }

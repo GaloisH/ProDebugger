@@ -18,7 +18,7 @@ export function factIndex(model) {
   return index;
 }
 
-export function factInspector(model, fid) {
+export function factInspector(model, fid, {compact = false} = {}) {
   const f = model.dsl?.factsById.get(Number(fid));
   if (!f) return `<p class="empty">Fact ${esc(fid)} is not in this record.</p>`;
   const idx = factIndex(model);
@@ -35,11 +35,12 @@ export function factInspector(model, fid) {
       <dt>value</dt><dd class="mono">${esc(typeof f.value === "object" ? JSON.stringify(f.value) : short(f.value, 300))} <span class="muted">${esc(f.value_type || "")}</span></dd>
       ${f.purpose ? `<dt>purpose</dt><dd>${entityChip(entityId(f.purpose))}</dd>` : ""}</dl>
     ${f.span ? `<div class="insp-block"><h4>Source span</h4><div class="text-box">${esc(f.span)}</div></div>` : ""}
+    ${compact ? `<button class="link" data-fid="${f.fid}">Open in fact graph →</button>` : `
     <div class="insp-block"><h4>Basis · ${(f.basis || []).length}</h4><div class="chip-col">${chips(f.basis || [])}</div></div>
     <div class="insp-block"><h4>Dependents · ${deps.length}</h4><div class="chip-col">${chips(deps.slice(0, 30))}</div></div>
     ${evals.length ? `<div class="insp-block"><h4>Rule evaluations · ${evals.length}</h4>${evals.map(e => `<div class="eval-row"><span class="badge ${EVAL_CLASS[e.state] || ""}">${esc(e.state)}</span><button class="link mono" data-rule-eval="${e.index}">${esc(e.rule)}</button><span class="muted">${esc(e.details?.reason || "")}</span></div>`).join("")}</div>` : ""}
     ${model.debugger ? `<div class="insp-block"><h4>Cited by debugger · ${events.length}</h4>${events.map(e => `<button class="event-link phase-${esc(e.phase)}" data-open-event="${e.index}"><span class="phase-dot"></span><span class="mono">#${String(e.index + 1).padStart(3, "0")}</span> ${esc(e.title)}<small>${esc(e.phase)}</small></button>`).join("") || `<p class="muted">Not cited yet.</p>`}</div>` : ""}
-    <details class="insp-block"><summary>Raw fact</summary><pre class="raw">${esc(pretty(f))}</pre></details>`;
+    <details class="insp-block"><summary>Raw fact</summary><pre class="raw">${esc(pretty(f))}</pre></details>`}`;
 }
 
 // Delegated handlers shared by every inspector: open steps/events in the trajectory, facts/entities in graphs.

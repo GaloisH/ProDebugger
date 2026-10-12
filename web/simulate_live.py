@@ -37,15 +37,16 @@ def main():
     parser.add_argument("source", type=Path, help="finished trajectory directory inside a run")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "artifacts" / "dsl_debugger")
     parser.add_argument("--delay", type=float, default=0.5, help="seconds between transcript messages")
+    parser.add_argument("--run-id", help="new run directory name (default: <timestamp>-replay)")
     args = parser.parse_args()
     source = args.source.resolve()
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-replay"
+    run_id = args.run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-replay"
     target = args.output_dir.resolve() / run_id / source.name
     target.mkdir(parents=True)
     manifest = json.loads((source.parent / "manifest.json").read_text(encoding="utf-8"))
     manifest.update(run_id=run_id, created_at=datetime.now(timezone.utc).isoformat(), trajectory_ids=[source.name])
     (target.parent / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"replaying into {target}")
+    print(f"replaying into {target}", flush=True)
 
     for name in STATIC_FIRST:
         if (source / name).is_file():

@@ -25,11 +25,11 @@ export function normaliseDsl(record) {
 const FID_KEYS = new Set(["fid", "fids", "issue_fids", "cites", "refs", "evidence_for", "evidence_against", "supporting_evidence", "counterevidence", "start_refs"]);
 const STEP_KEYS = new Set(["step", "issue_step", "event_step"]);
 
-// Original steps an event points at, found by walking ids in its arguments/results.
-export function stepRefs(value, factsById, limit = 4000) {
-  const steps = new Set();
+// Original steps and Facts an event points at, found by walking ids in its arguments/results.
+export function collectRefs(value, factsById, limit = 4000) {
+  const steps = new Set(), fids = new Set();
   let budget = limit;
-  const addFid = fid => { const f = factsById?.get(Number(fid)); if (f && f.t) steps.add(f.t); };
+  const addFid = fid => { const f = factsById?.get(Number(fid)); if (!f) return; fids.add(f.fid); if (f.t) steps.add(f.t); };
   (function walk(node, key, depth) {
     if (budget-- <= 0 || depth > 7 || node == null) return;
     if (Array.isArray(node)) { node.forEach(v => walk(v, key, depth + 1)); return; }
@@ -38,7 +38,8 @@ export function stepRefs(value, factsById, limit = 4000) {
     if (FID_KEYS.has(key)) addFid(node);
     else if (STEP_KEYS.has(key) && Number(node) > 0) steps.add(Number(node));
   })(value, "", 0);
-  return [...steps].sort((a, b) => a - b);
+  const sort = set => [...set].sort((a, b) => a - b);
+  return {steps: sort(steps), fids: sort(fids)};
 }
 
 function parseJson(text) {
@@ -61,7 +62,12 @@ export function buildEvents(raw, factsById) {
   const events = [];
   const used = new Set();
   let assistantIndex = 0;
-  const push = event => { event.index = events.length; event.steps = stepRefs(event.refsSource ?? event.data, factsById); delete event.refsSource; events.push(event); };
+  const push = event => {
+    event.index = events.length;
+    Object.assign(event, collectRefs(event.refsSource ?? event.data, factsById));
+    delete event.refsSource;
+    events.push(event);
+  };
 
   for (const row of raw.messages) {
     const m = row.message || row;

@@ -55,7 +55,10 @@ export class CaseStore extends Emitter {
         changed.add(key);
       }));
       await Promise.all(Object.entries(this.followers).map(async ([key, follower]) => {
-        if ((await follower.poll()).length || first) { this.raw[key] = follower.rows; changed.add(key); }
+        const size = files[RUN_JSONL[key]]?.size;
+        // Only existing files whose size moved; a shrink means rewrite and is handled by the follower.
+        const grew = size != null && size !== follower.offset && (await follower.poll()).length;
+        if (grew || first) { this.raw[key] = follower.rows; changed.add(key); }
       }));
       const newest = Math.max(0, ...Object.values(files).map(f => f.mtime));
       const result = files["result.json"]?.mtime;

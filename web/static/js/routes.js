@@ -9,8 +9,11 @@ export function parseRoute(hash = location.hash) {
   if (parts[0] === "case" && parts.length >= 4) {
     return {page: "case", ref: parts.slice(1, 4), tab: parts[4] || "trajectory", extra: parts.slice(5), query};
   }
-  return {page: "runs", query};
+  if (parts[0] === "runs") return {page: "runs", query};
+  return {page: "home", query};
 }
+
+export const runsHref = group => "#/runs" + (group ? "?group=" + encodeURIComponent(group) : "");
 
 export const chatHref = (group, trajectory) =>
   "#/chat" + (group ? "/" + [group, trajectory].map(s => encodeURIComponent(String(s))).join("/") : "");

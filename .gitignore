@@ -18,3 +18,4 @@ prodebugger/sessions/
 # Local-only tests and editor settings
 **/tests/
 .vscode/
+docs/

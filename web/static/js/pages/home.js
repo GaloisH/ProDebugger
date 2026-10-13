@@ -159,9 +159,9 @@ export function mountHome(root) {
 
       <section class="home-hero">
         <div class="hero-copy" data-reveal-group>
-          <div class="h-eyebrow">Agent failure diagnosis</div>
-          <h1 class="hero-title">Find why your agent <em>failed.</em></h1>
-          <p class="hero-sub">ProDebugger traces every agent failure back to its root cause — with evidence you can verify.</p>
+          <h1 class="hero-title">Pro<em>Debugger</em></h1>
+          <p class="hero-subtitle">Evidence-Grounded Root-Cause Debugging of LLM Agent Trajectories</p>
+          <p class="hero-sub">Find why your agent failed — every failure traced back to its root cause, with evidence you can verify.</p>
           <div class="hero-ctas">
             <a class="h-btn primary" href="#/chat">Try a live diagnosis ${ARROW}</a>
             <a class="h-btn" href="#/runs">Explore runs</a>

@@ -45,22 +45,58 @@ const STAGES = [
   ["submit", "SUBMIT", "Submit the verdict", "Compares all candidates against the full history and returns one root cause with step, module, fault type and fix — or abstains.", "Root cause or uncertain"],
 ];
 
-// Decorative: a trajectory that fails at the end, traced back to the step that caused it.
-function heroArt() {
-  const n = 11, x0 = 36, dx = 42, y = 150, cause = 3, fail = n - 1;
-  const nodes = Array.from({length: n}, (_, i) => {
-    const cls = i === fail ? "is-fail" : i === cause ? "is-cause" : i > cause ? "is-after" : "";
-    return `<circle class="ha-node ${cls}" cx="${x0 + i * dx}" cy="${y}" r="${i === cause || i === fail ? 9 : 6}"/>`;
-  }).join("");
-  const xc = x0 + cause * dx, xf = x0 + fail * dx;
-  return `<svg class="hero-art" viewBox="0 0 520 240" role="img" aria-label="A failing trajectory traced back to its root cause">
-    <line class="ha-line" x1="${x0}" y1="${y}" x2="${xf}" y2="${y}"/>
-    <path class="ha-trace" d="M${xf} ${y - 14} C ${xf - 60} 40, ${xc + 60} 40, ${xc} ${y - 14}"/>
-    ${nodes}
-    <g class="ha-tag" transform="translate(${xc - 52} ${y + 26})"><rect width="104" height="28" rx="14"/><text x="52" y="18.5">Root cause</text></g>
-    <g class="ha-tag is-fail" transform="translate(${xf - 44} ${y + 26})"><rect width="88" height="28" rx="14"/><text x="44" y="18.5">Failure</text></g>
-    <text class="ha-note" x="${(xc + xf) / 2}" y="44">traced back with evidence</text>
-  </svg>`;
+// Hero screenshots of the workbench (web/capture_shots.py); each opens the live view.
+const SHOTS = [
+  ["result", "Result", "One root cause, connected evidence", caseHref(DEMO_REF, "result")],
+  ["trajectory", "Trajectory", "Debugger decisions linked to agent steps", caseHref(DEMO_REF, "trajectory", "step", 4)],
+  ["graph", "DSL Graph", "World state compiled from the trajectory", caseHref(DEMO_REF, "graph", "entities")],
+  ["chat", "Chat", "Launch or replay a diagnosis", "#/chat"],
+];
+
+function heroShots() {
+  return `<div class="shot-frame">
+      <div class="shot-bar"><span class="demo-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="shot-caption"></span></div>
+      <div class="shot-stage">
+        ${SHOTS.map(([id, label, caption, href]) => `<a class="shot" href="${href}" data-shot="${id}">
+          <img src="./img/shots/${id}.webp" width="1280" height="800" alt="${label} view: ${caption}"></a>`).join("")}
+      </div>
+    </div>
+    <div class="shot-tabs" role="tablist" aria-label="Product views">
+      ${SHOTS.map(([id, label]) => `<button type="button" role="tab" data-shot-tab="${id}">${label}<span class="shot-progress"></span></button>`).join("")}
+    </div>`;
+}
+
+// Cross-fades the hero screenshots. The active tab's progress bar times each slide, so
+// hovering (which pauses the bar) also pauses the rotation; no autoplay for reduced motion.
+function rotateShots(box) {
+  const auto = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let index = 0;
+  function go(i) {
+    index = (i + SHOTS.length) % SHOTS.length;
+    const [id, label, caption] = SHOTS[index];
+    box.querySelectorAll("[data-shot]").forEach(a => {
+      const on = a.dataset.shot === id;
+      a.classList.toggle("is-on", on);
+      a.tabIndex = on ? 0 : -1;
+      a.setAttribute("aria-hidden", String(!on));
+    });
+    box.querySelectorAll("[data-shot-tab]").forEach(b => {
+      b.setAttribute("aria-selected", String(b.dataset.shotTab === id));
+      b.classList.remove("is-timing");
+    });
+    if (auto) {
+      const tab = box.querySelector(`[data-shot-tab="${id}"]`);
+      void tab.offsetWidth; // restart the bar's animation
+      tab.classList.add("is-timing");
+    }
+    box.querySelector(".shot-caption").textContent = `${label} · ${caption}`;
+  }
+  box.addEventListener("animationend", event => { if (event.target.classList.contains("shot-progress")) go(index + 1); });
+  box.querySelector(".shot-tabs").addEventListener("click", event => {
+    const b = event.target.closest("[data-shot-tab]");
+    if (b) go(SHOTS.findIndex(s => s[0] === b.dataset.shotTab));
+  });
+  go(0);
 }
 
 // Read-only workbench views for DEMO_REF inside a dark app window. Tab changes and
@@ -132,7 +168,8 @@ export function mountHome(root) {
             <a class="h-btn ghost" href="${caseHref(DEMO_REF, "result")}">See a case ${ARROW}</a>
           </div>
         </div>
-        <div class="hero-visual" data-reveal>${heroArt()}</div>
+        <div class="hero-visual" data-reveal>${heroShots()}</div>
+        <button type="button" class="hero-scroll" data-scroll="capabilities" aria-label="Scroll to the problem">${icon('<path d="m6 9 6 6 6-6"/>')}</button>
       </section>
 
       <section class="home-section" id="capabilities">
@@ -216,6 +253,7 @@ export function mountHome(root) {
       </dialog>
     </div>`;
 
+  rotateShots(root.querySelector(".hero-visual"));
   const dialog = root.querySelector(".diagram-dialog");
   const onClick = event => {
     const target = event.target.closest("[data-scroll]");

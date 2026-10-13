@@ -3,6 +3,7 @@
 import {CaseStore} from "../case/store.js";
 import {createCaseViews, TABS} from "../case/views.js";
 import {caseHref} from "../routes.js";
+import {domainIcon} from "./runs.js";
 import {esc} from "../util.js";
 
 // The showcase case: a fully correct reference run kept under artifacts/.
@@ -26,6 +27,15 @@ const CAPABILITIES = [
    "Follow each stage and every window review as the run writes it, or replay a finished diagnosis step by step."],
   ["See the structure", '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="8" cy="18" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.3 7 15.6 7M7 8.4l.7 7.1M10.4 17.8l5.1-.6M17.9 9.5l.1 5"/>',
    "Trajectories compile into fact, entity and goal graphs, shown side by side with the debugger's own decisions."],
+];
+
+const USE_CASES = [
+  ["alfworld", "Embodied & household agents", "ALFWorld",
+   "Agents that move through rooms, open receptacles and handle objects. ProDebugger checks each action against the goal and the world state the agent had already observed.",
+   ["Repeated or ineffective actions", "Plans that drift from the goal", "Misread observations"]],
+  ["webshop", "Web shopping agents", "WebShop",
+   "Agents that search, compare and buy products against a list of constraints. ProDebugger finds which requirement slipped, and the step where it did.",
+   ["Constraints lost during search", "Wrong option or attribute chosen", "Premature purchase"]],
 ];
 
 const STAGES = [
@@ -174,6 +184,20 @@ export function mountHome(root) {
             <a class="demo-open" href="${caseHref(DEMO_REF)}">Open in workbench ${ARROW}</a>
           </div>
           <div class="demo-body"><p class="demo-status">Loading the case…</p></div>
+        </div>
+      </section>
+
+      <section class="home-section alt" id="use-cases">
+        <div class="section-head">
+          <div class="h-eyebrow">Use cases</div>
+          <h2 class="section-title">Built for agents that act.</h2>
+          <p class="section-lede">ProDebugger reads the agent's own trajectory — observations, memory, reflection, plan and action — so it works wherever an agent takes steps in an environment.</p>
+        </div>
+        <div class="case-grid">
+          ${USE_CASES.map(([domain, title, bench, text, issues]) => `<article class="case-card">
+            <div class="case-top"><span class="case-icon">${domainIcon(domain)}</span><span class="case-bench">${bench}</span></div>
+            <h3>${title}</h3><p>${text}</p>
+            <ul class="case-issues">${issues.map(i => `<li>${i}</li>`).join("")}</ul></article>`).join("")}
         </div>
       </section>
 

@@ -7,45 +7,66 @@ import {esc, short} from "../util.js";
 const EFFORTS = ["none", "low", "high", "max"];
 const MAX_OPTIONS = 80;
 
+const svg = body => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
+const ICON = {
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  chevron: '<svg class="icon chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+  benchmark: svg('<path d="M4 6h16M4 12h16M4 18h10"/>'),
+  custom: svg('<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>'),
+  live: svg('<path d="M13 2 4 14h7l-1 8 9-12h-7Z"/>'),
+  replay: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'),
+  play: svg('<path d="M7 4.5v15l12-7.5Z" fill="currentColor"/>'),
+  stop: svg('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
+};
+const LABEL = {benchmark: "Benchmark", custom: "Custom task", online: "Live run", replay: "Replay"};
+const menuItem = (kind, value, icon, title, sub) => `<button class="menu-item" role="menuitemradio" data-pick="${kind}" data-val="${value}">${icon}<span><strong>${title}</strong><small>${sub}</small></span></button>`;
+
 export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
   const state = {tab: "benchmark", catalog: null, catalogError: null, query: "", open: false, cursor: 0,
-                 selected: null, mode: "online", source: "", launch: null, busy: false, error: null};
+                 selected: null, mode: "online", source: "", menu: null, launch: null, busy: false, error: null};
   root.innerHTML = `
     <div class="composer">
-      <div class="composer-row">
-        <div class="segmented" role="tablist" aria-label="Input">
-          <button class="btn" data-ctab="benchmark" aria-pressed="true">Benchmark</button>
-          <button class="btn" data-ctab="custom" aria-pressed="false">Custom task</button>
-        </div>
-        <span class="composer-status" id="cp-status" aria-live="polite"></span>
-      </div>
-      <div class="composer-pane" data-pane="benchmark">
-        <div class="picker">
-          <input id="cp-search" class="input" type="search" autocomplete="off" placeholder="Search benchmark trajectories by id, task or model…" aria-label="Benchmark trajectory" aria-expanded="false" aria-controls="cp-options">
-          <ul id="cp-options" class="picker-options" role="listbox" hidden></ul>
-        </div>
-        <div class="composer-row" id="cp-selected"></div>
-        <div class="composer-row">
-          <div class="segmented" role="group" aria-label="Run mode">
-            <button class="btn" data-mode="online" aria-pressed="true" title="Call the model through MAP → ROUTE → TRACE → SUBMIT">Live run</button>
-            <button class="btn" data-mode="replay" aria-pressed="false" title="Re-play a finished run of this trajectory at a readable pace, without model calls">Replay</button>
+      <div class="composer-box">
+        <div class="composer-pane" data-pane="benchmark">
+          <div class="picker">
+            <input id="cp-search" class="input" type="search" autocomplete="off" placeholder="Search benchmark trajectories by id, task or model…" aria-label="Benchmark trajectory" aria-expanded="false" aria-controls="cp-options">
+            <ul id="cp-options" class="picker-options" role="listbox" hidden></ul>
           </div>
-          <select id="cp-source" class="input" aria-label="Finished run to replay" hidden></select>
-          <details class="composer-adv" id="cp-adv"><summary>Advanced</summary>
-            <label>Model <input id="cp-model" class="input mono" type="text" spellcheck="false"></label>
-            <label>Reasoning <select id="cp-effort" class="input"><option value="">default</option>${EFFORTS.map(e => `<option>${e}</option>`).join("")}</select></label>
-            <label>Window <input id="cp-window" class="input" type="number" min="1" max="30" step="1"></label>
-          </details>
-          <span class="composer-fill"></span>
-          <button class="btn primary composer-run" id="cp-run">Run ▶</button>
+          <div class="composer-row" id="cp-selected"></div>
         </div>
-      </div>
-      <div class="composer-pane" data-pane="custom" hidden>
-        <textarea id="cp-task" class="input composer-task" rows="3" placeholder="Describe the task the agent should accomplish…"></textarea>
-        <div class="composer-row">
+        <div class="composer-pane" data-pane="custom" hidden>
+          <textarea id="cp-task" class="input composer-task" rows="3" placeholder="Describe the task the agent should accomplish…"></textarea>
           <span class="muted composer-note">Custom tasks are not wired to the debugger yet; the request is sent but the launcher declines it.</span>
-          <span class="composer-fill"></span>
-          <button class="btn primary composer-run" id="cp-custom-run">Run ▶</button>
+        </div>
+        <div class="composer-bar">
+          <div class="chip-wrap" id="cp-adv-wrap">
+            <button class="chip chip-icon" data-menu="adv" aria-haspopup="true" aria-expanded="false" title="Run settings" aria-label="Run settings">${ICON.plus}</button>
+            <div class="menu menu-adv" id="cp-menu-adv" hidden>
+              <label>Model <input id="cp-model" class="input mono" type="text" spellcheck="false"></label>
+              <label>Reasoning <select id="cp-effort" class="input"><option value="">default</option>${EFFORTS.map(e => `<option>${e}</option>`).join("")}</select></label>
+              <label>Window <input id="cp-window" class="input" type="number" min="1" max="30" step="1"></label>
+            </div>
+          </div>
+          <div class="chip-wrap">
+            <button class="chip" data-menu="tab" aria-haspopup="true" aria-expanded="false" title="Input"><span id="cp-tab-label"></span>${ICON.chevron}</button>
+            <div class="menu" id="cp-menu-tab" role="menu" hidden>
+              ${menuItem("tab", "benchmark", ICON.benchmark, "Benchmark", "Pick a trajectory from the dataset")}
+              ${menuItem("tab", "custom", ICON.custom, "Custom task", "Describe a task yourself")}
+            </div>
+          </div>
+          <div class="chip-wrap" id="cp-mode-wrap">
+            <button class="chip" data-menu="mode" aria-haspopup="true" aria-expanded="false" title="Run mode"><span id="cp-mode-label"></span>${ICON.chevron}</button>
+            <div class="menu" id="cp-menu-mode" role="menu" hidden>
+              ${menuItem("mode", "online", ICON.live, "Live run", "Call the model through MAP → ROUTE → TRACE → SUBMIT")}
+              ${menuItem("mode", "replay", ICON.replay, "Replay", "Re-play a finished run at a readable pace, no model calls")}
+            </div>
+          </div>
+          <div class="chip-wrap" id="cp-source-wrap">
+            <button class="chip" id="cp-source-chip" data-menu="source" aria-haspopup="true" aria-expanded="false" title="Finished run to replay"><span id="cp-source-label"></span>${ICON.chevron}</button>
+            <div class="menu menu-wide" id="cp-menu-source" role="menu" hidden></div>
+          </div>
+          <span class="composer-status" id="cp-status" aria-live="polite"></span>
+          <button class="composer-run" id="cp-run" aria-label="Run" title="Run"></button>
         </div>
       </div>
     </div>`;
@@ -101,36 +122,46 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
 
   // ---------- render ----------
   function render() {
-    root.querySelectorAll("[data-ctab]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ctab === state.tab)));
     root.querySelectorAll("[data-pane]").forEach(p => { p.hidden = p.dataset.pane !== state.tab; });
-    root.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode)));
+    const benchmark = state.tab === "benchmark", replay = state.mode === "replay";
+    $("cp-tab-label").textContent = LABEL[state.tab];
+    $("cp-mode-label").textContent = LABEL[state.mode];
+    $("cp-mode-wrap").hidden = !benchmark;
+    $("cp-adv-wrap").hidden = !benchmark || replay;
+    $("cp-source-wrap").hidden = !benchmark || !replay;
+    root.querySelectorAll("[data-pick]").forEach(b => {
+      const current = b.dataset.pick === "tab" ? state.tab : b.dataset.pick === "mode" ? state.mode : state.source;
+      b.setAttribute("aria-checked", String(b.dataset.val === current));
+    });
     const c = state.selected;
     $("cp-selected").innerHTML = c ? `<span class="picked"><span class="mono">${esc(c.trajectory_id)}</span><span class="badge">${esc(c.task_type)}</span><span class="badge">${esc(c.llm_model)}</span>
         ${c.task ? `<span class="picked-task">“${esc(short(c.task, 120))}”</span>` : ""}</span>`
       : `<span class="muted">No trajectory selected — ${state.catalog ? `${cases().filter(x => x.supported).length} of ${cases().length} are supported (ALFWorld, WebShop)` : "loading catalog…"}.</span>`;
     const sources = replaySources();
     if (!sources.some(s => s.group === state.source)) state.source = sources[0]?.group || "";
-    const source = $("cp-source");
-    source.hidden = state.mode !== "replay";
-    source.innerHTML = sources.length ? sources.map(s => `<option value="${esc(s.group)}" ${s.group === state.source ? "selected" : ""}>${esc(s.group)} · ${esc(s.status)}</option>`).join("")
-      : `<option value="">No finished run to replay</option>`;
-    source.disabled = !sources.length;
-    $("cp-adv").hidden = state.mode !== "online";
+    $("cp-source-label").textContent = state.source || "No finished run";
+    $("cp-source-chip").disabled = !sources.length;
+    $("cp-menu-source").innerHTML = sources.map(s => `<button class="menu-item" role="menuitemradio" data-pick="source" data-val="${esc(s.group)}" aria-checked="${s.group === state.source}"><span><strong class="mono">${esc(s.group)}</strong><small>${esc(s.status)} · finished run</small></span></button>`).join("");
     const defaults = state.launch?.defaults || {};
     $("cp-model").placeholder = defaults.model || "model";
     $("cp-window").placeholder = defaults.window_size ?? 5;
     $("cp-effort").options[0].textContent = `default (${defaults.reasoning_effort || "provider"})`;
+    for (const name of ["adv", "tab", "mode", "source"]) {
+      root.querySelector(`[data-menu="${name}"]`).setAttribute("aria-expanded", String(state.menu === name));
+      $("cp-menu-" + name).hidden = state.menu !== name;
+    }
     renderStatus();
   }
 
   function renderStatus() {
     const active = state.launch?.active;
     const running = Boolean(active);
-    const blocked = running || state.busy;
-    $("cp-run").textContent = running ? "Stop ■" : "Run ▶";
+    const label = running ? "Stop" : "Run";
+    $("cp-run").innerHTML = running ? ICON.stop : ICON.play;
+    $("cp-run").title = label;
+    $("cp-run").setAttribute("aria-label", label);
     $("cp-run").classList.toggle("is-stop", running);
-    $("cp-run").disabled = state.busy || (!running && (!state.selected || (state.mode === "replay" && !state.source)));
-    $("cp-custom-run").disabled = blocked;
+    $("cp-run").disabled = state.busy || (!running && (state.tab === "custom" ? false : !state.selected || (state.mode === "replay" && !state.source)));
     $("cp-status").innerHTML = state.error ? `<span class="badge bad" title="${esc(state.error)}">${esc(short(state.error, 90))}</span>`
       : running ? `<a class="badge live" href="${chatHref(active.run_id, active.trajectory_id)}"><span class="live-dot"></span>${active.mode === "replay" ? "Replaying" : "Running"} ${esc(active.trajectory_id)}</a>`
       : "";
@@ -157,6 +188,7 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
       poll();
       return;
     }
+    if (state.tab === "custom") { start({mode: "custom", task: $("cp-task").value}); return; }
     const c = state.selected;
     if (!c) return;
     const config = {model: $("cp-model").value.trim() || undefined, reasoning_effort: $("cp-effort").value || undefined,
@@ -165,16 +197,22 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
       : {mode: "online", trajectory_id: c.trajectory_id, config});
   }
 
+  function pick(kind, value) {
+    if (kind === "tab") { state.tab = value; state.error = null; }
+    else if (kind === "mode") state.mode = value;
+    else state.source = value;
+    state.menu = null;
+    render();
+  }
+
   root.addEventListener("click", event => {
     const b = event.target.closest("button, [data-tid]");
     if (!b) return;
-    if (b.dataset.ctab) { state.tab = b.dataset.ctab; state.error = null; render(); }
-    else if (b.dataset.mode) { state.mode = b.dataset.mode; render(); }
+    if (b.dataset.menu) { state.menu = state.menu === b.dataset.menu ? null : b.dataset.menu; render(); }
+    else if (b.dataset.pick) pick(b.dataset.pick, b.dataset.val);
     else if (b.dataset.tid) select(b.dataset.tid);
     else if (b.id === "cp-run") run();
-    else if (b.id === "cp-custom-run") start({mode: "custom", task: $("cp-task").value});
   });
-  $("cp-source").addEventListener("change", e => { state.source = e.target.value; renderStatus(); });
   const search = $("cp-search");
   search.addEventListener("focus", () => { state.open = true; renderOptions(); });
   search.addEventListener("input", () => { state.query = search.value.trim(); state.open = true; state.cursor = 0; renderOptions(); });
@@ -190,7 +228,11 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
       select(found[state.cursor].trajectory_id);
     } else if (event.key === "Escape") { state.open = false; renderOptions(); }
   });
-  const outside = event => { if (state.open && !event.target.closest(".picker")) { state.open = false; renderOptions(); } };
+  root.addEventListener("keydown", event => { if (event.key === "Escape" && state.menu) { state.menu = null; render(); } });
+  const outside = event => {
+    if (state.open && !event.target.closest(".picker")) { state.open = false; renderOptions(); }
+    if (state.menu && !event.target.closest(".chip-wrap")) { state.menu = null; render(); }
+  };
   document.addEventListener("pointerdown", outside);
 
   // ---------- polling ----------

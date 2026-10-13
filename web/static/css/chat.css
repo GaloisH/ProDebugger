@@ -113,25 +113,50 @@
 
 /* Composer */
 .chat-composer { border-top: 1px solid var(--line); background: var(--surface-2); }
-.composer { display: flex; flex-direction: column; gap: .55rem; max-width: 62rem; margin: 0 auto; padding: .8rem 1.4rem 1rem; }
-.composer-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; min-width: 0; }
-.composer-fill { flex: 1; }
-.composer-status { margin-left: auto; }
+.composer { max-width: 62rem; margin: 0 auto; padding: .8rem 1.4rem 1rem; }
+.composer-box { display: flex; flex-direction: column; gap: .35rem; padding: .6rem .7rem .5rem; border: 1px solid var(--line-strong); border-radius: 1rem; background: var(--surface-1); }
+.composer-box:focus-within { border-color: var(--accent-line); }
+.composer-pane { display: flex; flex-direction: column; gap: .35rem; }
+.composer-box .input { border-color: transparent; background: transparent; }
+.composer-box .input:focus { border-color: transparent; }
+.composer-box .menu .input { border-color: var(--line-strong); background: var(--surface-1); }
+.composer-box .menu .input:focus { border-color: var(--accent); }
+.composer-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; min-width: 0; padding: 0 .7rem; }
+.composer-task { width: 100%; resize: vertical; min-height: 4.5rem; line-height: 1.5; }
+.composer-note { padding: 0 .7rem; font-size: .82rem; }
+
+/* Option chips: compact dropdown buttons along the bottom of the composer */
+.composer-bar { display: flex; align-items: center; gap: .15rem; min-width: 0; }
+.chip-wrap { position: relative; }
+.chip-wrap[hidden] { display: none; }
+.chip { display: inline-flex; align-items: center; gap: .4rem; padding: .35rem .6rem; border: 0; border-radius: .6rem; background: transparent; color: var(--muted); font: inherit; font-size: .92rem; cursor: pointer; }
+.chip:hover:not(:disabled), .chip[aria-expanded="true"] { background: var(--panel-3); color: var(--text); }
+.chip:disabled { opacity: .5; cursor: default; }
+.chip-icon { padding: .35rem .5rem; }
+.chip-icon .icon { width: 1.2rem; height: 1.2rem; }
+.chip .chev { width: .8rem; height: .8rem; opacity: .7; }
+.menu { position: absolute; left: 0; bottom: calc(100% + .5rem); z-index: 40; display: flex; flex-direction: column; gap: .15rem; min-width: 17rem; padding: .35rem; border: 1px solid var(--line-strong); border-radius: .8rem; background: var(--surface-2); box-shadow: 0 -16px 40px -12px #000a; }
+.menu[hidden] { display: none; }
+.menu-wide { min-width: 20rem; max-height: 18rem; overflow-y: auto; }
+.menu-item { display: flex; align-items: flex-start; gap: .65rem; padding: .5rem .6rem; border: 0; border-radius: .55rem; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.menu-item:hover { background: var(--panel-3); }
+.menu-item .icon { margin-top: .15rem; color: var(--muted); }
+.menu-item span { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }
+.menu-item strong { font-weight: 600; font-size: .92rem; overflow-wrap: anywhere; }
+.menu-item small { color: var(--faint); font-size: .78rem; line-height: 1.35; }
+.menu-item[aria-checked="true"] { background: var(--active-bg); box-shadow: inset 3px 0 0 var(--accent); }
+.menu-item[aria-checked="true"] .icon { color: var(--accent); }
+.menu-adv { gap: .5rem; min-width: 15rem; padding: .7rem; }
+.menu-adv label { display: flex; align-items: center; justify-content: space-between; gap: .6rem; color: var(--muted); font-size: .85rem; }
+#cp-model { width: 10rem; } #cp-window { width: 4.5rem; }
+.composer-status { margin-left: auto; min-width: 0; padding-right: .5rem; }
 .composer-status a.badge { text-decoration: none; }
-.composer-run { min-width: 6.5rem; justify-content: center; font-weight: 600; }
+.composer-run { display: grid; place-items: center; flex: none; width: 2.2rem; height: 2.2rem; border: 1px solid var(--accent-line-2); border-radius: 50%; background: var(--accent-strong); color: var(--on-accent); cursor: pointer; }
+.composer-run:hover:not(:disabled) { background: var(--accent-strong-hover); }
+.composer-run:disabled { opacity: .45; cursor: default; }
+.composer-run .icon { width: 1rem; height: 1rem; }
 .composer-run.is-stop { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-ink); }
 .composer-run.is-stop:hover { background: var(--bad-hover); }
-.composer select.input { padding: .38rem .6rem; }
-#cp-source { max-width: 22rem; }
-.composer-adv { position: relative; font-size: .85rem; }
-.composer-adv > summary { padding: .35rem .65rem; border: 1px solid var(--line); border-radius: .5rem; color: var(--muted); cursor: pointer; list-style: none; }
-.composer-adv > summary::before { content: '⚙ '; }
-.composer-adv[open] > summary { border-color: var(--line-strong); color: var(--text); }
-.composer-adv[open] { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.composer-adv label { display: flex; align-items: center; gap: .35rem; color: var(--muted); }
-#cp-model { width: 11rem; } #cp-window { width: 4.5rem; }
-.composer-task { width: 100%; resize: vertical; min-height: 4.5rem; line-height: 1.5; }
-.composer-note { font-size: .82rem; }
 .picked { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; min-width: 0; font-size: .88rem; }
 .picked-task { color: var(--muted); font-style: italic; }
 
@@ -146,6 +171,17 @@
 .picker-steps { margin-left: auto; color: var(--faint); font-size: .75rem; font-family: var(--mono); }
 .picker-task { color: var(--muted); font-size: .8rem; }
 .picker-note { padding: .6rem; color: var(--faint); font-size: .84rem; }
+
+/* New conversation: welcome heading and composer sit in the middle of the pane */
+.chat-main.is-new { align-items: center; justify-content: center; padding-bottom: 6vh; }
+.chat-main.is-new .chat-head { display: none; }
+.chat-main.is-new .chat-scroll { flex: none; width: 100%; overflow: visible; }
+.chat-main.is-new .chat-stream { padding-bottom: 0; }
+.chat-main.is-new .chat-welcome { padding: 0 0 .6rem; text-align: center; }
+.chat-main.is-new .chat-composer { width: 100%; max-width: 46rem; border-top: 0; background: none; }
+.chat-main.is-new .composer { padding-top: 0; }
+.chat-main.is-new .picker-options { bottom: auto; top: calc(100% + .4rem); max-height: min(20rem, 36vh); box-shadow: 0 16px 40px -12px #000a; }
+.chat-main.is-new .menu { bottom: auto; top: calc(100% + .5rem); box-shadow: 0 16px 40px -12px #000a; }
 
 @media (max-width: 900px) {
   .chat-layout { grid-template-columns: minmax(0, 1fr); height: auto; }

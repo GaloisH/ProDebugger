@@ -1,45 +1,59 @@
-/* Charcoal palette shared with the AgentDebugger Explore workspace. */
+/* Abyss palette: cold near-black surfaces with an amber accent. */
 :root {
   color-scheme: dark;
-  --bg: #22262b;
-  --bg-deep: #1c2025;
-  --panel: #2c3138;
-  --panel-2: #303842;
-  --panel-3: #343c45;
-  --hover: #414c58;
-  --text: #e4e8ed;
-  --muted: #aeb8c2;
-  --faint: #8794a1;
-  --line: #454e5a;
-  --line-strong: #596675;
-  --accent: #a5cbcc;
-  --accent-strong: #587783;
-  --focus: #9bc5ca;
-  --warn-bg: #4c4025; --warn-line: #a78b43; --warn-ink: #f3d788;
-  --bad-bg: #50393e;  --bad-line: #e0a19d;  --bad-ink: #f4d9d7;
-  --ok-bg: #324336;   --ok-line: #668060;   --ok-ink: #c2ddba;
-  --info-bg: #2d3e54; --info-line: #587699; --info-ink: #c0d8f5;
-  --teal-bg: #2a4248; --teal-line: #54818a; --teal-ink: #bfe1e5;
-  --violet-bg: #3d354c; --violet-line: #7b6896; --violet-ink: #dacbed;
-  --live: #6fd0a0; --live-line: #4f9a7a; --live-bg: #24453a; --live-ink: #c4f0dc;
-  /* Surfaces, darkest to lightest (panel / panel-2 / panel-3 above continue the ramp) */
-  --inset: #1f2429; --surface-1: #262c33; --surface-2: #2a3037;
-  --bg-lift: #272d33; --line-soft: #3d4651;
-  --active-bg: #3b4d5d; --active-soft: #2f3d47; --active-ink: #d9e9f4;
-  --accent-line: #9bb7c6; --accent-line-2: #7c9ea8; --accent-strong-hover: #6a8d98;
-  --sel-bg: #486573; --sel-ink: #f0f3f5;
-  --text-2: #d2dbe3; --text-hi: #fff;
-  /* Chart parts: bars, cells, edges */
-  --cell: #3a434d; --bar: #4a5562; --bar-strong: #6c7a88;
-  --edge: #7d8b99; --edge-dim: #6b7a8a; --edge-hi: #c8d4de;
-  --amber: #eacb81; --route-hot: #e9a15b;
+  /* Surfaces, darkest to lightest */
+  --bg: #080b0f;
+  --bg-deep: #0c1015;
+  --bg-lift: #0a0e13;
+  --inset: #0a0e12;
+  --surface-1: #0d131a;
+  --surface-2: #11181f;
+  --panel: #131b23;
+  --panel-2: #17212b;
+  --panel-3: #1c2833;
+  --hover: #243240;
+  /* Text */
+  --text: #e6eaee;
+  --text-2: #c3ccd5;
+  --text-hi: #fff;
+  --muted: #98a5b3;
+  --faint: #7a8998;
+  /* Lines */
+  --line: #1e2933;
+  --line-strong: #2c3a47;
+  --line-soft: #18222b;
+  /* Accent (amber) */
+  --accent: #e0b867;
+  --accent-strong: #d9a94a;
+  --accent-strong-hover: #e3b95e;
+  --accent-line: #8a7240;
+  --accent-line-2: #d9a94a;
+  --on-accent: #1a1406;
+  --focus: #e0b867;
+  --active-bg: #262111;
+  --active-soft: #1d1a10;
+  --active-ink: #f0d9a0;
+  --sel-bg: #5a4a22;
+  --sel-ink: #fff;
+  /* Status */
+  --warn-bg: #33280c; --warn-line: #8a6e2a; --warn-ink: #efcf86;
+  --bad-bg: #35161b;  --bad-line: #c97b7b;  --bad-ink: #f2b4b4;
+  --ok-bg: #10281a;   --ok-line: #3d7a55;   --ok-ink: #8fdca6;
+  --info-bg: #102842; --info-line: #3d6a9a; --info-ink: #a2c9f0;
+  --teal-bg: #0f2a2c; --teal-line: #357a7e; --teal-ink: #a6dcdf;
+  --violet-bg: #231c38; --violet-line: #6a58a0; --violet-ink: #d3c4f0;
+  --live: #6fd0a0; --live-line: #3f9a74; --live-bg: #10281d; --live-ink: #b8f0d4;
   /* Tinted surfaces */
-  --bad-hi: #f4b7b2; --bad-deep: #4a3337; --bad-hover: #5e434a; --warn-deep: #3a3426;
-  --violet-hi: #c9b8f0;
-  --teal2-bg: #253b3a; --teal2-line: #4f7a6f; --teal2-ink: #c4e6dc;
-  --user-line: #5d7d88; --user-bg-1: #34505a; --user-bg-2: #2e3a44;
-  /* Debugger phases */
-  --map: #7fa7d9; --route: #b39ad6; --trace: #e0b867; --submit: #8cc49a;
+  --bad-hi: #f2a0a0; --bad-deep: #2a1115; --bad-hover: #4a1f26; --warn-deep: #2a2410;
+  --violet-hi: #bfaaf0;
+  --teal2-bg: #0f2b26; --teal2-line: #3a7a68; --teal2-ink: #b0e2d2;
+  --user-line: #8a7240; --user-bg-1: #2a2312; --user-bg-2: #1a1710;
+  /* Chart parts: bars, cells, edges */
+  --cell: #17212b; --bar: #243240; --bar-strong: #3a4a59;
+  --edge: #52626f; --edge-dim: #3f4d59; --edge-hi: #b6c3cf;
+  --amber: #f0cf86; --route-hot: #e9854f;
+  /* Debugger phases (trace is terracotta so it stays apart from the amber accent) */
+  --map: #7fa7d9; --route: #b39ad6; --trace: #e08a62; --submit: #8cc49a;
   --mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace;
   --radius: .9rem;
   --header-h: 3.75rem;
@@ -92,7 +106,7 @@ code, pre, .mono { font-family: var(--mono); }
 .btn { display: inline-flex; align-items: center; gap: .45rem; border: 1px solid var(--line-strong); border-radius: .5rem; padding: .45rem .8rem; background: var(--panel-3); cursor: pointer; font-size: .9rem; text-decoration: none; color: var(--text); }
 .btn:hover { background: var(--hover); }
 .btn:disabled { opacity: .5; cursor: default; }
-.btn.primary { background: var(--accent-strong); border-color: var(--accent-line-2); }
+.btn.primary { background: var(--accent-strong); border-color: var(--accent-line-2); color: var(--on-accent); font-weight: 600; }
 .btn.primary:hover { background: var(--accent-strong-hover); }
 .btn[aria-pressed="true"] { background: var(--active-bg); border-color: var(--accent-line); color: var(--active-ink); }
 .input { border: 1px solid var(--line-strong); border-radius: .5rem; padding: .45rem .7rem; background: var(--surface-1); min-width: 0; }

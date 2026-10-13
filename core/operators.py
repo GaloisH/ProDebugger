@@ -9,7 +9,7 @@ and countable. Nothing here decides where to go next; that is the caller's job,
 which is why the search is a subgraph rather than a path or a binary tree.
 """
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Set
 import collections
 
 from record import Record, Fact, Entity

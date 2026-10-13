@@ -44,8 +44,8 @@ export function createView(root, ctx) {
       toolbar: box.querySelector(".graph-toolbar"), legend: box.querySelector(".graph-legend"), inspector,
       stage: box.querySelector(".graph-stage"),
       canvas: null,
-      // Keeps the URL in sync so selections are shareable and survive reloads.
-      select: id => history.replaceState(null, "", `#/case/${ctx.ref.map(encodeURIComponent).join("/")}/graph/${def.id}${id != null ? "/" + encodeURIComponent(id) : ""}`),
+      // Keeps the URL in sync so selections are shareable and survive reloads (not when embedded).
+      select: id => ctx.embedded || history.replaceState(null, "", `#/case/${ctx.ref.map(encodeURIComponent).join("/")}/graph/${def.id}${id != null ? "/" + encodeURIComponent(id) : ""}`),
       goto: (sub, id) => ctx.navigate("graph", sub, id),
     };
     const sub = module.createSubview(api, createCanvas);

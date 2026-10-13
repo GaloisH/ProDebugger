@@ -14,7 +14,7 @@ ProDebugger/
     run_compile.py      compile one trajectory / the fixed 20-ID sample
     prompts/            map.md, route.md, trace.md, submit.md
     sessions/abstract_rules_n20/   20 compiled trajectories used as saved inputs
-  web/                  workbench: read-only stdlib server + static frontend (no build)
+  web/                  workbench: stdlib server + static frontend (no build), chat launcher
   artifacts/dsl_debugger/          run outputs (created on first run; git-ignored)
 ```
 
@@ -174,14 +174,24 @@ and preserves rejected restores in resume_error.json.
 Runs and compiled sessions are browsed in the web workbench. It is isolated from the
 debugger: `web/server.py` uses only the Python standard library, imports nothing from
 `prodebugger/` or `core/`, and serves the files above read-only; the frontend is plain
-HTML/CSS/ES modules with no build step.
+HTML/CSS/ES modules with no build step. Its only writes are runs started from the Chat
+page, which `web/launcher.py` runs as subprocesses.
 
 ```powershell
 python web/server.py            # http://127.0.0.1:8770
 ```
 
-Options: `--port`, `--host` (default 127.0.0.1), `--runs-dir`, `--sessions-dir`.
-The page lists every run under `artifacts/dsl_debugger/` and every compiled session
+Options: `--port`, `--host` (default 127.0.0.1), `--runs-dir`, `--sessions-dir`,
+`--data-dir` (benchmark parquet, default `core/data`), `--python` (interpreter for
+launched runs, default `.venv` when present).
+The home page (`#/`) is a light product overview: the problem, capabilities, the four
+stages (the full diagram is `web/static/img/methodology.png`), use cases, and the real
+case views for `GPT-4o_018` from
+`artifacts/dsl_debugger/dsl-route-causal-timeline-high-unlimited-alf18-20261007-live`
+embedded read-only (a placeholder appears when that run is absent).
+Its hero rotates screenshots in `web/static/img/shots/`; refresh them after UI changes with
+`python web/capture_shots.py` (headless Chrome or Edge plus Pillow, server running).
+The Runs page (`#/runs`) lists every run under `artifacts/dsl_debugger/` and every compiled session
 under `prodebugger/sessions/`. A run that is still being written is marked LIVE and
 followed as it grows (JSON files refetched on change, JSONL logs read from their last
 byte offset), so it can be opened while `run_experiment` is working.
@@ -201,7 +211,20 @@ Each case has three tabs:
 - **Result**: a diagnosed run shows the root cause with its step chain and evidence;
   any other status shows the status, reasoning, uncertainty and window coverage.
 
-URLs are shareable (`#/case/<runs|sessions>/<group>/<trajectory>/<tab>/...`).
+**Chat** (`#/chat`) reads every run as a conversation: the request, then one message per
+phase (MAP requirements, ROUTE anchors, one per TRACE window, the SUBMIT verdict) with an
+expandable activity log, and, once a run has a result, a Reference card comparing step,
+module and error type with the benchmark label. The composer searches the parquet catalog
+(read by `web/catalog.py` in a subprocess; gaia rows are listed but unsupported) and
+starts either a **Live run** (`run_experiment` with the newest online run's config, model /
+reasoning / window overridable) or a **Replay** of a finished run of the same trajectory.
+One run at a time; Run becomes Stop while it is active. Launched runs carry `chat.json`
+(mode, config, exit state, log tail). Custom tasks are accepted by the form but not
+implemented by the launcher yet. Reference labels are served only to the page and are
+never passed to the debugger.
+
+URLs are shareable (`#/runs?group=<group>`, `#/case/<runs|sessions>/<group>/<trajectory>/<tab>/...`,
+`#/chat/<group>/<trajectory>`).
 `python web/simulate_live.py <run>/<trajectory>` replays a finished run into a new run
 directory at a slow pace, to try the live view without model calls.
 

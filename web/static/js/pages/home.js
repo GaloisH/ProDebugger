@@ -122,7 +122,7 @@ export function mountHome(root) {
       </header>
 
       <section class="home-hero">
-        <div class="hero-copy">
+        <div class="hero-copy" data-reveal-group>
           <div class="h-eyebrow">Agent failure diagnosis</div>
           <h1 class="hero-title">Find why your agent <em>failed.</em></h1>
           <p class="hero-sub">ProDebugger traces every agent failure back to its root cause — with evidence you can verify.</p>
@@ -132,49 +132,49 @@ export function mountHome(root) {
             <a class="h-btn ghost" href="${caseHref(DEMO_REF, "result")}">See a case ${ARROW}</a>
           </div>
         </div>
-        <div class="hero-visual">${heroArt()}</div>
+        <div class="hero-visual" data-reveal>${heroArt()}</div>
       </section>
 
       <section class="home-section" id="capabilities">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <div class="h-eyebrow">The problem</div>
           <h2 class="section-title">Agent failures surface far from their cause.</h2>
           <p class="section-lede">When an agent fails at the last step, the decision that doomed it usually happened much earlier. Finding it by hand is slow, and an unexplained verdict is hard to act on.</p>
         </div>
-        <div class="pain-row">
+        <div class="pain-row" data-reveal-group>
           ${PAINS.map(([title, text]) => `<div class="pain"><h3>${title}</h3><p>${text}</p></div>`).join("")}
         </div>
-        <h3 class="solution-title"><span class="h-eyebrow">The solution</span>ProDebugger turns a failed run into a verified diagnosis.</h3>
-        <div class="cap-grid">
+        <h3 class="solution-title" data-reveal><span class="h-eyebrow">The solution</span>ProDebugger turns a failed run into a verified diagnosis.</h3>
+        <div class="cap-grid" data-reveal-group>
           ${CAPABILITIES.map(([title, paths, text]) => `<article class="cap-card">
             <span class="cap-icon">${icon(paths)}</span><h3>${title}</h3><p>${text}</p></article>`).join("")}
         </div>
       </section>
 
       <section class="home-section alt" id="how">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <div class="h-eyebrow">How it works</div>
           <h2 class="section-title">Four stages, one verified verdict.</h2>
           <p class="section-lede">Each stage runs in its own isolated model context and hands a structured result to the next, so every conclusion can be traced back to the source.</p>
         </div>
-        <ol class="stage-row">
+        <ol class="stage-row" data-reveal-group>
           ${STAGES.map(([id, name, title, text, output], i) => `<li class="stage stage-${id}">
             <div class="stage-top"><span class="stage-num">0${i + 1}</span><span class="stage-name">${name}</span></div>
             <h3>${title}</h3><p>${text}</p>
             <div class="stage-out"><span>Output</span>${output}</div></li>`).join("")}
         </ol>
-        <div class="how-more">
+        <div class="how-more" data-reveal>
           <button type="button" class="h-btn" data-open-diagram>${icon('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>')}View the technical diagram</button>
         </div>
       </section>
 
       <section class="home-section" id="demo">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <div class="h-eyebrow">Product</div>
           <h2 class="section-title">See it on a real case.</h2>
           <p class="section-lede">A household agent failed its task. Explore the diagnosis the way an engineer would: the trajectory beside the debugger's decisions, the compiled facts, and the final verdict.</p>
         </div>
-        <div class="demo-window">
+        <div class="demo-window" data-reveal>
           <div class="demo-bar">
             <span class="demo-dots" aria-hidden="true"><i></i><i></i><i></i></span>
             <div class="demo-tabs" role="tablist" aria-label="Demo views">
@@ -188,12 +188,12 @@ export function mountHome(root) {
       </section>
 
       <section class="home-section alt" id="use-cases">
-        <div class="section-head">
+        <div class="section-head" data-reveal>
           <div class="h-eyebrow">Use cases</div>
           <h2 class="section-title">Built for agents that act.</h2>
           <p class="section-lede">ProDebugger reads the agent's own trajectory — observations, memory, reflection, plan and action — so it works wherever an agent takes steps in an environment.</p>
         </div>
-        <div class="case-grid">
+        <div class="case-grid" data-reveal-group>
           ${USE_CASES.map(([domain, title, bench, text, issues]) => `<article class="case-card">
             <div class="case-top"><span class="case-icon">${domainIcon(domain)}</span><span class="case-bench">${bench}</span></div>
             <h3>${title}</h3><p>${text}</p>
@@ -225,6 +225,18 @@ export function mountHome(root) {
     if (event.target.closest("[data-close-diagram]") || event.target === dialog) dialog.close();
   };
   root.addEventListener("click", onClick);
+  // Blocks fade and rise into view once; children of a group follow one another.
+  root.querySelectorAll("[data-reveal-group] > *").forEach(el => {
+    el.dataset.reveal = "";
+    el.style.setProperty("--i", [...el.parentElement.children].indexOf(el));
+  });
+  const reveal = new IntersectionObserver(entries => entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    entry.target.classList.add("is-in");
+    reveal.unobserve(entry.target);
+  }), {threshold: 0.15, rootMargin: "0px 0px -40px 0px"});
+  root.querySelectorAll("[data-reveal]").forEach(el => reveal.observe(el));
+
   // The demo loads a whole case, so it starts only when its section comes near.
   let demo = null;
   const demoSection = root.querySelector("#demo");
@@ -236,5 +248,5 @@ export function mountHome(root) {
   nearDemo.observe(demoSection);
 
   window.scrollTo(0, 0);
-  return {unmount() { root.removeEventListener("click", onClick); nearDemo.disconnect(); demo?.destroy(); }};
+  return {unmount() { root.removeEventListener("click", onClick); nearDemo.disconnect(); reveal.disconnect(); demo?.destroy(); }};
 }

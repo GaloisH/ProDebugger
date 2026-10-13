@@ -1,19 +1,12 @@
 // Case workbench: summary header, phase strip and lazily mounted views.
 import {CaseStore} from "../case/store.js";
 import {PHASES} from "../case/model.js";
+import {createCaseViews, TABS} from "../case/views.js";
 import {caseHref} from "../routes.js";
 import {esc, number, statusBadge} from "../util.js";
 
-const TABS = [
-  {id: "trajectory", label: "Trajectory", load: () => import("../views/trajectory.js")},
-  {id: "graph", label: "DSL Graph", load: () => import("../views/graph.js")},
-  {id: "result", label: "Result", load: () => import("../views/result.js"), runOnly: true},
-];
-
 export function mountWorkbench(root, route) {
   const store = new CaseStore(route.ref);
-  const views = new Map();
-  let active = null;
   let currentRoute = route;
 
   root.innerHTML = `
@@ -71,41 +64,25 @@ export function mountWorkbench(root, route) {
       : `<span class="sync-idle">Snapshot · ${new Date().toLocaleTimeString("en-GB")}</span>`;
   }
 
-  async function show(routeNow) {
+  const views = createCaseViews($("wb-views"), {store, ref: route.ref,
+    navigate: (t, ...extra) => { location.hash = caseHref(route.ref, t, ...extra); }});
+
+  function show(routeNow) {
     currentRoute = routeNow;
-    let tab = TABS.find(t => t.id === routeNow.tab) || TABS[0];
-    if (tab.runOnly && store.kind !== "run") tab = TABS[0];
+    const tab = views.tabFor(routeNow.tab);
     root.querySelectorAll(".wb-tab").forEach(a => {
       const on = a.dataset.tab === tab.id;
       a.setAttribute("aria-selected", String(on));
       a.classList.toggle("is-active", on);
-      const t = TABS.find(x => x.id === a.dataset.tab);
-      a.hidden = Boolean(t.runOnly && store.kind !== "run");
+      a.hidden = Boolean(TABS.find(x => x.id === a.dataset.tab).runOnly && store.kind !== "run");
     });
-    if (!pending.has(tab.id)) pending.set(tab.id, mountView(tab));
-    await pending.get(tab.id);
-    if (currentRoute !== routeNow) return; // a newer navigation won
-    active = tab.id;
-    views.forEach((v, id) => { v.container.hidden = id !== active; });
-    views.get(active).view.show?.(routeNow);
-  }
-
-  const pending = new Map();
-  async function mountView(tab) {
-    const container = document.createElement("section");
-    container.className = `wb-view view-${tab.id}`;
-    container.hidden = true;
-    $("wb-views").append(container);
-    const module = await tab.load();
-    const view = module.createView(container, {store, ref: route.ref, navigate: (t, ...extra) => { location.hash = caseHref(route.ref, t, ...extra); }});
-    views.set(tab.id, {container, view});
-    if (store.model) view.update(store.model, {changed: new Set(["all"]), first: true});
+    return views.show(routeNow);
   }
 
   store.on("change", ({changed, first}) => {
     renderHeader(store.model);
     renderSync();
-    views.forEach(v => v.view.update(store.model, {changed, first}));
+    views.update(store.model, {changed, first});
     if (first) show(currentRoute);
   });
   store.start().catch(error => {
@@ -114,6 +91,6 @@ export function mountWorkbench(root, route) {
 
   return {
     update: show,
-    unmount() { store.stop(); views.forEach(v => v.view.destroy?.()); },
+    unmount() { store.stop(); views.destroy(); },
   };
 }

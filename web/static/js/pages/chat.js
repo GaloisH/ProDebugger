@@ -74,10 +74,8 @@ export function mountChat(root, route) {
 
   function renderHead() {
     const ref = state.route.ref;
-    if (!ref) {
-      $("chat-head").innerHTML = `<div><div class="eyebrow">New conversation</div><h1 class="chat-title">Debug an agent trajectory</h1></div>`;
-      return;
-    }
+    root.querySelector(".chat-main").classList.toggle("is-new", !ref); // new conversation: welcome + composer centered
+    if (!ref) { $("chat-head").innerHTML = ""; return; }
     const t = conversations().find(x => x.group === ref[1] && x.id === ref[2]);
     $("chat-head").innerHTML = `<div class="chat-head-text"><div class="eyebrow">${esc(ref[1])}</div>
         <h1 class="chat-title mono">${esc(ref[2])}</h1></div>
@@ -147,8 +145,7 @@ export function mountChat(root, route) {
   function renderWelcome() {
     $("chat-stream").innerHTML = `<div class="chat-welcome">
       <div class="eyebrow">ProDebugger chat</div>
-      <h2>Pick a benchmark trajectory and watch the debugger work.</h2>
-      <p class="lede">MAP reads the unmet requirements, ROUTE ranks issue anchors, TRACE judges each window against the raw text, and SUBMIT selects a root cause — every phase arrives here as a message. Any earlier run on the left can be read the same way.</p>
+      <h2>Watch the debugger work.</h2>
     </div>`;
   }
 

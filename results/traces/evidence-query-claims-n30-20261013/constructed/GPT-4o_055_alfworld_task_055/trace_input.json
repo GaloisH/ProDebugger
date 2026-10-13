@@ -1,0 +1,478 @@
+{
+  "schema": "evidence-query-step/v2-elements",
+  "task": "put a clean bowl in shelf.",
+  "manager_assignment": {
+    "agent_id": "investigate_origin_and_recovery",
+    "anchor_case_id": "authored_route",
+    "route_case_ids": [
+      "authored_route"
+    ],
+    "question": "Does the step-6 completion premise originate in an earlier unsupported clean-bowl confirmation, or was cleanliness established independently? Compare memory, reflection and placement feedback before selecting an origin.",
+    "search_targets": [
+      "Earlier clean-bowl completion claims across memory/reflection/plan",
+      "Bowl 1 source observations and recorded state",
+      "Placement and examination actions",
+      "Any earlier cleanliness support or later correction"
+    ],
+    "evidence": [
+      {
+        "source_id": "source:6:plan",
+        "step": 6,
+        "module": "plan",
+        "source_kind": "original_agent_module",
+        "quote": "Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task."
+      }
+    ],
+    "criteria": {
+      "supported": "An earlier reflection explicitly asserts that the full clean-bowl goal is complete, while the cited feedback only confirms placement.",
+      "refuted": "A source observation establishes that this bowl is clean before the assertion, or the claimed completion is explicitly confined to a subgoal.",
+      "unknown": "World cleanliness or the unique within-step origin is not determined by the available record."
+    },
+    "interpretation": "An investigation plan, not findings or a search whitelist. Expand to relevant peer modules at the same step, independent actions/feedback, earlier causes and counterevidence within your one SQL query. You may identify a different supported step/module or mechanism. Explain how it supports, refutes or leaves the original premise unknown; do not force a manager rule to fit."
+  },
+  "candidate": {
+    "candidate_id": "investigate_origin_and_recovery",
+    "issue_step": 6,
+    "issue_fids": [
+      97
+    ],
+    "goal_links": [
+      "req:bowl_in_shelf"
+    ],
+    "hypothesis": "Does the step-6 completion premise originate in an earlier unsupported clean-bowl confirmation, or was cleanliness established independently? Compare memory, reflection and placement feedback before selecting an origin."
+  },
+  "facts": [
+    {
+      "fid": 97,
+      "rel": "planned",
+      "args": [
+        {
+          "kind": "agent",
+          "index": "self"
+        }
+      ],
+      "value": "stated",
+      "slot": "plan",
+      "side": "mind",
+      "t": 6,
+      "situation": 72,
+      "basis": [
+        91,
+        92,
+        93,
+        94,
+        95,
+        96
+      ],
+      "purpose": {
+        "kind": "int",
+        "index": "i6"
+      },
+      "span": "Plan the next step based on memory and reflection\n- Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task.\n- This plan is helpful to ensure that the task is completed as expected.\n- I expect this action to confirm that the bowl is indeed on the shelf as intended.",
+      "value_type": "string",
+      "source_kind": "agent_text",
+      "parse_status": "verbatim_not_verified_truth",
+      "assertion_time": null,
+      "claim_scope": null,
+      "claim_polarity": null
+    }
+  ],
+  "entities": [
+    "agent:self"
+  ],
+  "requirement_ids": [
+    "req:bowl_in_shelf"
+  ],
+  "agent_statements": {
+    "schema": "agent-statements/v1",
+    "cards": [
+      {
+        "source_id": "claim:6:memory:75:194",
+        "step": 6,
+        "module": "memory",
+        "start": 75,
+        "end": 194,
+        "quote": "The most relevant memory for this step is Observation 5 and Action 4, where I successfully moved the bowl 1 to shelf 1.",
+        "topics": [
+          "result_assessment"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "this"
+        ],
+        "event_references": [
+          "Observation 5"
+        ],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The most relevant memory for this step is Observation 5 and Action 4, where I successfully moved the bowl 1 to shelf 1.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:memory:195:285",
+        "step": 6,
+        "module": "memory",
+        "start": 195,
+        "end": 285,
+        "quote": "This indicates that I have likely completed the task of putting a clean bowl on the shelf.",
+        "topics": [
+          "completion",
+          "hypothesis",
+          "state"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "This",
+          "that",
+          "likely"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "This indicates that I have likely completed the task of putting a clean bowl on the shelf.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:plan:52:178",
+        "step": 6,
+        "module": "plan",
+        "start": 52,
+        "end": 178,
+        "quote": "Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task.",
+        "topics": [
+          "completion",
+          "verification",
+          "state",
+          "decision_basis"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "that"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:plan:181:251",
+        "step": 6,
+        "module": "plan",
+        "start": 181,
+        "end": 251,
+        "quote": "This plan is helpful to ensure that the task is completed as expected.",
+        "topics": [
+          "completion",
+          "expected_gain"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "This",
+          "that"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "This plan is helpful to ensure that the task is completed as expected.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:plan:254:335",
+        "step": 6,
+        "module": "plan",
+        "start": 254,
+        "end": 335,
+        "quote": "I expect this action to confirm that the bowl is indeed on the shelf as intended.",
+        "topics": [
+          "verification",
+          "expected_gain",
+          "state"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "this",
+          "that"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "I expect this action to confirm that the bowl is indeed on the shelf as intended.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:reflection:75:120",
+        "step": 6,
+        "module": "reflection",
+        "start": 75,
+        "end": 120,
+        "quote": "Yes, I have placed a clean bowl on the shelf.",
+        "topics": [
+          "state"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "Yes, I have placed a clean bowl on the shelf.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:reflection:182:245",
+        "step": 6,
+        "module": "reflection",
+        "start": 182,
+        "end": 245,
+        "quote": "The last action of moving the bowl to the shelf was successful.",
+        "topics": [],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The last action of moving the bowl to the shelf was successful.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:reflection:291:334",
+        "step": 6,
+        "module": "reflection",
+        "start": 291,
+        "end": 334,
+        "quote": "Yes, the task goal appears to be completed.",
+        "topics": [
+          "completion"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "appears"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "Yes, the task goal appears to be completed.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:6:reflection:469:580",
+        "step": 6,
+        "module": "reflection",
+        "start": 469,
+        "end": 580,
+        "quote": "Since the action was successful and the task seems complete, no further actions are needed to achieve the goal.",
+        "topics": [
+          "completion",
+          "decision_basis"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "seems",
+          "no"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "Since the action was successful and the task seems complete, no further actions are needed to achieve the goal.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      }
+    ],
+    "scaffold_clauses": 7,
+    "instruction": "Statements describe what the agent said, not verified world state. Topic tags are lexical discovery hints, not extracted claims. Reviewed text is not a guarantee of semantic completeness. Missing extraction means unknown. Distinguish available/selected, purpose/achieved outcome, tentative/asserted, and the scope of negation. Compare premises with separately supplied observations; shared step, basis edges and earlier occurrence do not prove support or causation."
+  },
+  "query_context": {
+    "task_type": "alfworld",
+    "step_range": [
+      1,
+      30
+    ],
+    "default_scope": "full_trajectory_including_steps_before_anchor",
+    "relation_names": [
+      "admissibility",
+      "asked",
+      "assessed",
+      "at",
+      "clean",
+      "close",
+      "concluded",
+      "cool",
+      "effect",
+      "examined_with",
+      "go",
+      "has",
+      "heat",
+      "holding",
+      "hypothesis",
+      "in",
+      "inventory_empty",
+      "look",
+      "memory_unparsed",
+      "open",
+      "open_action",
+      "planned",
+      "put",
+      "recalled_nothing",
+      "recalled_summary",
+      "satisfied",
+      "slice",
+      "take",
+      "use",
+      "visible",
+      "visible_empty"
+    ],
+    "observed_action_relations": [
+      "go",
+      "look",
+      "put",
+      "take"
+    ],
+    "bounds_instruction": "Use these original step bounds. The anchor is a lead, not a lower bound. Omit optional bounds for a full-range element search; task-level Facts may have step 0."
+  },
+  "source": {
+    "step": 6,
+    "observation": "On the shelf 1, you see a bowl 1.",
+    "modules": {
+      "memory": "Look at the past observations and actions from our conversation history.\n- The most relevant memory for this step is Observation 5 and Action 4, where I successfully moved the bowl 1 to shelf 1. This indicates that I have likely completed the task of putting a clean bowl on the shelf.",
+      "reflection": "Reflect on the last action and its outcome\n- Did I complete the task goal? Yes, I have placed a clean bowl on the shelf.\n- Was the last action successful or did it encounter issues? The last action of moving the bowl to the shelf was successful.\n- Am I making progress toward the task goal? Yes, the task goal appears to be completed.\n- If the action did not go as expected and did not result in progress, provide constructive feedback to guide the next planning step. Since the action was successful and the task seems complete, no further actions are needed to achieve the goal.",
+      "plan": "Plan the next step based on memory and reflection\n- Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task.\n- This plan is helpful to ensure that the task is completed as expected.\n- I expect this action to confirm that the bowl is indeed on the shelf as intended.",
+      "action": "examine shelf 1"
+    },
+    "admissible": [
+      "examine shelf 1",
+      "go to cabinet 1",
+      "go to cabinet 2",
+      "go to cabinet 3",
+      "go to cabinet 4",
+      "go to cabinet 5",
+      "go to cabinet 6",
+      "go to cabinet 7",
+      "go to cabinet 8",
+      "go to cabinet 9",
+      "go to coffeemachine 1",
+      "go to countertop 1",
+      "go to countertop 2",
+      "go to countertop 3",
+      "go to drawer 1",
+      "go to drawer 2",
+      "go to drawer 3",
+      "go to drawer 4",
+      "go to drawer 5",
+      "go to drawer 6",
+      "go to drawer 7",
+      "go to drawer 8",
+      "go to drawer 9",
+      "go to fridge 1",
+      "go to garbagecan 1",
+      "go to microwave 1",
+      "go to shelf 2",
+      "go to shelf 3",
+      "go to sinkbasin 1",
+      "go to stoveburner 1",
+      "go to stoveburner 2",
+      "go to stoveburner 3",
+      "go to stoveburner 4",
+      "go to toaster 1",
+      "inventory",
+      "look",
+      "take bowl 1 from shelf 1"
+    ],
+    "next_observation": "On the shelf 1, you see a bowl 1."
+  },
+  "rule_evidence": [],
+  "parse_audits": [
+    {
+      "source_id": "task:0",
+      "step": 0,
+      "kind": "task",
+      "status": "template",
+      "template": "complete-domain-templates/v1/alfworld/task",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": []
+    },
+    {
+      "source_id": "observation:6",
+      "step": 6,
+      "kind": "observation",
+      "status": "template",
+      "template": "complete-domain-templates/v1/alfworld/observation",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": []
+    }
+  ],
+  "evidence_quality": {
+    "through_step": 6,
+    "absence_means": "unknown_not_false",
+    "parse_gaps": [],
+    "unmodeled_goals": [],
+    "observation_coverage": "Template/backoff admission is extraction coverage, not complete world observability or semantic truth.",
+    "agent_module_coverage": "Memory/plan/action extraction is selective and heuristic. A missing typed claim or unmentioned constraint is not an omission by the agent.",
+    "derived_checks": "env/chk facts are computed from attempted actions and parsed state, not independent environment feedback.",
+    "false_positive_check": "Compare original source with the extracted proposition; test ambiguity, history, negation and legitimate exploration/retry. Missing facts, unmet checks or limited retrieval alone cannot support error."
+  },
+  "instruction": "ROUTE hypothesis is a lead, not proof. Only the cited anchor source is supplied. Manager-assigned verbatim excerpts may supplement it. The assignment is a starting point, not a search whitelist. Compare the supplied anchor modules; compose your one SQL query to collect relevant claims in other modules at discovered steps, independent actions/feedback, and evidence for a competing cause. You may select a better-supported step/module beyond the assigned targets. Full steps/modules and RAW_STEP are forbidden. Verify parsed assertions with targeted source excerpts; absence is unknown."
+}

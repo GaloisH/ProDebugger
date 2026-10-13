@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_id": "authored_route",
+    "issue_step": 9,
+    "issue_fids": [
+      335
+    ],
+    "goal_links": [
+      "req:color",
+      "req:description",
+      "req:price",
+      "req:size"
+    ],
+    "hypothesis": "Does the purchase decision override an explicit need to verify product details, or were all required attributes already independently established? Compare earlier product claims, exact option clicks and same-step memory/reflection/plan."
+  }
+]

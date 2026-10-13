@@ -7,6 +7,10 @@ See [README_EVOLUTION.md](README_EVOLUTION.md) for the changes from the initial
 repository to the current backend, and [results/summary/](results/summary/) for
 published experiment summaries and links to their complete trajectory archives.
 
+The same 30-task result directory also includes [six manually authored, source-grounded
+diagnostic demonstrations](results/traces/evidence-query-claims-n30-20261013/constructed/README.md),
+with real offline SQL results and complete stage handoffs. These examples are not measured model results.
+
 ```text
 ProDebugger/
   core/                 canonical compiler, domain profiles, semantic scope and operators

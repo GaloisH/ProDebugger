@@ -1,0 +1,295 @@
+{
+  "provenance": {
+    "schema": "authored-debugger-demonstration/v1",
+    "synthetic": true,
+    "trajectory_id": "GPT-4o_055_alfworld_task_055",
+    "source_run": "evidence-query-claims-n30-20261013",
+    "archive": "results/traces/evidence-query-claims-n30-20261013/GPT-4o_055_alfworld_task_055.tar.gz",
+    "archive_sha256": "d4a12dd41e80a5d10da9e376a8b29c6f9f07d1d6a6febc192b4ac946bc25742c",
+    "input_sha256": {
+      "input.json": "67bf5c5d495d45964e74f91a3c5b98f32cef108d24989bfffc005462adac1530",
+      "audited_parse.json": "471b74703f317600ef5dc853e37e209591a32459f76e0725760a2cef7070fe90",
+      "canonical_record.json": "8a42e3bc28afc81c585416093aabfbce9a2bb774baf8e2febd57469ada54d9ea"
+    },
+    "author": "Codex, manually authored at the user's request",
+    "authoring_context": "The author reviewed saved traces and offline evaluations; this is not a blind model evaluation",
+    "decisions": "Manually authored MAP/ROUTE/manager/TRACE/SUBMIT decisions, not model responses",
+    "tool_results": "Actually executed offline against the unchanged archived input and audited parse",
+    "semantic_parser": "Offline templates only; unresolved clauses are preserved; no simulated LLM backoff",
+    "environment_actions": "Historical source actions only; no new environment execution",
+    "model_api_calls": 0,
+    "include_in_benchmark": false,
+    "correctness_scope": "Source quotations and protocol checked; causal conclusions are authored examples, not an independently scored success"
+  },
+  "result": {
+    "schema": "debugger-result/v1",
+    "status": "diagnosed",
+    "accepted": true,
+    "policy": "window-candidates-submit/v5-manager-forced-choice",
+    "root": {
+      "root_id": "trace-window:investigate_origin_and_recovery:1",
+      "step": 5,
+      "module": "reflection",
+      "fid": 87,
+      "fault_class": "progress_misjudge",
+      "source_trace_status": "error",
+      "output_quote": "Yes, I completed the task goal of putting a clean bowl in a shelf.",
+      "status": "error",
+      "proposition": "Reflection upgrades confirmed placement into confirmed completion of the full clean-bowl goal.",
+      "reasoning": "The evidence_supported rule favors the step-5 reflection because it explicitly declares the clean-bowl goal completed before step 6. Placement feedback and the later shelf observation support location only. The same-step memory is a credible competing source, but reflection states the disputed clean-goal conclusion directly. Under evidence_unknown, no dirty state or unique within-step causal origin is established.",
+      "goal_links": [
+        "req:bowl_in_shelf"
+      ],
+      "supporting_fids": [
+        87
+      ],
+      "counterevidence": []
+    },
+    "reasoning": "The evidence_supported rule favors the step-5 reflection because it explicitly declares the clean-bowl goal completed before step 6. Placement feedback and the later shelf observation support location only. The same-step memory is a credible competing source, but reflection states the disputed clean-goal conclusion directly. Under evidence_unknown, no dirty state or unique within-step causal origin is established.",
+    "supporting_evidence": [
+      87
+    ],
+    "counterevidence": [],
+    "causal_chain": [],
+    "repair": "Report that bowl placement succeeded while cleanliness remains unverified. Verify or establish the clean condition before claiming that the full task is complete.",
+    "uncertainty": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim.",
+    "alternatives": [
+      {
+        "candidate_id": "trace-window:investigate_origin_and_recovery:2",
+        "window": {
+          "candidate_id": "investigate_origin_and_recovery",
+          "lo": 6,
+          "hi": 6
+        },
+        "step": 5,
+        "module": "memory",
+        "assessment": {
+          "status": "error",
+          "step": 5,
+          "module": "memory",
+          "fault_class": "over_simplification",
+          "output_quote": "confirm the completion of the task.",
+          "proposition": "Memory summarizes the retrieval and placement milestones as confirming the entire task.",
+          "reasoning": "The selected memory phrase is a genuine same-step rival: it omits the unresolved distinction between placement and cleanliness. Reflection expresses the clean-goal certainty more explicitly; chronological priority within a rendered step does not establish sole causal ownership.",
+          "immediate_effect": "The milestone summary supplies a full-goal framing in the same step as the reflection.",
+          "uncertainty": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim.",
+          "requirement_links": [
+            "req:bowl_in_shelf"
+          ],
+          "primary_fid": 85,
+          "evidence_for": [
+            85
+          ],
+          "evidence_against": []
+        },
+        "local_context_ref": "local:5",
+        "related_evidence": [
+          {
+            "event_ref": "event:3",
+            "roles": [
+              "prior_related"
+            ],
+            "temporal_role": "prior"
+          },
+          {
+            "event_ref": "event:4",
+            "roles": [
+              "previous_event",
+              "prior_related"
+            ],
+            "temporal_role": "prior"
+          },
+          {
+            "event_ref": "event:6",
+            "roles": [
+              "later_related_observation",
+              "later_same_action"
+            ],
+            "temporal_role": "later"
+          },
+          {
+            "event_ref": "event:8",
+            "roles": [
+              "later_related_no_effect"
+            ],
+            "temporal_role": "later"
+          },
+          {
+            "event_ref": "event:25",
+            "roles": [
+              "later_related_observation"
+            ],
+            "temporal_role": "later"
+          },
+          {
+            "event_ref": "event:28",
+            "roles": [
+              "later_related_observation"
+            ],
+            "temporal_role": "later"
+          },
+          {
+            "event_ref": "event:29",
+            "roles": [
+              "later_related_no_effect"
+            ],
+            "temporal_role": "later"
+          },
+          {
+            "event_ref": "event:30",
+            "roles": [
+              "later_same_action"
+            ],
+            "temporal_role": "later"
+          }
+        ],
+        "evidence_selection": {
+          "search_range": [
+            1,
+            30
+          ],
+          "method": "previous/cited steps and normalized-action/entity-word matches",
+          "matching_steps": 24,
+          "selected_steps": [
+            3,
+            4,
+            6,
+            8,
+            25,
+            28,
+            29,
+            30
+          ],
+          "omitted_matching_steps": 16,
+          "max_related_events": 12,
+          "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+        }
+      }
+    ],
+    "candidate_comparisons": [
+      {
+        "candidate_id": "trace-window:investigate_origin_and_recovery:1",
+        "reasoning": "Prefer reflection for its explicit assertion that the clean-bowl goal is complete, which matches the investigated certainty mechanism."
+      },
+      {
+        "candidate_id": "trace-window:investigate_origin_and_recovery:2",
+        "reasoning": "Memory also overgeneralizes the placement milestones, but its completion wording is less specific about the clean attribute. Retain it as a same-step alternative, not a second independent vote."
+      }
+    ],
+    "coverage": {
+      "windows": [
+        {
+          "issue_step": 6,
+          "issue_fids": [
+            97
+          ],
+          "goal_links": [
+            "req:bowl_in_shelf"
+          ],
+          "hypothesis": "Does the step-6 completion premise originate in an earlier unsupported clean-bowl confirmation, or was cleanliness established independently? Compare memory, reflection and placement feedback before selecting an origin.",
+          "candidate_id": "investigate_origin_and_recovery",
+          "lo": 6,
+          "hi": 6,
+          "missing_steps": []
+        }
+      ],
+      "window_version": 2,
+      "selected_steps": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        13,
+        15,
+        22,
+        29,
+        30
+      ],
+      "assessed_steps": [
+        5
+      ],
+      "missing_steps": [],
+      "unassessed_steps": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "trace_complete": true,
+      "completed_windows": [
+        "investigate_origin_and_recovery"
+      ],
+      "missing_windows": [],
+      "assessment_unit": "single_step_per_route_candidate"
+    },
+    "benchmark_scope": {
+      "schema": "benchmark-error-scope/v1",
+      "allowed_by_module": {
+        "memory": [
+          "hallucination",
+          "over_simplification",
+          "memory_retrieval_failure"
+        ],
+        "reflection": [
+          "progress_misjudge",
+          "causal_misattribution",
+          "outcome_misinterpretation"
+        ],
+        "plan": [
+          "inefficient_plan",
+          "constraint_ignorance",
+          "impossible_action"
+        ],
+        "action": [
+          "invalid_action",
+          "parameter_error",
+          "misalignment"
+        ],
+        "system": [
+          "environment_error",
+          "step_limit",
+          "llm_limit",
+          "tool_execution_error"
+        ]
+      },
+      "source": "core/local_judgement.py:FAULT with user-requested exclusions",
+      "excluded_causes": [
+        "formatting",
+        "spelling",
+        "literal quotation marks",
+        "serialization"
+      ],
+      "premise": "All genuine benchmark errors are within allowed_by_module. Formatting and spelling cannot cause the benchmark failure. Do not relabel these causes as another allowed error."
+    },
+    "stop_reason": "direct TRACE-candidate comparison completed",
+    "semantic_verdict": "Manually authored source-grounded example; structural validation is not causal correctness certification"
+  }
+}

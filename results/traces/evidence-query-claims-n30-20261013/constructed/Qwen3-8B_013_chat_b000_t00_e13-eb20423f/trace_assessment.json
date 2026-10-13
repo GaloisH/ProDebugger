@@ -1,0 +1,113 @@
+{
+  "schema": "independent-window-candidates/v3-root-role",
+  "window_id": "investigate_origin_and_recovery",
+  "window": {
+    "issue_step": 9,
+    "issue_fids": [
+      212
+    ],
+    "goal_links": [
+      "req:color",
+      "req:description",
+      "req:price",
+      "req:size"
+    ],
+    "hypothesis": "Did a tentative brown/r.brown2626 equivalence become a confirmed match used for purchase? Test original description evidence, displayed variants and earlier verification plans; do not mistake leather uppers for evidence against rubber soles.",
+    "candidate_id": "investigate_origin_and_recovery",
+    "lo": 9,
+    "hi": 9
+  },
+  "packet_digest": "9e0522efd05cbb996e57aa9c49a128da6b9d9505406e0b103ef81d9621233669",
+  "response_turn": "authored-007",
+  "after_tool_calls": 7,
+  "conclusion": {
+    "window_id": "investigate_origin_and_recovery",
+    "candidates": [
+      {
+        "status": "error",
+        "is_root_cause": null,
+        "step": 9,
+        "module": "memory",
+        "fault_class": "hallucination",
+        "output_quote": "confirming it matches the target color \"r.brown2626\" (likely a shade variation).",
+        "proposition": "Memory asserts an exact required-color match from an unverified equivalence between brown and r.brown2626.",
+        "reasoning": "Plan 8 explicitly says to verify the mapping. The next item page still lists brown and does not establish the exact code mapping. Memory 9 says confirming and fully matching, although its parenthesis says likely. Description 6 really does support non-slip rubber soles, so material is not used as a spurious objection.",
+        "immediate_effect": "Plan 9 treats the product as meeting all requirements and action 9 purchases it.",
+        "uncertainty": "The page does not prove that brown differs from r.brown2626 in the hidden catalog, nor that the two are equivalent. The parenthetical likely a shade variation is a qualification, but the surrounding confirmed match and fully matching conclusion overstate the evidence. Prior selection claims and absence of purchase feedback limit causal attribution.",
+        "requirement_links": [
+          "req:color",
+          "req:description",
+          "req:price",
+          "req:size"
+        ]
+      },
+      {
+        "status": "error",
+        "is_root_cause": null,
+        "step": 9,
+        "module": "plan",
+        "fault_class": "constraint_ignorance",
+        "output_quote": "as it meets all requirements: slip-resistant, rubber outsole, r.brown2626 color, size 9.5, and price under $60.",
+        "proposition": "The plan purchases on a full-match premise that has not resolved the exact-color requirement.",
+        "reasoning": "The plan continues the same-step memory assertion. Its purchase consequence is concrete, but the unsupported equivalence is expressed most directly in memory.",
+        "immediate_effect": "The plan immediately issues Buy Now instead of completing the earlier color-mapping verification.",
+        "uncertainty": "The page does not prove that brown differs from r.brown2626 in the hidden catalog, nor that the two are equivalent. The parenthetical likely a shade variation is a qualification, but the surrounding confirmed match and fully matching conclusion overstate the evidence. Prior selection claims and absence of purchase feedback limit causal attribution.",
+        "requirement_links": [
+          "req:color",
+          "req:description",
+          "req:price",
+          "req:size"
+        ]
+      }
+    ],
+    "uncertainty": "The page does not prove that brown differs from r.brown2626 in the hidden catalog, nor that the two are equivalent. The parenthetical likely a shade variation is a qualification, but the surrounding confirmed match and fully matching conclusion overstate the evidence. Prior selection claims and absence of purchase feedback limit causal attribution."
+  },
+  "candidates": [
+    {
+      "status": "error",
+      "is_root_cause": null,
+      "step": 9,
+      "module": "memory",
+      "fault_class": "hallucination",
+      "output_quote": "confirming it matches the target color \"r.brown2626\" (likely a shade variation).",
+      "proposition": "Memory asserts an exact required-color match from an unverified equivalence between brown and r.brown2626.",
+      "reasoning": "Plan 8 explicitly says to verify the mapping. The next item page still lists brown and does not establish the exact code mapping. Memory 9 says confirming and fully matching, although its parenthesis says likely. Description 6 really does support non-slip rubber soles, so material is not used as a spurious objection.",
+      "immediate_effect": "Plan 9 treats the product as meeting all requirements and action 9 purchases it.",
+      "uncertainty": "The page does not prove that brown differs from r.brown2626 in the hidden catalog, nor that the two are equivalent. The parenthetical likely a shade variation is a qualification, but the surrounding confirmed match and fully matching conclusion overstate the evidence. Prior selection claims and absence of purchase feedback limit causal attribution.",
+      "requirement_links": [
+        "req:color",
+        "req:description",
+        "req:price",
+        "req:size"
+      ],
+      "primary_fid": 209,
+      "evidence_for": [
+        209
+      ],
+      "evidence_against": []
+    },
+    {
+      "status": "error",
+      "is_root_cause": null,
+      "step": 9,
+      "module": "plan",
+      "fault_class": "constraint_ignorance",
+      "output_quote": "as it meets all requirements: slip-resistant, rubber outsole, r.brown2626 color, size 9.5, and price under $60.",
+      "proposition": "The plan purchases on a full-match premise that has not resolved the exact-color requirement.",
+      "reasoning": "The plan continues the same-step memory assertion. Its purchase consequence is concrete, but the unsupported equivalence is expressed most directly in memory.",
+      "immediate_effect": "The plan immediately issues Buy Now instead of completing the earlier color-mapping verification.",
+      "uncertainty": "The page does not prove that brown differs from r.brown2626 in the hidden catalog, nor that the two are equivalent. The parenthetical likely a shade variation is a qualification, but the surrounding confirmed match and fully matching conclusion overstate the evidence. Prior selection claims and absence of purchase feedback limit causal attribution.",
+      "requirement_links": [
+        "req:color",
+        "req:description",
+        "req:price",
+        "req:size"
+      ],
+      "primary_fid": 212,
+      "evidence_for": [
+        212
+      ],
+      "evidence_against": []
+    }
+  ]
+}

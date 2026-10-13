@@ -1,0 +1,75 @@
+{
+  "schema": "independent-window-candidates/v3-root-role",
+  "window_id": "investigate_origin_and_recovery",
+  "window": {
+    "issue_step": 26,
+    "issue_fids": [
+      725
+    ],
+    "goal_links": [
+      "req:color",
+      "req:description",
+      "req:fit_type",
+      "req:price",
+      "req:size"
+    ],
+    "hypothesis": "Is generic grey promoted to an established heather-grey match, and does that assertion remain causally relevant after the item is rejected? Compare earlier product claims and the later return to search instead of labeling every exploratory option click a root cause.",
+    "candidate_id": "investigate_origin_and_recovery",
+    "lo": 26,
+    "hi": 26
+  },
+  "packet_digest": "da471bc40aa81af1119de4bd5d94b2d0b5633b7d81f3bec896676423b7cd0a2f",
+  "response_turn": "authored-007",
+  "after_tool_calls": 7,
+  "conclusion": {
+    "window_id": "investigate_origin_and_recovery",
+    "candidates": [
+      {
+        "status": "error",
+        "is_root_cause": null,
+        "step": 26,
+        "module": "memory",
+        "fault_class": "hallucination",
+        "output_quote": "The current observation includes color options, with 'grey' matching the desired heather grey.",
+        "proposition": "Memory presents generic grey as an established match for the requested heather grey without a source mapping.",
+        "reasoning": "The original page lists grey and light grey, not an equivalence mapping. Memory states a match, while the plan partly frames the click as exploration. Action 26 clicks grey; step 27 recognizes the item is not a dress shirt and returns to search. These observations support a local unsupported assertion but limit any task-level causal claim.",
+        "immediate_effect": "The assertion is echoed in the same-step option-selection plan; the product is abandoned at the next step.",
+        "uncertainty": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping.",
+        "requirement_links": [
+          "req:color",
+          "req:description",
+          "req:fit_type",
+          "req:price",
+          "req:size"
+        ]
+      }
+    ],
+    "uncertainty": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping."
+  },
+  "candidates": [
+    {
+      "status": "error",
+      "is_root_cause": null,
+      "step": 26,
+      "module": "memory",
+      "fault_class": "hallucination",
+      "output_quote": "The current observation includes color options, with 'grey' matching the desired heather grey.",
+      "proposition": "Memory presents generic grey as an established match for the requested heather grey without a source mapping.",
+      "reasoning": "The original page lists grey and light grey, not an equivalence mapping. Memory states a match, while the plan partly frames the click as exploration. Action 26 clicks grey; step 27 recognizes the item is not a dress shirt and returns to search. These observations support a local unsupported assertion but limit any task-level causal claim.",
+      "immediate_effect": "The assertion is echoed in the same-step option-selection plan; the product is abandoned at the next step.",
+      "uncertainty": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping.",
+      "requirement_links": [
+        "req:color",
+        "req:description",
+        "req:fit_type",
+        "req:price",
+        "req:size"
+      ],
+      "primary_fid": 722,
+      "evidence_for": [
+        722
+      ],
+      "evidence_against": []
+    }
+  ]
+}

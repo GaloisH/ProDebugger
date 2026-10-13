@@ -1,0 +1,1832 @@
+{
+  "schema": "direct-submit-input/v2",
+  "policy": "window-candidates-submit/v5-manager-forced-choice",
+  "task": "put a spraybottle in countertop.",
+  "benchmark_scope": {
+    "schema": "benchmark-error-scope/v1",
+    "allowed_by_module": {
+      "memory": [
+        "hallucination",
+        "over_simplification",
+        "memory_retrieval_failure"
+      ],
+      "reflection": [
+        "progress_misjudge",
+        "causal_misattribution",
+        "outcome_misinterpretation"
+      ],
+      "plan": [
+        "inefficient_plan",
+        "constraint_ignorance",
+        "impossible_action"
+      ],
+      "action": [
+        "invalid_action",
+        "parameter_error",
+        "misalignment"
+      ],
+      "system": [
+        "environment_error",
+        "step_limit",
+        "llm_limit",
+        "tool_execution_error"
+      ]
+    },
+    "source": "core/local_judgement.py:FAULT with user-requested exclusions",
+    "excluded_causes": [
+      "formatting",
+      "spelling",
+      "literal quotation marks",
+      "serialization"
+    ],
+    "premise": "All genuine benchmark errors are within allowed_by_module. Formatting and spelling cannot cause the benchmark failure. Do not relabel these causes as another allowed error."
+  },
+  "coverage": {
+    "windows": [
+      {
+        "candidate_id": "investigate_origin_and_recovery",
+        "lo": 17,
+        "hi": 17
+      }
+    ],
+    "selected_steps": [
+      1,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      23,
+      24,
+      25
+    ],
+    "assessed_steps": [
+      14
+    ],
+    "unassessed_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "trace_complete": true
+  },
+  "candidates": [
+    {
+      "candidate_id": "trace-window:investigate_origin_and_recovery:1",
+      "window": {
+        "candidate_id": "investigate_origin_and_recovery",
+        "lo": 17,
+        "hi": 17
+      },
+      "step": 14,
+      "module": "reflection",
+      "assessment": {
+        "status": "error",
+        "step": 14,
+        "module": "reflection",
+        "fault_class": "outcome_misinterpretation",
+        "output_quote": "I should now focus on taking the soapbottle 1 and placing it on the countertop.",
+        "proposition": "Reflection turns observing a soapbottle into actionable progress toward the spraybottle task.",
+        "reasoning": "The observation explicitly identifies soapbottle 1. The reflection first calls it a potential spraybottle, then directs taking and placing it. Plan and action 14 follow that directive. Step 15 acknowledges the mistake, while step 16 reintroduces the wrong task object. The error is the actionable substitution, not the existence of a tentative hypothesis.",
+        "immediate_effect": "Action 14 acquires the wrong object; observation 15 confirms the pickup and reflection 15 recognizes it as a mistake.",
+        "uncertainty": "The step-14 wording includes potential, so the mere hypothesis of object equivalence is not the error. The actionable recommendation adopts the wrong object. Step 15 temporarily corrects the mistake, and step 16 reintroduces it; this prevents a claim of uninterrupted propagation or uniquely established final root cause.",
+        "requirement_links": [
+          "req:spraybottle_in_countertop"
+        ],
+        "primary_fid": 132,
+        "evidence_for": [
+          132
+        ],
+        "evidence_against": []
+      },
+      "local_context_ref": "local:14",
+      "related_evidence": [
+        {
+          "event_ref": "event:12",
+          "roles": [
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:13",
+          "roles": [
+            "previous_event",
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:15",
+          "roles": [
+            "later_related_observation",
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:16",
+          "roles": [
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:28",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:29",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        }
+      ],
+      "evidence_selection": {
+        "search_range": [
+          1,
+          30
+        ],
+        "method": "previous/cited steps and normalized-action/entity-word matches",
+        "matching_steps": 27,
+        "selected_steps": [
+          12,
+          13,
+          15,
+          16,
+          28,
+          29
+        ],
+        "omitted_matching_steps": 21,
+        "max_related_events": 12,
+        "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+      }
+    },
+    {
+      "candidate_id": "trace-window:investigate_origin_and_recovery:2",
+      "window": {
+        "candidate_id": "investigate_origin_and_recovery",
+        "lo": 17,
+        "hi": 17
+      },
+      "step": 14,
+      "module": "plan",
+      "assessment": {
+        "status": "error",
+        "step": 14,
+        "module": "plan",
+        "fault_class": "constraint_ignorance",
+        "output_quote": "which can then be placed on the countertop to complete the task.",
+        "proposition": "The plan treats moving soapbottle 1 as satisfying the required spraybottle type.",
+        "reasoning": "The same-step plan explicitly adopts the substituted object. Reflection already recommends that course, so the plan is a credible execution-level alternative but does not introduce distinct source evidence.",
+        "immediate_effect": "The chosen take action acquires soapbottle 1 rather than searching for a confirmed spraybottle.",
+        "uncertainty": "The step-14 wording includes potential, so the mere hypothesis of object equivalence is not the error. The actionable recommendation adopts the wrong object. Step 15 temporarily corrects the mistake, and step 16 reintroduces it; this prevents a claim of uninterrupted propagation or uniquely established final root cause.",
+        "requirement_links": [
+          "req:spraybottle_in_countertop"
+        ],
+        "primary_fid": 133,
+        "evidence_for": [
+          133
+        ],
+        "evidence_against": []
+      },
+      "local_context_ref": "local:14",
+      "related_evidence": [
+        {
+          "event_ref": "event:12",
+          "roles": [
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:13",
+          "roles": [
+            "previous_event",
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:15",
+          "roles": [
+            "later_related_observation",
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:16",
+          "roles": [
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:28",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:29",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        }
+      ],
+      "evidence_selection": {
+        "search_range": [
+          1,
+          30
+        ],
+        "method": "previous/cited steps and normalized-action/entity-word matches",
+        "matching_steps": 27,
+        "selected_steps": [
+          12,
+          13,
+          15,
+          16,
+          28,
+          29
+        ],
+        "omitted_matching_steps": 21,
+        "max_related_events": 12,
+        "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+      }
+    }
+  ],
+  "window_reviews": [
+    {
+      "window_id": "investigate_origin_and_recovery",
+      "candidate_ids": [
+        "trace-window:investigate_origin_and_recovery:1",
+        "trace-window:investigate_origin_and_recovery:2"
+      ],
+      "uncertainty": "The step-14 wording includes potential, so the mere hypothesis of object equivalence is not the error. The actionable recommendation adopts the wrong object. Step 15 temporarily corrects the mistake, and step 16 reintroduces it; this prevents a claim of uninterrupted propagation or uniquely established final root cause."
+    }
+  ],
+  "local_context": {
+    "local:14": {
+      "step": 14,
+      "source_digest": "3a681bc300ec3df52635779ec2d8f2cda19c37486e4d1e5d5c8009223ae0884f",
+      "env_text": "You open the cabinet 3. The cabinet 3 is open. In it, you see a candle 1, and a soapbottle 1.",
+      "module_text": {
+        "memory": "Look at the past observations and actions from our conversation history.\n- Step 4 and Step 5 are relevant: I went to the countertop 1 but found nothing on it. This is where I need to place the spraybottle.\n- Step 13 is relevant: I opened cabinet 3 and found a soapbottle 1, which could potentially be the spraybottle I need to place on the countertop.",
+        "reflection": "Reflect on the last action and its outcome\n- Did I complete the task goal? No, I only opened cabinet 3 and found potential items.\n- Was last action successful or did it encounter issues? The action was successful in revealing the contents of cabinet 3.\n- Am I making progress toward the task goal? Yes, I have identified a potential spraybottle (soapbottle 1) that could be placed on the countertop.\n- If the action did not go as expected and did not result in progress, provide constructive feedback to guide the next planning step. I should now focus on taking the soapbottle 1 and placing it on the countertop.",
+        "plan": "Plan the next step based on memory and reflection\n- Given what I've learned, what should I do next? I should take the soapbottle 1 from cabinet 3.\n- Please explain why this plan is helpful for the next action? This action will allow me to carry the soapbottle 1, which can then be placed on the countertop to complete the task.\n- What do I expect this action to achieve? I expect to have the soapbottle 1 in my inventory, ready to be placed on the countertop.",
+        "action": "take soapbottle 1 from cabinet 3"
+      },
+      "admissible": [
+        "close cabinet 3",
+        "close cabinet 4",
+        "examine cabinet 3",
+        "examine cabinet 4",
+        "go to cabinet 1",
+        "go to cabinet 2",
+        "go to countertop 1",
+        "go to garbagecan 1",
+        "go to handtowelholder 1",
+        "go to sinkbasin 1",
+        "go to sinkbasin 2",
+        "go to toilet 1",
+        "go to toiletpaperhanger 1",
+        "go to towelholder 1",
+        "inventory",
+        "look",
+        "take candle 1 from cabinet 3",
+        "take cloth 1 from cabinet 4",
+        "take soapbar 1 from cabinet 4",
+        "take soapbottle 1 from cabinet 3"
+      ],
+      "next_env_text": "You pick up the soapbottle 1 from the cabinet 3."
+    }
+  },
+  "related_events": {
+    "event:12": {
+      "step": 12,
+      "evidence_refs": [
+        "source:12:env_text:0:49",
+        "source:12:parts.action:0:14",
+        "source:13:env_text:0:89",
+        "source:12:parts.memory:29:309",
+        "source:12:parts.reflection:41:321",
+        "source:12:parts.plan:21:301"
+      ]
+    },
+    "event:13": {
+      "step": 13,
+      "evidence_refs": [
+        "source:13:env_text:0:89",
+        "source:13:parts.action:0:14",
+        "source:14:env_text:0:93",
+        "source:13:parts.memory:33:313",
+        "source:13:parts.reflection:29:309",
+        "source:13:parts.plan:22:302"
+      ]
+    },
+    "event:15": {
+      "step": 15,
+      "evidence_refs": [
+        "source:15:env_text:0:48",
+        "source:15:parts.action:0:15",
+        "source:16:env_text:0:74",
+        "source:15:parts.memory:3:283",
+        "source:15:parts.reflection:35:315",
+        "source:15:parts.plan:38:318"
+      ]
+    },
+    "event:16": {
+      "step": 16,
+      "evidence_refs": [
+        "source:16:env_text:0:74",
+        "source:16:parts.action:0:18",
+        "source:17:env_text:0:65",
+        "source:16:parts.memory:23:303",
+        "source:16:parts.reflection:349:629",
+        "source:16:parts.plan:22:302"
+      ]
+    },
+    "event:28": {
+      "step": 28,
+      "evidence_refs": [
+        "source:28:env_text:0:90",
+        "source:28:parts.action:0:15",
+        "source:29:env_text:0:74",
+        "source:28:parts.memory:3:283",
+        "source:28:parts.reflection:40:320",
+        "source:28:parts.plan:43:323"
+      ]
+    },
+    "event:29": {
+      "step": 29,
+      "evidence_refs": [
+        "source:29:env_text:0:74",
+        "source:29:parts.action:0:15",
+        "source:30:env_text:0:73",
+        "source:29:parts.memory:2:282",
+        "source:29:parts.reflection:10:290",
+        "source:29:parts.plan:38:318"
+      ]
+    }
+  },
+  "evidence_slices": [
+    {
+      "evidence_id": "source:12:env_text:0:49",
+      "step": 12,
+      "source_field": "env_text",
+      "source_digest": "1ea6b8245f07bd45754d346f6e5d0fc0074f946aaa116f5bcfeb9ab1e6f99a52",
+      "span_start": 0,
+      "span_end": 49,
+      "verbatim": "You arrive at cabinet 4. The cabinet 4 is closed.",
+      "source_chars": 49,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:12:parts.action:0:14",
+      "step": 12,
+      "source_field": "parts.action",
+      "source_digest": "e4497456da35a717e8d9cf365d7cae8fef4df29bb95a049e9e4c90afa0b3ed23",
+      "span_start": 0,
+      "span_end": 14,
+      "verbatim": "open cabinet 4",
+      "source_chars": 14,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:13:env_text:0:89",
+      "step": 13,
+      "source_field": "env_text",
+      "source_digest": "1304f777d00b08a3c9673d7e04696fcfd0e7dc94cdb3e7c1f048b617cccedf8c",
+      "span_start": 0,
+      "span_end": 89,
+      "verbatim": "You open the cabinet 4. The cabinet 4 is open. In it, you see a cloth 1, and a soapbar 1.",
+      "source_chars": 89,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:12:parts.memory:29:309",
+      "step": 12,
+      "source_field": "parts.memory",
+      "source_digest": "16ffeb425362fd57338566569f6249bf742ff2639ca86ce9eae6d75da627fd26",
+      "span_start": 29,
+      "span_end": 309,
+      "verbatim": " and actions from our conversation history.\n- Step 6 and 7 are relevant: At Step 6, I opened cabinet 1 to find a candle, not the spray bottle I am looking for.\n- Step 8 and 9 are relevant: I opened cabinet 2 and found a cloth, not the spray bottle.\nThis shows that I have been sys",
+      "source_chars": 380,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:12:parts.reflection:41:321",
+      "step": 12,
+      "source_field": "parts.reflection",
+      "source_digest": "74daaa7d0325ecd2c1c1e7a76e12bff9c844bfe0da471ba0d0d2c5f02a2bd02e",
+      "span_start": 41,
+      "span_end": 321,
+      "verbatim": "e\n- Did I complete the task goal? No, I have not yet found the spray bottle or put it on the countertop.\n- Was last action successful or did it encounter issues? The last action was successful in reaching cabinet 4, but I have not yet opened it to check for contents.\n- Am I makin",
+      "source_chars": 675,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:12:parts.plan:21:301",
+      "step": 12,
+      "source_field": "parts.plan",
+      "source_digest": "f8dabd6b07cef107c04672af1ee522bbecbb671a164bbf902032bd1dcaf94ce4",
+      "span_start": 21,
+      "span_end": 301,
+      "verbatim": "sed on memory and reflection\n- Given what I've learned, what should I do next? I should open cabinet 4 to see if the spray bottle is inside.\n- Please explain why this plan is helpful for the next action? Opening cabinet 4 will allow me to check if it contains the spray bottle, wh",
+      "source_chars": 513,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:13:parts.action:0:14",
+      "step": 13,
+      "source_field": "parts.action",
+      "source_digest": "071c86b8c76d0c94d22d1168960162b35cccb3d9228206cdf1f7803b7d8d1d3b",
+      "span_start": 0,
+      "span_end": 14,
+      "verbatim": "open cabinet 3",
+      "source_chars": 14,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:14:env_text:0:93",
+      "step": 14,
+      "source_field": "env_text",
+      "source_digest": "8cfa441c0f9a583ba94127247055ed5c114af65122ff04bf2836bba15086413c",
+      "span_start": 0,
+      "span_end": 93,
+      "verbatim": "You open the cabinet 3. The cabinet 3 is open. In it, you see a candle 1, and a soapbottle 1.",
+      "source_chars": 93,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:13:parts.memory:33:313",
+      "step": 13,
+      "source_field": "parts.memory",
+      "source_digest": "45298f3906d7f5921c95b69cf033694a854d07f52e8240a1fe320756047b472a",
+      "span_start": 33,
+      "span_end": 313,
+      "verbatim": " actions from our conversation history.\n- The relevant memory is from step 5: \"You arrive at countertop 1. On the countertop 1, you see nothing.\" and the action was \"go to cabinet 1.\" This indicates that there is currently nothing on countertop 1, which is where the spray bottle ",
+      "source_chars": 332,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:13:parts.reflection:29:309",
+      "step": 13,
+      "source_field": "parts.reflection",
+      "source_digest": "1757542751c78024dc309d2dbd889f05980b675e7d51f41b0daa3a0b38cbcf79",
+      "span_start": 29,
+      "span_end": 309,
+      "verbatim": "d its outcome\n- Did I complete the task goal? No, the task goal of placing a spray bottle on countertop 1 has not been achieved.\n- Was the last action successful or did it encounter issues? The last action successfully opened cabinet 4, but it did not uncover a spray bottle.\n- Am",
+      "source_chars": 657,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:13:parts.plan:22:302",
+      "step": 13,
+      "source_field": "parts.plan",
+      "source_digest": "1aabb756d0be28b8189aa12103e774d3bd112eb92e4a47e3a5fdaba1eefdb3d7",
+      "span_start": 22,
+      "span_end": 302,
+      "verbatim": "ed on memory and reflection\n- Given what I've learned, what should I do next? I should go to cabinet 3 and open it to see if the spray bottle is inside.\n- Please explain why this plan is helpful for the next action? This plan is helpful because I need to find the spray bottle, an",
+      "source_chars": 482,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:15:env_text:0:48",
+      "step": 15,
+      "source_field": "env_text",
+      "source_digest": "ebdf218d88eda98146d9df69ac06fd3e567bd44f00732ec4d7ae763ed1fd05e2",
+      "span_start": 0,
+      "span_end": 48,
+      "verbatim": "You pick up the soapbottle 1 from the cabinet 3.",
+      "source_chars": 48,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:15:parts.action:0:15",
+      "step": 15,
+      "source_field": "parts.action",
+      "source_digest": "69b14111d0f17f2f6f11948781726740957801940664901faab7ff76c4dd7b4f",
+      "span_start": 0,
+      "span_end": 15,
+      "verbatim": "go to cabinet 1",
+      "source_chars": 15,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:16:env_text:0:74",
+      "step": 16,
+      "source_field": "env_text",
+      "source_digest": "d05880f80b93ea1ef7cf07286d65a0be6ae265eb8bbd31590fede97f0bf9f980",
+      "span_start": 0,
+      "span_end": 74,
+      "verbatim": "You arrive at cabinet 1. The cabinet 1 is open. In it, you see a candle 2.",
+      "source_chars": 74,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:15:parts.memory:3:283",
+      "step": 15,
+      "source_field": "parts.memory",
+      "source_digest": "c65a3994efb0228288203e668f35e95575dd1e49a1512bdee497e96f29a1eca6",
+      "span_start": 3,
+      "span_end": 283,
+      "verbatim": "k at the past observations and actions from our conversation history.\n- The task is to put a spraybottle on the countertop, but the soapbottle was mistakenly taken from cabinet 3. This is observed in step 14, where the action was 'take soapbottle 1 from cabinet 3', and the curren",
+      "source_chars": 453,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:15:parts.reflection:35:315",
+      "step": 15,
+      "source_field": "parts.reflection",
+      "source_digest": "5c60827ce8a74281b3693a4bb4516a313ebd39b6325f2a2ad7a6cc39341870ea",
+      "span_start": 35,
+      "span_end": 315,
+      "verbatim": "outcome\n- Did I complete the task goal? No, I mistakenly picked up a soapbottle instead of a spraybottle.\n- Was last action successful or did it encounter issues? The action was successful in picking up the soapbottle, but it was not the correct item needed for the task.\n- Am I m",
+      "source_chars": 686,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:15:parts.plan:38:318",
+      "step": 15,
+      "source_field": "parts.plan",
+      "source_digest": "034832c5480251c30c3f24ab211e1c05bbc43361e910d19851de839d67398b18",
+      "span_start": 38,
+      "span_end": 318,
+      "verbatim": " reflection\n- Given what I've learned, what should I do next? I should examine the remaining cabinets to locate the spraybottle.\n- Please explain why this plan is helpful for the next action? Finding the spraybottle is necessary to complete the task of placing it on the counterto",
+      "source_chars": 430,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:16:parts.action:0:18",
+      "step": 16,
+      "source_field": "parts.action",
+      "source_digest": "dc4083d90ea5f04c7e8217ad95501c0a544e49a08f3bb6535f34084e1135d4a7",
+      "span_start": 0,
+      "span_end": 18,
+      "verbatim": "go to countertop 1",
+      "source_chars": 18,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:17:env_text:0:65",
+      "step": 17,
+      "source_field": "env_text",
+      "source_digest": "470eaf2656d50ed572d7d68d06fc86448af2338825c74b1849700381bdbca7c2",
+      "span_start": 0,
+      "span_end": 65,
+      "verbatim": "You arrive at countertop 1. On the countertop 1, you see nothing.",
+      "source_chars": 65,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:16:parts.memory:23:303",
+      "step": 16,
+      "source_field": "parts.memory",
+      "source_digest": "8e5fb5bcb1392689778633323bdec90438d8467182cf737a30e31b375c8b4f32",
+      "span_start": 23,
+      "span_end": 303,
+      "verbatim": "ations and actions from our conversation history.\n- Step 5: Observation indicated arrival at countertop 1 with nothing on it.\n- Step 14: Successfully took the soapbottle 1 from cabinet 3.\nThese memory steps are helpful milestones because they confirm that the countertop is curren",
+      "source_chars": 392,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:16:parts.reflection:349:629",
+      "step": 16,
+      "source_field": "parts.reflection",
+      "source_digest": "c2d782caf3fc2782f75c9265e6a99b2f1324c2d887aab6d4430e6c7d382a1637",
+      "span_start": 349,
+      "span_end": 629,
+      "verbatim": "e task goal? Indirectly, as I have acquired the soapbottle 1, but I need to move towards the countertop to continue progress.\n- If the action did not go as expected and did not result in progress, provide constructive feedback to guide the next planning step. The last action of m",
+      "source_chars": 791,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:16:parts.plan:22:302",
+      "step": 16,
+      "source_field": "parts.plan",
+      "source_digest": "69982f46119d891101f71be63e57922885e8a4602fa9b280c40f0f95db3bc7ea",
+      "span_start": 22,
+      "span_end": 302,
+      "verbatim": "ed on memory and reflection\n- Given what I've learned, what should I do next? I should go to countertop 1.\n- Please explain why this plan is helpful for the next action? This plan is helpful because the task requires placing the soapbottle on the countertop, and I am currently no",
+      "source_chars": 505,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:28:env_text:0:90",
+      "step": 28,
+      "source_field": "env_text",
+      "source_digest": "1b59e75486a3d986ba4c631ac87b30312accfcb5615282a33fd1c9ec59d6fcd3",
+      "span_start": 0,
+      "span_end": 90,
+      "verbatim": "You arrive at cabinet 4. The cabinet 4 is open. In it, you see a cloth 1, and a soapbar 1.",
+      "source_chars": 90,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:28:parts.action:0:15",
+      "step": 28,
+      "source_field": "parts.action",
+      "source_digest": "69b14111d0f17f2f6f11948781726740957801940664901faab7ff76c4dd7b4f",
+      "span_start": 0,
+      "span_end": 15,
+      "verbatim": "go to cabinet 1",
+      "source_chars": 15,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:29:env_text:0:74",
+      "step": 29,
+      "source_field": "env_text",
+      "source_digest": "d05880f80b93ea1ef7cf07286d65a0be6ae265eb8bbd31590fede97f0bf9f980",
+      "span_start": 0,
+      "span_end": 74,
+      "verbatim": "You arrive at cabinet 1. The cabinet 1 is open. In it, you see a candle 2.",
+      "source_chars": 74,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:28:parts.memory:3:283",
+      "step": 28,
+      "source_field": "parts.memory",
+      "source_digest": "457ec40c550b0eb392c8b4013d6fb9b9966fce7101a906a685177a996246a318",
+      "span_start": 3,
+      "span_end": 283,
+      "verbatim": "k at the past observations and actions from our conversation history.\n- The task is to put a spraybottle on the countertop. In Observation 14, I picked up a soapbottle from cabinet 3, which was mistaken for a spraybottle. Step 17 shows that I placed the soapbottle on the countert",
+      "source_chars": 286,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:28:parts.reflection:40:320",
+      "step": 28,
+      "source_field": "parts.reflection",
+      "source_digest": "9b7f642544d27e318333b0e355dbc780493d87797c249f38290671af80eb5448",
+      "span_start": 40,
+      "span_end": 320,
+      "verbatim": "me\n- Did I complete the task goal? No, because I mistakenly placed a soapbottle instead of a spraybottle on the countertop.\n- Was the last action successful or did it encounter issues? The last action of moving the soapbottle to the countertop was successful, but it did not contr",
+      "source_chars": 751,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:28:parts.plan:43:323",
+      "step": 28,
+      "source_field": "parts.plan",
+      "source_digest": "ab41a870ff49c3143454906098f9b4d468d48d8645fac5f032f3780fcc4d64b2",
+      "span_start": 43,
+      "span_end": 323,
+      "verbatim": "ection\n- Given what I've learned, what should I do next? I should continue searching for the spraybottle by examining other cabinets or areas that have not been checked yet.\n- Please explain why this plan is helpful for the next action? This plan helps ensure that I identify the ",
+      "source_chars": 489,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:29:parts.action:0:15",
+      "step": 29,
+      "source_field": "parts.action",
+      "source_digest": "4a7478b2e386f6976232c8b5bef88ca3b24809c07f05466de710a7f03c664ee2",
+      "span_start": 0,
+      "span_end": 15,
+      "verbatim": "go to cabinet 2",
+      "source_chars": 15,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:30:env_text:0:73",
+      "step": 30,
+      "source_field": "env_text",
+      "source_digest": "fb7b768416877fd93808b6c402e676783d716785fc258cc03f2d55742226a7ac",
+      "span_start": 0,
+      "span_end": 73,
+      "verbatim": "You arrive at cabinet 2. The cabinet 2 is open. In it, you see a cloth 2.",
+      "source_chars": 73,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:29:parts.memory:2:282",
+      "step": 29,
+      "source_field": "parts.memory",
+      "source_digest": "def55d2193e434be5fce80734f0acbd4bc10cb89e2fea24b4630f4b35270ab5c",
+      "span_start": 2,
+      "span_end": 282,
+      "verbatim": "ok at the past observations and actions from our conversation history.\n- Step 17: Arrived at countertop 1 and moved the soapbottle 1 to it, which means I have interacted with the countertop before and know the location. This is relevant as my task is to put a spraybottle on the c",
+      "source_chars": 292,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:29:parts.reflection:10:290",
+      "step": 29,
+      "source_field": "parts.reflection",
+      "source_digest": "24b8235bf40cd93e2e0f4f3a600ebca16e917c53eaf564ca55c37d490fffa4a9",
+      "span_start": 10,
+      "span_end": 290,
+      "verbatim": " the last action and its outcome\n- Did I complete the task goal? No, because I need to put a spraybottle on the countertop, not a soapbottle.\n- Was last action successful or did it encounter issues? The last action involved moving, which didn't contribute to solving the task.\n- A",
+      "source_chars": 634,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:29:parts.plan:38:318",
+      "step": 29,
+      "source_field": "parts.plan",
+      "source_digest": "2378df1454a91cecf91234239a6801f164585ad1aa97aae6d90b076dc646a9ad",
+      "span_start": 38,
+      "span_end": 318,
+      "verbatim": " reflection\n- Given what I've learned, what should I do next? I should examine the remaining cabinets or areas to locate the spraybottle.\n- Please explain why this plan is helpful for the next action? This plan is helpful as it targets finding the missing spraybottle, which is es",
+      "source_chars": 528,
+      "excerpted": true
+    }
+  ],
+  "terminal_context": {
+    "steps": 30,
+    "last_action_step": 30,
+    "final_feedback_available": false,
+    "limitation": "The source has no observation after its final action. Outcome and stop cause are unknown."
+  },
+  "evidence_policy": {
+    "max_related_events_per_candidate": 12,
+    "related_module_excerpt_chars": 280,
+    "related_observation_excerpt_chars": 600,
+    "local_context_unit": "unique_candidate_step",
+    "selection_is_semantic_verdict": false
+  },
+  "manager_guidance": {
+    "plan": {
+      "schema": "trace-investigation-plan/v1",
+      "assignments": [
+        {
+          "agent_id": "investigate_origin_and_recovery",
+          "anchor_case_id": "authored_route",
+          "route_case_ids": [
+            "authored_route"
+          ],
+          "question": "Where did the plan to satisfy a spraybottle task with soapbottle 1 become an actionable substitution? Search earlier related modules and test the rival that this was only a temporary hypothesis followed by correction.",
+          "search_targets": [
+            "Earlier soapbottle versus spraybottle reasoning in all mental modules",
+            "Cabinet observation naming the actual object",
+            "Take and placement actions involving soapbottle 1",
+            "Correction at subsequent steps and possible later recurrence"
+          ],
+          "evidence": [
+            {
+              "source_id": "source:17:plan",
+              "quote": "This action will complete the task of putting a spraybottle in the countertop, as I'm currently at the correct location with the soapbottle in my possession."
+            }
+          ],
+          "criteria": {
+            "supported": "Original observation identifies soapbottle 1, but a reflection recommends taking and placing it to advance the spraybottle goal and the action follows that recommendation.",
+            "refuted": "The source establishes that the names refer to the same valid task object, or the hypothesis is rejected before any decision relies on it.",
+            "unknown": "The record establishes a local substitution but does not establish which later relapse determines the final outcome."
+          }
+        }
+      ],
+      "decision_rules": [
+        {
+          "rule_id": "evidence_supported",
+          "conditions": [
+            {
+              "agent_id": "investigate_origin_and_recovery",
+              "outcome": "supported",
+              "finding": "Original observation identifies soapbottle 1, but a reflection recommends taking and placing it to advance the spraybottle goal and the action follows that recommendation."
+            }
+          ],
+          "conclusion": "Select the step where a qualified hypothesis becomes actionable guidance; compare the same-step plan as a downstream alternative.",
+          "caveat": "The step-14 wording includes potential, so the mere hypothesis of object equivalence is not the error. The actionable recommendation adopts the wrong object. Step 15 temporarily corrects the mistake, and step 16 reintroduces it; this prevents a claim of uninterrupted propagation or uniquely established final root cause."
+        },
+        {
+          "rule_id": "evidence_refuted",
+          "conditions": [
+            {
+              "agent_id": "investigate_origin_and_recovery",
+              "outcome": "refuted",
+              "finding": "The source establishes that the names refer to the same valid task object, or the hypothesis is rejected before any decision relies on it."
+            }
+          ],
+          "conclusion": "Reject object substitution as the explanation; object names in parsed facts alone cannot prove an error.",
+          "caveat": "The step-14 wording includes potential, so the mere hypothesis of object equivalence is not the error. The actionable recommendation adopts the wrong object. Step 15 temporarily corrects the mistake, and step 16 reintroduces it; this prevents a claim of uninterrupted propagation or uniquely established final root cause."
+        },
+        {
+          "rule_id": "evidence_unknown",
+          "conditions": [
+            {
+              "agent_id": "investigate_origin_and_recovery",
+              "outcome": "unknown",
+              "finding": "The record establishes a local substitution but does not establish which later relapse determines the final outcome."
+            }
+          ],
+          "conclusion": "Identify the local decision while explicitly accounting for recovery and recurrence, rather than claiming uninterrupted causal propagation.",
+          "caveat": "The step-14 wording includes potential, so the mere hypothesis of object equivalence is not the error. The actionable recommendation adopts the wrong object. Step 15 temporarily corrects the mistake, and step 16 reintroduces it; this prevents a claim of uninterrupted propagation or uniquely established final root cause."
+        }
+      ],
+      "uncertainty": "The step-14 wording includes potential, so the mere hypothesis of object equivalence is not the error. The actionable recommendation adopts the wrong object. Step 15 temporarily corrects the mistake, and step 16 reintroduces it; this prevents a claim of uninterrupted propagation or uniquely established final root cause.",
+      "plan_digest": "380bf61395bca640e8bba7fa3d3af42884901b07168ff75c808120947f1361d0",
+      "source_coverage": {
+        "step_range": [
+          1,
+          30
+        ],
+        "action_observation_timeline_complete": true,
+        "all_memory_reflection_plan_supplied": false,
+        "other_modules": "ROUTE anchor steps only",
+        "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+      }
+    },
+    "assigned_evidence": {
+      "investigate_origin_and_recovery": [
+        {
+          "source_id": "source:17:plan",
+          "step": 17,
+          "module": "plan",
+          "source_kind": "original_agent_module",
+          "quote": "This action will complete the task of putting a spraybottle in the countertop, as I'm currently at the correct location with the soapbottle in my possession."
+        }
+      ]
+    },
+    "trace_evidence": {
+      "investigate_origin_and_recovery": {
+        "query": "-- Purpose: Trace the object-substitution decision and check both the next-step correction and later recurrence.\n-- Search entity-specific history before the anchor and later recovery; never retrieve whole steps.\nWITH evidence AS (\n-- Inspect the memory evidence for 'soapbottle' in original steps 1-17.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('soapbottle','memory',1,17)\nUNION\n-- Inspect the reflection evidence for 'soapbottle' in original steps 1-17.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('soapbottle','reflection',1,17)\nUNION\n-- Inspect the plan evidence for 'soapbottle' in original steps 1-17.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('soapbottle','plan',1,17)\nUNION\n-- Inspect the observation evidence for 'soapbottle 1' in original steps 1-30.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('soapbottle 1','observation',1,30)\nUNION\n-- Inspect the action evidence for 'soapbottle 1' in original steps 1-30.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('soapbottle 1','action',1,30)\nUNION\n-- Inspect the observation evidence for 'spraybottle' in original steps 1-30.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('spraybottle','observation',1,30)\nUNION\n-- Track the disputed entity; parsed claims and derived checks remain unverified.\nSELECT step,'parsed_fact' AS module,span AS text,NULL AS source_id,\n       NULL AS start,NULL AS end,fid,source_kind,parse_status,\n       rel,args,slot,side,value,value_type,assertion_time,claim_scope,claim_polarity\nFROM TRACK_ENTITY('portable:soapbottle_1',1,30)\n)\n-- Deduplicate overlapping excerpts while retaining exact source offsets.\nSELECT DISTINCT * FROM evidence ORDER BY step,module,start,fid;\n",
+        "columns": [
+          "step",
+          "module",
+          "text",
+          "source_id",
+          "start",
+          "end",
+          "fid",
+          "source_kind",
+          "parse_status",
+          "rel",
+          "args",
+          "slot",
+          "side",
+          "value",
+          "value_type",
+          "assertion_time",
+          "claim_scope",
+          "claim_polarity"
+        ],
+        "rows": [
+          {
+            "step": 1,
+            "module": "observation",
+            "text": "kbasin 1, a toilet 1, a toiletpaperhanger 1, and a towelholder 1.\n\nYour task is to: put a spraybottle in countertop.",
+            "source_id": "observation:1:231:347",
+            "start": 231,
+            "end": 347,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "action",
+            "text": "take soapbottle 1 from cabinet 3",
+            "source_id": "action:14:0:32",
+            "start": 0,
+            "end": 32,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "memory",
+            "text": "re I need to place the spraybottle.\n- Step 13 is relevant: I opened cabinet 3 and found a soapbottle 1, which could potentially be the spraybottle I need to place on the countertop.",
+            "source_id": "memory:14:170:351",
+            "start": 170,
+            "end": 351,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "observation",
+            "text": "You open the cabinet 3. The cabinet 3 is open. In it, you see a candle 1, and a soapbottle 1.",
+            "source_id": "observation:14:0:93",
+            "start": 0,
+            "end": 93,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "parsed_fact",
+            "text": "In it, you see a candle 1, and a soapbottle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 128,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:soapbottle_1\", \"attribute:object_type\", \"value:soapbottle\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "parsed_fact",
+            "text": "In it, you see a candle 1, and a soapbottle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 129,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:soapbottle_1\", \"cabinet:3\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "parsed_fact",
+            "text": "take soapbottle 1 from cabinet 3",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 134,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "take",
+            "args": "[\"portable:soapbottle_1\", \"cabinet:3\"]",
+            "slot": "act",
+            "side": "mind",
+            "value": "take soapbottle 1 from cabinet 3",
+            "value_type": "string",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "plan",
+            "text": "memory and reflection\n- Given what I've learned, what should I do next? I should take the soapbottle 1 from cabinet 3.\n- Please explain why this plan is helpful for the next action? This action will allow me to carry the soapbottle 1, which can then be placed on the countertop to complete the task.\n- What do I expect this action to achieve? I expect to have ",
+            "source_id": "plan:14:28:388",
+            "start": 28,
+            "end": 388,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 14,
+            "module": "reflection",
+            "text": "m I making progress toward the task goal? Yes, I have identified a potential spraybottle (soapbottle 1) that could be placed on the countertop.\n- If the action did not go as expected and did not result in progress, provide constructive feedback to guide the next planning step. I should now focus on taking the soapbottle 1 and placing it on the countertop.",
+            "source_id": "reflection:14:256:613",
+            "start": 256,
+            "end": 613,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 15,
+            "module": "memory",
+            "text": "m our conversation history.\n- The task is to put a spraybottle on the countertop, but the soapbottle was mistakenly taken from cabinet 3. This is observed in step 14, where the action was 'take soapbottle 1 from cabinet 3', and the current observation confirms that the soapbottle is now in hand.\n- At step 5, it was observed that the countertop 1 was empty, w",
+            "source_id": "memory:15:45:405",
+            "start": 45,
+            "end": 405,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 15,
+            "module": "observation",
+            "text": "You pick up the soapbottle 1 from the cabinet 3.",
+            "source_id": "observation:15:0:48",
+            "start": 0,
+            "end": 48,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 15,
+            "module": "parsed_fact",
+            "text": "You pick up the soapbottle 1 from the cabinet 3.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 136,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:soapbottle_1\", \"attribute:object_type\", \"value:soapbottle\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 15,
+            "module": "parsed_fact",
+            "text": "You pick up the soapbottle 1 from the cabinet 3.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 137,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:soapbottle_1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 15,
+            "module": "parsed_fact",
+            "text": "You pick up the soapbottle 1 from the cabinet 3.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 138,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:soapbottle_1\", \"cabinet:3\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 0,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 15,
+            "module": "reflection",
+            "text": " last action and its outcome\n- Did I complete the task goal? No, I mistakenly picked up a soapbottle instead of a spraybottle.\n- Was last action successful or did it encounter issues? The action was successful in picking up the soapbottle, but it was not the correct item needed for the task.\n- Am I making progress toward the task goal? Not currently, as I ne",
+            "source_id": "reflection:15:14:374",
+            "start": 14,
+            "end": 374,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 16,
+            "module": "memory",
+            "text": "on indicated arrival at countertop 1 with nothing on it.\n- Step 14: Successfully took the soapbottle 1 from cabinet 3.\nThese memory steps are helpful milestones because they confirm that the countertop is currently empty and that I am carrying the soapbottle 1, which is a relevant item for the task.",
+            "source_id": "memory:16:92:392",
+            "start": 92,
+            "end": 392,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 16,
+            "module": "parsed_fact",
+            "text": "- Step 14: Successfully took the soapbottle 1 from cabinet 3",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 152,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:soapbottle_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 14,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 16,
+            "module": "parsed_fact",
+            "text": "These memory steps are helpful milestones because they confirm that the countertop is currently empty and that I am carrying the soapbottle 1, which is a relevant item for the task",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 153,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:soapbottle_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 16,
+            "claim_scope": "current",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 16,
+            "module": "plan",
+            "text": "s helpful for the next action? This plan is helpful because the task requires placing the soapbottle on the countertop, and I am currently not at the correct location for this action.\n- What do I expect this action to achieve? I expect this action to position me at the countertop, allowing me to place the soapbottle on it in subsequent steps.",
+            "source_id": "plan:16:161:505",
+            "start": 161,
+            "end": 505,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 16,
+            "module": "reflection",
+            "text": "ask goal.\n- Am I making progress toward the task goal? Indirectly, as I have acquired the soapbottle 1, but I need to move towards the countertop to continue progress.\n- If the action did not go as expected and did not result in progress, provide constructive feedback to guide the next planning step. The last action of moving to cabinet 1 was unnecessary for",
+            "source_id": "reflection:16:307:667",
+            "start": 307,
+            "end": 667,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 17,
+            "module": "action",
+            "text": "move soapbottle 1 to countertop 1",
+            "source_id": "action:17:0:33",
+            "start": 0,
+            "end": 33,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 17,
+            "module": "memory",
+            "text": "ry.\n- Step 5: Arrived at countertop 1 and observed that it was empty.\n- Step 14: Took the soapbottle 1 from cabinet 3, indicating that I currently have it in my possession.\nThese memory should be helpful milestones to solve this task.",
+            "source_id": "memory:17:69:303",
+            "start": 69,
+            "end": 303,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 17,
+            "module": "parsed_fact",
+            "text": "- Step 14: Took the soapbottle 1 from cabinet 3, indicating that I currently have it in my possession",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 161,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:soapbottle_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 14,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 17,
+            "module": "parsed_fact",
+            "text": "move soapbottle 1 to countertop 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 165,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "put",
+            "args": "[\"portable:soapbottle_1\", \"countertop:1\"]",
+            "slot": "act",
+            "side": "mind",
+            "value": "move soapbottle 1 to countertop 1",
+            "value_type": "string",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 17,
+            "module": "plan",
+            "text": "memory and reflection\n- Given what I've learned, what should I do next? I should move the soapbottle 1 to countertop 1.\n- Please explain why this plan is helpful for the next action? This action will complete the task of putting a spraybottle in the countertop, as I'm currently at the correct location with the soapbottle in my possession.\n- What do I expect ",
+            "source_id": "plan:17:28:388",
+            "start": 28,
+            "end": 388,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 17,
+            "module": "reflection",
+            "text": "\n- Am I making progress toward the task goal? Yes, I am making progress as I now have the soapbottle 1 and am at the location where it needs to be placed.\n- If the action did not go as expected and did not result in progress, provide constructive feedback to guide the next planning step. The action went as expected, so no additional feedback is necessary.",
+            "source_id": "reflection:17:236:593",
+            "start": 236,
+            "end": 593,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 18,
+            "module": "observation",
+            "text": "You move the soapbottle 1 to the countertop 1.",
+            "source_id": "observation:18:0:46",
+            "start": 0,
+            "end": 46,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 18,
+            "module": "parsed_fact",
+            "text": "You move the soapbottle 1 to the countertop 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 168,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:soapbottle_1\", \"attribute:object_type\", \"value:soapbottle\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 18,
+            "module": "parsed_fact",
+            "text": "You move the soapbottle 1 to the countertop 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 169,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:soapbottle_1\", \"countertop:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 18,
+            "module": "parsed_fact",
+            "text": "You move the soapbottle 1 to the countertop 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 170,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:soapbottle_1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 0,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 19,
+            "module": "observation",
+            "text": "On the countertop 1, you see a soapbottle 1.",
+            "source_id": "observation:19:0:44",
+            "start": 0,
+            "end": 44,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 19,
+            "module": "parsed_fact",
+            "text": "On the countertop 1, you see a soapbottle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 178,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:soapbottle_1\", \"attribute:object_type\", \"value:soapbottle\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 19,
+            "module": "parsed_fact",
+            "text": "On the countertop 1, you see a soapbottle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 179,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:soapbottle_1\", \"countertop:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 23,
+            "module": "observation",
+            "text": "You arrive at countertop 1. On the countertop 1, you see a soapbottle 1.",
+            "source_id": "observation:23:0:72",
+            "start": 0,
+            "end": 72,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 23,
+            "module": "parsed_fact",
+            "text": "On the countertop 1, you see a soapbottle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 222,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:soapbottle_1\", \"attribute:object_type\", \"value:soapbottle\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 23,
+            "module": "parsed_fact",
+            "text": "On the countertop 1, you see a soapbottle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 223,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:soapbottle_1\", \"countertop:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 24,
+            "module": "parsed_fact",
+            "text": "- Step 14: Took soapbottle 1 from cabinet 3, which was mistaken for a spraybottle",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 236,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:soapbottle_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 14,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 25,
+            "module": "parsed_fact",
+            "text": "- Step 14: I took the soapbottle 1 from cabinet 3, thinking it might be the spraybottle needed for the task",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 248,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:soapbottle_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 14,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          }
+        ],
+        "returned_steps": [
+          1,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          23,
+          24,
+          25
+        ],
+        "function_scopes": [
+          {
+            "function": "TRACK_ENTITY",
+            "arguments": [
+              "portable:soapbottle_1",
+              1,
+              30
+            ],
+            "matched_rows": 19,
+            "truncated": false,
+            "limits": {
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "spraybottle",
+              "observation",
+              1,
+              30
+            ],
+            "matched_rows": 1,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 1,
+              "returned_sources": 1,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "soapbottle 1",
+              "action",
+              1,
+              30
+            ],
+            "matched_rows": 2,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 2,
+              "returned_sources": 2,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "soapbottle 1",
+              "observation",
+              1,
+              30
+            ],
+            "matched_rows": 5,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 5,
+              "returned_sources": 5,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "soapbottle",
+              "plan",
+              1,
+              17
+            ],
+            "matched_rows": 3,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 3,
+              "returned_sources": 3,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "soapbottle",
+              "memory",
+              1,
+              17
+            ],
+            "matched_rows": 4,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 4,
+              "returned_sources": 4,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "soapbottle",
+              "reflection",
+              1,
+              17
+            ],
+            "matched_rows": 4,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 4,
+              "returned_sources": 4,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          }
+        ],
+        "truncated": false,
+        "evidence_quality": {
+          "through_step": 30,
+          "absence_means": "unknown_not_false",
+          "parse_gaps": [],
+          "unmodeled_goals": [],
+          "observation_coverage": "Template/backoff admission is extraction coverage, not complete world observability or semantic truth.",
+          "agent_module_coverage": "Memory/plan/action extraction is selective and heuristic. A missing typed claim or unmentioned constraint is not an omission by the agent.",
+          "derived_checks": "env/chk facts are computed from attempted actions and parsed state, not independent environment feedback.",
+          "false_positive_check": "Compare original source with the extracted proposition; test ambiguity, history, negation and legitimate exploration/retry. Missing facts, unmet checks or limited retrieval alone cannot support error."
+        },
+        "limitations": "Element results only, never complete steps. Failed function branches are UNAVAILABLE, not zero matches or counterevidence. Inspect partial/function_errors/skipped_branches and repairs. No aggregate row/byte/source/function budget is imposed. Explicit SQL LIMIT, filters, graph depth, phrase-centered excerpts and column selection can omit evidence. Empty results and missing facts mean unknown, not an agent error. Inspect original source before accepting a parsed premise.",
+        "partial": false,
+        "function_errors": [],
+        "repairs": [],
+        "skipped_branches": [],
+        "coverage": "element_scope_only",
+        "limits": {
+          "rows": null,
+          "bytes": null,
+          "vm_operations": 2000000,
+          "raw_source_chars": null,
+          "function_calls": null,
+          "excerpt_chars": 360
+        }
+      }
+    },
+    "instruction": "Evaluate each manager condition against original assigned/query evidence, including empty TRACE reviews. All conditions in a rule must be supported before using its conclusion. No result, clipping, parse gaps or agent confidence alone proves a condition. Explain supported/refuted/unknown outcomes in comparisons/reasoning; use unknown criteria for unresolved branches. partial/function_errors/skipped_branches mean unavailable evidence, never zero matches or refutation. The plan is advisory, not observed evidence or a vote. Select only an existing TRACE candidate."
+  },
+  "instruction": "Compare these TRACE suspects once and return one answer. Select exactly one supplied candidate and return status=diagnosed; SUBMIT cannot abstain or return uncertain. TRACE uncertain is an evidence qualification, not an exclusion from selection. Keep residual uncertainty in the uncertainty text and do not invent supporting evidence. Use shared local context and bounded related source excerpts; no complete history is supplied. Retrieval hints do not prove dependency, recovery or absence. Omitted evidence remains unknown. There are no tools. No labels or reference answer are supplied."
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "candidate_id": "authored_route",
+    "issue_step": 10,
+    "issue_fids": [
+      167
+    ],
+    "goal_links": [
+      "req:ladle_in_diningtable"
+    ],
+    "hypothesis": "Does the later completion claim follow from treating placement as sufficient, or was cleanliness already established? Search backward for the cleanliness obligation and compare pickup, placement and subsequent verification before blaming the first pickup."
+  }
+]

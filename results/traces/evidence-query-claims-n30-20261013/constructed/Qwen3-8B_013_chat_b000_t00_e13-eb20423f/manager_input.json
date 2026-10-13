@@ -1,0 +1,1242 @@
+{
+  "schema": "trace-manager-input/v1",
+  "task": "Find me slip resistant, non slip men's loafers & slip-ons with rubber outsole, rubber sole with color: r.brown2626, and size: 9.5, and price lower than 60.00 dollars",
+  "goal_map": {
+    "schema": "entity-evidence/v4",
+    "task_contract": {
+      "verbatim": "Find me slip resistant, non slip men's loafers & slip-ons with rubber outsole, rubber sole with color: r.brown2626, and size: 9.5, and price lower than 60.00 dollars",
+      "structured_requirement_count": 4,
+      "tracked_requirement_count": 3,
+      "unmodeled_requirement_count": 1,
+      "coverage": "not_proven_exhaustive",
+      "limitation": "The verbatim task is authoritative. Structured requirements include dynamic labelled properties and preserve free-text qualifiers, but a preserved phrase may not be semantically decomposed."
+    },
+    "requirements": [
+      {
+        "entity": {
+          "id": "req:description",
+          "kind": "requirement"
+        },
+        "definition": {
+          "count": 1,
+          "relation": "has",
+          "target": "attribute:description",
+          "constraints": [
+            {
+              "property": "attribute:description",
+              "attribute": "description",
+              "operator": "semantic_match",
+              "expected": "slip resistant, non slip men's loafers & slip-ons with rubber outsole, rubber sole",
+              "value_type": "text",
+              "unit": null,
+              "mode": "semantic",
+              "source_span": "slip resistant, non slip men's loafers & slip-ons with rubber outsole, rubber sole",
+              "confidence": 1.0
+            }
+          ],
+          "status_mode": "unmodeled"
+        },
+        "status": {
+          "state": "unresolved",
+          "recorded_met": 0,
+          "required_count": 1,
+          "reason": "the constraint is parsed but has no deterministic discharge rule",
+          "qualifying_steps": [],
+          "fully_qualifying_steps": [],
+          "decision_steps": [],
+          "limitations": [
+            "Missing extracted state is unknown, not false. Compiled decisions are not observed effects; task satisfaction is not agent responsibility.",
+            "This free-text constraint is preserved in the contract but is not yet deterministically verified."
+          ]
+        },
+        "gaps": [
+          {
+            "kind": "the_constraint_is_parsed_but_has_no_deterministic_discharge_rule",
+            "qualifying_steps": [],
+            "decision_steps": []
+          }
+        ],
+        "evidence_counts": {
+          "events": 3,
+          "changes": 0,
+          "intentions": 6
+        }
+      },
+      {
+        "entity": {
+          "id": "req:color",
+          "kind": "requirement"
+        },
+        "definition": {
+          "count": 1,
+          "relation": "chosen",
+          "target": "attribute:color",
+          "constraints": [
+            {
+              "property": "attribute:color",
+              "attribute": "color",
+              "operator": "eq",
+              "expected": "r.brown2626",
+              "value_type": "string",
+              "unit": null,
+              "mode": "selection",
+              "source_span": "color: r.brown2626",
+              "confidence": 1.0
+            }
+          ],
+          "status_mode": "tracked"
+        },
+        "status": {
+          "state": "unmet",
+          "recorded_met": 0,
+          "required_count": 1,
+          "reason": "the recorded decision did not satisfy the constraint",
+          "qualifying_steps": [],
+          "fully_qualifying_steps": [],
+          "decision_steps": [
+            3,
+            4
+          ],
+          "limitations": [
+            "Missing extracted state is unknown, not false. Compiled decisions are not observed effects; task satisfaction is not agent responsibility."
+          ]
+        },
+        "gaps": [
+          {
+            "kind": "the_recorded_decision_did_not_satisfy_the_constraint",
+            "qualifying_steps": [],
+            "decision_steps": [
+              3,
+              4
+            ]
+          }
+        ],
+        "evidence_counts": {
+          "events": 7,
+          "changes": 3,
+          "intentions": 6
+        }
+      },
+      {
+        "entity": {
+          "id": "req:size",
+          "kind": "requirement"
+        },
+        "definition": {
+          "count": 1,
+          "relation": "chosen",
+          "target": "attribute:size",
+          "constraints": [
+            {
+              "property": "attribute:size",
+              "attribute": "size",
+              "operator": "eq",
+              "expected": "9.5",
+              "value_type": "string",
+              "unit": null,
+              "mode": "selection",
+              "source_span": "size: 9.5",
+              "confidence": 1.0
+            }
+          ],
+          "status_mode": "tracked"
+        },
+        "status": {
+          "state": "unknown",
+          "recorded_met": 0,
+          "required_count": 1,
+          "reason": "qualifying evidence exists but no satisfying decision is recorded",
+          "qualifying_steps": [
+            3,
+            4,
+            5,
+            9
+          ],
+          "fully_qualifying_steps": [
+            3,
+            4,
+            5,
+            9
+          ],
+          "decision_steps": [],
+          "limitations": [
+            "Missing extracted state is unknown, not false. Compiled decisions are not observed effects; task satisfaction is not agent responsibility."
+          ]
+        },
+        "gaps": [
+          {
+            "kind": "qualifying_evidence_exists_but_no_satisfying_decision_is_recorded",
+            "qualifying_steps": [
+              3,
+              4,
+              5,
+              9
+            ],
+            "decision_steps": []
+          }
+        ],
+        "evidence_counts": {
+          "events": 4,
+          "changes": 0,
+          "intentions": 6
+        }
+      },
+      {
+        "entity": {
+          "id": "req:price",
+          "kind": "requirement"
+        },
+        "definition": {
+          "count": 1,
+          "relation": "chosen",
+          "target": "attribute:price",
+          "constraints": [
+            {
+              "property": "attribute:price",
+              "attribute": "price",
+              "operator": "lt",
+              "expected": 60.0,
+              "value_type": "money",
+              "unit": "USD",
+              "mode": "observation",
+              "source_span": "price lower than 60.00 dollars",
+              "confidence": 1.0
+            }
+          ],
+          "status_mode": "tracked"
+        },
+        "status": {
+          "state": "unknown",
+          "recorded_met": 0,
+          "required_count": 1,
+          "reason": "qualifying evidence exists but no satisfying decision is recorded",
+          "qualifying_steps": [
+            2,
+            8
+          ],
+          "fully_qualifying_steps": [
+            2,
+            8
+          ],
+          "decision_steps": [],
+          "limitations": [
+            "Missing extracted state is unknown, not false. Compiled decisions are not observed effects; task satisfaction is not agent responsibility.",
+            "Price observations do not currently create a chosen(price, value) discharge fact."
+          ]
+        },
+        "gaps": [
+          {
+            "kind": "qualifying_evidence_exists_but_no_satisfying_decision_is_recorded",
+            "qualifying_steps": [
+              2,
+              8
+            ],
+            "decision_steps": []
+          }
+        ],
+        "evidence_counts": {
+          "events": 6,
+          "changes": 0,
+          "intentions": 8
+        }
+      }
+    ],
+    "query": "requirements",
+    "requested_query": "requirements",
+    "parse_audit": {
+      "unresolved": [
+        {
+          "step": 3,
+          "kind": "observation",
+          "reasons": [
+            "semantic_trigger:comparison_change:now",
+            "no_complete_trusted_template",
+            "template_rejection:item page requires semantic/context audit"
+          ]
+        },
+        {
+          "step": 4,
+          "kind": "observation",
+          "reasons": [
+            "semantic_trigger:comparison_change:now",
+            "no_complete_trusted_template",
+            "template_rejection:item page requires semantic/context audit"
+          ]
+        },
+        {
+          "step": 5,
+          "kind": "observation",
+          "reasons": [
+            "semantic_trigger:comparison_change:now",
+            "no_complete_trusted_template",
+            "template_rejection:item page requires semantic/context audit"
+          ]
+        },
+        {
+          "step": 9,
+          "kind": "observation",
+          "reasons": [
+            "semantic_trigger:comparison_change:now",
+            "no_complete_trusted_template",
+            "template_rejection:item page requires semantic/context audit"
+          ]
+        }
+      ],
+      "instruction": "Parse gaps are unknowns, not evidence of agent failure; inspect original text."
+    }
+  },
+  "route_cases": [
+    {
+      "candidate": {
+        "candidate_id": "authored_route",
+        "issue_step": 9,
+        "issue_fids": [
+          212
+        ],
+        "goal_links": [
+          "req:color",
+          "req:description",
+          "req:price",
+          "req:size"
+        ],
+        "hypothesis": "Did a tentative brown/r.brown2626 equivalence become a confirmed match used for purchase? Test original description evidence, displayed variants and earlier verification plans; do not mistake leather uppers for evidence against rubber soles."
+      },
+      "facts": [
+        {
+          "fid": 212,
+          "rel": "planned",
+          "args": [
+            {
+              "kind": "agent",
+              "index": "self"
+            }
+          ],
+          "value": "stated",
+          "slot": "plan",
+          "side": "mind",
+          "t": 9,
+          "situation": 187,
+          "basis": [
+            187,
+            188,
+            189,
+            190,
+            191,
+            192,
+            193,
+            194,
+            195,
+            196,
+            197,
+            198,
+            199,
+            200,
+            201,
+            202,
+            203,
+            204,
+            205,
+            206,
+            207,
+            208,
+            209,
+            210,
+            211
+          ],
+          "purpose": {
+            "kind": "int",
+            "index": "i9"
+          },
+          "span": "The next step is to finalize the purchase of the MCICI Mens Loafers as it meets all requirements: slip-resistant, rubber outsole, r.brown2626 color, size 9.5, and price under $60. Clicking \"Buy Now\" will complete the task efficiently.",
+          "value_type": "string",
+          "source_kind": "agent_text",
+          "parse_status": "verbatim_not_verified_truth",
+          "assertion_time": null,
+          "claim_scope": null,
+          "claim_polarity": null
+        }
+      ],
+      "rule_evidence": [],
+      "parse_audits": [
+        {
+          "source_id": "task:0",
+          "step": 0,
+          "kind": "task",
+          "status": "template",
+          "template": "complete-domain-templates/v1/webshop/task",
+          "reasons": [],
+          "unresolved": [],
+          "handled_triggers": [
+            "semantic_trigger:quantity_scope:lower than"
+          ]
+        },
+        {
+          "source_id": "observation:9",
+          "step": 9,
+          "kind": "observation",
+          "status": "unresolved",
+          "template": null,
+          "reasons": [
+            "semantic_trigger:comparison_change:now",
+            "no_complete_trusted_template",
+            "template_rejection:item page requires semantic/context audit"
+          ],
+          "unresolved": [
+            {
+              "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+              "reason": "uncovered source tokens: Description Features Reviews Buy Now"
+            }
+          ],
+          "handled_triggers": []
+        }
+      ],
+      "evidence_quality": {
+        "through_step": 9,
+        "absence_means": "unknown_not_false",
+        "parse_gaps": [
+          {
+            "source_id": "observation:3",
+            "step": 3,
+            "kind": "observation",
+            "status": "unresolved",
+            "reasons": [
+              "semantic_trigger:comparison_change:now",
+              "no_complete_trusted_template",
+              "template_rejection:item page requires semantic/context audit"
+            ],
+            "unresolved": [
+              {
+                "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+                "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews"
+              }
+            ]
+          },
+          {
+            "source_id": "observation:4",
+            "step": 4,
+            "kind": "observation",
+            "status": "unresolved",
+            "reasons": [
+              "semantic_trigger:comparison_change:now",
+              "no_complete_trusted_template",
+              "template_rejection:item page requires semantic/context audit"
+            ],
+            "unresolved": [
+              {
+                "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+                "reason": "uncovered source tokens: Back to Search Prev Rating N A Description Features Reviews Buy Now"
+              }
+            ]
+          },
+          {
+            "source_id": "observation:5",
+            "step": 5,
+            "kind": "observation",
+            "status": "unresolved",
+            "reasons": [
+              "semantic_trigger:comparison_change:now",
+              "no_complete_trusted_template",
+              "template_rejection:item page requires semantic/context audit"
+            ],
+            "unresolved": [
+              {
+                "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+                "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews Buy Now"
+              }
+            ]
+          },
+          {
+            "source_id": "observation:9",
+            "step": 9,
+            "kind": "observation",
+            "status": "unresolved",
+            "reasons": [
+              "semantic_trigger:comparison_change:now",
+              "no_complete_trusted_template",
+              "template_rejection:item page requires semantic/context audit"
+            ],
+            "unresolved": [
+              {
+                "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+                "reason": "uncovered source tokens: Description Features Reviews Buy Now"
+              }
+            ]
+          }
+        ],
+        "unmodeled_goals": [
+          "req:description"
+        ],
+        "observation_coverage": "Template/backoff admission is extraction coverage, not complete world observability or semantic truth.",
+        "agent_module_coverage": "Memory/plan/action extraction is selective and heuristic. A missing typed claim or unmentioned constraint is not an omission by the agent.",
+        "derived_checks": "env/chk facts are computed from attempted actions and parsed state, not independent environment feedback.",
+        "false_positive_check": "Compare original source with the extracted proposition; test ambiguity, history, negation and legitimate exploration/retry. Missing facts, unmet checks or limited retrieval alone cannot support error."
+      }
+    }
+  ],
+  "benchmark_scope": {
+    "schema": "benchmark-error-scope/v1",
+    "allowed_by_module": {
+      "memory": [
+        "hallucination",
+        "over_simplification",
+        "memory_retrieval_failure"
+      ],
+      "reflection": [
+        "progress_misjudge",
+        "causal_misattribution",
+        "outcome_misinterpretation"
+      ],
+      "plan": [
+        "inefficient_plan",
+        "constraint_ignorance",
+        "impossible_action"
+      ],
+      "action": [
+        "invalid_action",
+        "parameter_error",
+        "misalignment"
+      ],
+      "system": [
+        "environment_error",
+        "step_limit",
+        "llm_limit",
+        "tool_execution_error"
+      ]
+    },
+    "source": "core/local_judgement.py:FAULT with user-requested exclusions",
+    "excluded_causes": [
+      "formatting",
+      "spelling",
+      "literal quotation marks",
+      "serialization"
+    ],
+    "premise": "All genuine benchmark errors are within allowed_by_module. Formatting and spelling cannot cause the benchmark failure. Do not relabel these causes as another allowed error."
+  },
+  "query_context": {
+    "task_type": "webshop",
+    "step_range": [
+      1,
+      9
+    ],
+    "default_scope": "full_trajectory_including_steps_before_anchor",
+    "relation_names": [
+      "admissibility",
+      "asked",
+      "assessed",
+      "at",
+      "chosen",
+      "click",
+      "concluded",
+      "describes",
+      "effect",
+      "has",
+      "hypothesis",
+      "in",
+      "memory_unparsed",
+      "offers",
+      "open",
+      "planned",
+      "recalled_nothing",
+      "recalled_summary",
+      "result_total",
+      "satisfied",
+      "search",
+      "visible"
+    ],
+    "observed_action_relations": [
+      "click",
+      "search"
+    ],
+    "bounds_instruction": "Use these original step bounds. The anchor is a lead, not a lower bound. Omit optional bounds for a full-range element search; task-level Facts may have step 0."
+  },
+  "query_language": "# Record SQL v5: element investigation with source-bound agent statements\n\nOne read-only SQLite SELECT, including WITH, JOIN, UNION, conditions, grouping,\nordering and aggregates. Each case gets ONE query including errors. Compose targeted\nelement functions in that query to test a hypothesis AND its strongest rival.\nThere is no aggregate row, byte, source-count or function-count retrieval budget.\n\nInclude concise English `--` comments in the SQL string itself. Begin with\n`-- Purpose: ...` to state the question being tested, then explain each CTE/retrieval\nbranch and meaningful bounds, filters or joins in one short comment near that SQL.\nThese are query annotations, not asserted findings. Use actual newlines after line\ncomments; `#` is not a SQLite comment. Do not send annotations as a separate turn.\nThe original annotated SQL is preserved in `trace_queries.jsonl` under `query`\nand in the tool-call log under `arguments.sql` for display and debugging.\n\nHARD BOUNDARY: steps, modules, facts, fact_args, entities and edges are NOT SQL\ntables. RAW_STEP is forbidden, even for one step, with selected columns, via a CTE,\nor a join. No full-step/full-module text accessor exists. A query must use at least\none element function. Do not reconstruct the trajectory or dump whole modules.\nIdentify the entity, state, action type or precise claim you need first.\n\nBASIC QUERY CHECKLIST\n- query_context.step_range gives the actual original [1,last_step]. Omitting optional\n  bounds searches the full trajectory, including BEFORE the ROUTE anchor (task Facts\n  may use step 0). Use [1,anchor] for prior support; use later bounds only to test\n  recovery. Legacy window lo/hi identifies the anchor, not SQL visibility.\n- Use query_context.relation_names. In ALFWorld: examine/look -> look,\n  move/put -> put, go -> go, open action -> open_action; open is the state relation.\n  TRACK_ACTION('examine') is invalid. WebShop actions include search and click.\n- Arguments to table functions are LITERALS, not columns/subqueries. CTEs can join\n  already materialized results, but SOURCE(found.fid,'phrase') is unsupported.\n  Use known anchor IDs or SEARCH_TEXT to retrieve a missing source directly.\n  For a discovered claim, retrieve targeted peer-module excerpts using literal\n  task terms, then JOIN on step or use WHERE step IN (SELECT step FROM claims).\n  This expands evidence within the same query, without a second call or full steps.\n  Independent evidence may use different wording; do not require every source to\n  repeat the manager's exact phrase. Do not treat an empty phrase match as refutation.\n- SQL text uses SINGLE quotes: SEARCH_TEXT('4T','plan',1,15). Escape an apostrophe\n  by doubling it: SEARCH_TEXT('women''s','plan',1,15). Do not use double quotes for\n  text, invent function/relation names, or use expressions as function arguments.\n- Generic SEARCH_TEXT('search','plan',...) and SEARCH_TEXT('search','reflection',...)\n  are forbidden. Use the actual disputed phrase, such as 'fit type', or use\n  TRACK_ACTION('search',1,anchor) for search actions. Specific two-character codes\n  containing one letter and one digit (4T, 2T) are allowed and match whole tokens.\n  SEARCH_TEXT('Search','observation',t,t) is allowed ONLY for a WebShop observation\n  whose complete original text is the single home-page label Search. It cannot\n  retrieve richer observations or a range of steps using this generic label.\n- Before calling, check every function's literal\n  arguments and returned columns, and use UNION ALL only for independent evidence.\n  One malformed branch can make a dependent join/aggregate unusable. Prefer simple\n  documented syntax; the single query opportunity is consumed even on failure.\n- SOURCE(fid,'phrase') searches that Fact's actual original field. Choose a phrase\n  from the disputed claim; copying 'clean' into a shopping case yields no evidence.\n  SEARCH_TEXT is a case-insensitive literal search, not semantic search. Search the\n  right module: a memory's claim about a click is not itself a recorded action.\n- Match the entity AND attribute: has(value=1) may just mean object_type=cup.\n  Keep args, slot/side, source_kind and claim timing when comparing Fact rows.\n  Product keywords on a listing may describe different products. Track the product\n  ID and navigation/selection context; an available option is not a selected option.\n- Functions materialize BEFORE outer SQL filters/joins/LIMIT. Pass meaningful step\n  bounds into functions and prefer a specific claim over a broad common word.\n  All matching sources are returned before explicit SQL filtering. Inspect function_scopes.\n\nElement table functions (literal arguments only; bounds are original steps):\n- FIND_ENTITY('ladle'): existing IDs matching a specific noun/ID substring.\n  Columns: entity_id,kind,entity_index. Use IDs already in the anchor when possible.\n- TRACK_ENTITY('portable:ladle_1'[,from_step,to_step]): related compact Facts.\n  ABOUT is an alias. agent/self and intention entities are too broad and rejected.\n- TRACK_STATE('portable:ladle_1','has'[,from_step,to_step]): recorded env/task\n  assignments of ONE entity and ONE relation; inspect source_kind for derived checks.\n- STATE_AT('portable:ladle_1','has',7): latest assignments for that entity/relation.\n  Missing state is UNKNOWN; this is recorded knowledge, not complete world state.\n- TRACK_ACTION('search'[,from_step,to_step]): only original action facts of that\n  operation, e.g. compare search strings across time without retrieving logs.\n- TRACE_FACT(123,'backward'|'forward'|'goal',depth): provenance neighborhood;\n  depth 0..8, default 2, no node-count cap. These edges are not causal proof.\n- VERSIONS(123): Facts with the same relation and functional key.\n- SOURCE(123,'specific phrase'): exact source excerpt around a specific phrase in that\n  Fact's original field. Raw module Facts expose IDs, not their text: use this\n  function to check what an extraction actually meant.\n- SEARCH_TEXT('size medium','memory'[,from_step,to_step]): search one original\n  field independently of parsing. Field is observation/memory/reflection/plan/action.\n  Use this to find evidence a parser missed. Literal 3..120-character search term\n  (also specific two-character letter+digit codes, matched as whole tokens);\n  no wildcards, generic labels, or empty terms. 'clean', a product ID, or an exact\n  disputed claim are appropriate. No match means only no literal match.\n- GOAL_STATUS('req:size',9): goal_id,step,state,details. Missing verification is\n  unknown; unmodeled goals unresolved. Derived decision status is not world truth.\n- COVERAGE(9): step,details. Extraction gaps and interpretive limits through step 9.\n- FIND_CLAIMS('verification','reflection'[,from_step,to_step]): discover original\n  clauses about one topic in one mental module (memory/reflection/plan). Topics:\n  completion, verification, availability, selection, result_assessment,\n  expected_gain, hypothesis, state, decision_basis. Same columns as SEARCH_TEXT.\n  This is lexical topic discovery, NOT exhaustive semantic search or a fault test.\n  Add entity filters and independent action/observation evidence where relevant.\n  It finds clauses that have no typed memory Fact; no match still means unknown.\n\nCompact Fact columns (TRACK_ENTITY/STATE/ACTION, STATE_AT, TRACE_FACT, VERSIONS):\nfid,step,rel,args,slot,side,value,value_type,span,purpose,source_kind,parse_status,value_clipped,assertion_time,claim_scope,claim_polarity.\nargs is a JSON array of entity IDs. Raw memory/reflection/plan wrapper Facts have\nNULL value/span to prevent paragraph dumping. Other text values/spans cap at 240\ncharacters; value_clipped indicates value clipping. Query original source for quotes.\nmemory slot=mem, reflection=refl, plan=plan, action=act, observation=obs.\nenv/chk is a DERIVED check, not an observed state. Agent claims remain unverified.\n\nSOURCE/SEARCH_TEXT/FIND_CLAIMS columns:\nsource_id,fid,step,module,start,end,text,matched,source_kind,parse_status.\ntext is an exact original slice, maximum 360 characters, with [start,end) offsets.\nSEARCH_TEXT returns every matching source in the requested range; function_scopes\nreports matched and returned counts. No shared character budget drops later branches.\nSearch bounds and terms must focus on a causal question; don't request every field.\n\nSource-bound statement cards:\nThe response also has agent_statements for returned mental text and already-visible\nanchor/assigned evidence. Keep step,module,text (or exact fid,span) in your SELECT\nto enable source alignment; preserve source_id/start/end to disambiguate repeated\nidentical clauses. Intermediate hits removed by WHERE/LIMIT do not produce cards.\nStatements preserve original quote, polarity, modality, subjects/details and literal\nqualifiers. Links express the author's stated reasons/conditions/expectations, not\nverified evidence support. Partial clauses are never expanded from hidden text.\nReferences can bind pronouns to exact earlier already-visible clauses in the same\nmodule. They establish language reference only, not world truth or causal support.\nUnresolved clauses are batched into at most ONE parser request after your query;\ncached statements are reused. This grants no additional investigation/query turn.\nmodel_reviewed means source-validated model extraction, not guaranteed semantic\ncompleteness or world truth. Always compare the accompanying original quote.\n\nExample pattern (adapt the topic, entity phrase and modules to the evidence):\n```sql\n-- Purpose: compare verification language in peer modules for the same object.\nWITH checks AS (\n -- Discover reflection clauses about verification, retaining source provenance.\n SELECT * FROM FIND_CLAIMS('verification','reflection') WHERE lower(text) LIKE '%drawer%'\n), plans AS (\n -- Inspect the related drawer decision only at discovered verification steps.\n SELECT * FROM SEARCH_TEXT('drawer','plan')\n)\nSELECT * FROM checks\nUNION ALL SELECT * FROM plans WHERE step IN (SELECT step FROM checks)\nORDER BY step,module;\n```\nThis pattern exposes differences in what modules claim; it does not itself prove\nthat verification happened, was needed, or was improperly skipped.\n\nMetadata tables may be joined to element results:\n- goals(goal_id,name,count,of_kind,rel,target,status_mode)\n- constraints(goal_id,property,operator,expected,value_type,unit,mode,span)\n- route_evidence(candidate_id,issue_step,fid,hypothesis,goal_links)\n- parse_audits(source_id,step,kind,status,template,reasons,unresolved)\n- relations(rel,arity,functional_key)\nMetadata text is bounded. JSON uses json_extract; constraints preserve the contract,\nnot proof that it was violated. Unmentioned terms in a parsed plan do not mean ignored.\n\nREAL SOURCE EXAMPLES\nThese queries were executed on archived trajectories, separate from the current\n10-task evaluation. They teach retrieval, not benchmark answers or fault labels.\nUse the current case's phrases, IDs and bounds; never copy an example mechanically.\nResult notes describe source support and limits, not a required diagnosis.\n\nExample 1: expand a memory investigation to related modules, actions and observations.\nAt step 12 the memory says: “I have opened drawer 1 and drawer 2 but did not find\na credit card (Observation 7, 10).” The trajectory has 30 steps. Check whether the\ndrawer-2 portion is supported; historical opening is not a claim of current location.\n<!-- real-example: GPT-4o_012_alfworld_task_012 anchor=12 -->\n```sql\n-- Purpose: verify the drawer-2 memory against opening feedback and possible parsing errors.\nWITH claims AS (\n -- Search earlier memories through step 12, preserving the original text and module.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer 2','memory',1,12)\n), peers AS (\n -- Inspect the related drawer reasoning and intended next action at discovered claim steps.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer','reflection',1,12)\n UNION ALL SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer','plan',1,12)\n), observations AS (\n -- Verify the same drawer in original observations; a room listing does not prove opening.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer 2','observation',1,12)\n), attempts AS (\n -- Keep open_action attempts for drawer:2; an attempted action does not prove success.\n SELECT step,'action' AS module,span AS text,source_kind\n FROM TRACK_ACTION('open_action',1,12) WHERE json_extract(args,'$[0]')='drawer:2'\n)\n-- Compare claims, actions and feedback by original step; Observation numbers are not Fact IDs.\nSELECT * FROM claims\nUNION ALL SELECT * FROM peers WHERE step IN (SELECT step FROM claims)\nUNION ALL SELECT * FROM observations\nUNION ALL SELECT * FROM attempts ORDER BY step,module;\n```\nObserved return: memory 12 and its related reflection/plan excerpts, action 9,\nobservations 1/9/10. Peer steps are discovered by SQL, not guessed in advance.\nThe memory keyword does not need to occur in the peer modules. Observation 9 says\ndrawer 2 is closed; observation 10 says it opens and contains a watch. The memory\nhas supporting history. Neither the closed state at 9 nor a different current\nlocation at 12 establishes a contradiction. No whole step is retrieved.\n\nExample 2: separate placement evidence, cleanliness knowledge and completion claims.\nThe task is “put a clean cup in sidetable.” Step 19 repeats that this goal was\nachieved in Observation 11. Search earlier reflection and independent state support.\n<!-- real-example: GPT-4o_010_alfworld_task_010 anchor=19 -->\n```sql\n-- Purpose: trace earlier completion claims and independently verify placement and cleanliness.\nWITH claims AS (\n -- Search earlier completion assertions, including claims preceding the repeated anchor claim.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('has been completed','reflection',1,19)\n), placement AS (\n -- Check placement using movement feedback; movement alone does not establish cleanliness.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('You move the cup 1','observation',1,19)\n), cleanliness AS (\n -- Bind the same cup and clean attribute; unrelated true properties do not establish clean state.\n SELECT step,'state' AS module,span AS text,source_kind\n FROM TRACK_STATE('portable:cup_1','has',1,19)\n WHERE json_extract(args,'$[1]')='attribute:clean'\n)\n-- Preserve each evidence source; no clean row means unknown, not that the cup is dirty.\nSELECT * FROM claims UNION ALL SELECT * FROM placement\nUNION ALL SELECT * FROM cleanliness ORDER BY step,module;\n```\nObserved return: reflection 11/12/15/18 and placement observation 11; no clean\nassignment. The earlier reflection quote is available for attribution if justified.\nThe query establishes placement and repeated completion claims, not dirty state\nor a unique causal fault. Check parsing gaps and the actual assertion's support.\n\nExample 3: verify a memory of size selection against recorded clicks.\nThe requested henley has color 159- yellow and size x-large. At step 5 the memory\nsays: “The action \"click[159- yellow]\" confirms the color selection, while\n\"click[x-large]\" verifies the size.” Product B09R9YCM6R was opened at step 2.\n<!-- real-example: Qwen3-8B_002_chat_b000_t00_e01-7ab08a46 anchor=5 -->\n```sql\n-- Purpose: verify the claimed size click and distinguish available options from selected size.\nWITH clicks AS (\n -- Track click elements for product navigation, color selection and purchase.\n SELECT step,'action' AS module,CAST(value AS TEXT) AS text,source_kind\n FROM TRACK_ACTION('click',1,5)\n), claims AS (\n -- Retrieve the disputed action claim verbatim; memory does not prove an action occurred.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('click[x-large]','memory',1,5)\n), options AS (\n -- Steps 3 through 5 follow this product's opening at 2; retrieve only size-related excerpts.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('x-large','observation',3,5)\n)\n-- Check whether the claimed click precedes purchase; option text is not click evidence.\nSELECT * FROM clicks UNION ALL SELECT * FROM claims\nUNION ALL SELECT * FROM options ORDER BY step,module;\n```\nObserved clicks: product ID at 2, 159- yellow at 3 and 4, buy now at 5. The memory\nquote and page option x-large are returned. No x-large click is in these retrieved\naction elements. Page parsing is unresolved, so selected/default size is not settled\nby the option excerpt. Evaluate the memory's claim separately from product state;\ndo not manufacture a prohibition on purchase from the words “Find me”.\n\nExample 4: compare an “initial search” memory with the actual search sequence.\nAt step 22 a shirt-shopping memory calls a query containing “polyester or cotton\nheather” the initial search. The original task includes fit type women. Compare\nthe actual searches and explicit plans; omitted query keywords alone are insufficient.\n<!-- real-example: GPT-4o_003_chat_b000_t00_e02-1e119842 anchor=22 -->\n```sql\n-- Purpose: verify the initial-search claim and fit-type planning changes, including recovery.\nWITH searches AS (\n -- Track original search arguments from step 1; the late anchor does not hide earlier actions.\n SELECT step,'action' AS module,CAST(value AS TEXT) AS text,source_kind\n FROM TRACK_ACTION('search',1,22)\n), claims AS (\n -- Find the exact initial-search claim; the memory itself does not verify historical actions.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('initial search query','memory',1,22)\n), intentions AS (\n -- Retrieve fit-type plans to distinguish changed requirements, exploration and recovery.\n SELECT step,module,text,source_kind FROM SEARCH_TEXT('fit type','plan',1,22)\n)\n-- Compare actions, memories and plans with recovery evidence; earlier time alone is not causality.\nSELECT * FROM searches UNION ALL SELECT * FROM claims\nUNION ALL SELECT * FROM intentions ORDER BY step,module;\n```\nObserved return: search actions 1/4/12/22, memory 22, plans 4/12/22. The query\ndescribed as initial matches action 12 rather than action 1. Plan 12 discusses\nadjusting fit type; plan 22 explicitly includes women again. These are distinct\nmemory/plan questions with recovery evidence, not a rule that every narrowed\nsearch is wrong. Establish material causal effect before returning an error.\n\nNo aggregate output or per-function row/source-count caps are imposed. SQL LIMIT,\nfilters, graph depth and phrase-centered excerpt selection still restrict coverage. Neither\ntruncated=false nor an empty result proves exhaustive evidence. Full parse warnings\nand source semantics accompany every result, even an error. Keep aliases for fid and\nstep truthful. Explicitly alias UNION output columns before ORDER BY.\n\nRECOVERY IS LIMITED AND VISIBLE\nThe engine can normalize a double-quoted identifier to a string only in a known\ntable-function string-argument position; it records the exact repair in repairs.\nIt does not rewrite SELECT identifiers, invent search terms, widen bounds or retry\nwith a model. Prefer correct single quotes instead of relying on normalization.\nIf a known function has invalid arguments, independent top-level UNION ALL arms\nmay still return evidence. Every arm depending on that failure, including through\na CTE, join, COUNT or NOT EXISTS, is suppressed as a whole. Inspect partial,\nfunction_errors, skipped_branches and function_scopes BEFORE interpreting rows.\nSuppressed evidence is UNAVAILABLE, never zero matches, count=0 or refutation.\nIf no independent arm remains, the query fails. Full-log access, RAW_STEP, writes,\nunknown functions still fail the whole query. Execution timeout and read-only checks\nremain active. All recovery stays inside the same one query without widening scope.\n\nBefore reporting error, verify the exact original assertion and its temporal scope;\ncheck whether partial extraction, an unmodeled attribute, or limited retrieval would\nproduce the same apparent violation. Use uncertain if that alternative remains\nmaterial. Do not infer world absence, bad agency or causality from missing records.\n# Interpreting agent claims\n\nFact rows may include `assertion_time`, `claim_scope`, and `claim_polarity`.\n`step` is the original utterance step; `assertion_time` is the step its claim\ndescribes. A historical location is not a current location. Null assertion time\nmeans temporal binding is unresolved. These fields do not certify the truth or\ncompleteness of a memory. Missing typed memory/plan bindings remain unknown;\nretrieve the particular source claim when semantic interpretation is required.\n",
+  "source_inventory": [
+    {
+      "source_id": "source:1:observation",
+      "step": 1,
+      "module": "observation",
+      "text": "'Search'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:1:action",
+      "step": 1,
+      "module": "action",
+      "text": "search[slip resistant non slip men's loafers rubber outsole r.brown2626 size 9.5 under $60.00]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:2:observation",
+      "step": 2,
+      "module": "observation",
+      "text": "'Back to Search' [SEP] 'Page 1 (Total results: 50)' [SEP] 'Next >' [SEP] 'B07HP6LVRS' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] '$15.99 to $32.99' [SEP] 'B07S7HDC88' [SEP] 'VanciLin Mens Casual Leather Fashion Slip-on Loafers' [SEP] '$33.99 to $35.99' [SEP] 'B082MT9162' [SEP] 'GLOBALWIN Men's Casual Slip On Penny Loafers Lightweight Driving Shoes' [SEP] '$29.99 to $49.99' [SEP] 'B06W51MMKY' [SEP] 'Alegria Women's Kourtney' [SEP] '$62.99 to $129.99' [SEP] 'B07CN9RZ1C' [SEP] 'Ecco Men's Melbourne Plain Toe Slip on Loafer' [SEP] '$114.99' [SEP] 'B094RBNS2K' [SEP] 'Mens Running Tennis Blade Shoes Lightweight Casual Walking Sneakers Mesh Breathable Sport Sneakers Sheet Shoes' [SEP] '$27.0' [SEP] 'B09HMCKZQW' [SEP] 'Copercn Dress Ankle Booties For Women Ladies Fashion Casual Chunky Block High Heels Dress Pump Thermal Short Boots Winter Fall Dressy Short Boots For Business Work Wedding Party Dresses' [SEP] '$17.99 to $23.99' [SEP] 'B07RPMCNKD' [SEP] 'ULTRAIDEAS Women's Comfy Lightweight Slippers Non-Slip House Shoes for Indoor & Outdoor' [SEP] '$19.99 to $21.99' [SEP] 'B09QXF3V3X' [SEP] 'DEUVOUM Summer Trend Mesh Shoes Men's Sports Shoes Solid Color Lace-Up Sneakers Fashion All-Match Walking Shoes Outdoor Hiking Shoes Non-Slip Shock-Absorbing Casual Sports Shoes' [SEP] '$100.0' [SEP] 'B01EX1BWE4' [SEP] 'Milwaukee Leather MBM9075 Men's Black 6-inch Plain Toe Dual Zipper Lock Leather Boots' [SEP] '$99.82 to $134.99'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:2:action",
+      "step": 2,
+      "module": "action",
+      "text": "click[b07hp6lvrs]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:3:observation",
+      "step": 3,
+      "module": "observation",
+      "text": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:3:action",
+      "step": 3,
+      "module": "action",
+      "text": "click[brown]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:4:observation",
+      "step": 4,
+      "module": "observation",
+      "text": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:4:action",
+      "step": 4,
+      "module": "action",
+      "text": "click[brown]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:5:observation",
+      "step": 5,
+      "module": "observation",
+      "text": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:5:action",
+      "step": 5,
+      "module": "action",
+      "text": "click[description]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:6:observation",
+      "step": 6,
+      "module": "observation",
+      "text": "'Back to Search' [SEP] '< Prev' [SEP] 'Men's soft leather loafers are made from the first layer of cowhide fabric. The non-slip,wear-resistant rubber soles are always balanced and have a soft touch. So you can easily drive and walk easily. The Loafers There are two ways to wear,no matter what the occasion with all appropriate. One,can be used as a leisure or formal business occasion. Tow,when you do not want to wear shoe,you can also wear slippers,which is convenient and stylish.  you will love this lightweight Loafers. You need a pair of stylish casual shoes.  Size chart EU38= US6 =foot length 24.0CM=9.44inch EU39= US6.5 =foot length 24.5 CM=9.65inch EU40= US7 =foot length 25 CM=9.84inch EU41= US8 =foot length 25.5 CM=10.03inch EU42= US8.5 =foot length 26 CM=10.24inch EU43= US9.5 =foot length 26.5 CM=10.43inch EU44= US10 =foot length 27 CM=10.63inch EU45= US10.5 =foot length 27.5 CM=10.83inch EU46= US11 =foot length 28 CM=11.02inch EU47= US11.5 =foot length 28.5 CM=11.22inch EU48= US12 =foot length 29.0 CM=11.42inch   A well-fitting multifunctional Loafers can bring more enjoy to your life,so please choose the correct size according your own actual foot length. As the shape of the foot different from each other,so there may be some differences in size,so please understand.'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:6:action",
+      "step": 6,
+      "module": "action",
+      "text": "click[back to search]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:7:observation",
+      "step": 7,
+      "module": "observation",
+      "text": "'Search'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:7:action",
+      "step": 7,
+      "module": "action",
+      "text": "search[slip resistant non slip men's loafers rubber outsole r.brown2626 size 9.5 under $60.00]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:8:observation",
+      "step": 8,
+      "module": "observation",
+      "text": "'Back to Search' [SEP] 'Page 1 (Total results: 50)' [SEP] 'Next >' [SEP] 'B07HP6LVRS' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] '$15.99 to $32.99' [SEP] 'B07S7HDC88' [SEP] 'VanciLin Mens Casual Leather Fashion Slip-on Loafers' [SEP] '$33.99 to $35.99' [SEP] 'B082MT9162' [SEP] 'GLOBALWIN Men's Casual Slip On Penny Loafers Lightweight Driving Shoes' [SEP] '$29.99 to $49.99' [SEP] 'B06W51MMKY' [SEP] 'Alegria Women's Kourtney' [SEP] '$62.99 to $129.99' [SEP] 'B07CN9RZ1C' [SEP] 'Ecco Men's Melbourne Plain Toe Slip on Loafer' [SEP] '$114.99' [SEP] 'B094RBNS2K' [SEP] 'Mens Running Tennis Blade Shoes Lightweight Casual Walking Sneakers Mesh Breathable Sport Sneakers Sheet Shoes' [SEP] '$27.0' [SEP] 'B09HMCKZQW' [SEP] 'Copercn Dress Ankle Booties For Women Ladies Fashion Casual Chunky Block High Heels Dress Pump Thermal Short Boots Winter Fall Dressy Short Boots For Business Work Wedding Party Dresses' [SEP] '$17.99 to $23.99' [SEP] 'B07RPMCNKD' [SEP] 'ULTRAIDEAS Women's Comfy Lightweight Slippers Non-Slip House Shoes for Indoor & Outdoor' [SEP] '$19.99 to $21.99' [SEP] 'B09QXF3V3X' [SEP] 'DEUVOUM Summer Trend Mesh Shoes Men's Sports Shoes Solid Color Lace-Up Sneakers Fashion All-Match Walking Shoes Outdoor Hiking Shoes Non-Slip Shock-Absorbing Casual Sports Shoes' [SEP] '$100.0' [SEP] 'B01EX1BWE4' [SEP] 'Milwaukee Leather MBM9075 Men's Black 6-inch Plain Toe Dual Zipper Lock Leather Boots' [SEP] '$99.82 to $134.99'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:8:action",
+      "step": 8,
+      "module": "action",
+      "text": "click[b07hp6lvrs]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:9:observation",
+      "step": 9,
+      "module": "observation",
+      "text": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+      "source_kind": "original_observation"
+    },
+    {
+      "source_id": "source:9:action",
+      "step": 9,
+      "module": "action",
+      "text": "click[buy now]",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:9:memory",
+      "step": 9,
+      "module": "memory",
+      "text": "In step 8, the relevant product B07HP6LVRS (MCICI Mens Loafers) matched the color \"brown\" and size \"9.5,\" with a price range of $15.99–$32.99, which is under $60. The color \"brown\" is explicitly listed in the current observation, confirming it matches the target color \"r.brown2626\" (likely a shade variation). The product also meets the slip-resistant/rubber outsole criteria based on the description. This is the only fully matching product in the current context.",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:9:reflection",
+      "step": 9,
+      "module": "reflection",
+      "text": "The last action (step 9) confirmed the MCICI product matches all criteria except explicitly verifying the rubber outsole. However, the description mentions \"rubber outsole\" in the initial search result. Since the product's attributes align with the query, proceeding to purchase is valid. The task goal is achieved.",
+      "source_kind": "original_agent_module"
+    },
+    {
+      "source_id": "source:9:plan",
+      "step": 9,
+      "module": "plan",
+      "text": "The next step is to finalize the purchase of the MCICI Mens Loafers as it meets all requirements: slip-resistant, rubber outsole, r.brown2626 color, size 9.5, and price under $60. Clicking \"Buy Now\" will complete the task efficiently.",
+      "source_kind": "original_agent_module"
+    }
+  ],
+  "agent_statements": {
+    "schema": "agent-statements/v1",
+    "cards": [
+      {
+        "source_id": "claim:9:memory:0:162",
+        "step": 9,
+        "module": "memory",
+        "start": 0,
+        "end": 162,
+        "quote": "In step 8, the relevant product B07HP6LVRS (MCICI Mens Loafers) matched the color \"brown\" and size \"9.5,\" with a price range of $15.99–$32.99, which is under $60.",
+        "topics": [
+          "result_assessment"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [
+          "step 8"
+        ],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "In step 8, the relevant product B07HP6LVRS (MCICI Mens Loafers) matched the color \"brown\" and size \"9.5,\" with a price range of $15.99–$32.99, which is under $60.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:memory:163:310",
+        "step": 9,
+        "module": "memory",
+        "start": 163,
+        "end": 310,
+        "quote": "The color \"brown\" is explicitly listed in the current observation, confirming it matches the target color \"r.brown2626\" (likely a shade variation).",
+        "topics": [
+          "verification",
+          "result_assessment",
+          "hypothesis",
+          "state"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "it",
+          "likely"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The color \"brown\" is explicitly listed in the current observation, confirming it matches the target color \"r.brown2626\" (likely a shade variation).",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:memory:311:402",
+        "step": 9,
+        "module": "memory",
+        "start": 311,
+        "end": 402,
+        "quote": "The product also meets the slip-resistant/rubber outsole criteria based on the description.",
+        "topics": [
+          "state",
+          "decision_basis"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The product also meets the slip-resistant/rubber outsole criteria based on the description.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:memory:403:466",
+        "step": 9,
+        "module": "memory",
+        "start": 403,
+        "end": 466,
+        "quote": "This is the only fully matching product in the current context.",
+        "topics": [
+          "result_assessment",
+          "state"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "This",
+          "only"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "This is the only fully matching product in the current context.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:plan:0:179",
+        "step": 9,
+        "module": "plan",
+        "start": 0,
+        "end": 179,
+        "quote": "The next step is to finalize the purchase of the MCICI Mens Loafers as it meets all requirements: slip-resistant, rubber outsole, r.brown2626 color, size 9.5, and price under $60.",
+        "topics": [
+          "completion",
+          "selection"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "it",
+          "all"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The next step is to finalize the purchase of the MCICI Mens Loafers as it meets all requirements: slip-resistant, rubber outsole, r.brown2626 color, size 9.5, and price under $60.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:plan:180:234",
+        "step": 9,
+        "module": "plan",
+        "start": 180,
+        "end": 234,
+        "quote": "Clicking \"Buy Now\" will complete the task efficiently.",
+        "topics": [
+          "completion",
+          "selection",
+          "expected_gain"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "Clicking \"Buy Now\" will complete the task efficiently.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:reflection:0:121",
+        "step": 9,
+        "module": "reflection",
+        "start": 0,
+        "end": 121,
+        "quote": "The last action (step 9) confirmed the MCICI product matches all criteria except explicitly verifying the rubber outsole.",
+        "topics": [
+          "completion",
+          "verification",
+          "result_assessment"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "all",
+          "except"
+        ],
+        "event_references": [
+          "step 9"
+        ],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The last action (step 9) confirmed the MCICI product matches all criteria except explicitly verifying the rubber outsole.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:reflection:122:202",
+        "step": 9,
+        "module": "reflection",
+        "start": 122,
+        "end": 202,
+        "quote": "However, the description mentions \"rubber outsole\" in the initial search result.",
+        "topics": [
+          "result_assessment",
+          "state"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "However, the description mentions \"rubber outsole\" in the initial search result.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:reflection:203:288",
+        "step": 9,
+        "module": "reflection",
+        "start": 203,
+        "end": 288,
+        "quote": "Since the product's attributes align with the query, proceeding to purchase is valid.",
+        "topics": [
+          "selection",
+          "decision_basis"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "Since the product's attributes align with the query, proceeding to purchase is valid.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:reflection:289:315",
+        "step": 9,
+        "module": "reflection",
+        "start": 289,
+        "end": 315,
+        "quote": "The task goal is achieved.",
+        "topics": [
+          "completion"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "template",
+        "coverage": "template_complete",
+        "statements": [
+          {
+            "topic": "completion",
+            "polarity": "positive",
+            "modality": "asserted",
+            "subject_quote": null,
+            "detail_quote": null,
+            "qualifier_quotes": []
+          }
+        ],
+        "links": [],
+        "unresolved": []
+      }
+    ],
+    "scaffold_clauses": 0,
+    "instruction": "Statements describe what the agent said, not verified world state. Topic tags are lexical discovery hints, not extracted claims. Reviewed text is not a guarantee of semantic completeness. Missing extraction means unknown. Distinguish available/selected, purpose/achieved outcome, tentative/asserted, and the scope of negation. Compare premises with separately supplied observations; shared step, basis edges and earlier occurrence do not prove support or causation."
+  },
+  "source_coverage": {
+    "step_range": [
+      1,
+      9
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  },
+  "parse_audits": [
+    {
+      "source_id": "task:0",
+      "step": 0,
+      "kind": "task",
+      "status": "template",
+      "template": "complete-domain-templates/v1/webshop/task",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": [
+        "semantic_trigger:quantity_scope:lower than"
+      ]
+    },
+    {
+      "source_id": "observation:1",
+      "step": 1,
+      "kind": "observation",
+      "status": "template",
+      "template": "complete-domain-templates/v1/webshop/observation",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": []
+    },
+    {
+      "source_id": "observation:2",
+      "step": 2,
+      "kind": "observation",
+      "status": "template",
+      "template": "complete-domain-templates/v1/webshop/observation",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": [
+        "semantic_trigger:quantity_scope:all"
+      ]
+    },
+    {
+      "source_id": "observation:3",
+      "step": 3,
+      "kind": "observation",
+      "status": "unresolved",
+      "template": null,
+      "reasons": [
+        "semantic_trigger:comparison_change:now",
+        "no_complete_trusted_template",
+        "template_rejection:item page requires semantic/context audit"
+      ],
+      "unresolved": [
+        {
+          "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+          "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews"
+        }
+      ],
+      "handled_triggers": []
+    },
+    {
+      "source_id": "observation:4",
+      "step": 4,
+      "kind": "observation",
+      "status": "unresolved",
+      "template": null,
+      "reasons": [
+        "semantic_trigger:comparison_change:now",
+        "no_complete_trusted_template",
+        "template_rejection:item page requires semantic/context audit"
+      ],
+      "unresolved": [
+        {
+          "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+          "reason": "uncovered source tokens: Back to Search Prev Rating N A Description Features Reviews Buy Now"
+        }
+      ],
+      "handled_triggers": []
+    },
+    {
+      "source_id": "observation:5",
+      "step": 5,
+      "kind": "observation",
+      "status": "unresolved",
+      "template": null,
+      "reasons": [
+        "semantic_trigger:comparison_change:now",
+        "no_complete_trusted_template",
+        "template_rejection:item page requires semantic/context audit"
+      ],
+      "unresolved": [
+        {
+          "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+          "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews Buy Now"
+        }
+      ],
+      "handled_triggers": []
+    },
+    {
+      "source_id": "observation:6",
+      "step": 6,
+      "kind": "observation",
+      "status": "backoff",
+      "template": null,
+      "reasons": [
+        "semantic_trigger:reference:one,other,there,this",
+        "semantic_trigger:negation_empty:no,not",
+        "semantic_trigger:quantity_scope:all,each,some",
+        "semantic_trigger:comparison_change:different",
+        "semantic_trigger:uncertainty_alternative:may,or",
+        "no_complete_trusted_template",
+        "template_rejection:item page requires semantic/context audit"
+      ],
+      "unresolved": [],
+      "handled_triggers": []
+    },
+    {
+      "source_id": "observation:7",
+      "step": 7,
+      "kind": "observation",
+      "status": "template",
+      "template": "complete-domain-templates/v1/webshop/observation",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": []
+    },
+    {
+      "source_id": "observation:8",
+      "step": 8,
+      "kind": "observation",
+      "status": "template",
+      "template": "complete-domain-templates/v1/webshop/observation",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": [
+        "semantic_trigger:quantity_scope:all"
+      ]
+    },
+    {
+      "source_id": "observation:9",
+      "step": 9,
+      "kind": "observation",
+      "status": "unresolved",
+      "template": null,
+      "reasons": [
+        "semantic_trigger:comparison_change:now",
+        "no_complete_trusted_template",
+        "template_rejection:item page requires semantic/context audit"
+      ],
+      "unresolved": [
+        {
+          "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SEP] 'blue' [SEP] 'brown' [SEP] 'white' [SEP] 'yellow' [SEP] 'black-b' [SEP] 'blue-a' [SEP] 'yellow-a' [SEP] 'MCICI Mens Loafers Moccasin Driving Shoes Premium Genuine Leather Casual Slip On Flats Fashion Slipper Breathable Big Size' [SEP] 'Price: $15.99 to $32.99' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+          "reason": "uncovered source tokens: Description Features Reviews Buy Now"
+        }
+      ],
+      "handled_triggers": []
+    }
+  ],
+  "evidence_quality": {
+    "through_step": 9,
+    "absence_means": "unknown_not_false",
+    "parse_gaps": [
+      {
+        "source_id": "observation:3",
+        "step": 3,
+        "kind": "observation",
+        "status": "unresolved",
+        "reasons": [
+          "semantic_trigger:comparison_change:now",
+          "no_complete_trusted_template",
+          "template_rejection:item page requires semantic/context audit"
+        ],
+        "unresolved": [
+          {
+            "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+            "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews"
+          }
+        ]
+      },
+      {
+        "source_id": "observation:4",
+        "step": 4,
+        "kind": "observation",
+        "status": "unresolved",
+        "reasons": [
+          "semantic_trigger:comparison_change:now",
+          "no_complete_trusted_template",
+          "template_rejection:item page requires semantic/context audit"
+        ],
+        "unresolved": [
+          {
+            "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+            "reason": "uncovered source tokens: Back to Search Prev Rating N A Description Features Reviews Buy Now"
+          }
+        ]
+      },
+      {
+        "source_id": "observation:5",
+        "step": 5,
+        "kind": "observation",
+        "status": "unresolved",
+        "reasons": [
+          "semantic_trigger:comparison_change:now",
+          "no_complete_trusted_template",
+          "template_rejection:item page requires semantic/context audit"
+        ],
+        "unresolved": [
+          {
+            "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+            "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews Buy Now"
+          }
+        ]
+      },
+      {
+        "source_id": "observation:9",
+        "step": 9,
+        "kind": "observation",
+        "status": "unresolved",
+        "reasons": [
+          "semantic_trigger:comparison_change:now",
+          "no_complete_trusted_template",
+          "template_rejection:item page requires semantic/context audit"
+        ],
+        "unresolved": [
+          {
+            "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'size' [SEP] '6.5' [SEP] '7' [SEP] '8' [SEP] '8.5' [SEP] '9.5' [SEP] '10' [SEP] '10.5' [SEP] '11' [SEP] '11.5' [SEP] 'color' [SEP] 'black' [SE",
+            "reason": "uncovered source tokens: Description Features Reviews Buy Now"
+          }
+        ]
+      }
+    ],
+    "unmodeled_goals": [
+      "req:description"
+    ],
+    "observation_coverage": "Template/backoff admission is extraction coverage, not complete world observability or semantic truth.",
+    "agent_module_coverage": "Memory/plan/action extraction is selective and heuristic. A missing typed claim or unmentioned constraint is not an omission by the agent.",
+    "derived_checks": "env/chk facts are computed from attempted actions and parsed state, not independent environment feedback.",
+    "false_positive_check": "Compare original source with the extracted proposition; test ambiguity, history, negation and legitimate exploration/retry. Missing facts, unmet checks or limited retrieval alone cannot support error."
+  },
+  "limits": {
+    "max_agents": 5,
+    "queries_per_agent": 1,
+    "steps_per_agent_result": 1,
+    "max_assigned_excerpts": 6,
+    "excerpt_chars": 360
+  },
+  "instruction": "Prioritize decision-critical evidence. Default to one investigator and merge related ROUTE cases; add a second only for an independent question requiring a separate one-step finding. More than two needs an explicit decision-changing reason for each extra investigator. Cover all ROUTE cases. Every worker also receives its anchor source. Plan feasible element retrieval using query_context and query_language. Treat ROUTE as one hypothesis; include a source-grounded rival mechanism and cross-module checks, not just earlier repetitions of anchor wording. Workers may expand these starting targets to related evidence and better-supported causes within one composed query. Allocate only exact short excerpts from source_inventory. Decide how possible findings affect causal comparison, including unknown and refuting evidence. This plan goes directly to SUBMIT, not through worker summaries."
+}

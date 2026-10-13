@@ -1,0 +1,13 @@
+[
+  {
+    "candidate_id": "authored_route",
+    "issue_step": 17,
+    "issue_fids": [
+      164
+    ],
+    "goal_links": [
+      "req:spraybottle_in_countertop"
+    ],
+    "hypothesis": "Where did the plan to satisfy a spraybottle task with soapbottle 1 become an actionable substitution? Search earlier related modules and test the rival that this was only a temporary hypothesis followed by correction."
+  }
+]

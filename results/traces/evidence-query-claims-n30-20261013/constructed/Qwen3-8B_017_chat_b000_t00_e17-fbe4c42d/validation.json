@@ -1,0 +1,22 @@
+{
+  "archived_inputs_verified": true,
+  "source_excerpts_exact": true,
+  "all_cited_evidence_visible": true,
+  "manager_plan_validated": true,
+  "trace_assess_validated": true,
+  "submit_validated": true,
+  "manager_plan_preserved": true,
+  "query_rows_preserved": true,
+  "single_worker_root_role_hidden": true,
+  "english_sql_comments": true,
+  "queries": 1,
+  "rows": 44,
+  "agents": 1,
+  "selected_steps": [
+    9
+  ],
+  "model_api_calls": 0,
+  "partial": false,
+  "truncated": false,
+  "benchmark_metrics_modified": false
+}

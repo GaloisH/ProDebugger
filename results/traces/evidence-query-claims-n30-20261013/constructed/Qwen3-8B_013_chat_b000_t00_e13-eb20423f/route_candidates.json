@@ -1,0 +1,16 @@
+[
+  {
+    "candidate_id": "authored_route",
+    "issue_step": 9,
+    "issue_fids": [
+      212
+    ],
+    "goal_links": [
+      "req:color",
+      "req:description",
+      "req:price",
+      "req:size"
+    ],
+    "hypothesis": "Did a tentative brown/r.brown2626 equivalence become a confirmed match used for purchase? Test original description evidence, displayed variants and earlier verification plans; do not mistake leather uppers for evidence against rubber soles."
+  }
+]

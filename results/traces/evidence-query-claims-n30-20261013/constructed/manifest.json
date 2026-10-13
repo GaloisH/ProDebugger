@@ -1,0 +1,713 @@
+{
+  "schema": "authored-debugger-demonstrations/v1",
+  "source_run": "evidence-query-claims-n30-20261013",
+  "synthetic": true,
+  "include_in_benchmark": false,
+  "model_api_calls": 0,
+  "original_artifacts_unchanged": true,
+  "tasks": [
+    {
+      "trajectory_id": "GPT-4o_019_alfworld_task_019",
+      "title": "清洁条件被放置完成条件替代",
+      "selected_step": 9,
+      "selected_module": "plan",
+      "fault_class": "constraint_ignorance",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "validation": {
+        "archived_inputs_verified": true,
+        "source_excerpts_exact": true,
+        "all_cited_evidence_visible": true,
+        "manager_plan_validated": true,
+        "trace_assess_validated": true,
+        "submit_validated": true,
+        "manager_plan_preserved": true,
+        "query_rows_preserved": true,
+        "single_worker_root_role_hidden": true,
+        "english_sql_comments": true,
+        "queries": 1,
+        "rows": 52,
+        "agents": 1,
+        "selected_steps": [
+          9
+        ],
+        "model_api_calls": 0,
+        "partial": false,
+        "truncated": false,
+        "benchmark_metrics_modified": false
+      }
+    },
+    {
+      "trajectory_id": "GPT-4o_055_alfworld_task_055",
+      "title": "从后续完成断言追到首次明确确认",
+      "selected_step": 5,
+      "selected_module": "reflection",
+      "fault_class": "progress_misjudge",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "validation": {
+        "archived_inputs_verified": true,
+        "source_excerpts_exact": true,
+        "all_cited_evidence_visible": true,
+        "manager_plan_validated": true,
+        "trace_assess_validated": true,
+        "submit_validated": true,
+        "manager_plan_preserved": true,
+        "query_rows_preserved": true,
+        "single_worker_root_role_hidden": true,
+        "english_sql_comments": true,
+        "queries": 1,
+        "rows": 47,
+        "agents": 1,
+        "selected_steps": [
+          5
+        ],
+        "model_api_calls": 0,
+        "partial": false,
+        "truncated": false,
+        "benchmark_metrics_modified": false
+      }
+    },
+    {
+      "trajectory_id": "GPT-4o_013_alfworld_task_013",
+      "title": "追踪 soapbottle 被当作 spraybottle 的决策",
+      "selected_step": 14,
+      "selected_module": "reflection",
+      "fault_class": "outcome_misinterpretation",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "validation": {
+        "archived_inputs_verified": true,
+        "source_excerpts_exact": true,
+        "all_cited_evidence_visible": true,
+        "manager_plan_validated": true,
+        "trace_assess_validated": true,
+        "submit_validated": true,
+        "manager_plan_preserved": true,
+        "query_rows_preserved": true,
+        "single_worker_root_role_hidden": true,
+        "english_sql_comments": true,
+        "queries": 1,
+        "rows": 38,
+        "agents": 1,
+        "selected_steps": [
+          14
+        ],
+        "model_api_calls": 0,
+        "partial": false,
+        "truncated": false,
+        "benchmark_metrics_modified": false
+      }
+    },
+    {
+      "trajectory_id": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d",
+      "title": "购买决定覆盖了同一步的验证要求",
+      "selected_step": 9,
+      "selected_module": "plan",
+      "fault_class": "constraint_ignorance",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "validation": {
+        "archived_inputs_verified": true,
+        "source_excerpts_exact": true,
+        "all_cited_evidence_visible": true,
+        "manager_plan_validated": true,
+        "trace_assess_validated": true,
+        "submit_validated": true,
+        "manager_plan_preserved": true,
+        "query_rows_preserved": true,
+        "single_worker_root_role_hidden": true,
+        "english_sql_comments": true,
+        "queries": 1,
+        "rows": 44,
+        "agents": 1,
+        "selected_steps": [
+          9
+        ],
+        "model_api_calls": 0,
+        "partial": false,
+        "truncated": false,
+        "benchmark_metrics_modified": false
+      }
+    },
+    {
+      "trajectory_id": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f",
+      "title": "颜色近似猜测被升级为购买依据",
+      "selected_step": 9,
+      "selected_module": "memory",
+      "fault_class": "hallucination",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "validation": {
+        "archived_inputs_verified": true,
+        "source_excerpts_exact": true,
+        "all_cited_evidence_visible": true,
+        "manager_plan_validated": true,
+        "trace_assess_validated": true,
+        "submit_validated": true,
+        "manager_plan_preserved": true,
+        "query_rows_preserved": true,
+        "single_worker_root_role_hidden": true,
+        "english_sql_comments": true,
+        "queries": 1,
+        "rows": 64,
+        "agents": 1,
+        "selected_steps": [
+          9
+        ],
+        "model_api_calls": 0,
+        "partial": false,
+        "truncated": false,
+        "benchmark_metrics_modified": false
+      }
+    },
+    {
+      "trajectory_id": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84",
+      "title": "局部颜色误认与后续恢复分开判断",
+      "selected_step": 26,
+      "selected_module": "memory",
+      "fault_class": "hallucination",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "validation": {
+        "archived_inputs_verified": true,
+        "source_excerpts_exact": true,
+        "all_cited_evidence_visible": true,
+        "manager_plan_validated": true,
+        "trace_assess_validated": true,
+        "submit_validated": true,
+        "manager_plan_preserved": true,
+        "query_rows_preserved": true,
+        "single_worker_root_role_hidden": true,
+        "english_sql_comments": true,
+        "queries": 1,
+        "rows": 77,
+        "agents": 1,
+        "selected_steps": [
+          26
+        ],
+        "model_api_calls": 0,
+        "partial": false,
+        "truncated": false,
+        "benchmark_metrics_modified": false
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "GPT-4o_013_alfworld_task_013/README.md",
+      "sha256": "ff361cee7161a56cbe344b079a161ff5a179c6e491bd2fba5d1dcf2f451eae50",
+      "bytes": 8646
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/authoring_spec.json",
+      "sha256": "20b57957631e4531ce5fdf351a039e13933a4fe051b0cde7a73292ea72853912",
+      "bytes": 8392
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/events.jsonl",
+      "sha256": "c935fe546568dfa78cf2b8afee1be370e9dd6e0c26c33ef4a3d7de081542d03b",
+      "bytes": 106182
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/evidence_notes.json",
+      "sha256": "509393e119b00418603719526ddb9722936ea92858a469c05c89650c9a81ddec",
+      "bytes": 1348
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/goal_map.json",
+      "sha256": "6322da4c4cd16e80e56a844e3e1a02572a647609fc27320c38d9b57890434a1c",
+      "bytes": 2763
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/manager_input.json",
+      "sha256": "c83effde9892c5a3069c2c709ec45a121e09020f103928b9e4ae9fb8763cee87",
+      "bytes": 63368
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/manager_plan.json",
+      "sha256": "16c475aaa6175c3a42073cf24c8eb4884a9dfeffe94c125300843ec5ed884e6e",
+      "bytes": 4896
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/provenance.json",
+      "sha256": "5fbeec420a6f4af6bf2376c95575008bb7127074bb3fa033889aa967de1a50e9",
+      "bytes": 1450
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/query.sql",
+      "sha256": "ef05d768a542261bd6b6a40b699e75c42f7341f923b26b72805df56d43d531c4",
+      "bytes": 2924
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/query_result.json",
+      "sha256": "194519f5263273c600856ae8dbafed6aead5d766444821f150382a99e6e8e230",
+      "bytes": 65890
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/result.json",
+      "sha256": "b6244d5d3ba5213faa272caefcbd4327c154a0111d3cc9072b61a43ae97b0e09",
+      "bytes": 10770
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/route_candidates.json",
+      "sha256": "d2c5f16cf171f2fb4070c49e3b725d083a83cb1784f67f122db632faa6fae997",
+      "bytes": 412
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/submit_answer.json",
+      "sha256": "a9648c506ad588fadc141831d3494cbce07b50ab688da41aa3ab8a80c6914c02",
+      "bytes": 3414
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/submit_input.json",
+      "sha256": "88563745a3a9f21318e6a11a9d1c1a99bedd956036802d8422c37888608a2109",
+      "bytes": 75550
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/trace_assessment.json",
+      "sha256": "58c9ef966b7bb4ab305ee5a1c7ad227fde27200d11d77c10a63df5ff06f08969",
+      "bytes": 6374
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/trace_input.json",
+      "sha256": "84253b3695686a73b6e15b7c6dfaafa5212ca877f98ec1861d5b4c4ad26bae23",
+      "bytes": 17051
+    },
+    {
+      "path": "GPT-4o_013_alfworld_task_013/validation.json",
+      "sha256": "02f13197a38609f82b076b629c856052a1fc202bae83f7f7f9dd8daf0d3f2545",
+      "bytes": 530
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/README.md",
+      "sha256": "3211680ce965ffc332d69e72abb8e86a90bdf5369834ae53e7b58f337a3cb55d",
+      "bytes": 8712
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/authoring_spec.json",
+      "sha256": "e22e7d5235c1eb62a83601cd2f92940b8d7c9111c200e2cd60669c0a64ccdf13",
+      "bytes": 6750
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/events.jsonl",
+      "sha256": "09633c959874c9af0e8142346be46250348a1068e26363ccf2555edf3aa2d093",
+      "bytes": 144328
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/evidence_notes.json",
+      "sha256": "ea99f8447688987048b7930056714b99b3488f78f250b59461dab8ca6d23cb95",
+      "bytes": 1030
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/goal_map.json",
+      "sha256": "9d416805d65e3b2b5537be3e7c013e79aad3e2fb7dd993c429fec9d9563a2806",
+      "bytes": 3269
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/manager_input.json",
+      "sha256": "a48c28a92d7949e8ceb63f9a17068f044b3f2f0601592dbe3c3f8f6030b5e912",
+      "bytes": 65545
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/manager_plan.json",
+      "sha256": "d8e3d736fc85f6167d8e853ccd0e40307101bec71c6cd6a03b0b80bf80c9f682",
+      "bytes": 4846
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/provenance.json",
+      "sha256": "b1bb13d94ceb312850ef3a0442095e3891b099bda995f455d8c77a60fac38bd4",
+      "bytes": 1450
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/query.sql",
+      "sha256": "cc52749646b7c5001b6375bf8872f5afeb46ae2c84059d0811addc63cd2cc24e",
+      "bytes": 3246
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/query_result.json",
+      "sha256": "7767bb37984c192addbcae44946a3265b4b1c310b918d17fb972cb1d53276292",
+      "bytes": 123074
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/result.json",
+      "sha256": "ef2e2e911662534a63f51c71529300e04d96094138311f2571be40eee91b92ee",
+      "bytes": 7061
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/route_candidates.json",
+      "sha256": "01a8620b23347e14f55067f4688eb24ec080792d8ff34295d6b935d48d49c252",
+      "bytes": 445
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/submit_answer.json",
+      "sha256": "059d0db15d1ade5250b71294334e1c58ef87e14209dbbd8a0a37e28ab3087aa6",
+      "bytes": 3061
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/submit_input.json",
+      "sha256": "3ab9e1777dabe8a0dfc8ca7a4d3010cb090ebd2ddc676cb9406d83487b6b78bc",
+      "bytes": 89797
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/trace_assessment.json",
+      "sha256": "ad5666b073178712263c078872cadc91b6834178ac0269f29b297459d2580a58",
+      "bytes": 3712
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/trace_input.json",
+      "sha256": "4d229241147de505dc9b3da09ebd090e34ec7da687acd9a74268e26a08cb65db",
+      "bytes": 18839
+    },
+    {
+      "path": "GPT-4o_019_alfworld_task_019/validation.json",
+      "sha256": "b447c08fa82d51813d87cfa86c382c5db5bd7d4493e93ef0873f32c8528384f8",
+      "bytes": 529
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/README.md",
+      "sha256": "d398207babcd2db00b4817892843629f5a9c87fb478004fab14e083c67a5aaaa",
+      "bytes": 8487
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/authoring_spec.json",
+      "sha256": "984237e4a20514d759d7084af47ff31a05ba6e9b2816e955d424152dedb98ee7",
+      "bytes": 7730
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/events.jsonl",
+      "sha256": "b7c605f4b5a4e5d30d3bb68ca786b24892326963c1a4ac20fdd76e5a0bae4b59",
+      "bytes": 115238
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/evidence_notes.json",
+      "sha256": "7c1a1bc376fb29eb10fd14523cbba3b6320a70353a7409d7bf56560bda1a1d92",
+      "bytes": 1021
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/goal_map.json",
+      "sha256": "5a45c2b536b130a1b33cebcc3075949cb811d73980469b958727cacbea9e8bfe",
+      "bytes": 3393
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/manager_input.json",
+      "sha256": "8007ad9f36b2d6bfc854d2a4cc5a28063a0b1e5497b4a203f068ea76ee98f812",
+      "bytes": 64097
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/manager_plan.json",
+      "sha256": "caab05126cedd8ee1e9099207a980c95e22b420e53d44ca9b8a9da5e3d4a07c9",
+      "bytes": 4471
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/provenance.json",
+      "sha256": "52e557b8452ac71be76482103404a2f37021020ab9bc626eb5672f1297d1c0a4",
+      "bytes": 1450
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/query.sql",
+      "sha256": "a9914478ae7e30f32c12139aeabbb2498be48550c59c84eb5196d95a73576760",
+      "bytes": 3239
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/query_result.json",
+      "sha256": "6c8aab43b8398eb7644b04c35c4bffff90c5d2717a1576afa41574d6235268b0",
+      "bytes": 83715
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/result.json",
+      "sha256": "b639bae59bde18ebefe3cf539158a6530c3c4d9ba70bb962b957dd78740dec90",
+      "bytes": 10913
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/route_candidates.json",
+      "sha256": "70b1b75b6bb8d150881dd05ee39221d6fe97d911949039afe072f7f9749d1bf2",
+      "bytes": 400
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/submit_answer.json",
+      "sha256": "8fe1af143a30ede676538fb3caf2d2945c0667227e2c61ef67f15d271b693f00",
+      "bytes": 3260
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/submit_input.json",
+      "sha256": "6d41e0f936ea1fb96f9fdd6ba25ae93670c78065da1c8b0674c3ba8c780ce236",
+      "bytes": 88716
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/trace_assessment.json",
+      "sha256": "c3d82fcf765c7c5d34b91d30c28e93e0b921daddb9f0f495996f31c1cdffa6a7",
+      "bytes": 6110
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/trace_input.json",
+      "sha256": "48678f65fcc65147b68b1ca72f06cddf9d6f7c77754c81d3cc93453f0e84bf49",
+      "bytes": 17068
+    },
+    {
+      "path": "GPT-4o_055_alfworld_task_055/validation.json",
+      "sha256": "e24080e82e8226ee9c316f381a3d3b39f4043144fb3e9514d42750a2054b7da4",
+      "bytes": 529
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/README.md",
+      "sha256": "73d9e99fb29ca27f862f280ab5bab783ef7244d9ec9ef01d2bee66a22a727532",
+      "bytes": 9129
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/authoring_spec.json",
+      "sha256": "eb88d13d8d2752bf6c3be318534bfc39a1f97c99788e801afa3b7df2bab877c4",
+      "bytes": 7020
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/events.jsonl",
+      "sha256": "0789e5d6711ec96cc73560b103651f7ee1a3c6aa39ec0644219b0b0725893005",
+      "bytes": 179935
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/evidence_notes.json",
+      "sha256": "1bdf87556e182c3e2f1b8a6015ebc0e994a287aaf3d9c91131b3a095c52ba51c",
+      "bytes": 1156
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/goal_map.json",
+      "sha256": "0dbc22ab7f50bf50fecc2e905c0cda2e4bd51a5fc3ef0feb533ba5d073a096ca",
+      "bytes": 9766
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/manager_input.json",
+      "sha256": "7c0468e3bbbda4359937a215387e99c43090cad3e79a99cbb6bb229df1f715f8",
+      "bytes": 100185
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/manager_plan.json",
+      "sha256": "267cee246e6ff88a3295edcf9e0e1b14a8c9ba1d73f35d63e610fabb0e7f8b3f",
+      "bytes": 4846
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/provenance.json",
+      "sha256": "840ecaa9c043c9ef01249b2ebd3048efdc24702dfe9fa1318b7be1489452b502",
+      "bytes": 1472
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/query.sql",
+      "sha256": "d7c0f334b4eb6d4ac07aba191dffefc23f16ed2ada7695f03768f6d30ffdcb12",
+      "bytes": 3222
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/query_result.json",
+      "sha256": "6ac5ef1ae8c5eeaef6b6c7eea1907fc19af03d694359da64952029561361bb97",
+      "bytes": 153981
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/result.json",
+      "sha256": "34d97e5bdc2215dfd1d37596d69c54d20c1f14fe9d942f5b33fd18921d58cc7b",
+      "bytes": 7545
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/route_candidates.json",
+      "sha256": "217ced2f2f49e0c4904ee2b5c8c46eac474e2aa1512911722bf383f02d12d17d",
+      "bytes": 525
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/submit_answer.json",
+      "sha256": "152d50d96342ab160a9e79529fa8a2569627eacc0ca854065f0528bac848ce4b",
+      "bytes": 3216
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/submit_input.json",
+      "sha256": "32f0e4103ee1b93ae0101eba12c87b7a9a4e8b4e13c82dd8d9ce241169aacb5f",
+      "bytes": 108538
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/trace_assessment.json",
+      "sha256": "b33513a729e871206c44495077dc93cab8e7191d32d33f5dd73bd27aa7243ac3",
+      "bytes": 4263
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/trace_input.json",
+      "sha256": "0dbee9b82a237b372d758c140101a678f457589f1fa24aff493bcfd9d0d4b0b2",
+      "bytes": 20292
+    },
+    {
+      "path": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84/validation.json",
+      "sha256": "fd61711298ce783225a5857c53d99b91b1e30569d783d2554923fead205bc45d",
+      "bytes": 530
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/README.md",
+      "sha256": "d978f35161a0f36de3c0e7f8bfec31aa9fbf9cbf2687b2f2645a1e87680dd001",
+      "bytes": 9118
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/authoring_spec.json",
+      "sha256": "82542cb7ef6295e7ca10600f4817171ea44dee9406c268a85c05dea7711e37d3",
+      "bytes": 8484
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/events.jsonl",
+      "sha256": "32dafe611654109b8a07374e807c3bee5843d640d3cd2745a90018e4dd378c7c",
+      "bytes": 158967
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/evidence_notes.json",
+      "sha256": "4d008a7e36e1aed5c9e0cb1929b127cd8827b5bfac944a869a40261ebe5621b0",
+      "bytes": 1249
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/goal_map.json",
+      "sha256": "e5194af0be7868758b65052cab3b0a982c01779dc211e07770ad67cc7d4021f6",
+      "bytes": 8256
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/manager_input.json",
+      "sha256": "511699ce207262b37a4e1f92d04de5f2f231e9784803cfcdb179e5c0eeda43eb",
+      "bytes": 71499
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/manager_plan.json",
+      "sha256": "1de86428e4ce13cc1dd33a6d296492113cab53f3046836679ceedf8d7ebc40f0",
+      "bytes": 5104
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/provenance.json",
+      "sha256": "a2dbed0caa6042a9e270792c40c217ad1c7baf192764c8776dd50334085089e4",
+      "bytes": 1472
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/query.sql",
+      "sha256": "d60ff715d81791ddc89c59774e099fc5b54d5dec18372023f5e7fd315ab93368",
+      "bytes": 3205
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/query_result.json",
+      "sha256": "26ff7b06e79118f4e627270eb178934b1ca66b92e8925b5ce684f7d09dd8f9fd",
+      "bytes": 125880
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/result.json",
+      "sha256": "ff36bde08e9b6123f6ce1a1da3adbeaba4f1642ccf5259f859a859cd7ff5d9e0",
+      "bytes": 9974
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/route_candidates.json",
+      "sha256": "2daa74fc6cad86a9291f8ae21a48dcff57bf8aa2971c6e695ad38cfe4e4e8f37",
+      "bytes": 477
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/submit_answer.json",
+      "sha256": "8ebe14b416e5c9754bb9de728a15c7ccd76d032bae6e6810123b9c3415cf79db",
+      "bytes": 3492
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/submit_input.json",
+      "sha256": "5a89eed377328f861cddf8b1df7a5f6ffe963a80d517cf29dd5b8077313cdeaa",
+      "bytes": 90404
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/trace_assessment.json",
+      "sha256": "23c661627ed5c726c0adb09a67b2fea70461479e8d8aad7cd295fc647a0698b3",
+      "bytes": 6662
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/trace_input.json",
+      "sha256": "c3eebc5c74ac876ee47e91bc15029def649b7eebe893fa747755fbc97d8085df",
+      "bytes": 22373
+    },
+    {
+      "path": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f/validation.json",
+      "sha256": "c27bc8100afd2df031bcef0c3b283f8032ad31c5bd071e97423d2409396cf529",
+      "bytes": 529
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/README.md",
+      "sha256": "9e6bd2ef57b22f89408725ed2f32a14ff5761c7e1db2107a7ace8b4b2ae6b7c7",
+      "bytes": 10583
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/authoring_spec.json",
+      "sha256": "c39fc7eae6a85858a296670a0de73480d036df719c92dd204d440c630b9277e1",
+      "bytes": 7411
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/events.jsonl",
+      "sha256": "46f9b07b1d4da7f7dc3b6535ead9b838f4a0783a7837ab89117f1feda11fd5e1",
+      "bytes": 112037
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/evidence_notes.json",
+      "sha256": "80642a15bf027a1ae6b0435459889d457436857cab0945d7abfe4fc7aa29f86f",
+      "bytes": 1160
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/goal_map.json",
+      "sha256": "44b4a46a9691f143fdd0cc229e71a9c35336f096ffe1a674a37e8c33ebda623b",
+      "bytes": 8006
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/manager_input.json",
+      "sha256": "a5ec246ff426a9c107499d195ec531f999fd22ddf442d6bac20608e2c73a4cea",
+      "bytes": 73367
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/manager_plan.json",
+      "sha256": "534239694c228a2930563666ced7ed73c814e2d3ebbb3af1faef161c52b005ea",
+      "bytes": 4928
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/provenance.json",
+      "sha256": "4e425711d2d783b5caaccd3a584b656d595a734effc1633bef2df0e9794c5af1",
+      "bytes": 1472
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/query.sql",
+      "sha256": "f2b820a8e4ca9868bb1d9e34039365810f4129c7e9f08dc5344cf6b1874ef0d3",
+      "bytes": 4724
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/query_result.json",
+      "sha256": "3954f5ecbd9681939f9b9f5b0b72251d83a2c612b9c76ace4488bf3bb73b4c36",
+      "bytes": 69159
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/result.json",
+      "sha256": "9624985a17eadd17dea09d129325db056aa8c71e2e2bda8b4527724a4d0fa68d",
+      "bytes": 7052
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/route_candidates.json",
+      "sha256": "ca4cdfd9ec9e97a1088022a283d46acd3c0de20953f838eeb40cdafbda96a189",
+      "bytes": 472
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/submit_answer.json",
+      "sha256": "27d633bc095b5839b5ebaf087276f3897ffef3fb588ade68aa3a48d3ab108b69",
+      "bytes": 3238
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/submit_input.json",
+      "sha256": "4403d7aaa69bda8da6c14fffdec71389f81832edab26d6fd3e097dfcf4a20f81",
+      "bytes": 75413
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/trace_assessment.json",
+      "sha256": "47a3f9912e5ed0cb376a15b2943ed1a6eb895978bf5191e73ac6a81bede50ad0",
+      "bytes": 4203
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/trace_input.json",
+      "sha256": "702e1e4ba36bfdec82e031ba6145e43a03778430635706eff389822245b2d0a0",
+      "bytes": 22331
+    },
+    {
+      "path": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/validation.json",
+      "sha256": "f258f977ce637009dcfc60948e558dc688f588d581eccce4c58a72b8735c7d34",
+      "bytes": 529
+    },
+    {
+      "path": "README.md",
+      "sha256": "294616f3c40b56b76cf8e69c3ec6a776e1bdde7e0bc5e9d57d8b3a71eb291291",
+      "bytes": 2208
+    }
+  ]
+}

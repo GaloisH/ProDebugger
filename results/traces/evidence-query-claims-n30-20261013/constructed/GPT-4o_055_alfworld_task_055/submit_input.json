@@ -1,0 +1,2226 @@
+{
+  "schema": "direct-submit-input/v2",
+  "policy": "window-candidates-submit/v5-manager-forced-choice",
+  "task": "put a clean bowl in shelf.",
+  "benchmark_scope": {
+    "schema": "benchmark-error-scope/v1",
+    "allowed_by_module": {
+      "memory": [
+        "hallucination",
+        "over_simplification",
+        "memory_retrieval_failure"
+      ],
+      "reflection": [
+        "progress_misjudge",
+        "causal_misattribution",
+        "outcome_misinterpretation"
+      ],
+      "plan": [
+        "inefficient_plan",
+        "constraint_ignorance",
+        "impossible_action"
+      ],
+      "action": [
+        "invalid_action",
+        "parameter_error",
+        "misalignment"
+      ],
+      "system": [
+        "environment_error",
+        "step_limit",
+        "llm_limit",
+        "tool_execution_error"
+      ]
+    },
+    "source": "core/local_judgement.py:FAULT with user-requested exclusions",
+    "excluded_causes": [
+      "formatting",
+      "spelling",
+      "literal quotation marks",
+      "serialization"
+    ],
+    "premise": "All genuine benchmark errors are within allowed_by_module. Formatting and spelling cannot cause the benchmark failure. Do not relabel these causes as another allowed error."
+  },
+  "coverage": {
+    "windows": [
+      {
+        "candidate_id": "investigate_origin_and_recovery",
+        "lo": 6,
+        "hi": 6
+      }
+    ],
+    "selected_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      13,
+      15,
+      22,
+      29,
+      30
+    ],
+    "assessed_steps": [
+      5
+    ],
+    "unassessed_steps": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "trace_complete": true
+  },
+  "candidates": [
+    {
+      "candidate_id": "trace-window:investigate_origin_and_recovery:1",
+      "window": {
+        "candidate_id": "investigate_origin_and_recovery",
+        "lo": 6,
+        "hi": 6
+      },
+      "step": 5,
+      "module": "reflection",
+      "assessment": {
+        "status": "error",
+        "step": 5,
+        "module": "reflection",
+        "fault_class": "progress_misjudge",
+        "output_quote": "Yes, I completed the task goal of putting a clean bowl in a shelf.",
+        "proposition": "Reflection upgrades confirmed placement into confirmed completion of the full clean-bowl goal.",
+        "reasoning": "Observation 5 is feedback for action 4 and confirms movement to the shelf. Observation 6 confirms the bowl is on the shelf. Neither quotation states cleanliness. The selected reflection makes the full clean-goal assertion one step before the anchor repeats it. Same-step memory is a competing source, so exact within-step origin is not proved.",
+        "immediate_effect": "Later verification focuses on the shelf and continues reasoning from completion rather than preserving the unresolved cleanliness condition.",
+        "uncertainty": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim.",
+        "requirement_links": [
+          "req:bowl_in_shelf"
+        ],
+        "primary_fid": 87,
+        "evidence_for": [
+          87
+        ],
+        "evidence_against": []
+      },
+      "local_context_ref": "local:5",
+      "related_evidence": [
+        {
+          "event_ref": "event:3",
+          "roles": [
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:4",
+          "roles": [
+            "previous_event",
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:6",
+          "roles": [
+            "later_related_observation",
+            "later_same_action"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:8",
+          "roles": [
+            "later_related_no_effect"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:25",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:28",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:29",
+          "roles": [
+            "later_related_no_effect"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:30",
+          "roles": [
+            "later_same_action"
+          ],
+          "temporal_role": "later"
+        }
+      ],
+      "evidence_selection": {
+        "search_range": [
+          1,
+          30
+        ],
+        "method": "previous/cited steps and normalized-action/entity-word matches",
+        "matching_steps": 24,
+        "selected_steps": [
+          3,
+          4,
+          6,
+          8,
+          25,
+          28,
+          29,
+          30
+        ],
+        "omitted_matching_steps": 16,
+        "max_related_events": 12,
+        "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+      }
+    },
+    {
+      "candidate_id": "trace-window:investigate_origin_and_recovery:2",
+      "window": {
+        "candidate_id": "investigate_origin_and_recovery",
+        "lo": 6,
+        "hi": 6
+      },
+      "step": 5,
+      "module": "memory",
+      "assessment": {
+        "status": "error",
+        "step": 5,
+        "module": "memory",
+        "fault_class": "over_simplification",
+        "output_quote": "confirm the completion of the task.",
+        "proposition": "Memory summarizes the retrieval and placement milestones as confirming the entire task.",
+        "reasoning": "The selected memory phrase is a genuine same-step rival: it omits the unresolved distinction between placement and cleanliness. Reflection expresses the clean-goal certainty more explicitly; chronological priority within a rendered step does not establish sole causal ownership.",
+        "immediate_effect": "The milestone summary supplies a full-goal framing in the same step as the reflection.",
+        "uncertainty": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim.",
+        "requirement_links": [
+          "req:bowl_in_shelf"
+        ],
+        "primary_fid": 85,
+        "evidence_for": [
+          85
+        ],
+        "evidence_against": []
+      },
+      "local_context_ref": "local:5",
+      "related_evidence": [
+        {
+          "event_ref": "event:3",
+          "roles": [
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:4",
+          "roles": [
+            "previous_event",
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:6",
+          "roles": [
+            "later_related_observation",
+            "later_same_action"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:8",
+          "roles": [
+            "later_related_no_effect"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:25",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:28",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:29",
+          "roles": [
+            "later_related_no_effect"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:30",
+          "roles": [
+            "later_same_action"
+          ],
+          "temporal_role": "later"
+        }
+      ],
+      "evidence_selection": {
+        "search_range": [
+          1,
+          30
+        ],
+        "method": "previous/cited steps and normalized-action/entity-word matches",
+        "matching_steps": 24,
+        "selected_steps": [
+          3,
+          4,
+          6,
+          8,
+          25,
+          28,
+          29,
+          30
+        ],
+        "omitted_matching_steps": 16,
+        "max_related_events": 12,
+        "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+      }
+    }
+  ],
+  "window_reviews": [
+    {
+      "window_id": "investigate_origin_and_recovery",
+      "candidate_ids": [
+        "trace-window:investigate_origin_and_recovery:1",
+        "trace-window:investigate_origin_and_recovery:2"
+      ],
+      "uncertainty": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim."
+    }
+  ],
+  "local_context": {
+    "local:5": {
+      "step": 5,
+      "source_digest": "a467ff3a4df91997da6d36f6ed87b7a8a2f256267adb8a40b6195f5985447544",
+      "env_text": "You move the bowl 1 to the shelf 1.",
+      "module_text": {
+        "memory": "Look at the past observations and actions from our conversation history.\n- Step 1: Observation was that the task is to put a clean bowl in a shelf. The action taken was to go to countertop 1.\n- Step 4: Observation was that you arrived at shelf 1 with nothing on it. The action taken was to move bowl 1 to shelf 1.\nThese memory steps are helpful milestones to solve this task as they outline the initial goal and confirm the completion of the task.",
+        "reflection": "Reflect on the last action and its outcome\n- Did I complete the task goal? Yes, I completed the task goal of putting a clean bowl in a shelf.\n- Was last action successful or did it encounter issues? The last action was successful; the bowl was moved to shelf 1.\n- Am I making progress toward the task goal? The task goal has been achieved.\n- If the action did not go as expected and did not result in progress, provide constructive feedback to guide the next planning step. Not applicable as the task goal is complete.",
+        "plan": "Plan the next step based on memory and reflection\n- Given what I've learned, what should I do next? I should verify the completion of the task by examining the shelf.\n- Please explain why this plan is helpful for the next action? This plan is helpful as it confirms that the bowl is indeed in the shelf and the task has been completed successfully.\n- What do I expect this action to achieve? I expect this action to confirm the presence of the bowl on the shelf, providing visual confirmation of task completion.",
+        "action": "examine shelf 1"
+      },
+      "admissible": [
+        "examine shelf 1",
+        "go to cabinet 1",
+        "go to cabinet 2",
+        "go to cabinet 3",
+        "go to cabinet 4",
+        "go to cabinet 5",
+        "go to cabinet 6",
+        "go to cabinet 7",
+        "go to cabinet 8",
+        "go to cabinet 9",
+        "go to coffeemachine 1",
+        "go to countertop 1",
+        "go to countertop 2",
+        "go to countertop 3",
+        "go to drawer 1",
+        "go to drawer 2",
+        "go to drawer 3",
+        "go to drawer 4",
+        "go to drawer 5",
+        "go to drawer 6",
+        "go to drawer 7",
+        "go to drawer 8",
+        "go to drawer 9",
+        "go to fridge 1",
+        "go to garbagecan 1",
+        "go to microwave 1",
+        "go to shelf 2",
+        "go to shelf 3",
+        "go to sinkbasin 1",
+        "go to stoveburner 1",
+        "go to stoveburner 2",
+        "go to stoveburner 3",
+        "go to stoveburner 4",
+        "go to toaster 1",
+        "inventory",
+        "look",
+        "take bowl 1 from shelf 1"
+      ],
+      "next_env_text": "On the shelf 1, you see a bowl 1."
+    }
+  },
+  "related_events": {
+    "event:3": {
+      "step": 3,
+      "evidence_refs": [
+        "source:3:env_text:0:45",
+        "source:3:parts.action:0:13",
+        "source:4:env_text:0:55",
+        "source:3:parts.memory:83:363",
+        "source:3:parts.reflection:13:293",
+        "source:3:parts.plan:68:348"
+      ]
+    },
+    "event:4": {
+      "step": 4,
+      "evidence_refs": [
+        "source:4:env_text:0:55",
+        "source:4:parts.action:0:22",
+        "source:5:env_text:0:35",
+        "source:4:parts.memory:142:422",
+        "source:4:parts.reflection:131:411",
+        "source:4:parts.plan:26:306"
+      ]
+    },
+    "event:6": {
+      "step": 6,
+      "evidence_refs": [
+        "source:6:env_text:0:33",
+        "source:6:parts.action:0:15",
+        "source:7:env_text:0:33",
+        "source:6:parts.memory:5:285",
+        "source:6:parts.reflection:3:283",
+        "source:6:parts.plan:0:280"
+      ]
+    },
+    "event:8": {
+      "step": 8,
+      "evidence_refs": [
+        "source:8:env_text:0:56",
+        "source:8:parts.action:0:17",
+        "source:9:env_text:0:16",
+        "source:8:parts.memory:29:309",
+        "source:8:parts.reflection:14:294",
+        "source:8:parts.plan:0:280"
+      ]
+    },
+    "event:25": {
+      "step": 25,
+      "evidence_refs": [
+        "source:25:env_text:0:56",
+        "source:25:parts.action:0:4",
+        "source:26:env_text:0:56",
+        "source:25:parts.memory:31:311",
+        "source:25:parts.reflection:0:280",
+        "source:25:parts.plan:0:280"
+      ]
+    },
+    "event:28": {
+      "step": 28,
+      "evidence_refs": [
+        "source:28:env_text:0:16",
+        "source:28:parts.action:0:4",
+        "source:29:env_text:0:56",
+        "source:28:parts.memory:32:312",
+        "source:28:parts.reflection:14:294",
+        "source:28:parts.plan:0:280"
+      ]
+    },
+    "event:29": {
+      "step": 29,
+      "evidence_refs": [
+        "source:29:env_text:0:56",
+        "source:29:parts.action:0:50",
+        "source:30:env_text:0:16",
+        "source:29:parts.memory:1:281",
+        "source:29:parts.reflection:0:280",
+        "source:29:parts.plan:25:305"
+      ]
+    },
+    "event:30": {
+      "step": 30,
+      "evidence_refs": [
+        "source:30:env_text:0:16",
+        "source:30:parts.action:0:15",
+        "source:30:parts.memory:21:301",
+        "source:30:parts.reflection:20:300",
+        "source:30:parts.plan:170:450"
+      ]
+    }
+  },
+  "evidence_slices": [
+    {
+      "evidence_id": "source:3:env_text:0:45",
+      "step": 3,
+      "source_field": "env_text",
+      "source_digest": "162ced8d88004d691e4399240019cd3221776b714f2cfcc9ad32de2fb3d6b1b5",
+      "span_start": 0,
+      "span_end": 45,
+      "verbatim": "You pick up the bowl 1 from the countertop 1.",
+      "source_chars": 45,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:3:parts.action:0:13",
+      "step": 3,
+      "source_field": "parts.action",
+      "source_digest": "19f97678993a61fe5a5791715ec597ecfa9471cb37c477eeb6c5d384a0ba4863",
+      "span_start": 0,
+      "span_end": 13,
+      "verbatim": "go to shelf 1",
+      "source_chars": 13,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:4:env_text:0:55",
+      "step": 4,
+      "source_field": "env_text",
+      "source_digest": "d925d6a3c24328d66b28db7780b13dfd71a3271948ce6ea2e97e6ab8e9fb1bfc",
+      "span_start": 0,
+      "span_end": 55,
+      "verbatim": "You arrive at shelf 1. On the shelf 1, you see nothing.",
+      "source_chars": 55,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:3:parts.memory:83:363",
+      "step": 3,
+      "source_field": "parts.memory",
+      "source_digest": "e2272ea7d1e8b6d820243aa9598f9a728c2d627d1ac2c90628e01fbc853016d8",
+      "span_start": 83,
+      "span_end": 363,
+      "verbatim": "ion 1: You were in a room with multiple objects including shelves and your task was to put a clean bowl in a shelf. Action 1: You went to countertop 1.\n- Observation 2: At countertop 1, you found and took bowl 1. Action 2: You picked up bowl 1 from countertop 1.\nThese memory step",
+      "source_chars": 452,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:3:parts.reflection:13:293",
+      "step": 3,
+      "source_field": "parts.reflection",
+      "source_digest": "5f751b9dd752c4b15ca75e5d07cdadfe2f405816f7c6e63570249fcd890b2400",
+      "span_start": 13,
+      "span_end": 293,
+      "verbatim": "e last action and its outcome\n- Did I complete the task goal? No, the task goal to place the bowl in a shelf is not yet complete.\n- Was last action successful or did it encounter issues? The last action was successful in picking up the bowl.\n- Am I making progress toward the task",
+      "source_chars": 633,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:3:parts.plan:68:348",
+      "step": 3,
+      "source_field": "parts.plan",
+      "source_digest": "73177d90a99034b2e69e29d5056d8a07b395e7ebdc3191bd0960c360da1e130e",
+      "span_start": 68,
+      "span_end": 348,
+      "verbatim": "learned, what should I do next? I should go to one of the shelves to prepare for placing the bowl there.\n- Please explain why this plan is helpful for the next action? Moving towards a shelf is a direct action towards completing the task goal of placing the bowl on a shelf.\n- Wha",
+      "source_chars": 482,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:4:parts.action:0:22",
+      "step": 4,
+      "source_field": "parts.action",
+      "source_digest": "45a5e054fbea34a04c32398868bd9d926d5b49afc2a34b7979d4e619057f763a",
+      "span_start": 0,
+      "span_end": 22,
+      "verbatim": "move bowl 1 to shelf 1",
+      "source_chars": 22,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:5:env_text:0:35",
+      "step": 5,
+      "source_field": "env_text",
+      "source_digest": "ffef08192831047effb3caac8de6e6a3721d454d01f048ecca07dfd47d3fa6b4",
+      "span_start": 0,
+      "span_end": 35,
+      "verbatim": "You move the bowl 1 to the shelf 1.",
+      "source_chars": 35,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:4:parts.memory:142:422",
+      "step": 4,
+      "source_field": "parts.memory",
+      "source_digest": "7e7f98e59bf2ca4a7240897d08f426c8a88ee72a65d31ad3d47099b15849258b",
+      "span_start": 142,
+      "span_end": 422,
+      "verbatim": "shelves. Action was to go to countertop 1.\n- Step 2: Observed items on countertop 1 and took bowl 1. Action was to take bowl 1 from countertop 1.\n- Step 3: Successfully picked up the bowl 1 and moved towards shelf 1. Action was to go to shelf 1.\nThese memory steps are relevant as",
+      "source_chars": 532,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:4:parts.reflection:131:411",
+      "step": 4,
+      "source_field": "parts.reflection",
+      "source_digest": "0d44940157aaf24b1ef91d024f4c9df008d9536e28ab3faa665fb3491ca04643",
+      "span_start": 131,
+      "span_end": 411,
+      "verbatim": " action successful or did it encounter issues? The last action was successful; I reached the shelf 1 with the bowl.\n- Am I making progress toward the task goal? Yes, I am making progress. I have navigated to the shelf with the bowl.\n- If the action did not go as expected and did ",
+      "source_chars": 542,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:4:parts.plan:26:306",
+      "step": 4,
+      "source_field": "parts.plan",
+      "source_digest": "7480a601ba82c059857a778f498b86ba413996a6c65a4177e7c40e0c9cf533ac",
+      "span_start": 26,
+      "span_end": 306,
+      "verbatim": "n memory and reflection\n- Given what I've learned, what should I do next? I should place the bowl on shelf 1.\n- Please explain why this plan is helpful for the next action? This action directly aligns with the task goal of putting a clean bowl in the shelf.\n- What do I expect thi",
+      "source_chars": 402,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:6:env_text:0:33",
+      "step": 6,
+      "source_field": "env_text",
+      "source_digest": "11f4b3c35504ae76f7d4cd8d0d3e0ee92adb06343d1c08ec92533c13b0e9d15b",
+      "span_start": 0,
+      "span_end": 33,
+      "verbatim": "On the shelf 1, you see a bowl 1.",
+      "source_chars": 33,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:6:parts.action:0:15",
+      "step": 6,
+      "source_field": "parts.action",
+      "source_digest": "2f23d970d564210c6f1c3e7ddb6ba4b484568c64e4e385c10297054c0e88e253",
+      "span_start": 0,
+      "span_end": 15,
+      "verbatim": "examine shelf 1",
+      "source_chars": 15,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:7:env_text:0:33",
+      "step": 7,
+      "source_field": "env_text",
+      "source_digest": "11f4b3c35504ae76f7d4cd8d0d3e0ee92adb06343d1c08ec92533c13b0e9d15b",
+      "span_start": 0,
+      "span_end": 33,
+      "verbatim": "On the shelf 1, you see a bowl 1.",
+      "source_chars": 33,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:6:parts.memory:5:285",
+      "step": 6,
+      "source_field": "parts.memory",
+      "source_digest": "2a53207c15f52ed201e4b6837d3d716cf5886138eb1469c17179ba0974c6e389",
+      "span_start": 5,
+      "span_end": 285,
+      "verbatim": "at the past observations and actions from our conversation history.\n- The most relevant memory for this step is Observation 5 and Action 4, where I successfully moved the bowl 1 to shelf 1. This indicates that I have likely completed the task of putting a clean bowl on the shelf.",
+      "source_chars": 285,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:6:parts.reflection:3:283",
+      "step": 6,
+      "source_field": "parts.reflection",
+      "source_digest": "e4ea41817390ee9bdaf1177d8a0f4c0e27be4ebccbe52b384bb8cf5f6a534188",
+      "span_start": 3,
+      "span_end": 283,
+      "verbatim": "lect on the last action and its outcome\n- Did I complete the task goal? Yes, I have placed a clean bowl on the shelf.\n- Was the last action successful or did it encounter issues? The last action of moving the bowl to the shelf was successful.\n- Am I making progress toward the tas",
+      "source_chars": 580,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:6:parts.plan:0:280",
+      "step": 6,
+      "source_field": "parts.plan",
+      "source_digest": "cae17db6b32e5f172b61c947bba2f1861fbb48cf7243ae02e6e71b11b9c5d82e",
+      "span_start": 0,
+      "span_end": 280,
+      "verbatim": "Plan the next step based on memory and reflection\n- Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task.\n- This plan is helpful to ensure that the task is completed as expected.\n- I expect this action to co",
+      "source_chars": 335,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:8:env_text:0:56",
+      "step": 8,
+      "source_field": "env_text",
+      "source_digest": "69e241740b1317e32a3aa0ff195819608e5d97590773fe0def7673360f67d299",
+      "span_start": 0,
+      "span_end": 56,
+      "verbatim": "You are facing the shelf 1. Next to it, you see nothing.",
+      "source_chars": 56,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:8:parts.action:0:17",
+      "step": 8,
+      "source_field": "parts.action",
+      "source_digest": "3034f7637661d81eff7975b132d9c41bf392979dda915a2c14290cb181c478eb",
+      "span_start": 0,
+      "span_end": 17,
+      "verbatim": "'examine shelf 1'",
+      "source_chars": 17,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:9:env_text:0:16",
+      "step": 9,
+      "source_field": "env_text",
+      "source_digest": "e318e0836d1c5bb52c68b0b900c24267dc46721572e4f7a6952832024073d892",
+      "span_start": 0,
+      "span_end": 16,
+      "verbatim": "Nothing happens.",
+      "source_chars": 16,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:8:parts.memory:29:309",
+      "step": 8,
+      "source_field": "parts.memory",
+      "source_digest": "39e449aebbdbb28eb0b02ccd975e9f1678e45718006c1bbff29ba68c04d3d66d",
+      "span_start": 29,
+      "span_end": 309,
+      "verbatim": " and actions from our conversation history.\n- Step 4: Observation 4 showed that I arrived at shelf 1, and there was nothing on it before I moved bowl 1 to it. Action 4 was to move the bowl 1 to shelf 1.\n- Step 5: Observation 5 confirmed that bowl 1 was successfully placed on shel",
+      "source_chars": 469,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:8:parts.reflection:14:294",
+      "step": 8,
+      "source_field": "parts.reflection",
+      "source_digest": "c5dd7b0500273ed3d5a35901c95c60ff03022679568fa6ed809349b6d1233c39",
+      "span_start": 14,
+      "span_end": 294,
+      "verbatim": " last action and its outcome\n- Did I complete the task goal? Yes, the task goal was to put a clean bowl on a shelf, which was achieved in Step 4.\n- Was last action successful or did it encounter issues? The last action of examining the shelf confirmed that the bowl is indeed on i",
+      "source_chars": 607,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:8:parts.plan:0:280",
+      "step": 8,
+      "source_field": "parts.plan",
+      "source_digest": "63db3a6ee2d06e4293785e3df752fcf5b0d4f97dd1772c3588aeb407be0e2686",
+      "span_start": 0,
+      "span_end": 280,
+      "verbatim": "Plan the next step based on memory and reflection\n- Given what I've learned, what should I do next? Since the task is already completed, no further action is required unless additional tasks are specified.\n- Please explain why this plan is helpful for the next action? It avoids u",
+      "source_chars": 480,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:25:env_text:0:56",
+      "step": 25,
+      "source_field": "env_text",
+      "source_digest": "69e241740b1317e32a3aa0ff195819608e5d97590773fe0def7673360f67d299",
+      "span_start": 0,
+      "span_end": 56,
+      "verbatim": "You are facing the shelf 1. Next to it, you see nothing.",
+      "source_chars": 56,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:25:parts.action:0:4",
+      "step": 25,
+      "source_field": "parts.action",
+      "source_digest": "b3f95c301a7f764b20a608e4750adf1dcb7677df67f3c321aee58bb043040e9d",
+      "span_start": 0,
+      "span_end": 4,
+      "verbatim": "look",
+      "source_chars": 4,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:26:env_text:0:56",
+      "step": 26,
+      "source_field": "env_text",
+      "source_digest": "69e241740b1317e32a3aa0ff195819608e5d97590773fe0def7673360f67d299",
+      "span_start": 0,
+      "span_end": 56,
+      "verbatim": "You are facing the shelf 1. Next to it, you see nothing.",
+      "source_chars": 56,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:25:parts.memory:31:311",
+      "step": 25,
+      "source_field": "parts.memory",
+      "source_digest": "2f6239e1368618d8590369a31d7ce1458f0475dbc2df1371c5a6a64ee9741cec",
+      "span_start": 31,
+      "span_end": 311,
+      "verbatim": "nd actions from our conversation history.\n- Relevant memory: At step 5, the action was 'move bowl 1 to shelf 1', and the observation confirmed the task was completed with 'You move the bowl 1 to the shelf 1.'\n- This memory indicates that the task goal of putting a clean bowl on t",
+      "source_chars": 333,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:25:parts.reflection:0:280",
+      "step": 25,
+      "source_field": "parts.reflection",
+      "source_digest": "13606467123b5a592f96b7a409b69b943ed45ae099e65361bdb45b8f46005045",
+      "span_start": 0,
+      "span_end": 280,
+      "verbatim": "Reflect on the last action and its outcome\n- The task goal of putting a clean bowl on the shelf was completed at step 5.\n- The last action was 'look', which did not contribute to any further progress since the task is already done.\n- The repeated actions of examining the shelf an",
+      "source_chars": 469,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:25:parts.plan:0:280",
+      "step": 25,
+      "source_field": "parts.plan",
+      "source_digest": "da310ed1e7d11a040393fb06bd51444adede0abf48fd6cb1cc135f93c075b0a9",
+      "span_start": 0,
+      "span_end": 280,
+      "verbatim": "Plan the next step based on memory and reflection\n- Given the task is complete, the next step should be to conclude the task effectively.\n- This plan is helpful as it recognizes the completeness of the task and avoids unnecessary actions.\n- I expect this action to acknowledge the",
+      "source_chars": 355,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:28:env_text:0:16",
+      "step": 28,
+      "source_field": "env_text",
+      "source_digest": "e318e0836d1c5bb52c68b0b900c24267dc46721572e4f7a6952832024073d892",
+      "span_start": 0,
+      "span_end": 16,
+      "verbatim": "Nothing happens.",
+      "source_chars": 16,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:28:parts.action:0:4",
+      "step": 28,
+      "source_field": "parts.action",
+      "source_digest": "b3f95c301a7f764b20a608e4750adf1dcb7677df67f3c321aee58bb043040e9d",
+      "span_start": 0,
+      "span_end": 4,
+      "verbatim": "look",
+      "source_chars": 4,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:29:env_text:0:56",
+      "step": 29,
+      "source_field": "env_text",
+      "source_digest": "69e241740b1317e32a3aa0ff195819608e5d97590773fe0def7673360f67d299",
+      "span_start": 0,
+      "span_end": 56,
+      "verbatim": "You are facing the shelf 1. Next to it, you see nothing.",
+      "source_chars": 56,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:28:parts.memory:32:312",
+      "step": 28,
+      "source_field": "parts.memory",
+      "source_digest": "e88ea8bf45fa0fe1b3a08d0566ed1b2c33e2cb5d37e175c0f8970bdd9d42629a",
+      "span_start": 32,
+      "span_end": 312,
+      "verbatim": "d actions from our conversation history.\n- Step 4: Observation 4 indicated that I arrived at shelf 1 and moved bowl 1 to shelf 1. This was a key action where the task was essentially completed.\n- Step 5: Observation 5 confirmed that the bowl 1 was successfully moved to shelf 1.\n-",
+      "source_chars": 556,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:28:parts.reflection:14:294",
+      "step": 28,
+      "source_field": "parts.reflection",
+      "source_digest": "ac52d39ce42295ef8181fbfe43af647bbb6dbc69b73f880bf596ea67eeffca73",
+      "span_start": 14,
+      "span_end": 294,
+      "verbatim": " last action and its outcome\n- Did I complete the task goal? Yes, the task goal of placing a clean bowl on the shelf was completed earlier at step 4.\n- Was last action successful or did it encounter issues? The last action was a no-action step, indicating that the task was alread",
+      "source_chars": 634,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:28:parts.plan:0:280",
+      "step": 28,
+      "source_field": "parts.plan",
+      "source_digest": "e4c3ec2d116a6ff7e50b3a02a3d4fc87a46041459c4f42d5cb2842635ced20fa",
+      "span_start": 0,
+      "span_end": 280,
+      "verbatim": "Plan the next step based on memory and reflection\n- Given what I've learned, what should I do next? Since the task is complete, there is no need for further actions related to the task goal.\n- Please explain why this plan is helpful for the next action? It avoids unnecessary acti",
+      "source_chars": 461,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:29:parts.action:0:50",
+      "step": 29,
+      "source_field": "parts.action",
+      "source_digest": "939b91c8d7ab2cf64493a6dee7d08c9c240b056af19b5ddb5e6b86af3546b155",
+      "span_start": 0,
+      "span_end": 50,
+      "verbatim": "No action needed, as the task is already complete.",
+      "source_chars": 50,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:30:env_text:0:16",
+      "step": 30,
+      "source_field": "env_text",
+      "source_digest": "e318e0836d1c5bb52c68b0b900c24267dc46721572e4f7a6952832024073d892",
+      "span_start": 0,
+      "span_end": 16,
+      "verbatim": "Nothing happens.",
+      "source_chars": 16,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:29:parts.memory:1:281",
+      "step": 29,
+      "source_field": "parts.memory",
+      "source_digest": "4d034140985c55ed5c9b136dc22eca9672ad02b710a5c642505f7f256392266c",
+      "span_start": 1,
+      "span_end": 281,
+      "verbatim": "ook at the past observations and actions from our conversation history.\n- Step 4: Arrived at shelf 1 and moved the bowl 1 to shelf 1.\n- Step 3: Took bowl 1 from countertop 1 and went to shelf 1.\nThese actions indicate that the task of putting a clean bowl in the shelf was complet",
+      "source_chars": 297,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:29:parts.reflection:0:280",
+      "step": 29,
+      "source_field": "parts.reflection",
+      "source_digest": "6a57452182f142b4f8c82ab5ec7bdfab8c81fa3a937ca3535c5d27ec3ae75757",
+      "span_start": 0,
+      "span_end": 280,
+      "verbatim": "Reflect on the last action and its outcome\n- Did I complete the task goal? Yes, the task goal was to put a clean bowl in the shelf, which was accomplished at step 4.\n- Was last action successful or did it encounter issues? The last few actions were redundant and did not contribut",
+      "source_chars": 647,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:29:parts.plan:25:305",
+      "step": 29,
+      "source_field": "parts.plan",
+      "source_digest": "b42e99545771f87eede63314df54111d75b56a05ab67b39024091227b81f5be4",
+      "span_start": 25,
+      "span_end": 305,
+      "verbatim": "on memory and reflection\n- Given what I've learned, what should I do next? Since the task is already completed, there is no need to take further actions.\n- Please explain why this plan is helpful for the next action? This plan recognizes that the task has been completed and avoid",
+      "source_chars": 468,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:30:parts.action:0:15",
+      "step": 30,
+      "source_field": "parts.action",
+      "source_digest": "2f23d970d564210c6f1c3e7ddb6ba4b484568c64e4e385c10297054c0e88e253",
+      "span_start": 0,
+      "span_end": 15,
+      "verbatim": "examine shelf 1",
+      "source_chars": 15,
+      "excerpted": false
+    },
+    {
+      "evidence_id": "source:30:parts.memory:21:301",
+      "step": 30,
+      "source_field": "parts.memory",
+      "source_digest": "fda9ad2cdeadbd3b385d0886b7ca289fe39b759fb4bd3f8f785d34f8f2ef8ab8",
+      "span_start": 21,
+      "span_end": 301,
+      "verbatim": "rvations and actions from our conversation history.\n- Step 4: Observation indicated that the bowl 1 was successfully moved to shelf 1, which completes the task of putting a clean bowl in a shelf.\n- Step 5: Confirmed the presence of bowl 1 on shelf 1, verifying that the task was c",
+      "source_chars": 388,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:30:parts.reflection:20:300",
+      "step": 30,
+      "source_field": "parts.reflection",
+      "source_digest": "2d8abbc310503f958e158b8b99ef6b0bc98355c38fd54961d4b09991dea1bca4",
+      "span_start": 20,
+      "span_end": 300,
+      "verbatim": "action and its outcome\n- Did I complete the task goal? Yes, the task goal was completed when bowl 1 was placed on shelf 1.\n- Was last action successful or did it encounter issues? The last significant action (step 4) was successful, and further actions confirmed task completion.\n",
+      "source_chars": 612,
+      "excerpted": true
+    },
+    {
+      "evidence_id": "source:30:parts.plan:170:450",
+      "step": 30,
+      "source_field": "parts.plan",
+      "source_digest": "dd86bc2d37d0f93fadb246b181664fab4dca68b6b5b7cc040311086c4fe0eefe",
+      "span_start": 170,
+      "span_end": 450,
+      "verbatim": " if I'm required to perform an action, I could verify the task completion again by examining shelf 1.\n- Please explain why this plan is helpful for the next action? This plan reinforces the understanding that the task is complete and provides reassurance if needed.\n- What do I ex",
+      "source_chars": 576,
+      "excerpted": true
+    }
+  ],
+  "terminal_context": {
+    "steps": 30,
+    "last_action_step": 30,
+    "final_feedback_available": false,
+    "limitation": "The source has no observation after its final action. Outcome and stop cause are unknown."
+  },
+  "evidence_policy": {
+    "max_related_events_per_candidate": 12,
+    "related_module_excerpt_chars": 280,
+    "related_observation_excerpt_chars": 600,
+    "local_context_unit": "unique_candidate_step",
+    "selection_is_semantic_verdict": false
+  },
+  "manager_guidance": {
+    "plan": {
+      "schema": "trace-investigation-plan/v1",
+      "assignments": [
+        {
+          "agent_id": "investigate_origin_and_recovery",
+          "anchor_case_id": "authored_route",
+          "route_case_ids": [
+            "authored_route"
+          ],
+          "question": "Does the step-6 completion premise originate in an earlier unsupported clean-bowl confirmation, or was cleanliness established independently? Compare memory, reflection and placement feedback before selecting an origin.",
+          "search_targets": [
+            "Earlier clean-bowl completion claims across memory/reflection/plan",
+            "Bowl 1 source observations and recorded state",
+            "Placement and examination actions",
+            "Any earlier cleanliness support or later correction"
+          ],
+          "evidence": [
+            {
+              "source_id": "source:6:plan",
+              "quote": "Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task."
+            }
+          ],
+          "criteria": {
+            "supported": "An earlier reflection explicitly asserts that the full clean-bowl goal is complete, while the cited feedback only confirms placement.",
+            "refuted": "A source observation establishes that this bowl is clean before the assertion, or the claimed completion is explicitly confined to a subgoal.",
+            "unknown": "World cleanliness or the unique within-step origin is not determined by the available record."
+          }
+        }
+      ],
+      "decision_rules": [
+        {
+          "rule_id": "evidence_supported",
+          "conditions": [
+            {
+              "agent_id": "investigate_origin_and_recovery",
+              "outcome": "supported",
+              "finding": "An earlier reflection explicitly asserts that the full clean-bowl goal is complete, while the cited feedback only confirms placement."
+            }
+          ],
+          "conclusion": "Prefer the earlier explicit full-goal assertion over a later repetition, while comparing same-step memory and reflection.",
+          "caveat": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim."
+        },
+        {
+          "rule_id": "evidence_refuted",
+          "conditions": [
+            {
+              "agent_id": "investigate_origin_and_recovery",
+              "outcome": "refuted",
+              "finding": "A source observation establishes that this bowl is clean before the assertion, or the claimed completion is explicitly confined to a subgoal."
+            }
+          ],
+          "conclusion": "Do not diagnose a cleanliness error from placement or missing state alone.",
+          "caveat": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim."
+        },
+        {
+          "rule_id": "evidence_unknown",
+          "conditions": [
+            {
+              "agent_id": "investigate_origin_and_recovery",
+              "outcome": "unknown",
+              "finding": "World cleanliness or the unique within-step origin is not determined by the available record."
+            }
+          ],
+          "conclusion": "Keep factual certainty, causal origin and actual cleanliness separate; do not manufacture a dirty bowl to make the argument decisive.",
+          "caveat": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim."
+        }
+      ],
+      "uncertainty": "The bowl may have been clean initially; absence of a clean-state fact does not prove dirtiness. The source supports a premature certainty problem, not an independently verified unique physical cause of task failure. Step-5 memory also contains a broad completion claim.",
+      "plan_digest": "92e51dfe760a4e372084e4e1ec9d9361bc6799a31b09bdc05da91338544f802e",
+      "source_coverage": {
+        "step_range": [
+          1,
+          30
+        ],
+        "action_observation_timeline_complete": true,
+        "all_memory_reflection_plan_supplied": false,
+        "other_modules": "ROUTE anchor steps only",
+        "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+      }
+    },
+    "assigned_evidence": {
+      "investigate_origin_and_recovery": [
+        {
+          "source_id": "source:6:plan",
+          "step": 6,
+          "module": "plan",
+          "source_kind": "original_agent_module",
+          "quote": "Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task."
+        }
+      ]
+    },
+    "trace_evidence": {
+      "investigate_origin_and_recovery": {
+        "query": "-- Purpose: Find the earliest explicit full-goal confirmation and distinguish placement evidence from verified cleanliness.\n-- Search entity-specific history before the anchor and later recovery; never retrieve whole steps.\nWITH evidence AS (\n-- Inspect the reflection evidence for 'clean' in original steps 1-6.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('clean','reflection',1,6)\nUNION\n-- Inspect the memory evidence for 'completion of the task' in original steps 1-6.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('completion of the task','memory',1,6)\nUNION\n-- Inspect the memory evidence for 'clean' in original steps 1-6.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('clean','memory',1,6)\nUNION\n-- Inspect the plan evidence for 'bowl' in original steps 1-6.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('bowl','plan',1,6)\nUNION\n-- Inspect the action evidence for 'bowl 1' in original steps 1-30.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('bowl 1','action',1,30)\nUNION\n-- Inspect the observation evidence for 'bowl 1' in original steps 1-30.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('bowl 1','observation',1,30)\nUNION\n-- Inspect the observation evidence for 'clean' in original steps 1-30.\nSELECT step,module,text,source_id,start,end,fid,source_kind,parse_status,\n       NULL AS rel,NULL AS args,NULL AS slot,NULL AS side,NULL AS value,\n       NULL AS value_type,NULL AS assertion_time,NULL AS claim_scope,NULL AS claim_polarity\nFROM SEARCH_TEXT('clean','observation',1,30)\nUNION\n-- Track the disputed entity; parsed claims and derived checks remain unverified.\nSELECT step,'parsed_fact' AS module,span AS text,NULL AS source_id,\n       NULL AS start,NULL AS end,fid,source_kind,parse_status,\n       rel,args,slot,side,value,value_type,assertion_time,claim_scope,claim_polarity\nFROM TRACK_ENTITY('portable:bowl_1',1,30)\n)\n-- Deduplicate overlapping excerpts while retaining exact source offsets.\nSELECT DISTINCT * FROM evidence ORDER BY step,module,start,fid;\n",
+        "columns": [
+          "step",
+          "module",
+          "text",
+          "source_id",
+          "start",
+          "end",
+          "fid",
+          "source_kind",
+          "parse_status",
+          "rel",
+          "args",
+          "slot",
+          "side",
+          "value",
+          "value_type",
+          "assertion_time",
+          "claim_scope",
+          "claim_polarity"
+        ],
+        "rows": [
+          {
+            "step": 1,
+            "module": "observation",
+            "text": "stoveburner 3, a stoveburner 2, a stoveburner 1, and a toaster 1.\n\nYour task is to: put a clean bowl in shelf.",
+            "source_id": "observation:1:508:618",
+            "start": 508,
+            "end": 618,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 1,
+            "module": "plan",
+            "text": "Plan the next step:\n- To complete the task of putting a clean bowl on a shelf, I need to first locate a clean bowl. The most logical places to find a bowl in a kitchen are usually within cabinets, on countertops, in drawers, or in the sink if it has been recently cleaned. \n- Starting by checking the countertops can be helpful as they are often used for dryin",
+            "source_id": "plan:1:0:360",
+            "start": 0,
+            "end": 360,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "action",
+            "text": "take bowl 1 from countertop 1",
+            "source_id": "action:2:0:29",
+            "start": 0,
+            "end": 29,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "memory",
+            "text": "s from our conversation history.\n- Step 1: The observation was that the task is to \"put a clean bowl in shelf.\" The action taken was \"go to countertop 1\" where the bowl might be located.",
+            "source_id": "memory:2:40:226",
+            "start": 40,
+            "end": 226,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "observation",
+            "text": "You arrive at countertop 1. On the countertop 1, you see a bowl 1, a butterknife 2, a butterknife 1, a dishsponge 1, a fork 1, and a kettle 1.",
+            "source_id": "observation:2:0:142",
+            "start": 0,
+            "end": 142,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "parsed_fact",
+            "text": "On the countertop 1, you see a bowl 1, a butterknife 2, a butterknife 1, a dishsponge 1, a fork 1, and a kettle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 43,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:bowl_1\", \"attribute:object_type\", \"value:bowl\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "parsed_fact",
+            "text": "On the countertop 1, you see a bowl 1, a butterknife 2, a butterknife 1, a dishsponge 1, a fork 1, and a kettle 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 44,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"countertop:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "parsed_fact",
+            "text": "take bowl 1 from countertop 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 59,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "take",
+            "args": "[\"portable:bowl_1\", \"countertop:1\"]",
+            "slot": "act",
+            "side": "mind",
+            "value": "take bowl 1 from countertop 1",
+            "value_type": "string",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "plan",
+            "text": "step based on memory and reflection\n- Given the information, the next step is to take the bowl from countertop 1 since it is needed to complete the task.\n- Taking the bowl is helpful as it is necessary to have the bowl in my possession to proceed with placing it in a shelf.\n- I expect this action to achieve the acquisition of the bowl, allowing me to move to",
+            "source_id": "plan:2:14:374",
+            "start": 14,
+            "end": 374,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 2,
+            "module": "reflection",
+            "text": "Reflect on the last action and its outcome\n- The task goal to put a clean bowl in a shelf has not yet been completed.\n- The last action successfully moved me to countertop 1, where there is a bowl present.\n- This was a necessary step towards achieving the task goal.\n- The action went as expected and allowed me to locate the bowl needed for the task.",
+            "source_id": "reflection:2:0:351",
+            "start": 0,
+            "end": 351,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 3,
+            "module": "memory",
+            "text": " 1: You were in a room with multiple objects including shelves and your task was to put a clean bowl in a shelf. Action 1: You went to countertop 1.\n- Observation 2: At countertop 1, you found and took bowl 1. Action 2: You picked up bowl 1 from countertop 1.\nThese memory steps indicate that you've successfully acquired the bowl and now need to move it to a ",
+            "source_id": "memory:3:86:446",
+            "start": 86,
+            "end": 446,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 3,
+            "module": "observation",
+            "text": "You pick up the bowl 1 from the countertop 1.",
+            "source_id": "observation:3:0:45",
+            "start": 0,
+            "end": 45,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 3,
+            "module": "parsed_fact",
+            "text": "You pick up the bowl 1 from the countertop 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 61,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:bowl_1\", \"attribute:object_type\", \"value:bowl\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 3,
+            "module": "parsed_fact",
+            "text": "You pick up the bowl 1 from the countertop 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 62,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:bowl_1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 3,
+            "module": "parsed_fact",
+            "text": "You pick up the bowl 1 from the countertop 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 63,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"countertop:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 0,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 3,
+            "module": "parsed_fact",
+            "text": "- Observation 2: At countertop 1, you found and took bowl 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 66,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:bowl_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 2,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 3,
+            "module": "plan",
+            "text": "rned, what should I do next? I should go to one of the shelves to prepare for placing the bowl there.\n- Please explain why this plan is helpful for the next action? Moving towards a shelf is a direct action towards completing the task goal of placing the bowl on a shelf.\n- What do I expect this action to achieve? This action will position me in front of a sh",
+            "source_id": "plan:3:71:431",
+            "start": 71,
+            "end": 431,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 4,
+            "module": "action",
+            "text": "move bowl 1 to shelf 1",
+            "source_id": "action:4:0:22",
+            "start": 0,
+            "end": 22,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 4,
+            "module": "parsed_fact",
+            "text": "- Step 2: Observed items on countertop 1 and took bowl 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 75,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:bowl_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 2,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 4,
+            "module": "parsed_fact",
+            "text": "- Step 3: Successfully picked up the bowl 1 and moved towards shelf 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 76,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:bowl_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 3,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 4,
+            "module": "parsed_fact",
+            "text": "move bowl 1 to shelf 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 79,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "put",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "act",
+            "side": "mind",
+            "value": "move bowl 1 to shelf 1",
+            "value_type": "string",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 4,
+            "module": "plan",
+            "text": "emory and reflection\n- Given what I've learned, what should I do next? I should place the bowl on shelf 1.\n- Please explain why this plan is helpful for the next action? This action directly aligns with the task goal of putting a clean bowl in the shelf.\n- What do I expect this action to achieve? I expect this action to complete the task by placing the bowl ",
+            "source_id": "plan:4:29:389",
+            "start": 29,
+            "end": 389,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "memory",
+            "text": "ctions from our conversation history.\n- Step 1: Observation was that the task is to put a clean bowl in a shelf. The action taken was to go to countertop 1.\n- Step 4: Observation was that you arrived at shelf 1 with nothing on it. The action taken was to move bowl 1 to shelf 1.\nThese memory steps are helpful milestones to solve this task as they outline the ",
+            "source_id": "memory:5:35:395",
+            "start": 35,
+            "end": 395,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "memory",
+            "text": "re helpful milestones to solve this task as they outline the initial goal and confirm the completion of the task.",
+            "source_id": "memory:5:334:447",
+            "start": 334,
+            "end": 447,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "observation",
+            "text": "You move the bowl 1 to the shelf 1.",
+            "source_id": "observation:5:0:35",
+            "start": 0,
+            "end": 35,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "parsed_fact",
+            "text": "You move the bowl 1 to the shelf 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 82,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:bowl_1\", \"attribute:object_type\", \"value:bowl\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "parsed_fact",
+            "text": "You move the bowl 1 to the shelf 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 83,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "parsed_fact",
+            "text": "You move the bowl 1 to the shelf 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 84,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:bowl_1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 0,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "plan",
+            "text": "hy this plan is helpful for the next action? This plan is helpful as it confirms that the bowl is indeed in the shelf and the task has been completed successfully.\n- What do I expect this action to achieve? I expect this action to confirm the presence of the bowl on the shelf, providing visual confirmation of task completion.",
+            "source_id": "plan:5:185:512",
+            "start": 185,
+            "end": 512,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 5,
+            "module": "reflection",
+            "text": "d its outcome\n- Did I complete the task goal? Yes, I completed the task goal of putting a clean bowl in a shelf.\n- Was last action successful or did it encounter issues? The last action was successful; the bowl was moved to shelf 1.\n- Am I making progress toward the task goal? The task goal has been achieved.\n- If the action did not go as expected and did no",
+            "source_id": "reflection:5:29:389",
+            "start": 29,
+            "end": 389,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 6,
+            "module": "memory",
+            "text": " the bowl 1 to shelf 1. This indicates that I have likely completed the task of putting a clean bowl on the shelf.",
+            "source_id": "memory:6:171:285",
+            "start": 171,
+            "end": 285,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 6,
+            "module": "observation",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": "observation:6:0:33",
+            "start": 0,
+            "end": 33,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 6,
+            "module": "parsed_fact",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 92,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:bowl_1\", \"attribute:object_type\", \"value:bowl\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 6,
+            "module": "parsed_fact",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 93,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 6,
+            "module": "plan",
+            "text": "lan the next step based on memory and reflection\n- Given that the task of putting a clean bowl on the shelf is completed, the next step is to confirm the completion of the task.\n- This plan is helpful to ensure that the task is completed as expected.\n- I expect this action to confirm that the bowl is indeed on the shelf as intended.",
+            "source_id": "plan:6:1:335",
+            "start": 1,
+            "end": 335,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 6,
+            "module": "reflection",
+            "text": "t on the last action and its outcome\n- Did I complete the task goal? Yes, I have placed a clean bowl on the shelf.\n- Was the last action successful or did it encounter issues? The last action of moving the bowl to the shelf was successful.\n- Am I making progress toward the task goal? Yes, the task goal appears to be completed.\n- If the action did not go as e",
+            "source_id": "reflection:6:6:366",
+            "start": 6,
+            "end": 366,
+            "fid": null,
+            "source_kind": "original_agent_module",
+            "parse_status": "raw_agent_text_not_verified_truth",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 7,
+            "module": "observation",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": "observation:7:0:33",
+            "start": 0,
+            "end": 33,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 7,
+            "module": "parsed_fact",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 101,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:bowl_1\", \"attribute:object_type\", \"value:bowl\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 7,
+            "module": "parsed_fact",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 102,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 13,
+            "module": "observation",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": "observation:13:0:33",
+            "start": 0,
+            "end": 33,
+            "fid": null,
+            "source_kind": "original_observation",
+            "parse_status": "template",
+            "rel": null,
+            "args": null,
+            "slot": null,
+            "side": null,
+            "value": null,
+            "value_type": null,
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 13,
+            "module": "parsed_fact",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 149,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "has",
+            "args": "[\"portable:bowl_1\", \"attribute:object_type\", \"value:bowl\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 13,
+            "module": "parsed_fact",
+            "text": "On the shelf 1, you see a bowl 1.",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 150,
+            "source_kind": "observation_extraction",
+            "parse_status": "template",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "obs",
+            "side": "env",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": null,
+            "claim_polarity": null
+          },
+          {
+            "step": 13,
+            "module": "parsed_fact",
+            "text": "- Step 5: Confirmed that bowl 1 is on shelf 1 by examining",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 152,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 5,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 15,
+            "module": "parsed_fact",
+            "text": "- Step 3: Observation 3 showed I've picked up bowl 1 from countertop 1, and Step 4 showed I went to shelf 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 168,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:bowl_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 3,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 22,
+            "module": "parsed_fact",
+            "text": "- Step 5 confirms the presence of bowl 1 on shelf 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 222,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": null,
+            "claim_scope": "unspecified",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 29,
+            "module": "parsed_fact",
+            "text": "- Step 3: Took bowl 1 from countertop 1 and went to shelf 1",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 275,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "holding",
+            "args": "[\"agent:self\", \"portable:bowl_1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 3,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          },
+          {
+            "step": 30,
+            "module": "parsed_fact",
+            "text": "- Step 5: Confirmed the presence of bowl 1 on shelf 1, verifying that the task was completed successfully",
+            "source_id": null,
+            "start": null,
+            "end": null,
+            "fid": 284,
+            "source_kind": "agent_claim_extraction",
+            "parse_status": "selective_heuristic_not_audited",
+            "rel": "in",
+            "args": "[\"portable:bowl_1\", \"shelf:1\"]",
+            "slot": "mem",
+            "side": "mind",
+            "value": 1,
+            "value_type": "boolean",
+            "assertion_time": 5,
+            "claim_scope": "historical",
+            "claim_polarity": "positive"
+          }
+        ],
+        "returned_steps": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          13,
+          15,
+          22,
+          29,
+          30
+        ],
+        "function_scopes": [
+          {
+            "function": "TRACK_ENTITY",
+            "arguments": [
+              "portable:bowl_1",
+              1,
+              30
+            ],
+            "matched_rows": 24,
+            "truncated": false,
+            "limits": {
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "clean",
+              "observation",
+              1,
+              30
+            ],
+            "matched_rows": 1,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 1,
+              "returned_sources": 1,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "bowl 1",
+              "observation",
+              1,
+              30
+            ],
+            "matched_rows": 6,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 6,
+              "returned_sources": 6,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "bowl 1",
+              "action",
+              1,
+              30
+            ],
+            "matched_rows": 2,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 2,
+              "returned_sources": 2,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "bowl",
+              "plan",
+              1,
+              6
+            ],
+            "matched_rows": 6,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 6,
+              "returned_sources": 6,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "clean",
+              "memory",
+              1,
+              6
+            ],
+            "matched_rows": 4,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 4,
+              "returned_sources": 4,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "clean",
+              "reflection",
+              1,
+              6
+            ],
+            "matched_rows": 3,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 3,
+              "returned_sources": 3,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          },
+          {
+            "function": "SEARCH_TEXT",
+            "arguments": [
+              "completion of the task",
+              "memory",
+              1,
+              6
+            ],
+            "matched_rows": 1,
+            "truncated": false,
+            "limits": {
+              "matched_sources": 1,
+              "returned_sources": 1,
+              "max_sources": null,
+              "excerpt_chars": 360,
+              "shared_source_chars": null,
+              "rows": null
+            }
+          }
+        ],
+        "truncated": false,
+        "evidence_quality": {
+          "through_step": 30,
+          "absence_means": "unknown_not_false",
+          "parse_gaps": [],
+          "unmodeled_goals": [],
+          "observation_coverage": "Template/backoff admission is extraction coverage, not complete world observability or semantic truth.",
+          "agent_module_coverage": "Memory/plan/action extraction is selective and heuristic. A missing typed claim or unmentioned constraint is not an omission by the agent.",
+          "derived_checks": "env/chk facts are computed from attempted actions and parsed state, not independent environment feedback.",
+          "false_positive_check": "Compare original source with the extracted proposition; test ambiguity, history, negation and legitimate exploration/retry. Missing facts, unmet checks or limited retrieval alone cannot support error."
+        },
+        "limitations": "Element results only, never complete steps. Failed function branches are UNAVAILABLE, not zero matches or counterevidence. Inspect partial/function_errors/skipped_branches and repairs. No aggregate row/byte/source/function budget is imposed. Explicit SQL LIMIT, filters, graph depth, phrase-centered excerpts and column selection can omit evidence. Empty results and missing facts mean unknown, not an agent error. Inspect original source before accepting a parsed premise.",
+        "partial": false,
+        "function_errors": [],
+        "repairs": [],
+        "skipped_branches": [],
+        "coverage": "element_scope_only",
+        "limits": {
+          "rows": null,
+          "bytes": null,
+          "vm_operations": 2000000,
+          "raw_source_chars": null,
+          "function_calls": null,
+          "excerpt_chars": 360
+        }
+      }
+    },
+    "instruction": "Evaluate each manager condition against original assigned/query evidence, including empty TRACE reviews. All conditions in a rule must be supported before using its conclusion. No result, clipping, parse gaps or agent confidence alone proves a condition. Explain supported/refuted/unknown outcomes in comparisons/reasoning; use unknown criteria for unresolved branches. partial/function_errors/skipped_branches mean unavailable evidence, never zero matches or refutation. The plan is advisory, not observed evidence or a vote. Select only an existing TRACE candidate."
+  },
+  "instruction": "Compare these TRACE suspects once and return one answer. Select exactly one supplied candidate and return status=diagnosed; SUBMIT cannot abstain or return uncertain. TRACE uncertain is an evidence qualification, not an exclusion from selection. Keep residual uncertainty in the uncertainty text and do not invent supporting evidence. Use shared local context and bounded related source excerpts; no complete history is supplied. Retrieval hints do not prove dependency, recovery or absence. Omitted evidence remains unknown. There are no tools. No labels or reference answer are supplied."
+}

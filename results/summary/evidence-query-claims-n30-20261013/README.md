@@ -2,6 +2,8 @@
 
 运行 `evidence-query-claims-n30-20261013`；模型 `openai/gpt-6-luna-pro`；耗时 844.64 秒。
 
+同目录新增 [6 条逐阶段构造示范汇总](constructed_summary.md)，完整轨迹见 [constructed/](../../traces/evidence-query-claims-n30-20261013/constructed/README.md)。这些示范的决策由人工编写，SQL 返回为真实离线执行；下列数字仍是原 30 条实际运行结果。
+
 状态：{"diagnosed": 24, "no_candidate": 4, "uncertain": 1, "error": 1}。所有 30 个任务都计入分母。
 
 | 指标 | 结果 |
@@ -96,16 +98,16 @@
 
 | 归档 | 文件数 | 压缩字节 |
 |---|---:|---:|
-| [GPT-4o_019_alfworld_task_019.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_019_alfworld_task_019.tar.gz) | 43 | 970493 |
+| [GPT-4o_019_alfworld_task_019.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_019_alfworld_task_019.tar.gz) · [逐阶段构造示范](../../traces/evidence-query-claims-n30-20261013/constructed/GPT-4o_019_alfworld_task_019/README.md) | 43 | 970493 |
 | [GPT-4o_006_alfworld_task_006.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_006_alfworld_task_006.tar.gz) | 34 | 915179 |
-| [GPT-4o_055_alfworld_task_055.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_055_alfworld_task_055.tar.gz) | 42 | 832991 |
+| [GPT-4o_055_alfworld_task_055.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_055_alfworld_task_055.tar.gz) · [逐阶段构造示范](../../traces/evidence-query-claims-n30-20261013/constructed/GPT-4o_055_alfworld_task_055/README.md) | 42 | 832991 |
 | [GPT-4o_047_alfworld_task_047.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_047_alfworld_task_047.tar.gz) | 38 | 867727 |
 | [GPT-4o_037_alfworld_task_037.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_037_alfworld_task_037.tar.gz) | 40 | 1215740 |
 | [GPT-4o_013_chat_b000_t00_e12-f27d2887.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_013_chat_b000_t00_e12-f27d2887.tar.gz) | 42 | 1043128 |
 | [GPT-4o_011_chat_b000_t00_e10-69d80a84.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_011_chat_b000_t00_e10-69d80a84.tar.gz) | 42 | 1206043 |
 | [Qwen3-8B_011_chat_b000_t00_e11-1cc61441.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_011_chat_b000_t00_e11-1cc61441.tar.gz) | 44 | 1004182 |
 | [GPT-4o_009_chat_b000_t00_e08-6a7bac22.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_009_chat_b000_t00_e08-6a7bac22.tar.gz) | 39 | 1328900 |
-| [Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d.tar.gz) | 43 | 769360 |
+| [Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d.tar.gz) · [逐阶段构造示范](../../traces/evidence-query-claims-n30-20261013/constructed/Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d/README.md) | 43 | 769360 |
 | [Qwen3-8B_002_id_2___chat_b000_t00_e04-7e3c13ba.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_002_id_2___chat_b000_t00_e04-7e3c13ba.tar.gz) | 40 | 1412197 |
 | [GPT-4o_012_alfworld_task_012.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_012_alfworld_task_012.tar.gz) | 35 | 545456 |
 | [GPT-4o_002_alfworld_task_002.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_002_alfworld_task_002.tar.gz) | 39 | 1083478 |
@@ -113,19 +115,19 @@
 | [GPT-4o_026_alfworld_task_026.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_026_alfworld_task_026.tar.gz) | 41 | 1016036 |
 | [GPT-4o_024_alfworld_task_024.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_024_alfworld_task_024.tar.gz) | 42 | 901692 |
 | [GPT-4o_021_alfworld_task_021.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_021_alfworld_task_021.tar.gz) | 39 | 928433 |
-| [GPT-4o_013_alfworld_task_013.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_013_alfworld_task_013.tar.gz) | 39 | 961042 |
+| [GPT-4o_013_alfworld_task_013.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_013_alfworld_task_013.tar.gz) · [逐阶段构造示范](../../traces/evidence-query-claims-n30-20261013/constructed/GPT-4o_013_alfworld_task_013/README.md) | 39 | 961042 |
 | [Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f.tar.gz) | 42 | 1172456 |
 | [GPT-4o_011_alfworld_task_011.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_011_alfworld_task_011.tar.gz) | 39 | 932442 |
 | [GPT-4o_012_chat_b000_t00_e11-1cc61441.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_012_chat_b000_t00_e11-1cc61441.tar.gz) | 39 | 904543 |
 | [Qwen3-8B_007_chat_b000_t00_e07-d50ae81f.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_007_chat_b000_t00_e07-d50ae81f.tar.gz) | 39 | 1589531 |
 | [GPT-4o_005_chat_b000_t00_e04-7e3c13ba.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_005_chat_b000_t00_e04-7e3c13ba.tar.gz) | 37 | 957535 |
 | [GPT-4o_003_chat_b000_t00_e02-1e119842.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_003_chat_b000_t00_e02-1e119842.tar.gz) | 44 | 1187793 |
-| [Qwen3-8B_013_chat_b000_t00_e13-eb20423f.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_013_chat_b000_t00_e13-eb20423f.tar.gz) | 49 | 1002012 |
+| [Qwen3-8B_013_chat_b000_t00_e13-eb20423f.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_013_chat_b000_t00_e13-eb20423f.tar.gz) · [逐阶段构造示范](../../traces/evidence-query-claims-n30-20261013/constructed/Qwen3-8B_013_chat_b000_t00_e13-eb20423f/README.md) | 49 | 1002012 |
 | [GPT-4o_014_chat_b000_t00_e13-c39f2c41.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_014_chat_b000_t00_e13-c39f2c41.tar.gz) | 43 | 1222150 |
 | [GPT-4o_015_chat_b000_t00_e14-1d03d2d8.tar.gz](../../traces/evidence-query-claims-n30-20261013/GPT-4o_015_chat_b000_t00_e14-1d03d2d8.tar.gz) | 48 | 1038170 |
 | [Llama3.3-70B-Turbo_014_webshop_task_014.tar.gz](../../traces/evidence-query-claims-n30-20261013/Llama3.3-70B-Turbo_014_webshop_task_014.tar.gz) | 46 | 1630599 |
 | [Llama3.3-70B-Turbo_017_webshop_task_017.tar.gz](../../traces/evidence-query-claims-n30-20261013/Llama3.3-70B-Turbo_017_webshop_task_017.tar.gz) | 55 | 1422248 |
-| [Qwen3-8B_010_chat_b000_t00_e10-69d80a84.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_010_chat_b000_t00_e10-69d80a84.tar.gz) | 43 | 1180286 |
+| [Qwen3-8B_010_chat_b000_t00_e10-69d80a84.tar.gz](../../traces/evidence-query-claims-n30-20261013/Qwen3-8B_010_chat_b000_t00_e10-69d80a84.tar.gz) · [逐阶段构造示范](../../traces/evidence-query-claims-n30-20261013/constructed/Qwen3-8B_010_chat_b000_t00_e10-69d80a84/README.md) | 43 | 1180286 |
 | [run-metadata.tar.gz](../../traces/evidence-query-claims-n30-20261013/run-metadata.tar.gz) | 9 | 511442 |
 
 在仓库根目录解包：

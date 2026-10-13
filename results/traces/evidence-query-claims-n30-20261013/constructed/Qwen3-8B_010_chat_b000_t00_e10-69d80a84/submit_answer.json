@@ -1,0 +1,39 @@
+{
+  "provenance": {
+    "schema": "authored-debugger-demonstration/v1",
+    "synthetic": true,
+    "trajectory_id": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84",
+    "source_run": "evidence-query-claims-n30-20261013",
+    "archive": "results/traces/evidence-query-claims-n30-20261013/Qwen3-8B_010_chat_b000_t00_e10-69d80a84.tar.gz",
+    "archive_sha256": "23fe3a344b0c7ef7c627bb1805f176e94ba0f5b041b26d8c443907b3a9f4da63",
+    "input_sha256": {
+      "input.json": "d67ce53006bccd97e645b6112de3fff3cead2787d3f6b3cde6be55c032c5e450",
+      "audited_parse.json": "11c72dfb0ed9fa797bf7248207bd57b15d46518a582c813533f940cb943afcfe",
+      "canonical_record.json": "37a4ddd97253bfc73bb0eb6de5285c2de634e37755467c8fb7e3c6c9c598ee37"
+    },
+    "author": "Codex, manually authored at the user's request",
+    "authoring_context": "The author reviewed saved traces and offline evaluations; this is not a blind model evaluation",
+    "decisions": "Manually authored MAP/ROUTE/manager/TRACE/SUBMIT decisions, not model responses",
+    "tool_results": "Actually executed offline against the unchanged archived input and audited parse",
+    "semantic_parser": "Offline templates only; unresolved clauses are preserved; no simulated LLM backoff",
+    "environment_actions": "Historical source actions only; no new environment execution",
+    "model_api_calls": 0,
+    "include_in_benchmark": false,
+    "correctness_scope": "Source quotations and protocol checked; causal conclusions are authored examples, not an independently scored success"
+  },
+  "answer": {
+    "status": "diagnosed",
+    "selected_candidate_id": "trace-window:investigate_origin_and_recovery:1",
+    "fault_class": "hallucination",
+    "output_quote": "The current observation includes color options, with 'grey' matching the desired heather grey.",
+    "reasoning": "The evidence_supported rule supports the step-26 memory error because it states an exact color match without source evidence for the mapping. The plan includes exploratory language and action 27 returns to search, so evidence_unknown controls task-level attribution. The selected candidate is a local unsupported assertion; the submitted answer does not claim it caused all earlier failed searches or the final unresolved outcome.",
+    "comparisons": [
+      {
+        "candidate_id": "trace-window:investigate_origin_and_recovery:1",
+        "reasoning": "Select the memory assertion as the supported local error. The exploratory click and later recovery do not establish a separate plan error or a root cause for the entire shopping failure."
+      }
+    ],
+    "repair": "Describe grey as an available option whose relationship to heather grey is unverified. Preserve the later product rejection and keep investigating the unresolved task rather than turning this recovered local assertion into a definitive global root cause.",
+    "uncertainty": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping."
+  }
+}

@@ -152,6 +152,16 @@ SUBMIT 从已有候选中选择一个具体结果，不能输出 uncertain，也
 
 本轮已完成：24 个 diagnosed、4 个 no_candidate、1 个 ROUTE uncertain、1 个 SUBMIT 校验失败；step 匹配 3/30，step+module 匹配 0/30。35 个 SQL 均成功，35 个语义批次全部一次返回，无截断、无缺失条目。只有 1/30 的标注 step+module 进入 TRACE 候选池，最终未被 SUBMIT 选择。样本中另有 4 个 `system` 模块标注，超出当前候选模块 schema，仍保留在完整分母中。修复改善了响应完整性，尚未表现为定位准确率改善。
 
+## 8. 六条人工构造的诊断示范
+
+在同一轮 30 任务的结果目录中补充了 6 条逐阶段示范，涵盖 MAP、ROUTE、manager 分配和条件规则、单次 DSL 查询、TRACE 单步候选以及 SUBMIT 比较。选择的是原任务日志，观察、动作和归档保持原样；诊断决策由人工重新编写，并在文件中标记来源。
+
+查询和交接实际运行现有离线工具及校验器，保留英文 SQL 注释、精确原文与偏移、解析缺口、同一步模块比较和后续恢复证据。每条使用一个 investigator；单 worker 的根因角色字段按原协议从 SUBMIT 隐藏。没有新增模型调用，也没有修改真实评测结果。
+
+- [六条示范汇总](results/summary/evidence-query-claims-n30-20261013/constructed_summary.md)
+- [完整逐阶段轨迹](results/traces/evidence-query-claims-n30-20261013/constructed/README.md)
+- [可重复生成脚本](scripts/construct_trace_examples.py)：从已提交归档读取并校验输入，拒绝覆盖已有输出；仅结构校验通过不等于因果判断已获独立真值认证。
+
 ## 验证与边界
 
 ```bash

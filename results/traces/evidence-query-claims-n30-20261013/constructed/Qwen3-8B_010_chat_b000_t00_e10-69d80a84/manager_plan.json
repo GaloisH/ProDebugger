@@ -1,0 +1,80 @@
+{
+  "schema": "trace-investigation-plan/v1",
+  "assignments": [
+    {
+      "agent_id": "investigate_origin_and_recovery",
+      "anchor_case_id": "authored_route",
+      "route_case_ids": [
+        "authored_route"
+      ],
+      "question": "Is generic grey promoted to an established heather-grey match, and does that assertion remain causally relevant after the item is rejected? Compare earlier product claims and the later return to search instead of labeling every exploratory option click a root cause.",
+      "search_targets": [
+        "Earlier CLANMILUMS and heather-grey claims",
+        "Source product page listing grey and light grey",
+        "Same-step memory versus exploratory plan language",
+        "Next-step item rejection and return to search"
+      ],
+      "evidence": [
+        {
+          "source_id": "source:26:plan",
+          "quote": "Click on 'grey' to filter products by color, which aligns with the required heather grey."
+        }
+      ],
+      "criteria": {
+        "supported": "Memory calls grey a match for heather grey without original mapping evidence, and peer modules use that assertion.",
+        "refuted": "Original source evidence establishes the mapping, or every relevant statement remains explicitly hypothetical and no match is asserted.",
+        "unknown": "The local assertion is unsupported but its role in the final unresolved task is not established, especially if the product is subsequently rejected."
+      }
+    }
+  ],
+  "decision_rules": [
+    {
+      "rule_id": "evidence_supported",
+      "conditions": [
+        {
+          "agent_id": "investigate_origin_and_recovery",
+          "outcome": "supported",
+          "finding": "Memory calls grey a match for heather grey without original mapping evidence, and peer modules use that assertion."
+        }
+      ],
+      "conclusion": "Retain the supported local memory error and compare the plan as a reversible probe; do not infer a task-level root merely from confidence.",
+      "caveat": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping."
+    },
+    {
+      "rule_id": "evidence_refuted",
+      "conditions": [
+        {
+          "agent_id": "investigate_origin_and_recovery",
+          "outcome": "refuted",
+          "finding": "Original source evidence establishes the mapping, or every relevant statement remains explicitly hypothetical and no match is asserted."
+        }
+      ],
+      "conclusion": "Reject the equivalence accusation if the source supports it; option clicking alone is not a failure.",
+      "caveat": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping."
+    },
+    {
+      "rule_id": "evidence_unknown",
+      "conditions": [
+        {
+          "agent_id": "investigate_origin_and_recovery",
+          "outcome": "unknown",
+          "finding": "The local assertion is unsupported but its role in the final unresolved task is not established, especially if the product is subsequently rejected."
+        }
+      ],
+      "conclusion": "Preserve the recovery and limited causal contribution in SUBMIT reasoning. A local diagnosis must not become a claim that it explains all earlier search failures.",
+      "caveat": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping."
+    }
+  ],
+  "uncertainty": "This is a local unsupported equivalence, not an established root of the unresolved shopping task. The plan also describes an exploratory click, and step 27 returns to search. The record has no catalog proof of whether grey maps to heather grey; later rejection is about product type and does not itself disprove the color mapping.",
+  "plan_digest": "e58c1c196269d9dfa00325e7e4765f36f5ce52f681606bbb7493d077d64dfefe",
+  "source_coverage": {
+    "step_range": [
+      1,
+      30
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  }
+}

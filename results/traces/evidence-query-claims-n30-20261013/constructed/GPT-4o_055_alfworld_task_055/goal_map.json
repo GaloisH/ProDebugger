@@ -1,0 +1,128 @@
+{
+  "schema": "entity-evidence/v4",
+  "task_contract": {
+    "verbatim": "put a clean bowl in shelf.",
+    "structured_requirement_count": 1,
+    "tracked_requirement_count": 1,
+    "unmodeled_requirement_count": 0,
+    "coverage": "not_proven_exhaustive",
+    "limitation": "The verbatim task is authoritative. Structured requirements include dynamic labelled properties and preserve free-text qualifiers, but a preserved phrase may not be semantically decomposed."
+  },
+  "requirements": [
+    {
+      "entity": {
+        "id": "req:bowl_in_shelf",
+        "kind": "requirement"
+      },
+      "definition": {
+        "count": 1,
+        "relation": "in",
+        "target": "place:shelf",
+        "constraints": [
+          {
+            "property": "attribute:object_type",
+            "attribute": "object_type",
+            "operator": "eq",
+            "expected": "bowl",
+            "value_type": "string",
+            "unit": null,
+            "mode": "observation",
+            "source_span": "put a clean bowl in shelf.",
+            "confidence": 1.0
+          },
+          {
+            "property": "attribute:destination_type",
+            "attribute": "destination_type",
+            "operator": "eq",
+            "expected": "shelf",
+            "value_type": "string",
+            "unit": null,
+            "mode": "selection",
+            "source_span": "put a clean bowl in shelf.",
+            "confidence": 1.0
+          },
+          {
+            "property": "attribute:clean",
+            "attribute": "clean",
+            "operator": "eq",
+            "expected": true,
+            "value_type": "boolean",
+            "unit": null,
+            "mode": "observation",
+            "source_span": "put a clean bowl in shelf.",
+            "confidence": 1.0
+          }
+        ],
+        "status_mode": "tracked"
+      },
+      "status": {
+        "state": "unknown",
+        "recorded_met": 0,
+        "required_count": 1,
+        "reason": "qualifying evidence exists but no satisfying decision is recorded",
+        "qualifying_steps": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          10,
+          11,
+          13,
+          14,
+          18,
+          20,
+          21,
+          25,
+          26,
+          29
+        ],
+        "fully_qualifying_steps": [],
+        "decision_steps": [],
+        "limitations": [
+          "Missing extracted state is unknown, not false. Compiled decisions are not observed effects; task satisfaction is not agent responsibility."
+        ]
+      },
+      "gaps": [
+        {
+          "kind": "qualifying_evidence_exists_but_no_satisfying_decision_is_recorded",
+          "qualifying_steps": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            10,
+            11,
+            13,
+            14,
+            18,
+            20,
+            21,
+            25,
+            26,
+            29
+          ],
+          "decision_steps": []
+        }
+      ],
+      "evidence_counts": {
+        "events": 18,
+        "changes": 0,
+        "intentions": 18
+      }
+    }
+  ],
+  "query": "requirements",
+  "requested_query": "requirements",
+  "parse_audit": {
+    "unresolved": [],
+    "instruction": "Parse gaps are unknowns, not evidence of agent failure; inspect original text."
+  }
+}

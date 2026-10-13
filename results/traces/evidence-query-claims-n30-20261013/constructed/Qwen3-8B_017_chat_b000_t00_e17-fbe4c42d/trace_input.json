@@ -1,0 +1,575 @@
+{
+  "schema": "evidence-query-step/v2-elements",
+  "task": "Find me loose fit, day comfort, hand wash women's tops, tees & blouses with short sleeve, polyester spandex for teen girls with color: b16-blue, and size: medium, and price lower than 30.00 dollars",
+  "manager_assignment": {
+    "agent_id": "investigate_origin_and_recovery",
+    "anchor_case_id": "authored_route",
+    "route_case_ids": [
+      "authored_route"
+    ],
+    "question": "Does the purchase decision override an explicit need to verify product details, or were all required attributes already independently established? Compare earlier product claims, exact option clicks and same-step memory/reflection/plan.",
+    "search_targets": [
+      "Earlier B09NPML43M attribute assertions and original product observations",
+      "Actual b16-blue and medium clicks versus displayed options",
+      "Reflection requirement to verify details versus the purchase plan",
+      "Earlier asserted matches as rival origins"
+    ],
+    "evidence": [
+      {
+        "source_id": "source:9:plan",
+        "step": 9,
+        "module": "plan",
+        "source_kind": "original_agent_module",
+        "quote": "This action directly achieves the task goal without further verification steps, as the product attributes are already confirmed."
+      }
+    ],
+    "criteria": {
+      "supported": "Reflection still requires verification, while the plan claims all attributes are already confirmed and issues a purchase without recorded support for all required attributes.",
+      "refuted": "Independent observations and selection feedback establish every required attribute before purchase, or the action continues verification instead of purchasing.",
+      "unknown": "The product may match in the hidden catalog, but visible evidence does not establish a verified match or the post-purchase outcome."
+    },
+    "interpretation": "An investigation plan, not findings or a search whitelist. Expand to relevant peer modules at the same step, independent actions/feedback, earlier causes and counterevidence within your one SQL query. You may identify a different supported step/module or mechanism. Explain how it supports, refutes or leaves the original premise unknown; do not force a manager rule to fit."
+  },
+  "candidate": {
+    "candidate_id": "investigate_origin_and_recovery",
+    "issue_step": 9,
+    "issue_fids": [
+      335
+    ],
+    "goal_links": [
+      "req:color",
+      "req:description",
+      "req:price",
+      "req:size"
+    ],
+    "hypothesis": "Does the purchase decision override an explicit need to verify product details, or were all required attributes already independently established? Compare earlier product claims, exact option clicks and same-step memory/reflection/plan."
+  },
+  "facts": [
+    {
+      "fid": 335,
+      "rel": "planned",
+      "args": [
+        {
+          "kind": "agent",
+          "index": "self"
+        }
+      ],
+      "value": "stated",
+      "slot": "plan",
+      "side": "mind",
+      "t": 9,
+      "situation": 129,
+      "basis": [
+        281,
+        282,
+        283,
+        284,
+        285,
+        286,
+        287,
+        288,
+        289,
+        290,
+        291,
+        292,
+        293,
+        294,
+        295,
+        296,
+        297,
+        298,
+        299,
+        300,
+        301,
+        302,
+        303,
+        304,
+        305,
+        306,
+        307,
+        308,
+        309,
+        310,
+        311,
+        312,
+        313,
+        314,
+        315,
+        316,
+        317,
+        318,
+        319,
+        320,
+        321,
+        322,
+        323,
+        324,
+        325,
+        326,
+        327,
+        328,
+        329,
+        330,
+        331,
+        332,
+        333,
+        334
+      ],
+      "purpose": {
+        "kind": "int",
+        "index": "i9"
+      },
+      "span": "Click \"buy now\" to finalize the purchase since the product matches all requirements: color, size, material, price, and type. This action directly achieves the task goal without further verification steps, as the product attributes are already confirmed.",
+      "value_type": "string",
+      "source_kind": "agent_text",
+      "parse_status": "verbatim_not_verified_truth",
+      "assertion_time": null,
+      "claim_scope": null,
+      "claim_polarity": null
+    }
+  ],
+  "entities": [
+    "agent:self"
+  ],
+  "requirement_ids": [
+    "req:color",
+    "req:description",
+    "req:price",
+    "req:size"
+  ],
+  "agent_statements": {
+    "schema": "agent-statements/v1",
+    "cards": [
+      {
+        "source_id": "claim:9:memory:0:158",
+        "step": 9,
+        "module": "memory",
+        "start": 0,
+        "end": 158,
+        "quote": "In step 8, the relevant product B09NPML43M was identified with attributes matching the task: polyester spandex, short sleeve, size medium, and color b16-blue.",
+        "topics": [
+          "result_assessment"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [
+          "step 8"
+        ],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "In step 8, the relevant product B09NPML43M was identified with attributes matching the task: polyester spandex, short sleeve, size medium, and color b16-blue.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:memory:159:202",
+        "step": 9,
+        "module": "memory",
+        "start": 159,
+        "end": 202,
+        "quote": "The price range ($1.01-$1.74) is under $30.",
+        "topics": [],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The price range ($1.01-$1.74) is under $30.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:memory:203:314",
+        "step": 9,
+        "module": "memory",
+        "start": 203,
+        "end": 314,
+        "quote": "The current observation confirms the color and size options are available, aligning with the task requirements.",
+        "topics": [
+          "verification",
+          "availability"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The current observation confirms the color and size options are available, aligning with the task requirements.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:plan:0:124",
+        "step": 9,
+        "module": "plan",
+        "start": 0,
+        "end": 124,
+        "quote": "Click \"buy now\" to finalize the purchase since the product matches all requirements: color, size, material, price, and type.",
+        "topics": [
+          "completion",
+          "selection",
+          "result_assessment",
+          "decision_basis"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "all"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "Click \"buy now\" to finalize the purchase since the product matches all requirements: color, size, material, price, and type.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:plan:125:253",
+        "step": 9,
+        "module": "plan",
+        "start": 125,
+        "end": 253,
+        "quote": "This action directly achieves the task goal without further verification steps, as the product attributes are already confirmed.",
+        "topics": [
+          "completion",
+          "verification",
+          "decision_basis"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "This",
+          "without",
+          "already"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "This action directly achieves the task goal without further verification steps, as the product attributes are already confirmed.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:reflection:0:112",
+        "step": 9,
+        "module": "reflection",
+        "start": 0,
+        "end": 112,
+        "quote": "The last action (step 8) successfully identified a product matching all criteria except verification of details.",
+        "topics": [
+          "completion",
+          "verification",
+          "result_assessment"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "all",
+          "except"
+        ],
+        "event_references": [
+          "step 8"
+        ],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The last action (step 8) successfully identified a product matching all criteria except verification of details.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:reflection:113:230",
+        "step": 9,
+        "module": "reflection",
+        "start": 113,
+        "end": 230,
+        "quote": "The current observation confirms the color (b16-blue) and size (medium) are available, and the price is within range.",
+        "topics": [
+          "verification",
+          "availability"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The current observation confirms the color (b16-blue) and size (medium) are available, and the price is within range.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      },
+      {
+        "source_id": "claim:9:reflection:231:324",
+        "step": 9,
+        "module": "reflection",
+        "start": 231,
+        "end": 324,
+        "quote": "The task is nearly complete, but confirmation of product details is needed before purchasing.",
+        "topics": [
+          "completion",
+          "verification",
+          "selection"
+        ],
+        "source_role": "agent_content",
+        "scope_cues": [
+          "nearly",
+          "before"
+        ],
+        "event_references": [],
+        "fragment_partial": false,
+        "extraction": "unresolved",
+        "coverage": "unresolved",
+        "statements": [],
+        "links": [],
+        "unresolved": [
+          {
+            "quote": "The task is nearly complete, but confirmation of product details is needed before purchasing.",
+            "reason": "no_complete_statement_template"
+          }
+        ]
+      }
+    ],
+    "scaffold_clauses": 0,
+    "instruction": "Statements describe what the agent said, not verified world state. Topic tags are lexical discovery hints, not extracted claims. Reviewed text is not a guarantee of semantic completeness. Missing extraction means unknown. Distinguish available/selected, purpose/achieved outcome, tentative/asserted, and the scope of negation. Compare premises with separately supplied observations; shared step, basis edges and earlier occurrence do not prove support or causation."
+  },
+  "query_context": {
+    "task_type": "webshop",
+    "step_range": [
+      1,
+      9
+    ],
+    "default_scope": "full_trajectory_including_steps_before_anchor",
+    "relation_names": [
+      "admissibility",
+      "asked",
+      "assessed",
+      "at",
+      "chosen",
+      "click",
+      "concluded",
+      "describes",
+      "effect",
+      "has",
+      "hypothesis",
+      "in",
+      "memory_unparsed",
+      "offers",
+      "open",
+      "planned",
+      "recalled_nothing",
+      "recalled_summary",
+      "result_total",
+      "satisfied",
+      "search",
+      "visible"
+    ],
+    "observed_action_relations": [
+      "click",
+      "search"
+    ],
+    "bounds_instruction": "Use these original step bounds. The anchor is a lead, not a lower bound. Omit optional bounds for a full-range element search; task-level Facts may have step 0."
+  },
+  "source": {
+    "step": 9,
+    "observation": "'Back to Search' [SEP] '< Prev' [SEP] 'color' [SEP] 'a1-black' [SEP] 'a1-blue' [SEP] 'a1-gray' [SEP] 'a1-green' [SEP] 'a1-purple' [SEP] 'a1-wine red' [SEP] 'a1-yellow' [SEP] 'a2-blue' [SEP] 'a2-gray' [SEP] 'a2-green' [SEP] 'a2-white' [SEP] 'a2-yellow' [SEP] 'a3-army green' [SEP] 'a3-blue' [SEP] 'a3-gray' [SEP] 'a3-navy' [SEP] 'a3-orange' [SEP] 'a3-wine red' [SEP] 'a4-gray' [SEP] 'a6-black' [SEP] 'a6-blue' [SEP] 'a6-red' [SEP] 'a7-black' [SEP] 'a7-blue' [SEP] 'a7-red' [SEP] 'b15-black' [SEP] 'b15-blue' [SEP] 'b15-red' [SEP] 'b16-black' [SEP] 'b16-blue' [SEP] 'b16-red' [SEP] 'b17-army green' [SEP] 'b17-black' [SEP] 'b17-red' [SEP] 'b17-wine red' [SEP] 'b18-a' [SEP] 'b11-black' [SEP] 'b13-a' [SEP] 'b19-a' [SEP] 'b14-a' [SEP] 'b21-a' [SEP] 'b12-a' [SEP] 'size' [SEP] 'small' [SEP] 'medium' [SEP] 'large' [SEP] 'x-large' [SEP] 'xx-large' [SEP] '3x-large' [SEP] 'Womens Short Sleeve Tops, Womens Casual Dandelion Printing T-Shirts Loose O-Neck Blouse Tops Funny Graphic Tee Shirts' [SEP] 'Price: $1.01 to $1.74' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+    "modules": {
+      "memory": "In step 8, the relevant product B09NPML43M was identified with attributes matching the task: polyester spandex, short sleeve, size medium, and color b16-blue. The price range ($1.01-$1.74) is under $30. The current observation confirms the color and size options are available, aligning with the task requirements.",
+      "reflection": "The last action (step 8) successfully identified a product matching all criteria except verification of details. The current observation confirms the color (b16-blue) and size (medium) are available, and the price is within range. The task is nearly complete, but confirmation of product details is needed before purchasing.",
+      "plan": "Click \"buy now\" to finalize the purchase since the product matches all requirements: color, size, material, price, and type. This action directly achieves the task goal without further verification steps, as the product attributes are already confirmed.",
+      "action": "click[buy now]"
+    },
+    "admissible": [
+      "click[back to search]",
+      "click[< prev]",
+      "click[description]",
+      "click[features]",
+      "click[reviews]",
+      "click[buy now]",
+      "click[a1-black]",
+      "click[a1-blue]",
+      "click[a1-gray]",
+      "click[a1-green]",
+      "click[a1-purple]",
+      "click[a1-wine red]",
+      "click[a1-yellow]",
+      "click[a2-blue]",
+      "click[a2-gray]",
+      "click[a2-green]",
+      "click[a2-white]",
+      "click[a2-yellow]",
+      "click[a3-army green]",
+      "click[a3-blue]",
+      "click[a3-gray]",
+      "click[a3-navy]",
+      "click[a3-orange]",
+      "click[a3-wine red]",
+      "click[a4-gray]",
+      "click[a6-black]",
+      "click[a6-blue]",
+      "click[a6-red]",
+      "click[a7-black]",
+      "click[a7-blue]",
+      "click[a7-red]",
+      "click[b15-black]",
+      "click[b15-blue]",
+      "click[b15-red]",
+      "click[b16-black]",
+      "click[b16-blue]",
+      "click[b16-red]",
+      "click[b17-army green]",
+      "click[b17-black]",
+      "click[b17-red]",
+      "click[b17-wine red]",
+      "click[b18-a]",
+      "click[b11-black]",
+      "click[b13-a]",
+      "click[b19-a]",
+      "click[b14-a]",
+      "click[b21-a]",
+      "click[b12-a]",
+      "click[small]",
+      "click[medium]",
+      "click[large]",
+      "click[x-large]",
+      "click[xx-large]",
+      "click[3x-large]"
+    ],
+    "next_observation": null
+  },
+  "rule_evidence": [],
+  "parse_audits": [
+    {
+      "source_id": "task:0",
+      "step": 0,
+      "kind": "task",
+      "status": "template",
+      "template": "complete-domain-templates/v1/webshop/task",
+      "reasons": [],
+      "unresolved": [],
+      "handled_triggers": [
+        "semantic_trigger:quantity_scope:lower than"
+      ]
+    },
+    {
+      "source_id": "observation:9",
+      "step": 9,
+      "kind": "observation",
+      "status": "unresolved",
+      "template": null,
+      "reasons": [
+        "semantic_trigger:comparison_change:now",
+        "no_complete_trusted_template",
+        "template_rejection:item page requires semantic/context audit"
+      ],
+      "unresolved": [
+        {
+          "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'color' [SEP] 'a1-black' [SEP] 'a1-blue' [SEP] 'a1-gray' [SEP] 'a1-green' [SEP] 'a1-purple' [SEP] 'a1-wine red' [SEP] 'a1-yellow' [SEP] 'a2-blue' [SEP] 'a2-gray' [SEP] 'a2-green' [SEP] 'a2-white' [SEP] 'a2-yellow' [SEP] 'a3-army green' [SEP] 'a3-blue' [SEP] 'a3-gray' [SEP] 'a3-navy' [SEP] 'a3-orange' [SEP] 'a3-wine red' [SEP] 'a4-gray' [SEP] 'a6-black' [SEP] 'a6-blue' [SEP] 'a6-red' [SEP] 'a7-black' [SEP] 'a7-blue' [SEP] 'a7-red' [SEP] 'b15-black' [SEP] 'b15-blue' [SEP] 'b15-red' [SEP] 'b16-black' [SEP] 'b16-blue' [SEP] 'b16-red' [SEP] 'b17-army green' [SEP] 'b17-black' [SEP] 'b17-red' [SEP] 'b17-wine red' [SEP] 'b18-a' [SEP] 'b11-black' [SEP] 'b13-a' [SEP] 'b19-a' [SEP] 'b14-a' [SEP] 'b21-a' [SEP] 'b12-a' [SEP] 'size' [SEP] 'small' [SEP] 'medium' [SEP] 'large' [SEP] 'x-large' [SEP] 'xx-large' [SEP] '3x-large' [SEP] 'Womens Short Sleeve Tops, Womens Casual Dandelion Printing T-Shirts Loose O-Neck Blouse Tops Funny Graphic Tee Shirts' [SEP] 'Price: $1.01 to $1.74' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'",
+          "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews Buy Now"
+        }
+      ],
+      "handled_triggers": []
+    }
+  ],
+  "evidence_quality": {
+    "through_step": 9,
+    "absence_means": "unknown_not_false",
+    "parse_gaps": [
+      {
+        "source_id": "observation:7",
+        "step": 7,
+        "kind": "observation",
+        "status": "unresolved",
+        "reasons": [
+          "semantic_trigger:comparison_change:now",
+          "no_complete_trusted_template",
+          "template_rejection:item page requires semantic/context audit"
+        ],
+        "unresolved": [
+          {
+            "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'color' [SEP] 'a1-black' [SEP] 'a1-blue' [SEP] 'a1-gray' [SEP] 'a1-green' [SEP] 'a1-purple' [SEP] 'a1-wine red' [SEP] 'a1-yellow' [SEP] 'a2-bl",
+            "reason": "uncovered source tokens: Back to Search Prev Rating N A Description Features Reviews Buy Now"
+          }
+        ]
+      },
+      {
+        "source_id": "observation:8",
+        "step": 8,
+        "kind": "observation",
+        "status": "unresolved",
+        "reasons": [
+          "semantic_trigger:comparison_change:now",
+          "no_complete_trusted_template",
+          "template_rejection:item page requires semantic/context audit"
+        ],
+        "unresolved": [
+          {
+            "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'color' [SEP] 'a1-black' [SEP] 'a1-blue' [SEP] 'a1-gray' [SEP] 'a1-green' [SEP] 'a1-purple' [SEP] 'a1-wine red' [SEP] 'a1-yellow' [SEP] 'a2-bl",
+            "reason": "uncovered source tokens: Back to Search Prev color size Rating N A Description Features Reviews Buy Now"
+          }
+        ]
+      },
+      {
+        "source_id": "observation:9",
+        "step": 9,
+        "kind": "observation",
+        "status": "unresolved",
+        "reasons": [
+          "semantic_trigger:comparison_change:now",
+          "no_complete_trusted_template",
+          "template_rejection:item page requires semantic/context audit"
+        ],
+        "unresolved": [
+          {
+            "quote": "'Back to Search' [SEP] '< Prev' [SEP] 'color' [SEP] 'a1-black' [SEP] 'a1-blue' [SEP] 'a1-gray' [SEP] 'a1-green' [SEP] 'a1-purple' [SEP] 'a1-wine red' [SEP] 'a1-yellow' [SEP] 'a2-bl",
+            "reason": "uncovered source tokens: Back to Search Prev Description Features Reviews Buy Now"
+          }
+        ]
+      }
+    ],
+    "unmodeled_goals": [
+      "req:description"
+    ],
+    "observation_coverage": "Template/backoff admission is extraction coverage, not complete world observability or semantic truth.",
+    "agent_module_coverage": "Memory/plan/action extraction is selective and heuristic. A missing typed claim or unmentioned constraint is not an omission by the agent.",
+    "derived_checks": "env/chk facts are computed from attempted actions and parsed state, not independent environment feedback.",
+    "false_positive_check": "Compare original source with the extracted proposition; test ambiguity, history, negation and legitimate exploration/retry. Missing facts, unmet checks or limited retrieval alone cannot support error."
+  },
+  "instruction": "ROUTE hypothesis is a lead, not proof. Only the cited anchor source is supplied. Manager-assigned verbatim excerpts may supplement it. The assignment is a starting point, not a search whitelist. Compare the supplied anchor modules; compose your one SQL query to collect relevant claims in other modules at discovered steps, independent actions/feedback, and evidence for a competing cause. You may select a better-supported step/module beyond the assigned targets. Full steps/modules and RAW_STEP are forbidden. Verify parsed assertions with targeted source excerpts; absence is unknown."
+}

@@ -1,0 +1,13 @@
+[
+  {
+    "candidate_id": "authored_route",
+    "issue_step": 6,
+    "issue_fids": [
+      97
+    ],
+    "goal_links": [
+      "req:bowl_in_shelf"
+    ],
+    "hypothesis": "Does the step-6 completion premise originate in an earlier unsupported clean-bowl confirmation, or was cleanliness established independently? Compare memory, reflection and placement feedback before selecting an origin."
+  }
+]

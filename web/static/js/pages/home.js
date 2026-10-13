@@ -1,6 +1,9 @@
 // Home page: a light, business-style overview with its own header. In-page links scroll
 // instead of changing the hash, which belongs to the router.
+import {CaseStore} from "../case/store.js";
+import {createCaseViews, TABS} from "../case/views.js";
 import {caseHref} from "../routes.js";
+import {esc} from "../util.js";
 
 // The showcase case: a fully correct reference run kept under artifacts/.
 export const DEMO_REF = ["runs", "dsl-route-causal-timeline-high-unlimited-alf18-20261007-live", "GPT-4o_018_alfworld_task_018"];
@@ -48,6 +51,44 @@ function heroArt() {
     <g class="ha-tag is-fail" transform="translate(${xf - 44} ${y + 26})"><rect width="88" height="28" rx="14"/><text x="44" y="18.5">Failure</text></g>
     <text class="ha-note" x="${(xc + xf) / 2}" y="44">traced back with evidence</text>
   </svg>`;
+}
+
+// Read-only workbench views for DEMO_REF inside a dark app window. Tab changes and
+// in-view links stay inside the window; "Open in workbench" carries the current view.
+function mountDemo(section) {
+  const body = section.querySelector(".demo-body");
+  const open = section.querySelector(".demo-open");
+  const store = new CaseStore(DEMO_REF);
+  const views = createCaseViews(body, {store, ref: DEMO_REF, embedded: true, navigate: (tab, ...extra) => show({tab, extra})});
+  let route = {tab: "trajectory", extra: []};
+
+  function show(next) {
+    route = next;
+    const tab = views.tabFor(next.tab).id;
+    section.querySelectorAll("[data-demo-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.demoTab === tab)));
+    open.href = caseHref(DEMO_REF, tab, ...next.extra);
+    return views.show(next);
+  }
+
+  function unavailable(message) {
+    store.stop();
+    body.innerHTML = `<div class="demo-status"><strong>The demo case is not available here.</strong>
+      <span>It reads <code>artifacts/dsl_debugger/${esc(DEMO_REF[1])}/${esc(DEMO_REF[2])}</code>${message ? ` (${esc(message)})` : ""}.</span></div>`;
+  }
+
+  store.on("change", ({changed, first}) => {
+    if (first && store.error) { unavailable(store.error); return; }
+    const model = store.model;
+    section.querySelector(".demo-caption").textContent = [model.task && `“${model.task}”`, model.taskType].filter(Boolean).join(" · ");
+    views.update(model, {changed, first});
+    if (first) { body.querySelector(".demo-status")?.remove(); show(route); }
+  });
+  store.start().catch(error => unavailable(error.message));
+  section.querySelector(".demo-tabs").addEventListener("click", event => {
+    const b = event.target.closest("[data-demo-tab]");
+    if (b) show({tab: b.dataset.demoTab, extra: []});
+  });
+  return {destroy() { store.stop(); views.destroy(); }};
 }
 
 export function mountHome(root) {
@@ -117,6 +158,25 @@ export function mountHome(root) {
         </div>
       </section>
 
+      <section class="home-section" id="demo">
+        <div class="section-head">
+          <div class="h-eyebrow">Product</div>
+          <h2 class="section-title">See it on a real case.</h2>
+          <p class="section-lede">A household agent failed its task. Explore the diagnosis the way an engineer would: the trajectory beside the debugger's decisions, the compiled facts, and the final verdict.</p>
+        </div>
+        <div class="demo-window">
+          <div class="demo-bar">
+            <span class="demo-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div class="demo-tabs" role="tablist" aria-label="Demo views">
+              ${TABS.map(t => `<button type="button" role="tab" data-demo-tab="${t.id}" aria-selected="${t.id === "trajectory"}">${t.label}</button>`).join("")}
+            </div>
+            <span class="demo-caption"></span>
+            <a class="demo-open" href="${caseHref(DEMO_REF)}">Open in workbench ${ARROW}</a>
+          </div>
+          <div class="demo-body"><p class="demo-status">Loading the case…</p></div>
+        </div>
+      </section>
+
       <footer class="home-footer">
         <span class="home-brand"><span class="home-mark" aria-hidden="true">[/]</span><span><strong>PRO</strong>DEBUGGER</span></span>
         <nav aria-label="Footer">
@@ -141,6 +201,16 @@ export function mountHome(root) {
     if (event.target.closest("[data-close-diagram]") || event.target === dialog) dialog.close();
   };
   root.addEventListener("click", onClick);
+  // The demo loads a whole case, so it starts only when its section comes near.
+  let demo = null;
+  const demoSection = root.querySelector("#demo");
+  const nearDemo = new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    nearDemo.disconnect();
+    demo = mountDemo(demoSection);
+  }, {rootMargin: "600px 0px"});
+  nearDemo.observe(demoSection);
+
   window.scrollTo(0, 0);
-  return {unmount() { root.removeEventListener("click", onClick); }};
+  return {unmount() { root.removeEventListener("click", onClick); nearDemo.disconnect(); demo?.destroy(); }};
 }

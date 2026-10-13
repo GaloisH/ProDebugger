@@ -105,7 +105,7 @@
 
 /* Entity–relation graph */
 .node.entity .node-box { fill: color-mix(in srgb, var(--kc) 22%, var(--surface-1)); stroke: var(--kc); stroke-width: 1.6; }
-.node.entity .node-label { font-family: Inter, 'Segoe UI', sans-serif; font-size: 12.5px; }
+.node.entity .node-label { font-family: var(--sans); font-size: 12.5px; }
 .node.entity.is-inactive .node-box { fill: var(--surface-1); stroke-dasharray: 3 3; opacity: .5; }
 .node.entity.is-inactive .node-label { fill: var(--faint); font-weight: 450; }
 .edge.rel { stroke: var(--edge); stroke-width: 1.5; opacity: .7; }
@@ -132,7 +132,7 @@
 /* Schema graph */
 .node.kind .node-box { fill: color-mix(in srgb, var(--kc) 20%, var(--surface-1)); stroke: var(--kc); stroke-width: 1.5; }
 .node.kind.is-abstract .node-box { fill: var(--surface-1); stroke-dasharray: 5 3; }
-.node.kind .node-label { font-family: Inter, 'Segoe UI', sans-serif; }
+.node.kind .node-label { font-family: var(--sans); }
 .node.relation .node-box { fill: var(--surface-2); stroke: var(--edge-dim); }
 .node.relation .node-label { fill: var(--info-ink); font-size: 11.5px; }
 .edge.isa { stroke: var(--edge-dim); opacity: .75; }
@@ -143,11 +143,11 @@
 
 /* Goal graph */
 .node.goal-task .node-box { fill: var(--active-soft); stroke: var(--accent); stroke-width: 2; }
-.node.goal-task .node-label { font-family: Inter, 'Segoe UI', sans-serif; font-size: 13px; }
+.node.goal-task .node-label { font-family: var(--sans); font-size: 13px; }
 .node.goal-req .node-box { fill: var(--warn-bg); stroke: var(--warn-line); stroke-width: 1.6; }
 .node.goal-req.is-met .node-box { fill: var(--ok-bg); stroke: var(--ok-line); }
 .node.goal-req.is-unmodeled .node-box { fill: var(--surface-2); stroke: var(--faint); stroke-dasharray: 5 3; }
-.node.goal-req .node-label { font-family: Inter, 'Segoe UI', sans-serif; }
+.node.goal-req .node-label { font-family: var(--sans); }
 .node.goal-constraint .node-box { fill: var(--violet-bg); stroke: var(--violet-line); }
 .edge.goal-edge { stroke: var(--edge); opacity: .6; }
 .edge.goal-edge.evidence { stroke-dasharray: 3 3; opacity: .4; }
@@ -164,7 +164,7 @@
 .node.evaluation.st-violated .node-box { fill: var(--bad-bg); stroke: var(--bad-line); }
 .node.evaluation.st-unknown .node-box { fill: var(--warn-bg); stroke: var(--warn-line); }
 .node.evaluation.st-satisfied .node-box { fill: var(--ok-bg); stroke: var(--ok-line); }
-.node.evaluation .node-label { font-family: Inter, 'Segoe UI', sans-serif; font-size: 11.5px; }
+.node.evaluation .node-label { font-family: var(--sans); font-size: 11.5px; }
 .edge.rule-edge.st-violated { stroke: var(--bad-line); }
 .edge.rule-edge.st-unknown { stroke: var(--warn-line); }
 .edge.rule-edge.st-satisfied { stroke: var(--ok-line); }

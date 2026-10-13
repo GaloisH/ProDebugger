@@ -1,12 +1,12 @@
 /* Result tab */
 .result-title { margin: .25rem 0 1rem; font-size: clamp(1.6rem, 2.6vw, 2.3rem); font-weight: 600; letter-spacing: -.01em; }
 .result-status { max-width: 62rem; }
-.status-card { padding: 1.25rem 1.4rem; border: 1px solid var(--warn-line); border-radius: 1rem; background: linear-gradient(160deg, #3a3426, #2c3138 45%); box-shadow: 0 12px 34px -18px #000; }
+.status-card { padding: 1.25rem 1.4rem; border: 1px solid var(--warn-line); border-radius: 1rem; background: linear-gradient(160deg, var(--warn-deep), var(--panel) 45%); box-shadow: 0 12px 34px -18px #000; }
 .status-card h4 { margin: 1.1rem 0 .4rem; font-size: .8rem; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
 .status-card .kv { margin-top: .8rem; }
 .result-text { margin: 0; line-height: 1.65; white-space: pre-wrap; }
 .cov-strip { display: flex; gap: 3px; }
-.cov-cell { flex: 1; height: 1.4rem; min-width: 6px; padding: 0; border: 1px solid #ffffff14; border-radius: 3px; background: #3a434d; cursor: pointer; }
+.cov-cell { flex: 1; height: 1.4rem; min-width: 6px; padding: 0; border: 1px solid #ffffff14; border-radius: 3px; background: var(--cell); cursor: pointer; }
 .cov-cell.is-assessed { background: var(--ok-line); }
 .cov-cell.is-selected { background: var(--warn-line); }
 .cov-cell:hover { outline: 2px solid var(--accent); }
@@ -21,18 +21,18 @@
 
 .result-headline { display: flex; align-items: center; gap: 1.2rem; }
 .result-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
-.root-card { padding: 1.4rem 1.5rem; border: 1px solid #e0a19d88; border-radius: 1rem; background: linear-gradient(150deg, #4a3337, #303842 60%); box-shadow: 0 16px 40px -22px #000; }
-.root-eyebrow { color: #f4b7b2; }
-.root-card h3 { margin: .3rem 0 .5rem; color: #f5ccca; font-size: 1.7rem; font-weight: 600; }
+.root-card { padding: 1.4rem 1.5rem; border: 1px solid color-mix(in srgb, var(--bad-line) 53%, transparent); border-radius: 1rem; background: linear-gradient(150deg, var(--bad-deep), var(--panel-2) 60%); box-shadow: 0 16px 40px -22px #000; }
+.root-eyebrow { color: var(--bad-hi); }
+.root-card h3 { margin: .3rem 0 .5rem; color: var(--bad-ink); font-size: 1.7rem; font-weight: 600; }
 .root-card > p { margin: 0 0 1rem; line-height: 1.6; }
 .root-chain { display: flex; flex-direction: column; gap: .5rem; margin: 0 0 1rem; padding: 0; list-style: none; }
 .root-chain li { position: relative; display: grid; gap: .2rem; margin-left: calc(var(--i) * 1.1rem); padding: .55rem .75rem; border: 1px solid #ffffff1f; border-radius: .55rem; background: #00000026; animation: chain-in .45s both; animation-delay: calc(var(--i) * 140ms); }
-.root-chain li.is-error { border-color: #e0a19d; background: #50393e; box-shadow: 0 0 0 3px #e0a19d2b; }
+.root-chain li.is-error { border-color: var(--bad-line); background: var(--bad-bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bad-line) 17%, transparent); }
 .chain-label { display: flex; gap: .6rem; align-items: baseline; color: var(--muted); font-size: .75rem; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
-.chain-label em { color: #f4b7b2; font-style: normal; font-family: var(--mono); font-size: .68rem; }
+.chain-label em { color: var(--bad-hi); font-style: normal; font-family: var(--mono); font-size: .68rem; }
 .chain-text { overflow-wrap: anywhere; }
 @keyframes chain-in { from { opacity: 0; transform: translateX(-10px); } }
-.root-quote { margin: 0 0 1rem; padding: .6rem .8rem; border-left: 3px solid #e0a19d; background: #00000026; font-style: italic; }
+.root-quote { margin: 0 0 1rem; padding: .6rem .8rem; border-left: 3px solid var(--bad-line); background: #00000026; font-style: italic; }
 .root-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
 .evidence-col { display: flex; flex-direction: column; gap: .8rem; }
 .evidence-card { padding: 1rem 1.1rem; border: 1px solid var(--b); border-radius: .8rem; background: var(--bgc); color: var(--ink); animation: card-fly .6s cubic-bezier(.2, .8, .2, 1) both; animation-delay: calc(300ms + var(--i) * 160ms); }

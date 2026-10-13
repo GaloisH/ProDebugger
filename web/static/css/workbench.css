@@ -21,10 +21,10 @@
 .phase-pill.is-current .phase-dot { background: var(--c); animation: live-pulse 1.4s infinite; }
 .phase-arrow { color: var(--faint); }
 
-.wb-tabs { position: sticky; top: var(--header-h); z-index: 30; display: flex; align-items: center; gap: .25rem; margin: 0 calc(-1 * clamp(1rem, 2.6vw, 3rem)); padding: .5rem clamp(1rem, 2.6vw, 3rem); background: linear-gradient(115deg, #24292ff2, #272d33f2); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+.wb-tabs { position: sticky; top: var(--header-h); z-index: 30; display: flex; align-items: center; gap: .25rem; margin: 0 calc(-1 * clamp(1rem, 2.6vw, 3rem)); padding: .5rem clamp(1rem, 2.6vw, 3rem); background: linear-gradient(115deg, color-mix(in srgb, var(--bg) 95%, transparent), color-mix(in srgb, var(--bg) 95%, transparent)); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
 .wb-tab { padding: .45rem .95rem; border-radius: .5rem; color: var(--muted); text-decoration: none; font-weight: 550; }
 .wb-tab:hover { background: var(--panel-3); color: var(--text); }
-.wb-tab.is-active { background: #3b4d5d; color: #d9e9f4; box-shadow: inset 0 -2px 0 var(--accent); }
+.wb-tab.is-active { background: var(--active-bg); color: var(--active-ink); box-shadow: inset 0 -2px 0 var(--accent); }
 .wb-tabs-fill { flex: 1; }
 .wb-sync { font-size: .8rem; color: var(--faint); font-family: var(--mono); }
 .wb-views { padding-top: 1rem; }

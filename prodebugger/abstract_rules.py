@@ -11,7 +11,7 @@ else:
     from dsl import Fact, Rule, UNBOUND
 
 
-MODULE_RELATIONS = {"recalled_summary", "recalled_nothing", "planned", "assessed"}
+MODULE_RELATIONS = {"recalled_summary", "recalled_nothing", "memory_unparsed", "planned", "assessed"}
 
 
 def definition(id, scope, trigger, property, requirements, exceptions=()):
@@ -55,7 +55,12 @@ def fact_in_scope(ctx):
 
 
 def observations(ctx):
-    return sorted((f for f in ctx["record"].F if f.t <= ctx["t"]
+    claim = ctx['fact']
+    scopes = getattr(ctx['record'], 'claim_scopes', {})
+    scope = scopes.get(str(claim.fid), scopes.get(claim.fid, {}))
+    asserted_at = scope.get('event_step') if claim.slot == 'mem' else None
+    until = min(ctx['t'], asserted_at) if type(asserted_at) is int else ctx['t']
+    return sorted((f for f in ctx["record"].F if f.t <= until
                    and (ctx["scope"] != "step" or f.t == ctx["fact"].t)
                    and f.slot == "obs" and f.side == "env"), key=lambda f: (f.t, f.fid))
 

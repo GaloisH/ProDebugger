@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -23,12 +24,15 @@ from prodebugger.direct_submit import POLICY
 
 DEFAULTS = {"model": None, "base_url": None, "api_key_env": "OPENAI_API_KEY", "env_file": None,
             "reasoning_effort": None,
+            "workers": 1, "manager_model": None, "parse_model": None, "max_parse_calls": 100,
+            "max_parse_input_tokens": 4000000, "max_parse_output_tokens": 300000, "parse_max_tokens": 8192,
             "window_size": 5, "trace_top_p": 5, "trace_top_k": 2,
             "max_turns": 80, "max_tool_calls": 240,
             "max_input_tokens": 1000000, "max_output_tokens": 200000, "max_tokens": 8192,
             "timeout": 180.0, "retries": 1,
             **{p.lower() + "_model": None for p in PHASES}}
-BUDGET_KEYS = {"max_turns", "max_tool_calls", "max_input_tokens", "max_output_tokens"}
+BUDGET_KEYS = {"max_turns", "max_tool_calls", "max_input_tokens", "max_output_tokens", "workers",
+               "max_parse_calls", "max_parse_input_tokens", "max_parse_output_tokens"}
 
 
 def parser():
@@ -42,12 +46,13 @@ def parser():
     p.add_argument("--dry-run", action="store_true", help="Compile and probe tools without a model or diagnosis")
     p.add_argument("--replay", type=Path, help="Assistant messages JSON/JSONL, or directory containing TRAJECTORY_ID.json")
     p.add_argument("--resume", type=Path, help="Existing run directory with manifest.json and checkpoints")
-    for key in ("model", "base_url", "api_key_env", "env_file", *(p.lower() + "_model" for p in PHASES)):
+    for key in ("model", "manager_model", "parse_model", "base_url", "api_key_env", "env_file", *(p.lower() + "_model" for p in PHASES)):
         p.add_argument("--" + key.replace("_", "-"))
     p.add_argument("--reasoning-effort", choices=["none", "low", "high", "max"], help="Provider reasoning mode; none disables DeepSeek thinking")
-    p.add_argument("--trace-top-p", type=int, help="Maximum ranked ROUTE anchors passed to TRACE (default: 5)")
-    p.add_argument("--trace-top-k", type=int, help="Maximum distinct root steps per TRACE window (default: 2); same-step module alternatives are retained")
-    for key in ("window_size", "max_turns", "max_tool_calls", "max_input_tokens", "max_output_tokens", "max_tokens", "retries"):
+    p.add_argument("--trace-top-p", type=int, help="Maximum ROUTE anchors and maximum manager-assigned TRACE investigators (default: 5)")
+    p.add_argument("--trace-top-k", type=int, help="Legacy SUBMIT metadata; query TRACE always returns at most one step per case")
+    for key in ("window_size", "max_turns", "max_tool_calls", "max_input_tokens", "max_output_tokens", "max_tokens", "retries",
+                "workers", "max_parse_calls", "max_parse_input_tokens", "max_parse_output_tokens", "parse_max_tokens"):
         p.add_argument("--" + key.replace("_", "-"), type=int,
                        help="0 disables the application output limit" if key in {"max_tokens", "max_output_tokens"} else None)
     for key in ("timeout",):
@@ -63,7 +68,8 @@ def configuration(args, saved=None):
             if saved and key not in BUDGET_KEYS and cfg[key] != value:
                 raise ValueError(f"resume cannot change {key}; start a new run")
             cfg[key] = value
-    for key in ("window_size", "trace_top_p", "trace_top_k", "max_turns", "max_tool_calls", "max_input_tokens", "timeout"):
+    for key in ("window_size", "trace_top_p", "trace_top_k", "max_turns", "max_tool_calls", "max_input_tokens", "timeout",
+                "workers", "max_parse_calls", "max_parse_input_tokens", "max_parse_output_tokens", "parse_max_tokens"):
         if cfg[key] <= 0:
             raise ValueError(f"{key} must be positive")
     for key in ("max_tokens", "max_output_tokens"):
@@ -101,9 +107,11 @@ def dry_run(bundle, output, cfg):
         tools.execute("trace_fact", {"fid": facts[-1].fid, "scope": GLOBAL}, "dry:graph")
     if bundle.source["steps"]:
         t = len(bundle.source["steps"])
-        anchors = [{"candidate_id": "dry:last-step", "issue_step": t, "issue_fids": [], "goal_links": [],
+        fid = next(f.fid for f in facts if f.t == t and f.side == "mind")
+        anchors = [{"candidate_id": "dry:last-step", "issue_step": t, "issue_fids": [fid], "goal_links": [],
                     "hypothesis": "Tool probe only; this anchor is not an inferred failure."}]
-        tools.execute("trace_window", {"candidates": anchors}, "dry:window")
+        tools.execute("route_cases", {"candidates": anchors}, "dry:case")
+        tools.execute("query_logs", {"candidate_id": "dry:last-step", "sql": f"SELECT * FROM TRACE_FACT({fid},'backward',1)"}, "dry:query")
     errors = [e["result"]["error"] for e in tools.events if "error" in e["result"]]
     result = tools.stop_result("error" if errors else "dry_run", "tool probe failed" if errors else "offline compilation and tool probe completed")
     result.update(run_id=output.parent.name, trajectory_id=bundle.record.tid,
@@ -118,7 +126,7 @@ def dry_run(bundle, output, cfg):
 
 def report(run, results, prefix=""):
     write_json(run / f"{prefix}results.json", results)
-    lines = ["# MAP → ROUTE → TRACE → SUBMIT experiment", "", f"Policy: {POLICY}. TRACE coverage is limited to declared windows.", "",
+    lines = ["# MAP → ROUTE → TRACE → SUBMIT experiment", "", f"Policy: {POLICY}. The TRACE manager allocates investigators; each uses one evidence-driven SQL query.", "",
              "| Trajectory | Status | Original Facts | Candidates | Assessed steps | Tool calls | Model calls |", "|---|---|---:|---:|---:|---:|---:|"]
     for r in results:
         lines.append(f"| {r['trajectory_id']} | {r['status']} | {r.get('facts', '—')} | {r.get('candidates', '—')} | "
@@ -126,6 +134,63 @@ def report(run, results, prefix=""):
     lines += ["", "Rule candidates and accepted protocol results are not accuracy measurements.",
               "Replay calls are recorded separately from live model calls. See each trajectory's result, usage, and tool event log."]
     (run / f"{prefix}report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def execute_trajectory(tid, args, run_dir, mode, cfg, resume, manifest):
+    output = run_dir / valid_id(tid)
+    output.mkdir(exist_ok=True)
+    metadata = None
+    write_json(output / "worker.json", {"started_at": datetime.now(timezone.utc).isoformat(), "trajectory_id": tid})
+    try:
+        source = read_json(output / "input.json") if resume else (saved_source(args.compiled_dir, tid)
+                   if args.compiled_dir else parquet_source(tid, args.data_dir))
+        write_json(output / "input.json", source)
+        bundle = build_bundle(source, output=output, config=cfg, online=mode == "online")
+        previous = manifest["sources"].get(tid)
+        if resume and previous is not None and previous["fingerprint"] != bundle.fingerprint:
+            raise ValueError("source_mismatch: input/compiler/rules/prompt changed; use a new run")
+        if not resume or previous is None:
+            metadata = {"fingerprint": bundle.fingerprint, "source_versions": bundle.versions,
+                "input_digest": digest(bundle.source), "facts": len(bundle.projection.F),
+                "candidates": sum(len(g.items) for g in bundle.projection.evidences.values())}
+            export_bundle(bundle, output)
+
+        if mode == "dry_run":
+            result = dry_run(bundle, output, cfg)
+        else:
+            replay = Path(manifest["replay_source"]) if mode == "replay" else None
+            if replay and replay.is_dir():
+                replay = replay / f"{tid}.json"
+            client = ReplayClient(replay, output, cfg["max_turns"]) if replay else LLMClient(cfg, output)
+            agent = DebuggerAgent(bundle, client, output, cfg, resume=resume and (output / "checkpoint.json").exists())
+            result = agent.run()
+            result.update(facts=len(bundle.projection.F), candidates=len(agent.tools.index.evidence),
+                          compilation_mode=manifest["compilation_mode"])
+            write_json(output / "result.json", result)
+
+    except (OSError, ValueError, RuntimeError, ImportError, KeyError, TypeError, IndexError) as exc:
+        result = {"schema": "debugger-result/v1", "policy": POLICY, "run_id": run_dir.name,
+                  "trajectory_id": tid, "status": "error", "accepted": False, "root": None,
+                  "supporting_evidence": [], "counterevidence": [], "causal_chain": [],
+                  "repair": None, "alternatives": [], "coverage": {"status": "unavailable"},
+                  "stop_reason": str(exc), "error_type": type(exc).__name__,
+                  "usage": read_json(output / "usage.json") if (output / "usage.json").is_file()
+                           else {"model_calls": 0, "replay_calls": 0, "tool_calls": 0}}
+        # Preserve valid historical results when a restore is rejected.
+        write_json(output / ("resume_error.json" if resume else "result.json"), result)
+
+    if (output / "parsing_usage.json").exists():
+        result["parsing_usage"] = read_json(output / "parsing_usage.json")
+    if (output / "claim_parsing" / "usage_summary.json").exists():
+        result["claim_parsing_usage"] = read_json(output / "claim_parsing" / "usage_summary.json")
+    if (output / "audited_parse.json").exists():
+        from collections import Counter
+        units = read_json(output / "audited_parse.json")["units"]
+        result["parse_audit_summary"] = dict(Counter(u["status"] for u in units.values()))
+    write_json(output / ("resume_error.json" if resume and result["status"] == "error" else "result.json"), result)
+    write_json(output / "worker.json", {"finished_at": datetime.now(timezone.utc).isoformat(),
+               **read_json(output / "worker.json"), "status": result["status"]})
+    return result, metadata
 
 
 def run(args):
@@ -159,49 +224,20 @@ def run(args):
     # Effective budgets are recorded even when a resumed attempt stops immediately.
     manifest["config"] = cfg
     write_json(run_dir / ("resume_manifest.json" if resume else "manifest.json"), manifest)
-    results = []
-    for tid in ids:
-        output = run_dir / valid_id(tid)
-        output.mkdir(exist_ok=True)
-        try:
-            source = read_json(output / "input.json") if resume else (saved_source(args.compiled_dir, tid)
-                       if args.compiled_dir else parquet_source(tid, args.data_dir))
-            bundle = build_bundle(source)
-            previous = manifest["sources"].get(tid)
-            if resume and (previous is None or previous["fingerprint"] != bundle.fingerprint):
-                raise ValueError("source_mismatch: input/compiler/rules/prompt changed; use a new run")
-            if not resume:
-                manifest["sources"][tid] = {"fingerprint": bundle.fingerprint, "source_versions": bundle.versions,
-                    "input_digest": digest(bundle.source), "facts": len(bundle.projection.F),
-                    "candidates": sum(len(g.items) for g in bundle.projection.evidences.values())}
-                export_bundle(bundle, output)
-                write_json(run_dir / "manifest.json", manifest)
-            if mode == "dry_run":
-                result = dry_run(bundle, output, cfg)
-            else:
-                replay = Path(manifest["replay_source"]) if mode == "replay" else None
-                if replay and replay.is_dir():
-                    replay = replay / f"{tid}.json"
-                client = ReplayClient(replay, output, cfg["max_turns"]) if replay else LLMClient(cfg, output)
-                agent = DebuggerAgent(bundle, client, output, cfg, resume=resume)
-                result = agent.run()
-                result.update(facts=len(bundle.projection.F), candidates=len(agent.tools.index.evidence),
-                              compilation_mode=manifest["compilation_mode"])
-                write_json(output / "result.json", result)
-            results.append(result)
-        except (OSError, ValueError, RuntimeError, ImportError, KeyError, TypeError, IndexError) as exc:
-            result = {"schema": "debugger-result/v1", "policy": POLICY, "run_id": run_dir.name,
-                      "trajectory_id": tid, "status": "error", "accepted": False, "root": None,
-                      "supporting_evidence": [], "counterevidence": [], "causal_chain": [],
-                      "repair": None, "alternatives": [], "coverage": {"status": "unavailable"},
-                      "stop_reason": str(exc), "error_type": type(exc).__name__,
-                      "usage": read_json(output / "usage.json") if (output / "usage.json").is_file()
-                               else {"model_calls": 0, "replay_calls": 0, "tool_calls": 0}}
-            # Preserve valid historical results when a restore is rejected.
-            write_json(output / ("resume_error.json" if resume else "result.json"), result)
-            results.append(result)
-        report(run_dir, results, "resume_" if resume else "")
-        print(f"{tid}: {results[-1]['status']}")
+    results_by_id = {}
+    with ThreadPoolExecutor(max_workers=min(cfg["workers"], len(ids)), thread_name_prefix="trajectory") as pool:
+        futures = {pool.submit(execute_trajectory, tid, args, run_dir, mode, cfg, resume, manifest): tid for tid in ids}
+        for future in as_completed(futures):
+            tid = futures[future]
+            result, metadata = future.result()
+            results_by_id[tid] = result
+            if metadata:
+                manifest["sources"][tid] = metadata
+            write_json(run_dir / ("resume_manifest.json" if resume else "manifest.json"), manifest)
+            results = [results_by_id[t] for t in ids if t in results_by_id]
+            report(run_dir, results, "resume_" if resume else "")
+            print(f"{tid}: {result['status']}", flush=True)
+    results = [results_by_id[t] for t in ids]
     print(f"Artifacts: {run_dir}")
     print(f"Workbench: python web/server.py, then open http://127.0.0.1:8770/#/?group={run_dir.name}")
     return 1 if any(r["status"] == "error" for r in results) else 0

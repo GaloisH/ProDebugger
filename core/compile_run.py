@@ -11,7 +11,7 @@ Three invariants are checked here rather than requested in a prompt:
 The third is enforced by Record.add and so cannot be violated silently.
 """
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional, Tuple
 
 from record import (Record, Entity, Goal, IntentionOption, IntentionParameter,
@@ -37,21 +37,47 @@ def segment(env_texts: List[str], agent_texts: List[str],
     contains, because a delimiter is not a judgement."""
     steps: List[Step] = []
     for i, (u, a, adm) in enumerate(zip(env_texts, agent_texts, admissible), start=1):
-        parts: Dict[str, Optional[str]] = {}
-        for tg in TAGS:
-            m = (re.search(rf"<{tg}>(.*?)</{tg}>", a, re.S)
-                 or re.search(rf"\[{tg}>(.*?)\[/{tg}\]", a, re.S)
-                 or re.search(rf"<{tg}>(.*?)(?=<\w+>|\Z)", a, re.S))
-            parts[tg] = m.group(1).strip() if m else None
+        parts: Dict[str, Optional[str]] = {tag: None for tag in TAGS}
+        # A quoted '<action>' inside memory/reflection is source content, not a
+        # new output slot. Only a top-level tag, or a standalone line repairing
+        # a missing delimiter, can open a different module.
+        active, start = None, 0
+        pattern = r'[<\[](/?)(memory|reflection|plan|action)[>\]]'
+        for match in re.finditer(pattern, a):
+            closing, tag = match.groups()
+            line_prefix = a[a.rfind('\n', 0, match.start()) + 1:match.start()]
+            standalone = not line_prefix.strip()
+            quoted_literal = (match.start() > 0 and match.end() < len(a)
+                              and a[match.start()-1] in '\"\'`'
+                              and a[match.end()] == a[match.start()-1])
+            if quoted_literal:
+                continue
+            if closing:
+                if active == tag:
+                    parts[tag] = a[start:match.start()].strip()
+                    active = None
+            elif active is None or standalone:
+                if active is not None:
+                    parts[active] = a[start:match.start()].strip()
+                active, start = tag, match.end()
+        if active is not None:
+            parts[active] = a[start:].strip()
         steps.append(Step(i, u, a, adm, parts))
     return steps
 
 
-def build(tid: str, task: str, steps: List[Step], profile) -> Record:
+def build(tid: str, task: str, steps: List[Step], profile, *, parsed=None) -> Record:
     K, RL = profile.kinds(), profile.relations()
-    goals = profile.parse_goal(task)
+    goals = parsed["goals"] if parsed is not None else profile.parse_goal(task)
+    if parsed is not None:
+        # Even a fully consumed observation template does not make the world
+        # closed or the heuristic memory extraction exhaustive. Missing Facts
+        # must not become negative observations in native criterion checks.
+        for name, relation in RL.declared().items():
+            RL._r[name] = replace(relation, props=relation.props - {"observed"})
     R = Record(tid, K, RL, task=task, goals=goals)
     R.domain = getattr(profile, "name", "unknown")
+    R.parse_audits = parsed["audits"] if parsed is not None else []
     R.domain_briefing = (profile.domain_briefing()
                          if hasattr(profile, "domain_briefing") else
                          {"name": R.domain})
@@ -78,7 +104,9 @@ def build(tid: str, task: str, steps: List[Step], profile) -> Record:
         )
         # --- R over the environment turn -----------------------------
         obs_ids: List[int] = []
-        for item in profile.parse_observation(st.env_text, st.admissible):
+        observations = (parsed["observations"][str(st.t)] if parsed is not None
+                        else profile.parse_observation(st.env_text, st.admissible))
+        for item in observations:
             args = tuple(R.ent(k, i) for k, i in item["args"])
             fid = R.add(item["rel"], args, item["value"], slot="obs", side="env",
                         t=st.t, situation=situation,
@@ -133,11 +161,15 @@ def build(tid: str, task: str, steps: List[Step], profile) -> Record:
                             basis=tuple(f.fid for f in prior[-2:]),
                             span=item.get("span", ""),
                             value_type=item.get("value_type"))
+                scope = dict(item.get('claim_scope') or {'temporal': 'unspecified', 'event_step': None})
+                if scope['temporal'] == 'current':
+                    scope['event_step'] = st.t
+                R.claim_scopes[fid] = scope
                 mind_ids.append(fid)
             if not items:
-                # nothing in the recollection bound to an entity; record that the
-                # slot was used, so its absence of content is itself visible
-                fid = R.add("recalled_nothing", (agent,), True, slot="mem", side="mind",
+                # This is parser metadata, not a claim that the agent recalled
+                # nothing. Nonempty unbound prose remains in recalled_summary.
+                fid = R.add("memory_unparsed", (agent,), True, slot="mem", side="mind",
                             t=st.t, situation=situation, basis=tuple(obs_ids),
                             span=mem_txt[:160])
                 mind_ids.append(fid)

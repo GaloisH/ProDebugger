@@ -233,6 +233,9 @@ class Record:
         self.intentions: Dict[str, Intention] = {}
         self.source_steps: Dict[int, SourceStep] = {}
         self.process_notes: Dict[int, Dict[str, Any]] = {}
+        # Sidecar metadata preserves the Fact and TRACE/SUBMIT wire contracts.
+        # Fact.t is the utterance time; event_step is the time being recalled.
+        self.claim_scopes: Dict[int, Dict[str, Any]] = {}
         self._chain: Dict[Tuple[str, Tuple[Entity, ...]], List[int]] = collections.defaultdict(list)
         self._by_entity: Dict[str, List[int]] = collections.defaultdict(list)
         self._by_step: Dict[int, List[int]] = collections.defaultdict(list)
@@ -355,6 +358,8 @@ class Record:
         """The value in force at a step, which for a mutable relation is the last
         assignment at or before it."""
         c = self.chain(rel, args, upto=at_step)
+        c = [f for f in c if f.slot != 'mem' or
+             self.claim_scopes.get(f.fid, {}).get('temporal') == 'current']
         return c[-1] if c else None
 
     def keyed_in_force(self, rel: str, key_args: Tuple[Entity, ...], at_step: int) -> List[Fact]:
@@ -365,6 +370,8 @@ class Record:
         for fid in self._by_rel.get(rel, []):
             f = self.F[fid]
             if f.t > at_step:
+                continue
+            if f.slot == 'mem' and self.claim_scopes.get(f.fid, {}).get('temporal') != 'current':
                 continue
             if tuple(f.args[i] for i in r.key) != key_args:
                 continue

@@ -31,7 +31,7 @@ def goal_state(R: Record, goal: Goal, at_step: int) -> Dict[str, Any]:
     ]
     decisions = [
         fact for fact in relevant
-        if fact.slot == "chk" and fact.rel == goal.rel
+        if fact.slot == "chk" and fact.rel in {goal.rel, "satisfied"}
         and isinstance(fact.value, bool)
     ]
     successes = [fact for fact in decisions if fact.value is True]
@@ -46,10 +46,10 @@ def goal_state(R: Record, goal: Goal, at_step: int) -> Dict[str, Any]:
         state = "unmet"
         reason = "a recorded decision failed to satisfy the requirement"
     elif observed:
-        state = "unmet"
+        state = "unknown"
         reason = "relevant evidence was observed but no satisfying decision is recorded"
     else:
-        state = "unmet"
+        state = "unknown"
         reason = "no satisfying evidence or decision is recorded"
     return {
         "requirement": requirement,

@@ -1,18 +1,21 @@
 # ProDebugger
 
 Standalone migration of the DSL debugger experiment (`experiments/dsl` in the original
-OmniDebugger intern repository). Core logic, interfaces, prompts and outputs are unchanged;
-only import and resource paths were adjusted so the project runs on its own.
+OmniDebugger intern repository). The backend audits task/observation parsing and uses evidence-driven SQL retrieval in TRACE. SUBMIT retains its input schema and must select one supplied candidate.
+
+See [README_EVOLUTION.md](README_EVOLUTION.md) for the changes from the initial
+repository to the current backend, and [results/summary/](results/summary/) for
+published experiment summaries and links to their complete trajectory archives.
 
 ```text
 ProDebugger/
-  core/                 canonical record compiler, profiles, session/operators (copied unchanged)
+  core/                 canonical compiler, domain profiles, semantic scope and operators
     profiles/           alfworld, webshop, base
     data/train.parquet  benchmark trajectories (private; git-ignored)
   prodebugger/          the DSL debugger (formerly experiments/dsl)
     run_experiment.py   MAP -> ROUTE -> TRACE -> SUBMIT entry point
     run_compile.py      compile one trajectory / the fixed 20-ID sample
-    prompts/            map.md, route.md, trace.md, submit.md
+    prompts/            map.md, route.md, manager.md, trace.md, submit.md
     sessions/abstract_rules_n20/   20 compiled trajectories used as saved inputs
   web/                  workbench: read-only stdlib server + static frontend (no build)
   artifacts/dsl_debugger/          run outputs (created on first run; git-ignored)
@@ -34,31 +37,121 @@ Python 3.12+ (tested with 3.13). `pyarrow` is needed for Parquet input and `run_
 ## LLM debugger entry point
 
 `run_experiment.py` runs **MAP → ROUTE → TRACE → SUBMIT** with four isolated phase
-conversations, four prompts, and independently configurable phase models.
+conversations and independently configurable phase models. TRACE begins with a
+separate manager conversation before its investigator conversations.
 MAP reads unmet/unresolved requirements. ROUTE follows native evidence and entity
-history to several issue anchors. TRACE directly evaluates original window text
-with only the assess submission tool, without views or pagination. For anchor `t`, a window of size `W` covers
-`[max(1,t-W+1),t]`. W defaults to 5 and includes the anchor. Each window
-receives original prior context, four module texts, admissible commands and recorded
-next environment feedback in an independent conversation; overlapping steps remain
-in each window. Up to two window requests run concurrently; commits remain serial.
-TRACE calls its sole tool `assess` once per window with all plausible error/uncertain
-candidates and exact raw quotes, without selecting a winner. The runner validates
-the entire candidate list and maps it to existing Fact IDs; it creates no new Facts.
-The current TRACE mode is `independent-window-candidates/v2`.
+history to several issue anchors. Task and observation parsing first passes a strict
+whole-template audit. Complete domain grammars parse fixed task clauses, scoped
+empty/no-effect feedback, local unambiguous pronouns, object lists and listing
+product/title/price tuples. Every token/clause must be consumed and typed values
+validated. Unknown clauses, ambiguous references, invalid values or incomplete
+extraction require LLM backoff; keyword occurrence alone is not sufficient.
+Backoff uses the current text and only prior observations/actions; exact source spans,
+entity bindings and residual coverage are validated. Unresolved text is recorded as
+an evidence gap, and dependent rule violations are conservatively demoted. Offline
+compilation records backoff-required gaps instead of accepting partial extraction.
+
+The TRACE manager sees the complete original action/observation timeline, all ROUTE
+anchor modules, cited Facts and parse warnings, plus the same SQL documentation,
+original step bounds and relation names as TRACE. Other steps' memory/reflection/plan
+texts require investigator retrieval. It allocates 1..`trace_top_p` investigators,
+merging related ROUTE cases or assigning complementary questions to the same case.
+The manager defaults to one investigator, adds a second for an independent question
+that could change the diagnosis, and must justify additional investigators. Origin,
+verification and recovery can share one query; agent limits are ceilings, not targets.
+Each allocation specifies a question, search targets, exact source excerpts and
+supported/refuted/unknown criteria. Cross-agent conditional rules explain how findings
+would affect causal comparison, including missing links and counterevidence. The plan
+is validated and saved in `manager_plan.json` before queries, and cannot be rewritten
+after seeing results. Source excerpts must occur in manager-visible original text.
+The manager prompt explicitly allocates backward claim-origin searches across
+`[1,anchor]`, separate from historical-event verification and later recovery. Two
+source-grounded allocation examples illustrate supported origins and parser false
+positives. These are planning instructions; runtime validation checks structure,
+coverage and exact quotes, not the semantic quality of causal allocation.
+Assignments are starting points, not search whitelists. The manager asks workers to
+compare a source-grounded competing mechanism, not only earlier copies of an anchor
+phrase. Workers may expand to related modules and report a different supported cause.
+Within the one SQL query, targeted claim discovery can be joined by step to separately
+retrieved peer-module excerpts, actions and feedback. Table-function arguments remain
+literals; this does not permit full-step retrieval or another query. The historical
+drawer SQL example demonstrates this pattern using actual archived sources.
+
+Each TRACE investigator receives its anchor source, assigned question and evidence, makes
+**one SQL query**, then returns **one original step** in the existing candidate-list
+schema, adding `is_root_cause` (true/false/null) to distinguish causal role from
+fault confidence. A confident fault can return its step with `status=error` and
+`is_root_cause=false`. Same-step module alternatives remain possible. No fixed window or automatic
+prior-history dump is supplied. CTEs, joins, conditions, set operations and record-specific
+functions (`TRACK_ENTITY`, `TRACK_STATE`, `TRACK_ACTION`, `TRACE_FACT`, `STATE_AT`,
+`SOURCE`, `SEARCH_TEXT`, `GOAL_STATUS`, `COVERAGE`)
+are documented in [Record SQL](prodebugger/prompts/query_dsl.md). Queries are read-only,
+audited; invalid SQL also consumes the one opportunity. Quotes must exist
+in returned raw source, allocated exact excerpts or the initial anchor. The mode is `evidence-query-step/v2-elements`.
+Record SQL v4 accepts token-bounded letter/digit codes such as `4T` and normalizes
+double-quoted literals only in known string argument slots. Invalid known-function
+arguments may suppress dependent top-level `UNION ALL` arms while preserving
+independent arms. `partial`, `function_errors`, `skipped_branches` and `repairs`
+reach both TRACE and SUBMIT: suppressed evidence is unavailable, never zero matches.
+Full-log access and other prohibited SQL still fail; recovery makes no extra model
+call and does not widen search scope.
+TRACE is instructed to include concise English `--` comments in its SQL explaining
+the query's purpose, retrieval branches and meaningful filters/bounds. Annotated SQL
+is preserved in `trace_queries.jsonl` (`query`) and `tool_calls.jsonl` (`arguments.sql`)
+for display and debugging, within the same single query call.
+TRACE's `query_context` supplies the original step range and relation/action names.
+The SQL engine searches the full trajectory, including steps before a ROUTE anchor;
+optional function bounds narrow an element search, never create a fixed window.
+Prompts guide source-claim verification across memory/reflection/actions/observations
+and include four executable examples from other archived trajectories, without
+benchmark answers. Validate the exact prompt SQL offline with
+`python -B scripts/validate_query_examples.py --corpus artifacts/analysis/corpus-parsing-fixed-20261013`.
+ROUTE preserves every result in the latest tool batch in full, retains marked source
+previews for older large results, and references duplicate results. Three consecutive
+rounds without new successful evidence restrict the next turn to routing or finishing
+uncertain; another retrieval request stops uncertain. Durable tool logs remain complete.
+The executor rejects direct `steps`, `modules`, `facts` and `RAW_STEP` access, including
+through CTEs and joins. Queries must use element functions. Original excerpts require
+a specific search term and one source field, with 360-character phrase-centered
+excerpts. All matching sources are materialized; there is no shared character,
+source-count, graph-node-count, function-count or result-row/byte budget. Explicit
+SQL LIMIT, filters and graph depth still apply, and SQL execution deadlines remain.
+Raw module wrapper facts expose
+identity only. SQL LIMIT and function omissions remain explicit. Every result carries
+extraction gaps and distinguishes observations, agent claims and derived checks.
+Unknown state is not a negative state, and selective module extraction is not evidence
+that the agent omitted a constraint. TRACE must test these false-positive explanations.
+Legacy `window_id`, `window`, and result envelope fields remain for SUBMIT compatibility;
+`lo=hi=issue_step` records an anchor, never a retrieval boundary. `--window-size` and
+`--trace-top-k` remain legacy metadata and do not control TRACE retrieval or step count.
+
 SUBMIT compares every TRACE candidate, recovery and terminal goal impact in ONE
-plain-JSON response without tools. It selects an existing candidate or returns
-uncertain. The runner validates candidate references and saves `direct_submit.jsonl`.
-The current result policy is `window-candidates-submit/v3`; structural acceptance
+plain-JSON response without tools. It must select one existing candidate and return
+`diagnosed`, including when all TRACE candidates are `uncertain`. Evidence limits
+remain explicit in the `uncertainty` text; forced selection does not establish truth.
+The runner validates candidate references and saves `direct_submit.jsonl`.
+`manager_guidance` passes the manager's plan directly to SUBMIT, together with allocated
+source excerpts and the actual bounded SQL results/errors/truncation for every agent,
+including agents returning no candidate. SUBMIT checks each condition against evidence
+and explains relevant rule IDs in existing reasoning/comparisons fields. Conditions in
+one rule are ANDed; missing evidence remains unknown. Manager rules are hypotheses,
+not observations, votes or hard candidate exclusions. This is an additive input field;
+investigator candidate outputs and final answer fields retain their existing layout.
+The additional root-role field is passed to SUBMIT only when at least two different
+steps from independent TRACE cases have definite `error` judgements and known
+boolean root roles. A single case, same-step alternatives, or an uncertain case
+paired with a non-root case hides the field. The full annotations remain in TRACE
+logs. Role annotations inform comparison and never remove selectable candidates.
+The current result policy is `window-candidates-submit/v5-manager-forced-choice`; structural acceptance
 does not prove causal correctness.
 The user-specified benchmark scope contains all core fault classes except
 `format_error` (16 allowed labels); formatting, spelling and quotation marks
 cannot be benchmark root causes in this experiment. Both TRACE and SUBMIT use
 that premise. Raw source text is preserved; excluded causes cannot be relabelled.
-No surviving suspect yields `uncertain` rather than a fabricated alternative.
-Invalid SUBMIT JSON/selection stops uncertain after that response, without retries
+When every TRACE result is empty, the runner records `no_candidate` and skips SUBMIT.
+Invalid SUBMIT JSON/selection (including status `uncertain`) records `error` after that response, without retries
 for semantic correction. Provider transport retries retain their normal accounting.
-Current checkpoints require v4 and current source fingerprints. Earlier
+Current checkpoints require v6 and current source fingerprints. Earlier
 runs are not resumed under the changed protocol.
 
 Validate saved steps without any model or Parquet dependency:
@@ -80,7 +173,7 @@ Configure credentials locally in `OPENAI_API_KEY`, or select another variable wi
 included in manifests or model/tool logs. For an OpenAI-compatible provider:
 
 ```powershell
-python -B -m prodebugger.run_experiment TRAJECTORY_ID --model MODEL_NAME --base-url ENDPOINT --window-size 5 --max-turns 80 --max-tool-calls 240
+python -B -m prodebugger.run_experiment TRAJECTORY_ID --model MODEL_NAME --base-url ENDPOINT --max-turns 80 --max-tool-calls 240
 ```
 
 The endpoint is optional when using the SDK's default endpoint. No model is
@@ -105,10 +198,13 @@ and response model are logged by phase and globally.
 `--model` supplies the default for all four phase slots. Override them separately
 with `--map-model`, `--route-model`, `--trace-model`, and `--submit-model`; online
 execution needs either a default model or all four overrides. The endpoint and
-credential configuration are shared. Each phase uses `prompts/<phase>.md`.
+credential configuration are shared. `--manager-model` overrides the manager's model,
+which otherwise inherits `--trace-model` (or `--model`). MANAGER requests and usage are
+logged separately while its orchestration remains inside TRACE. Each role uses its
+corresponding prompt under `prompts/`.
 MAP requests the initial requirements view through its model. Phase switches
-pass explicit shared-state handoffs. TRACE receives only original text and goal IDs,
-not prior hypotheses, compiled state claims or audit packets. SUBMIT receives TRACE
+pass explicit shared-state handoffs. TRACE receives the ROUTE hypothesis and cited
+Facts, original anchor source, query metadata and parsing warnings. SUBMIT receives TRACE
 suspects, shared original context at candidate steps (including admissible), and bounded directed source excerpts. Complete `execution_history` is omitted. The `direct-submit-input/v2` packet preserves every candidate ID; window reviews reference IDs instead of duplicating candidate prose. A deterministic selector includes at most 12 related events per candidate, with 280-character related module excerpts and 600-character related observation excerpts. Selection scope/omissions are explicit: retrieval hints do not prove causal dependence, recovery or absence. Other phases' message/reasoning histories are
 excluded. Re-entry preserves only that phase's history and supplies current versions.
 
@@ -127,7 +223,7 @@ from committed events and are not appended a second time. An interrupted model
 request without a durable response cannot be safely replayed and requires a new run.
 Input, compiler, rules, prompt and actual Fact/Goal fingerprints must match. The CLI
 defaults to PYTHONHASHSEED=42 for stable IDs, honors an explicit numeric seed and
-uses the original seed when resuming. Current checkpoints use `debugger-checkpoint/v4`.
+uses the original seed when resuming. Current checkpoints use `debugger-checkpoint/v6`.
 Runs created by the original repository cannot be resumed here: the source
 fingerprint includes the source file set and paths, which changed with the migration.
 
@@ -136,18 +232,18 @@ then runs the unchanged seven abstract rules. Compilation mode is
 `canonical-core-dsl-projection/v1`.
 
 Available tools include scoped `view`, `view_evidence`, `trace_evidence`,
-`trace_fact`, `trace_window`, window-candidate `assess`,
+`trace_fact`, `route_cases`, `query_logs`, compatible candidate-list `assess`,
 `check/span/state/back/up/versions/neighbours`, `hold/drop/contrast`, `reroute`
 and `finish`. Read/routing tools remain available to MAP/ROUTE; TRACE exposes
-only `assess`, while SUBMIT has no tool schemas. Rule candidates, provenance
+`query_logs` followed by `assess`, while SUBMIT has no tool schemas. Rule candidates, provenance
 links and LLM assessments are separate claims.
 
 TRACE tool calls are recorded in messages/requests/usage and tool_calls; validated
-window conclusions are saved in `window_trace.jsonl`. Each window gets at most
+TRACE conclusions retain the `window_trace.jsonl` output contract. Each case gets at most
 three validation attempts. Invalid candidate lists cannot partially update coverage.
-Every declared window must have a committed conclusion before SUBMIT. Exact quotes,
+Every declared case must have a committed conclusion before SUBMIT. Exact quotes,
 existing Fact mappings and allowed benchmark fault classes are checked. SUBMIT
-compares all candidates once; invalid JSON/selection stops uncertain. Core's
+compares all candidates once; invalid JSON/selection stops with a protocol error. Core's
 full-trajectory gate remains unchanged. Finite coverage does not establish the
 globally earliest or unique cause.
 
@@ -159,13 +255,14 @@ artifacts/dsl_debugger/<run_id>/
   <trajectory_id>/
     input.json, canonical_record.json, rules.json, evidences.json, evaluations.json
     goal_map.json, route_candidates.json, trace_windows.json, trace_graph.json
-    window_trace.jsonl, direct_submit.jsonl
+    window_trace.jsonl, trace_queries.jsonl, direct_submit.jsonl
+    audited_parse.json, parse_audit.jsonl, parsing_usage.json, parsing/
     messages.jsonl, phase_events.jsonl, tool_calls.jsonl, usage.jsonl, usage.json
     requests/00001.json, ..., checkpoint.json, result.json
 ```
 
 Dry-run produces no model transcript/checkpoint or diagnosis. `result.status` is
-diagnosed, uncertain, no_failure, budget_exhausted, error, or dry_run. Only an
+diagnosed, uncertain, no_candidate, no_failure, budget_exhausted, error, or dry_run. Only an
 accepted submit produces diagnosed. Resume writes separate resume_manifest/results/report
 and preserves rejected restores in resume_error.json.
 
@@ -277,3 +374,62 @@ Facts and add no semantic or intention parsing.
 - Online runs: an OpenAI-compatible Chat Completions endpoint with tool calls, and its API key
   in an environment variable or `.env` (see `.env.example`). Dry-run, replay and compilation
   need no network or credentials.
+
+## Audited parsing and concurrent runs
+
+Scan every input task/observation (no answer columns); unsupported GAIA raw messages
+are counted separately because they include repeated history/instructions:
+
+```bash
+.venv/bin/python -B scripts/scan_parse_triggers.py
+.venv/bin/python -B -m unittest discover -s checks -v
+.venv/bin/python -B -m prodebugger.run_experiment --sample-file artifacts/analysis/sample10.json --workers 10 --model openai/gpt-6-luna-pro --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --env-file .env
+```
+
+`--workers` runs independent trajectories concurrently. Parsing has its own model
+(`--parse-model`, defaulting to `--model`) and recorded budgets (`--max-parse-calls`,
+`--max-parse-input-tokens`, `--max-parse-output-tokens`, `--parse-max-tokens`).
+`parsing_usage.json` is separate from the four diagnostic phases' `usage.json`.
+Completed parse units and TRACE conversations are durable; resume reuses them.
+Source/model changes require a new run. Frontend adaptation is outside this change.
+
+Agent statement parsing is separate from observed world facts. Compilation retains
+exact clause offsets, lexical topics, conservative complete-template statements and
+explicit unresolved text. A memory with no typed claim is `memory_unparsed`, never
+an assertion that the agent recalled nothing. ROUTE gets topic discovery metadata;
+manager and TRACE cards respect their existing source visibility.
+
+`FIND_CLAIMS(topic,module[,from,to])` discovers targeted mental clauses, including
+earlier clauses absent from entity/state parsing. Existing SQL results also receive
+statement cards when their final returned columns preserve source text/provenance.
+Filtered-out rows cannot contribute cards. Partial clauses remain unresolved and
+are not expanded into full modules. Topic matching is lexical, not exhaustive.
+
+After each successful TRACE query, all unique visible complex clauses (query,
+anchor and assigned excerpts) are sent in **one compact batch parser request**.
+Integer source indexes and positional statement fields avoid repeatedly generating
+long field names and source quotes. The validated statement-card format is unchanged.
+There is no per-sentence call, semantic repair loop or automatic transport retry. The batch
+extracts propositions, modality/negation and explicit stated relationships together;
+it also resolves pronouns against earlier already-visible clauses of the same module
+when an exact antecedent can be cited. Reference-sensitive caches include that visible
+context, so narrower retrieval cannot inherit a hidden antecedent. It does not
+diagnose faults or infer world truth. Exact quotations are validated;
+invalid units leave unresolved evidence. If JSON is cut off or the provider reports
+`finish_reason=length`, complete units are retained and **only missing units** are
+requested in smaller groups. Recovery splits each missing group in two, at most
+twice (at most seven requests including the initial request). An oversized single
+unit is not blindly repeated. Exhausted recovery leaves an explicit missing-unit
+count and unresolved sources; it is never reported as a complete parse. A complete
+JSON response that omits units without a length signal is flagged as incomplete,
+without semantic repair calls. Provider errors stop recovery.
+Recovery preserves the original visible reference context and never reruns SQL.
+Per-clause and whole-batch caches plus the durable response ledger preserve reuse
+and deterministic restart, including failed batches. Offline/replay runs make no
+new semantic model calls. The usage ledger records finish/native finish reasons,
+response IDs and reasoning-token usage when the provider supplies them.
+The parser uses the existing parse model/settings; its separate request/usage/cache
+files live in `claim_parsing/`, with usage also exposed in `result.usage.claim_parsing`.
+This is one logical parse batch per investigator, normally one model call;
+truncation recovery calls are counted separately in the batch metadata. The TRACE assess
+schema, one-query/one-step constraint and SUBMIT handoff fields are unchanged.

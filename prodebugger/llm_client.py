@@ -13,12 +13,13 @@ from .evidence_tools import BudgetExceeded, ToolError
 from .record_bridge import append_json, digest, plain, read_json, write_json
 
 PHASES = ("MAP", "ROUTE", "TRACE", "SUBMIT")
+ACCOUNTING_PHASES = (*PHASES, "MANAGER", "PARSE")
 
 
 def phase_usage():
     return {p: {"model_calls": 0, "replay_calls": 0, "input_tokens": 0,
                 "output_tokens": 0, "latency_seconds": 0.0,
-                "cache_hit_input_tokens": None, "cache_miss_input_tokens": None} for p in PHASES}
+                "cache_hit_input_tokens": None, "cache_miss_input_tokens": None} for p in ACCOUNTING_PHASES}
 
 
 def save_request(output, ordinal, phase, model, messages, schemas):
@@ -110,6 +111,7 @@ class LLMClient:
         self.config, self.output = dict(config), Path(output)
         self.recovered_message = None
         self.recovered_phase = None
+        self.last_completion = {}
         self.state = {"mode": "online", "model_calls": 0, "replay_calls": 0,
                       "input_tokens": 0, "output_tokens": 0,
                       "accounted_input": 0, "accounted_output": 0,
@@ -117,6 +119,8 @@ class LLMClient:
                       "cache_hit_input_tokens": None, "cache_miss_input_tokens": None,
                       "by_phase": phase_usage()}
         self.models = {p: config.get(p.lower() + "_model") or config.get("model") for p in PHASES}
+        self.models["MANAGER"] = config.get("manager_model") or self.models["TRACE"]
+        self.models["PARSE"] = config.get("parse_model") or config.get("model") or self.models["MAP"]
         if not all(self.models.values()):
             raise ValueError("online execution requires --model or all four phase models")
         if transport is None:
@@ -149,6 +153,8 @@ class LLMClient:
 
     def _reserve(self, messages, schemas, phase):
         cfg, state = self.config, self.state
+        if any((p / "STOP").is_file() for p in (self.output, self.output.parent, self.output.parent.parent)):
+            raise BudgetExceeded("run STOP marker found; no further model requests sent")
         estimate = len(json.dumps([messages, schemas], ensure_ascii=False).encode("utf-8")) + 512
         output = cfg["max_tokens"]
         if state["model_calls"] >= cfg["max_turns"]:
@@ -179,7 +185,7 @@ class LLMClient:
         return asyncio.run(self.complete_async(messages, schemas, phase=phase))
 
     async def complete_async(self, messages, schemas, *, phase="ROUTE"):
-        if phase not in PHASES:
+        if phase not in ACCOUNTING_PHASES:
             raise ValueError("unknown debugger phase")
         for attempt in range(self.config["retries"] + 1):
             estimate, reserved = self._reserve(messages, schemas, phase)
@@ -194,8 +200,8 @@ class LLMClient:
                     urlparse(self.config.get("base_url") or "").hostname == "api.deepseek.com"
                     and self.config.get("reasoning_effort") in {"low", "high", "max"}
                 )
-                if phase == "TRACE" and schemas and not deepseek_thinking:
-                    mode["tool_choice"] = {"type": "function", "function": {"name": "assess"}}
+                if phase in {"TRACE", "MANAGER"} and schemas and not deepseek_thinking:
+                    mode["tool_choice"] = {"type": "function", "function": {"name": schemas[0]["function"]["name"]}}
                 if reserved:
                     mode["max_tokens"] = reserved
                 response = await asyncio.to_thread(self.transport, model=self.models[phase], messages=messages,
@@ -239,8 +245,19 @@ class LLMClient:
             message = plain(response.choices[0].message.model_dump(exclude_none=True))
             # Keep only fields accepted in a subsequent chat request.
             message = {k: v for k, v in message.items() if k in {"role", "content", "tool_calls", "reasoning_content"}}
+            # Keep response diagnostics outside the assistant message: these
+            # fields are not valid chat-message input on a subsequent request.
+            choice = response.choices[0]
+            details = getattr(usage, "completion_tokens_details", None)
+            self.last_completion = {
+                "finish_reason": getattr(choice, "finish_reason", None),
+                "native_finish_reason": getattr(choice, "native_finish_reason", None),
+                "response_id": getattr(response, "id", None),
+                "reasoning_tokens": getattr(details, "reasoning_tokens", None),
+            }
             self._log({"event": "completed", "input_tokens": inp, "output_tokens": out,
                        "response_model": getattr(response, "model", None),
+                       **self.last_completion,
                        "message": message})
             return message
         raise ToolError("model_error", "model retry limit reached")

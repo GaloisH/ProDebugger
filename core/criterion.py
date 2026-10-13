@@ -81,18 +81,18 @@ def _recollection(R: Record, f: Fact) -> Verdict:
     lets a claim repeated four times confirm itself, which is the shape of the
     hallucination this check exists to catch."""
     rel = R.relations[f.rel]
+    scope = getattr(R, 'claim_scopes', {}).get(f.fid, {})
+    event_step = scope.get('event_step')
+    if (scope.get('modality') != 'asserted' or type(event_step) is not int
+            or not 1 <= event_step <= f.t):
+        return Verdict(UNK, 'recollection has no unambiguous assertion time/scope',
+                       (f.fid,), (f'claim: {f.span[:160]}',))
     key = tuple(str(f.args[i]) for i in rel.key)
-    shown = [g for g in R.F if g.rel == f.rel and g.side != "mind" and g.t <= f.t
+    shown = [g for g in R.F if g.rel == f.rel and g.side == 'env' and g.t <= event_step
+             and (g.slot == 'obs' or (g.slot == 'chk' and g.rel == 'chosen'))
              and tuple(str(g.args[i]) for i in rel.key) == key]
 
     if not shown:
-        if rel.is_observed():
-            # the record holds every instance of this relation the run saw, so
-            # an absence is a negation
-            return Verdict(VIOL,
-                           f"recalls {f.rel}({', '.join(key)}) where the record "
-                           f"holds no such observation up to t{f.t}",
-                           (f.fid,), (f"claim: {f.span[:120]}",))
         if not f.basis:
             return Verdict(UNK, "no earlier source is recorded for this recollection",
                            (f.fid,), (f"claim: {f.span[:120]}",))
@@ -100,6 +100,32 @@ def _recollection(R: Record, f: Fact) -> Verdict:
                        tuple([f.fid] + list(f.basis)), (f"claim: {f.span[:120]}",))
 
     latest = shown[-1]
+    if any(a['kind'] == 'observation' and a['status'] == 'unresolved'
+           and latest.t < a['step'] <= event_step for a in getattr(R, 'parse_audits', [])):
+        return Verdict(UNK, 'state may have changed during unresolved observations', (f.fid, latest.fid))
+    if f.value_type == 'boolean' and latest.value_type == 'boolean':
+        if f.args == latest.args:
+            agrees = f.value == latest.value
+        elif latest.value is True and rel.is_functional():
+            agrees = f.value is False
+        else:
+            return Verdict(UNK, 'negative observation does not identify another positive state', (f.fid, latest.fid))
+        if not agrees and scope.get('temporal') == 'historical' and scope.get('time_basis') == 'step':
+            # "Step N: returned to X" can summarize action N, whose feedback
+            # arrives at N+1. Do not force a pre-action interpretation when the
+            # visible feedback supports the post-action interpretation.
+            after = [g for g in R.F if g.slot == 'obs' and g.side == 'env'
+                     and g.t == event_step + 1 and g.t <= f.t and g.rel == f.rel
+                     and g.args == f.args and g.value == f.value]
+            missing_after = event_step >= f.t or any(a['kind'] == 'observation'
+                and a['status'] == 'unresolved' and a['step'] == event_step + 1
+                for a in getattr(R, 'parse_audits', []))
+            if after or missing_after:
+                return Verdict(UNK, 'historical step does not distinguish pre-action observation from post-action outcome',
+                               tuple([f.fid, latest.fid] + [g.fid for g in after]))
+        return Verdict(SAT if agrees else VIOL,
+                       f"{'agrees' if agrees else 'conflicts'} with observation at t{latest.t} for assertion time t{event_step}",
+                       (f.fid, latest.fid))
     a, b = _payload(rel, f), _payload(rel, latest)
     if a is None:
         return Verdict(SAT, f"names no version, and {f.rel}({', '.join(key)}) "
@@ -139,6 +165,9 @@ def kappa(R: Record, f: Fact) -> Verdict:
             return Verdict(UNK, "the plan declared an intention but named no act",
                            (f.fid,), (f"plan: {i.span[:140]}",
                                       f"action: {f.rel}{tuple(str(a) for a in f.args)}"))
+        if not (i.extraction.startswith('decision_clause:') or i.extraction == 'rule'):
+            return Verdict(UNK, 'plan extraction does not bind an audited current decision',
+                           (f.fid,), (f'plan: {i.span[:160]}',))
         def option_matches(option):
             if option.verb != f.rel:
                 return False
@@ -150,14 +179,13 @@ def kappa(R: Record, f: Fact) -> Verdict:
         if matched_option is not None:
             return Verdict(SAT, f"implements an admitted {matched_option.role} of the intention",
                            (f.fid,))
+        if b == "verb_only":
+            return Verdict(UNK, f"the plan names {i.verb} without a bound target or execution sequence",
+                           (f.fid,), (f"plan: {i.span[:140]}",
+                                      f"action: {f.rel}{tuple(str(a) for a in f.args)}"))
         if i.verb != f.rel:
             return Verdict(VIOL, f"intends {i.verb} and performs {f.rel}",
                            (f.fid,))
-        if b == "verb_only":
-            return Verdict(UNK, f"performs the intended {i.verb}, but the plan "
-                                f"named no target to compare",
-                           (f.fid,), (f"plan: {i.span[:140]}",
-                                      f"target: {[str(a) for a in f.args]}"))
         if tuple(str(x) for x in i.objects) != tuple(str(a) for a in f.args):
             return Verdict(VIOL,
                            f"intends {i.verb} on {[str(x) for x in i.objects]} "
@@ -174,20 +202,21 @@ def kappa(R: Record, f: Fact) -> Verdict:
         if ruled:
             return Verdict(VIOL, f"pursues a purpose ruled out at t{ruled[-1].t}",
                            (f.fid, ruled[-1].fid))
-        # a re-attempt of an intention the environment already refused is not a
-        # matter of taste: the earlier attempt is on record with its outcome
+        # A rejected action is not proof that a later plan is wrong: formatting,
+        # prerequisites, or the intended operation may have changed. Empty
+        # bindings must never compare as equal intentions.
         i = R.intentions.get(str(p))
-        if i is not None:
+        if i is not None and i.binding == 'full':
             for e, j in R.intentions.items():
-                if e == str(p) or j.verb != i.verb or j.objects != i.objects:
+                if e == str(p) or j.binding != 'full' or j.verb != i.verb or j.objects != i.objects:
                     continue
                 earlier = [g for g in R.by_entity(Entity("int", e.split(":")[1]))
                            if g.slot == "chk" and g.rel == "admissibility" and g.t < f.t]
                 refused = [g for g in earlier if g.value != "well_formed"]
                 if refused:
-                    return Verdict(VIOL,
-                                   f"repeats an attempt the environment refused at "
-                                   f"t{refused[-1].t} ({refused[-1].value})",
+                    return Verdict(UNK,
+                                   f"similar earlier intention had a parsed action contract issue at "
+                                   f"t{refused[-1].t}; retry validity needs current prerequisites and feedback",
                                    (f.fid, refused[-1].fid))
         return Verdict(UNK, "reachability of the purpose is not settled structurally",
                        tuple([f.fid] + list(f.basis)),

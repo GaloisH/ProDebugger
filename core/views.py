@@ -64,6 +64,8 @@ def _fact(R: Record, f: Fact, with_support: bool = False) -> Dict[str, Any]:
             "cites": list(verdict.cites),
             "operands": list(verdict.operands),
         }
+    if f.fid in getattr(R, 'claim_scopes', {}):
+        out['claim_scope'] = dict(R.claim_scopes[f.fid])
     return out
 
 
@@ -273,12 +275,12 @@ def _task_state_at(R: Record, step: int) -> List[Dict[str, Any]]:
         decisions = [f for f in R.F if f.t <= step and f.slot == "chk"
                      and f.purpose is not None
                      and str(f.purpose) == str(g.entity())
-                     and f.rel == g.rel and isinstance(f.value, bool)]
+                     and f.rel in {g.rel, "satisfied"} and isinstance(f.value, bool)]
         latest = decisions[-1] if decisions else None
         rows.append({
             "requirement": str(g.entity()),
             "state": "satisfied" if latest is not None and latest.value is True else
-                     ("unmet" if latest is not None and latest.value is False else "unresolved"),
+                     ("unmet" if latest is not None and latest.value is False else "unknown"),
             "decision_fid": None if latest is None else latest.fid,
         })
     return rows
@@ -463,7 +465,7 @@ def _requirement_view(R: Record, q: Entity) -> Dict[str, Any]:
                 if (f.purpose is not None and str(f.purpose) == str(q))
                 or (g.target is not None and any(str(a) == str(g.target) for a in f.args))]
     observed = [f for f in relevant if f.slot == "obs" and f.side == "env"]
-    decisions = [f for f in relevant if f.slot == "chk" and f.rel == g.rel
+    decisions = [f for f in relevant if f.slot == "chk" and f.rel in {g.rel, "satisfied"}
                  and f.value is not None]
     claims = [f for f in relevant if f.side == "mind" and f.rel == g.rel]
     met = [f for f in decisions if f.value is True]
@@ -522,13 +524,13 @@ def _requirement_view(R: Record, q: Entity) -> Dict[str, Any]:
     elif decisions:
         state, reason = "unmet", "the recorded decision did not satisfy the constraint"
     elif qualifying_steps:
-        state, reason = "unmet", "qualifying evidence exists but no satisfying decision is recorded"
+        state, reason = "unknown", "qualifying evidence exists but no satisfying decision is recorded"
     elif observations:
-        state, reason = "unmet", "only non-qualifying or unresolved observations are recorded"
+        state, reason = "unknown", "only non-qualifying or unresolved observations are recorded"
     else:
-        state, reason = "unmet", "no relevant observation or satisfying decision is recorded"
+        state, reason = "unknown", "no relevant observation or satisfying decision is recorded"
 
-    limitations = []
+    limitations = ["Missing extracted state is unknown, not false. Compiled decisions are not observed effects; task satisfaction is not agent responsibility."]
     if g.status_mode != "tracked":
         limitations.append(
             "This free-text constraint is preserved in the contract but is not yet deterministically verified."
@@ -559,7 +561,7 @@ def _requirement_view(R: Record, q: Entity) -> Dict[str, Any]:
         prior = value
 
     gaps = []
-    if state in ("unmet", "unresolved"):
+    if state in ("unmet", "unknown", "unresolved"):
         gaps.append({"kind": reason.replace(" ", "_"),
                      "qualifying_steps": sorted(qualifying_steps),
                      "decision_steps": sorted({f.t for f in decisions})})
@@ -1614,8 +1616,8 @@ def _parse_program(spec: str) -> Tuple[str, Dict[str, Any]]:
                    "effect", "constraint_relation"):
             options[key] = [x.strip() for x in raw.split(",") if x.strip()]
         elif key == "state":
-            if raw not in ("satisfied", "unmet", "unresolved"):
-                raise ValueError("state must be satisfied, unmet, or unresolved")
+            if raw not in ("satisfied", "unmet", "unknown", "unresolved"):
+                raise ValueError("state must be satisfied, unmet, unknown, or unresolved")
             options[key] = raw
         elif key == "steps":
             lo, hi = raw.split(":", 1)

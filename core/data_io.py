@@ -30,7 +30,7 @@ def load(task_type: Optional[str] = None, root: str = None) -> List[Dict[str, An
     return rows
 
 
-_TASK = re.compile(r"task is(?: to)?:\s*(.*?)\n", re.I)
+_TASK = re.compile(r"(?:^|\n)(?:Your )?task is(?: to)?:\s*(.*?)(?=\nYour (?:current )?observation is:|\nYour admissible|\Z)", re.I | re.S)
 _OBS = re.compile(r"(?:current )?observation is:\s*(.*?)(?:\nYour admissible|\nPlease |\Z)", re.S)
 _ADM = re.compile(r"admissible actions.*?are:\s*(.*?)(?:\n\n|\nPlease |\Z)", re.S)
 
@@ -45,13 +45,17 @@ def unpack(row: Dict[str, Any]) -> Tuple[str, str, List[str], List[str], List[Li
     tid = row["trajectory_id"]
     task_m = _TASK.search(msgs[0]["content"]) if msgs else None
     task = task_m.group(1).strip() if task_m else ""
+    if not task:
+        raise ValueError("task envelope missing: refusing silent empty task extraction")
 
     env, agent, adm = [], [], []
     for k in range(0, len(msgs) - 1, 2):
         u, a = msgs[k], msgs[k + 1]
         if u["role"] != "user" or a["role"] != "assistant":
-            break
+            raise ValueError("unexpected message order: refusing partial trajectory extraction")
         o = _OBS.search(u["content"])
+        if o is None:
+            raise ValueError(f"observation envelope missing at step {k // 2 + 1}")
         env.append(o.group(1).strip() if o else "")
         agent.append(a["content"])
         m = _ADM.search(u["content"])

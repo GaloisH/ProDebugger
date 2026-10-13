@@ -12,6 +12,7 @@ __pycache__/
 # Private trajectories, compiled sessions and experiment outputs
 core/data/
 *.parquet
+/data.zip
 artifacts/
 prodebugger/sessions/
 

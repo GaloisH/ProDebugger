@@ -1,0 +1,9 @@
+{
+  "tests": {
+    "command": ".venv/bin/python -B -m unittest discover -s checks -q",
+    "passed": 98
+  },
+  "scripts_syntax_checked": 19,
+  "test_scope": "Backend protocol, source visibility, parsing and truncated-response recovery; no additional model calls.",
+  "backend_commit": "1b81193aecd133cb1be561ca48607682bda50667"
+}

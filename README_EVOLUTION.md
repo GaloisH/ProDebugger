@@ -150,6 +150,8 @@ SUBMIT 从已有候选中选择一个具体结果，不能输出 uncertain，也
 
 运行中后端源码冻结，报告核对编译指纹。汇总区分 step、step+module、含类别完全匹配、TRACE 候选召回、SQL 错误、解析截断/恢复、协议失败及各阶段用量，避免把“成功输出诊断”当成“诊断正确”。
 
+本轮已完成：24 个 diagnosed、4 个 no_candidate、1 个 ROUTE uncertain、1 个 SUBMIT 校验失败；step 匹配 3/30，step+module 匹配 0/30。35 个 SQL 均成功，35 个语义批次全部一次返回，无截断、无缺失条目。只有 1/30 的标注 step+module 进入 TRACE 候选池，最终未被 SUBMIT 选择。样本中另有 4 个 `system` 模块标注，超出当前候选模块 schema，仍保留在完整分母中。修复改善了响应完整性，尚未表现为定位准确率改善。
+
 ## 验证与边界
 
 ```bash

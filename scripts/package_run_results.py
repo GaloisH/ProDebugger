@@ -84,6 +84,10 @@ def package(run, output, traces, baseline=None):
                'evaluation': evaluation['summary'], 'by_environment': {kind: metrics([r for r in rows if r['task_type'] == kind])
                     for kind in sorted({r['task_type'] for r in rows})},
                'manager_and_protocol': manager, 'claim_parsing': claims, 'shared_task_comparison': baseline_comparison,
+               'gold_modules_outside_candidate_schema': [dict(trajectory_id=r['trajectory_id'], gold_module=r['gold_module'])
+                    for r in rows if r['gold_module'] not in {'memory', 'reflection', 'plan', 'action'}],
+               'candidate_selection_losses': [{k: r[k] for k in ('trajectory_id', 'gold_step', 'gold_module', 'predicted_step', 'predicted_module')}
+                    for r in rows if r['gold_step_module_in_trace'] and not r['step_module_match']],
                'non_diagnosed_tasks': failures, 'production_sources_unchanged': True,
                'provider_finish_reasons': dict(Counter(str(e.get('finish_reason')) for e in model_events if e['event'] == 'completed')),
                'provider_errors': [dict(trajectory_id=e['trajectory_id'], ledger=e['ledger'], trajectory_request=e.get('request_file'), phase=e.get('phase'), error_type=e.get('error_type'))
@@ -112,13 +116,15 @@ def package(run, output, traces, baseline=None):
         f'| 标注 step + module 进入 TRACE 候选池 | {s["gold_step_module_in_trace"]}/{n} |',
         f'| 实际 TRACE 输入中标注模块原文可见 | {c["tasks_with_visible_gold_module"]}/{n} |', '',
         '精确标注匹配不等于因果正确性认证；原文可见不证明模型正确使用。抽样保留此前 10 个任务，其余按种子 42 补充；不属于完全独立的新测试集。', '',
+        f'标注模块不在当前候选 schema 内的任务：`{json.dumps(summary["gold_modules_outside_candidate_schema"], ensure_ascii=False)}`。这些任务仍计入完整分母，没有按标注筛掉或替换。', '',
+        f'标注候选曾进入 TRACE 池但最终未选中的任务：`{json.dumps(summary["candidate_selection_losses"], ensure_ascii=False)}`。', '',
         '## 运行与故障', '',
         f'- worker 启动间隔：{manager["start_spread_seconds"]} 秒。',
         f'- manager 计划 {manager["manager_plans"]} 份，调查 {manager["assigned_agents"]} 个，计划校验错误 {manager["manager_validation_errors"]} 次。',
         f'- SQL {s["queries"]} 次，失败 {s["invalid_queries"]} 次，部分失败 {manager["partial_queries"]} 次，截断 {s["truncated_queries"]} 次，成功但空返回 {manager["empty_successful_queries"]} 次。',
         f'- 语义解析实际调用 {c["semantic_model_calls"]} 次；截断响应 {c.get("truncated_responses",0)} 次；补齐请求 {c.get("recovery_requests",0)} 次；最终缺失条目 {c.get("missing_units",0)} 个。',
         f'- 语句卡片覆盖：`{json.dumps(c["card_coverage"], ensure_ascii=False)}`。完整返回不表示全部语义通过校验。',
-        f'- SQL 离线重放一致：{manager["all_sql_replays_equal"]}。协议问题 {len(manager["protocol_violations"])} 项；来源/查询传递问题 {len(c["violations"])} 项。',
+        f'- SQL 离线重放一致：{manager["all_sql_replays_equal"]}。交接/根因字段披露检查问题 {len(manager["protocol_violations"])} 项；来源/查询传递问题 {len(c["violations"])} 项。被拒绝的诊断响应单列在失败任务中。',
         '- 运行期间后端源码指纹保持一致。每个实际请求、响应和完整日志都保存在下列轨迹归档中。', '',
         '```json', json.dumps(failures, ensure_ascii=False, indent=2), '```', '',
         '## 用量', '', '供应商报告的 token；未计算美元成本。', '', '```json',

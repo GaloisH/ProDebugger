@@ -1,0 +1,80 @@
+{
+  "trajectory_ids": [
+    "GPT-4o_019_alfworld_task_019",
+    "GPT-4o_006_alfworld_task_006",
+    "GPT-4o_055_alfworld_task_055",
+    "GPT-4o_047_alfworld_task_047",
+    "GPT-4o_037_alfworld_task_037",
+    "GPT-4o_013_chat_b000_t00_e12-f27d2887",
+    "GPT-4o_011_chat_b000_t00_e10-69d80a84",
+    "Qwen3-8B_011_chat_b000_t00_e11-1cc61441",
+    "GPT-4o_009_chat_b000_t00_e08-6a7bac22",
+    "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d",
+    "Qwen3-8B_002_id_2___chat_b000_t00_e04-7e3c13ba",
+    "GPT-4o_012_alfworld_task_012",
+    "GPT-4o_002_alfworld_task_002",
+    "Qwen3-8B_011_id_11___chat_b006_t00_e01-5b8f974f",
+    "GPT-4o_026_alfworld_task_026",
+    "GPT-4o_024_alfworld_task_024",
+    "GPT-4o_021_alfworld_task_021",
+    "GPT-4o_013_alfworld_task_013",
+    "Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f",
+    "GPT-4o_011_alfworld_task_011",
+    "GPT-4o_012_chat_b000_t00_e11-1cc61441",
+    "Qwen3-8B_007_chat_b000_t00_e07-d50ae81f",
+    "GPT-4o_005_chat_b000_t00_e04-7e3c13ba",
+    "GPT-4o_003_chat_b000_t00_e02-1e119842",
+    "Qwen3-8B_013_chat_b000_t00_e13-eb20423f",
+    "GPT-4o_014_chat_b000_t00_e13-c39f2c41",
+    "GPT-4o_015_chat_b000_t00_e14-1d03d2d8",
+    "Llama3.3-70B-Turbo_014_webshop_task_014",
+    "Llama3.3-70B-Turbo_017_webshop_task_017",
+    "Qwen3-8B_010_chat_b000_t00_e10-69d80a84"
+  ],
+  "selection": {
+    "seed": 42,
+    "method": "Keep the previous 10 tasks, then sample 10 additional tasks per supported environment from sorted remaining IDs. No failure labels inspected for selection.",
+    "task_type_counts": {
+      "alfworld": 15,
+      "webshop": 15
+    },
+    "previous_tasks": [
+      "GPT-4o_019_alfworld_task_019",
+      "GPT-4o_006_alfworld_task_006",
+      "GPT-4o_055_alfworld_task_055",
+      "GPT-4o_047_alfworld_task_047",
+      "GPT-4o_037_alfworld_task_037",
+      "GPT-4o_013_chat_b000_t00_e12-f27d2887",
+      "GPT-4o_011_chat_b000_t00_e10-69d80a84",
+      "Qwen3-8B_011_chat_b000_t00_e11-1cc61441",
+      "GPT-4o_009_chat_b000_t00_e08-6a7bac22",
+      "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d"
+    ],
+    "new_tasks": [
+      "Qwen3-8B_002_id_2___chat_b000_t00_e04-7e3c13ba",
+      "GPT-4o_012_alfworld_task_012",
+      "GPT-4o_002_alfworld_task_002",
+      "Qwen3-8B_011_id_11___chat_b006_t00_e01-5b8f974f",
+      "GPT-4o_026_alfworld_task_026",
+      "GPT-4o_024_alfworld_task_024",
+      "GPT-4o_021_alfworld_task_021",
+      "GPT-4o_013_alfworld_task_013",
+      "Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f",
+      "GPT-4o_011_alfworld_task_011",
+      "GPT-4o_012_chat_b000_t00_e11-1cc61441",
+      "Qwen3-8B_007_chat_b000_t00_e07-d50ae81f",
+      "GPT-4o_005_chat_b000_t00_e04-7e3c13ba",
+      "GPT-4o_003_chat_b000_t00_e02-1e119842",
+      "Qwen3-8B_013_chat_b000_t00_e13-eb20423f",
+      "GPT-4o_014_chat_b000_t00_e13-c39f2c41",
+      "GPT-4o_015_chat_b000_t00_e14-1d03d2d8",
+      "Llama3.3-70B-Turbo_014_webshop_task_014",
+      "Llama3.3-70B-Turbo_017_webshop_task_017",
+      "Qwen3-8B_010_chat_b000_t00_e10-69d80a84"
+    ],
+    "excluded_task_types": [
+      "gaia"
+    ],
+    "reason": "Current compiler has alfworld and webshop profiles; gaia has no supported profile."
+  }
+}

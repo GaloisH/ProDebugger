@@ -1,0 +1,413 @@
+{
+  "run_id": "evidence-query-claims-n30-20261013",
+  "model": "openai/gpt-6-luna-pro",
+  "sample": {
+    "seed": 42,
+    "method": "Keep the previous 10 tasks, then sample 10 additional tasks per supported environment from sorted remaining IDs. No failure labels inspected for selection.",
+    "task_type_counts": {
+      "alfworld": 15,
+      "webshop": 15
+    },
+    "previous_tasks": [
+      "GPT-4o_019_alfworld_task_019",
+      "GPT-4o_006_alfworld_task_006",
+      "GPT-4o_055_alfworld_task_055",
+      "GPT-4o_047_alfworld_task_047",
+      "GPT-4o_037_alfworld_task_037",
+      "GPT-4o_013_chat_b000_t00_e12-f27d2887",
+      "GPT-4o_011_chat_b000_t00_e10-69d80a84",
+      "Qwen3-8B_011_chat_b000_t00_e11-1cc61441",
+      "GPT-4o_009_chat_b000_t00_e08-6a7bac22",
+      "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d"
+    ],
+    "new_tasks": [
+      "Qwen3-8B_002_id_2___chat_b000_t00_e04-7e3c13ba",
+      "GPT-4o_012_alfworld_task_012",
+      "GPT-4o_002_alfworld_task_002",
+      "Qwen3-8B_011_id_11___chat_b006_t00_e01-5b8f974f",
+      "GPT-4o_026_alfworld_task_026",
+      "GPT-4o_024_alfworld_task_024",
+      "GPT-4o_021_alfworld_task_021",
+      "GPT-4o_013_alfworld_task_013",
+      "Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f",
+      "GPT-4o_011_alfworld_task_011",
+      "GPT-4o_012_chat_b000_t00_e11-1cc61441",
+      "Qwen3-8B_007_chat_b000_t00_e07-d50ae81f",
+      "GPT-4o_005_chat_b000_t00_e04-7e3c13ba",
+      "GPT-4o_003_chat_b000_t00_e02-1e119842",
+      "Qwen3-8B_013_chat_b000_t00_e13-eb20423f",
+      "GPT-4o_014_chat_b000_t00_e13-c39f2c41",
+      "GPT-4o_015_chat_b000_t00_e14-1d03d2d8",
+      "Llama3.3-70B-Turbo_014_webshop_task_014",
+      "Llama3.3-70B-Turbo_017_webshop_task_017",
+      "Qwen3-8B_010_chat_b000_t00_e10-69d80a84"
+    ],
+    "excluded_task_types": [
+      "gaia"
+    ],
+    "reason": "Current compiler has alfworld and webshop profiles; gaia has no supported profile."
+  },
+  "evaluation": {
+    "tasks": 30,
+    "workers": 30,
+    "start_interval": [
+      "2026-10-13T13:17:07.602607+00:00",
+      "2026-10-13T13:17:07.685961+00:00"
+    ],
+    "statuses": {
+      "diagnosed": 24,
+      "no_candidate": 4,
+      "uncertain": 1,
+      "error": 1
+    },
+    "step_matches": 3,
+    "step_module_matches": 0,
+    "full_matches": 0,
+    "gold_step_in_route": 8,
+    "gold_step_module_in_trace": 1,
+    "queries": 35,
+    "invalid_queries": 0,
+    "truncated_queries": 0,
+    "parse_calls": 64,
+    "claim_parse_calls": 35,
+    "parse_units": {
+      "template": 858,
+      "unresolved": 24,
+      "backoff": 1
+    },
+    "usage": {
+      "diagnosis_input_tokens": 51269360,
+      "parsing_input_tokens": 722491,
+      "claim_parsing_input_tokens": 1847395,
+      "diagnosis_output_tokens": 1156958,
+      "parsing_output_tokens": 156099,
+      "claim_parsing_output_tokens": 572254,
+      "diagnosis_model_calls": 371,
+      "parsing_model_calls": 29,
+      "claim_parsing_model_calls": 35
+    },
+    "evaluation_scope": "One-based original steps compared directly to native critical_failure_step. Labels read only in this post-run script; all 30 tasks remain in the denominator. This is a small-sample exact annotation comparison, not causal correctness certification."
+  },
+  "by_environment": {
+    "alfworld": {
+      "tasks": 15,
+      "statuses": {
+        "diagnosed": 11,
+        "no_candidate": 2,
+        "uncertain": 1,
+        "error": 1
+      },
+      "step_match": 1,
+      "step_module_match": 0,
+      "full_match": 0,
+      "gold_step_module_in_trace": 0
+    },
+    "webshop": {
+      "tasks": 15,
+      "statuses": {
+        "diagnosed": 13,
+        "no_candidate": 2
+      },
+      "step_match": 2,
+      "step_module_match": 0,
+      "full_match": 0,
+      "gold_step_module_in_trace": 1
+    }
+  },
+  "manager_and_protocol": {
+    "tasks": 30,
+    "workers": 30,
+    "start_interval": [
+      "2026-10-13T13:17:07.602607+00:00",
+      "2026-10-13T13:17:07.685961+00:00"
+    ],
+    "statuses": {
+      "diagnosed": 24,
+      "no_candidate": 4,
+      "uncertain": 1,
+      "error": 1
+    },
+    "step_matches": 3,
+    "step_module_matches": 0,
+    "full_matches": 0,
+    "gold_step_in_route": 8,
+    "gold_step_module_in_trace": 1,
+    "queries": 35,
+    "invalid_queries": 0,
+    "truncated_queries": 0,
+    "parse_calls": 64,
+    "claim_parse_calls": 35,
+    "parse_units": {
+      "template": 858,
+      "unresolved": 24,
+      "backoff": 1
+    },
+    "usage": {
+      "diagnosis_input_tokens": 51269360,
+      "parsing_input_tokens": 722491,
+      "claim_parsing_input_tokens": 1847395,
+      "diagnosis_output_tokens": 1156958,
+      "parsing_output_tokens": 156099,
+      "claim_parsing_output_tokens": 572254,
+      "diagnosis_model_calls": 371,
+      "parsing_model_calls": 29,
+      "claim_parsing_model_calls": 35
+    },
+    "evaluation_scope": "One-based original steps compared directly to native critical_failure_step. Labels read only in this post-run script; all 30 tasks remain in the denominator. This is a small-sample exact annotation comparison, not causal correctness certification.",
+    "wall_seconds": 844.64,
+    "start_spread_seconds": 0.083354,
+    "phase_model_calls": {
+      "MAP": 30,
+      "ROUTE": 207,
+      "TRACE": 70,
+      "SUBMIT": 25,
+      "MANAGER": 39,
+      "PARSE": 0
+    },
+    "manager_plans": 29,
+    "assigned_agents": 35,
+    "agent_counts_per_task": {
+      "GPT-4o_019_alfworld_task_019": 2,
+      "GPT-4o_006_alfworld_task_006": 1,
+      "GPT-4o_055_alfworld_task_055": 1,
+      "GPT-4o_047_alfworld_task_047": 1,
+      "GPT-4o_037_alfworld_task_037": 1,
+      "GPT-4o_013_chat_b000_t00_e12-f27d2887": 1,
+      "GPT-4o_011_chat_b000_t00_e10-69d80a84": 1,
+      "Qwen3-8B_011_chat_b000_t00_e11-1cc61441": 1,
+      "GPT-4o_009_chat_b000_t00_e08-6a7bac22": 1,
+      "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d": 1,
+      "Qwen3-8B_002_id_2___chat_b000_t00_e04-7e3c13ba": 2,
+      "GPT-4o_012_alfworld_task_012": 0,
+      "GPT-4o_002_alfworld_task_002": 1,
+      "Qwen3-8B_011_id_11___chat_b006_t00_e01-5b8f974f": 1,
+      "GPT-4o_026_alfworld_task_026": 1,
+      "GPT-4o_024_alfworld_task_024": 2,
+      "GPT-4o_021_alfworld_task_021": 1,
+      "GPT-4o_013_alfworld_task_013": 1,
+      "Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f": 1,
+      "GPT-4o_011_alfworld_task_011": 1,
+      "GPT-4o_012_chat_b000_t00_e11-1cc61441": 1,
+      "Qwen3-8B_007_chat_b000_t00_e07-d50ae81f": 1,
+      "GPT-4o_005_chat_b000_t00_e04-7e3c13ba": 1,
+      "GPT-4o_003_chat_b000_t00_e02-1e119842": 2,
+      "Qwen3-8B_013_chat_b000_t00_e13-eb20423f": 1,
+      "GPT-4o_014_chat_b000_t00_e13-c39f2c41": 2,
+      "GPT-4o_015_chat_b000_t00_e14-1d03d2d8": 1,
+      "Llama3.3-70B-Turbo_014_webshop_task_014": 2,
+      "Llama3.3-70B-Turbo_017_webshop_task_017": 1,
+      "Qwen3-8B_010_chat_b000_t00_e10-69d80a84": 1
+    },
+    "tasks_with_at_most_two_agents": 29,
+    "manager_validation_errors": 10,
+    "submit_calls": 25,
+    "submit_calls_explicitly_mentioning_rule_ids": 25,
+    "nonempty_trace_cases": 30,
+    "trace_cases_selecting_anchor": 20,
+    "trace_cases_selecting_earlier_step": 4,
+    "queries_with_earlier_elements": 32,
+    "queries_with_earlier_source_quotes": 31,
+    "queries_with_cross_module_source_steps": 33,
+    "queries_with_cross_module_source_steps_outside_anchor": 32,
+    "queries_with_chinese_comments": 0,
+    "queries_with_english_purpose_comments": 35,
+    "partial_queries": 0,
+    "queries_with_repairs": 0,
+    "failed_function_branches": 0,
+    "skipped_output_branches": 0,
+    "mental_search_functions": 387,
+    "point_mental_search_functions": 10,
+    "mental_searches_from_start": 325,
+    "manager_requests_with_prior_origin_duty_and_examples": 39,
+    "trace_requests_with_english_comments_and_examples": 70,
+    "manager_requests_with_prioritized_few_agents": 39,
+    "manager_requests_with_query_reference_and_context": 39,
+    "manager_requests_with_competing_mechanism_guidance": 39,
+    "trace_requests_with_expansion_and_cross_module_guidance": 70,
+    "trace_requests_without_aggregate_retrieval_budgets": 70,
+    "empty_successful_queries": 0,
+    "trace_candidate_modules": {
+      "plan": 18,
+      "reflection": 8,
+      "memory": 8,
+      "action": 4
+    },
+    "source_search_modules": {
+      "plan": 135,
+      "observation": 106,
+      "memory": 124,
+      "reflection": 128,
+      "action": 5
+    },
+    "trace_root_roles": {
+      "True": 17,
+      "False": 13,
+      "None": 8
+    },
+    "route_reads": 1126,
+    "duplicate_route_reads": 177,
+    "all_sql_replays_equal": true,
+    "protocol_violations": []
+  },
+  "claim_parsing": {
+    "semantic_model_calls": 35,
+    "semantic_input_tokens": 1847395,
+    "semantic_output_tokens": 572254,
+    "requested_units": 4479,
+    "reused_units": 357,
+    "deduplicated_units": 59,
+    "truncated_responses": 0,
+    "recovery_requests": 0,
+    "missing_units": 0,
+    "clauses_with_partial_source": 1665,
+    "query_results_exactly_delivered": 35,
+    "queries": 35,
+    "tasks_with_visible_gold_module": 21,
+    "tasks_with_gold_statement_cards": 20,
+    "tasks_with_extracted_gold_statements": 20,
+    "card_coverage": {
+      "model_reviewed": 3991,
+      "unresolved": 1969,
+      "template_complete": 36,
+      "partial": 600
+    },
+    "batch_modes": {
+      "single_batch": 35
+    },
+    "card_parse_errors": {
+      "reference_requires_explicit_visible_earlier_antecedent": 30,
+      "invalid_statement_or_source_span": 484,
+      "qualified_clause_reported_as_unqualified_assertion; reference_requires_explicit_visible_earlier_antecedent": 2,
+      "relationship_requires_exact_explicit_source_cues": 36,
+      "qualified_clause_reported_as_unqualified_assertion": 226,
+      "invalid_statement_or_source_span; relationship_requires_exact_explicit_source_cues": 13,
+      "qualified_clause_reported_as_unqualified_assertion; invalid_statement_or_source_span": 23,
+      "invalid_statement_or_source_span; qualified_clause_reported_as_unqualified_assertion": 6,
+      "qualified_clause_reported_as_unqualified_assertion; invalid_statement_or_source_span; relationship_requires_exact_explicit_source_cues": 2,
+      "invalid_statement_or_source_span; qualified_clause_reported_as_unqualified_assertion; relationship_requires_exact_explicit_source_cues": 1,
+      "nonempty source cannot silently disappear": 5,
+      "qualified_clause_reported_as_unqualified_assertion; relationship_requires_exact_explicit_source_cues": 11,
+      "invalid_statement_or_source_span; reference_requires_explicit_visible_earlier_antecedent": 4,
+      "qualified_clause_reported_as_unqualified_assertion; invalid_statement_or_source_span; reference_requires_explicit_visible_earlier_antecedent": 1,
+      "relationship_requires_exact_explicit_source_cues; reference_requires_explicit_visible_earlier_antecedent": 1
+    },
+    "violations": []
+  },
+  "shared_task_comparison": {
+    "scope": "Only the shared tasks; a stochastic rerun, not a single-variable ablation.",
+    "baseline": "artifacts/dsl_debugger/evidence-query-claims-n10-20261013",
+    "shared_task_ids": [
+      "GPT-4o_006_alfworld_task_006",
+      "GPT-4o_009_chat_b000_t00_e08-6a7bac22",
+      "GPT-4o_011_chat_b000_t00_e10-69d80a84",
+      "GPT-4o_013_chat_b000_t00_e12-f27d2887",
+      "GPT-4o_019_alfworld_task_019",
+      "GPT-4o_037_alfworld_task_037",
+      "GPT-4o_047_alfworld_task_047",
+      "GPT-4o_055_alfworld_task_055",
+      "Qwen3-8B_011_chat_b000_t00_e11-1cc61441",
+      "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d"
+    ],
+    "before": {
+      "tasks": 10,
+      "statuses": {
+        "diagnosed": 8,
+        "no_candidate": 1,
+        "error": 1
+      },
+      "step_match": 1,
+      "step_module_match": 0,
+      "full_match": 0,
+      "gold_step_module_in_trace": 0
+    },
+    "after": {
+      "tasks": 10,
+      "statuses": {
+        "diagnosed": 9,
+        "no_candidate": 1
+      },
+      "step_match": 1,
+      "step_module_match": 0,
+      "full_match": 0,
+      "gold_step_module_in_trace": 0
+    },
+    "new_tasks": {
+      "tasks": 20,
+      "statuses": {
+        "diagnosed": 15,
+        "uncertain": 1,
+        "error": 1,
+        "no_candidate": 3
+      },
+      "step_match": 2,
+      "step_module_match": 0,
+      "full_match": 0,
+      "gold_step_module_in_trace": 1
+    }
+  },
+  "gold_modules_outside_candidate_schema": [
+    {
+      "trajectory_id": "Qwen3-8B_011_id_11___chat_b006_t00_e01-5b8f974f",
+      "gold_module": "system"
+    },
+    {
+      "trajectory_id": "GPT-4o_021_alfworld_task_021",
+      "gold_module": "system"
+    },
+    {
+      "trajectory_id": "Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f",
+      "gold_module": "system"
+    },
+    {
+      "trajectory_id": "GPT-4o_003_chat_b000_t00_e02-1e119842",
+      "gold_module": "system"
+    }
+  ],
+  "non_diagnosed_tasks": [
+    {
+      "trajectory_id": "GPT-4o_006_alfworld_task_006",
+      "status": "no_candidate",
+      "stop_reason": "TRACE completed with no candidates; SUBMIT skipped"
+    },
+    {
+      "trajectory_id": "GPT-4o_012_alfworld_task_012",
+      "status": "uncertain",
+      "stop_reason": "The complete 30-step timeline and original modules were assessed at the salient points: steps 1–4, 9–11, 15, 21–25, and 26–30, with targeted source reads including the step-1 inventory plan/action, step-4 and step-24 table examinations, step-25 box plan/take action, step-26 box examination, and step-29/30 plan/action. The unresolved subgoal is locating a credit card and then placing it in the coffee table. The trajectory shows extensive but plausible exploration; drawers/cabinets yielded empty observations or watches, the table held a box/statue, and the box was taken and later reported empty. The quoted examine actions at steps 4 and 26 produced no effect, but step 24 later successfully refreshed the table observation and step 27 successfully examined the box, so those effects have counterevidence/recovery. Taking the box at step 25 differs from the plan's literal 'examine' wording, but taking it is a plausible prerequisite to inspect it, and the subsequent examination occurred. The later table re-examination and move to the sidetable are also plausible search actions, not established faults. Step 28's original observation says the box was normal and empty; its extraction gap is a parser limitation, not evidence of agent error. No concrete decision is sufficiently supported as a cause that blocks the necessary subgoal. Terminal state and possible remaining locations are unknown; no failure and no success can be established. Assessed steps are the listed salient steps; other steps were reviewed in the complete timeline but not all original modules were individually inspected."
+    },
+    {
+      "trajectory_id": "GPT-4o_002_alfworld_task_002",
+      "status": "error",
+      "stop_reason": "direct SUBMIT response rejected: Action formatting/spelling/quoted-vs-bare causes are excluded, even under invalid_action/parameter_error/misalignment. Evaluate semantic choices or use uncertain."
+    },
+    {
+      "trajectory_id": "GPT-4o_021_alfworld_task_021",
+      "status": "no_candidate",
+      "stop_reason": "TRACE completed with no candidates; SUBMIT skipped"
+    },
+    {
+      "trajectory_id": "GPT-4o_012_chat_b000_t00_e11-1cc61441",
+      "status": "no_candidate",
+      "stop_reason": "TRACE completed with no candidates; SUBMIT skipped"
+    },
+    {
+      "trajectory_id": "GPT-4o_005_chat_b000_t00_e04-7e3c13ba",
+      "status": "no_candidate",
+      "stop_reason": "TRACE completed with no candidates; SUBMIT skipped"
+    }
+  ],
+  "production_sources_unchanged": true,
+  "provider_finish_reasons": {
+    "tool_calls": 346,
+    "stop": 89
+  },
+  "provider_errors": [],
+  "candidate_selection_losses": [
+    {
+      "trajectory_id": "GPT-4o_014_chat_b000_t00_e13-c39f2c41",
+      "gold_step": 2,
+      "gold_module": "memory",
+      "predicted_step": 12,
+      "predicted_module": "reflection"
+    }
+  ]
+}

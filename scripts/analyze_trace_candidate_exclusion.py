@@ -78,7 +78,13 @@ def assessment_requests(folder):
 
 
 def visible_sources(source, t, module, request):
-    original = source['steps'][t-1]['parts'][module]
+    # Some corpus labels target system rather than an agent module. Keep those
+    # tasks in evaluation, but do not pretend such a source was retrieved.
+    if type(t) is not int or not 1 <= t <= len(source['steps']):
+        return []
+    original = source['steps'][t-1]['parts'].get(module)
+    if not isinstance(original, str) or not original:
+        return []
     payload, result = request['payload'], request['query_response']
     visible = []
     if payload['source']['step'] == t and payload['source']['modules'].get(module):

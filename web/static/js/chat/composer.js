@@ -29,10 +29,9 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
       <div class="composer-box">
         <div class="composer-pane" data-pane="benchmark">
           <div class="picker">
-            <input id="cp-search" class="input" type="search" autocomplete="off" placeholder="Search benchmark trajectories by id, task or model…" aria-label="Benchmark trajectory" aria-expanded="false" aria-controls="cp-options">
+            <input id="cp-search" class="input" type="search" autocomplete="off" placeholder="Search benchmark trajectories by id, model or type…" aria-label="Benchmark trajectory" aria-expanded="false" aria-controls="cp-options">
             <ul id="cp-options" class="picker-options" role="listbox" hidden></ul>
           </div>
-          <div class="composer-row" id="cp-selected"></div>
         </div>
         <div class="composer-pane" data-pane="custom" hidden>
           <textarea id="cp-task" class="input composer-task" rows="3" placeholder="Describe the task the agent should accomplish…"></textarea>
@@ -69,6 +68,7 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
           <button class="composer-run" id="cp-run" aria-label="Run" title="Run"></button>
         </div>
       </div>
+      <div class="composer-row composer-picked" id="cp-selected"></div>
     </div>`;
   const $ = id => root.querySelector("#" + id);
 
@@ -76,7 +76,7 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
   const cases = () => state.catalog?.cases || [];
   function matches() {
     const q = state.query.toLowerCase();
-    return cases().filter(c => !q || `${c.trajectory_id} ${c.task} ${c.llm_model} ${c.task_type}`.toLowerCase().includes(q));
+    return cases().filter(c => !q || `${c.trajectory_id} ${c.llm_model} ${c.task_type}`.toLowerCase().includes(q));
   }
 
   function renderOptions() {
@@ -90,8 +90,7 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
     state.cursor = Math.min(state.cursor, Math.max(0, found.length - 1));
     list.innerHTML = found.slice(0, MAX_OPTIONS).map((c, i) => `<li role="option" class="picker-option ${i === state.cursor ? "is-cursor" : ""} ${c.supported ? "" : "is-disabled"}"
         data-tid="${esc(c.trajectory_id)}" aria-selected="${state.selected?.trajectory_id === c.trajectory_id}" aria-disabled="${!c.supported}">
-        <span class="picker-top"><span class="mono">${esc(c.trajectory_id)}</span><span class="badge">${esc(c.task_type)}</span>${c.supported ? "" : '<span class="badge warn">unsupported</span>'}<span class="picker-steps">${esc(c.num_steps)} steps</span></span>
-        ${c.task ? `<span class="picker-task">${esc(short(c.task, 140))}</span>` : ""}</li>`).join("")
+        <span class="picker-top"><span class="mono">${esc(c.trajectory_id)}</span><span class="badge">${esc(c.task_type)}</span>${c.supported ? "" : '<span class="badge warn">unsupported</span>'}<span class="picker-steps">${esc(c.num_steps)} steps</span></span></li>`).join("")
       + (found.length > MAX_OPTIONS ? `<li class="picker-note">${found.length - MAX_OPTIONS} more — refine the search</li>` : "")
       || `<li class="picker-note">No trajectory matches.</li>`;
     list.querySelector(".is-cursor")?.scrollIntoView({block: "nearest"});
@@ -134,8 +133,7 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
       b.setAttribute("aria-checked", String(b.dataset.val === current));
     });
     const c = state.selected;
-    $("cp-selected").innerHTML = c ? `<span class="picked"><span class="mono">${esc(c.trajectory_id)}</span><span class="badge">${esc(c.task_type)}</span><span class="badge">${esc(c.llm_model)}</span>
-        ${c.task ? `<span class="picked-task">“${esc(short(c.task, 120))}”</span>` : ""}</span>`
+    $("cp-selected").innerHTML = c ? `<span class="picked"><span class="mono">${esc(c.trajectory_id)}</span><span class="badge">${esc(c.task_type)}</span><span class="badge">${esc(c.llm_model)}</span></span>`
       : `<span class="muted">No trajectory selected — ${state.catalog ? `${cases().filter(x => x.supported).length} of ${cases().length} are supported (ALFWorld, WebShop)` : "loading catalog…"}.</span>`;
     const sources = replaySources();
     if (!sources.some(s => s.group === state.source)) state.source = sources[0]?.group || "";

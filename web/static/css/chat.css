@@ -121,6 +121,7 @@
 .composer-box .input:focus { border-color: transparent; }
 .composer-box .menu .input { border-color: var(--line-strong); background: var(--surface-1); }
 .composer-box .menu .input:focus { border-color: var(--accent); }
+.composer-picked { margin-top: .5rem; justify-content: center; }
 .composer-row { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .7rem; min-width: 0; padding: 0 .7rem; }
 .composer-task { width: 100%; resize: vertical; min-height: 4.5rem; line-height: 1.5; }
 .composer-note { padding: 0 .7rem; font-size: .82rem; }
@@ -158,7 +159,6 @@
 .composer-run.is-stop { background: var(--bad-bg); border-color: var(--bad-line); color: var(--bad-ink); }
 .composer-run.is-stop:hover { background: var(--bad-hover); }
 .picked { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; min-width: 0; font-size: .88rem; }
-.picked-task { color: var(--muted); font-style: italic; }
 
 .picker { position: relative; }
 .picker .input { width: 100%; }
@@ -169,7 +169,6 @@
 .picker-option.is-disabled { opacity: .45; cursor: not-allowed; }
 .picker-top { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; font-size: .84rem; }
 .picker-steps { margin-left: auto; color: var(--faint); font-size: .75rem; font-family: var(--mono); }
-.picker-task { color: var(--muted); font-size: .8rem; }
 .picker-note { padding: .6rem; color: var(--faint); font-size: .84rem; }
 
 /* New conversation: welcome heading and composer sit in the middle of the pane */

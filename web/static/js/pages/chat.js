@@ -145,7 +145,7 @@ export function mountChat(root, route) {
   function renderWelcome() {
     $("chat-stream").innerHTML = `<div class="chat-welcome">
       <div class="eyebrow">ProDebugger chat</div>
-      <h2>Pick a benchmark trajectory and watch the debugger work.</h2>
+      <h2>Watch the debugger work.</h2>
     </div>`;
   }
 

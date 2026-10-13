@@ -189,6 +189,8 @@ stages (the full diagram is `web/static/img/methodology.png`), use cases, and th
 case views for `GPT-4o_018` from
 `artifacts/dsl_debugger/dsl-route-causal-timeline-high-unlimited-alf18-20261007-live`
 embedded read-only (a placeholder appears when that run is absent).
+Its hero rotates screenshots in `web/static/img/shots/`; refresh them after UI changes with
+`python web/capture_shots.py` (headless Chrome or Edge plus Pillow, server running).
 The Runs page (`#/runs`) lists every run under `artifacts/dsl_debugger/` and every compiled session
 under `prodebugger/sessions/`. A run that is still being written is marked LIVE and
 followed as it grows (JSON files refetched on change, JSONL logs read from their last

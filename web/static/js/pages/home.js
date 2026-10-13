@@ -5,7 +5,32 @@ import {caseHref} from "../routes.js";
 // The showcase case: a fully correct reference run kept under artifacts/.
 export const DEMO_REF = ["runs", "dsl-route-causal-timeline-high-unlimited-alf18-20261007-live", "GPT-4o_018_alfworld_task_018"];
 
-const ARROW = '<svg class="h-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const icon = paths => `<svg class="h-icon" viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+const ARROW = icon('<path d="M5 12h14M13 6l6 6-6 6"/>');
+
+const PAINS = [
+  ["Hundreds of steps to read", "A single run mixes observations, memory, plans and actions; the decisive moment is buried."],
+  ["Symptoms show up late", "The failing step is rarely the faulty one. The real mistake happened several steps earlier."],
+  ["Verdicts without evidence", "A model saying “step 7 was wrong” is hard to trust when you cannot check why."],
+];
+
+const CAPABILITIES = [
+  ["Root cause, not symptoms", '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+   "Pinpoints the decisive step, the module that went wrong — memory, reflection, plan or action — and the fault type, not just where things broke."],
+  ["Evidence you can verify", '<path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="m9 12 2 2 4-4"/>',
+   "Every finding quotes the original trajectory and links to compiled facts. When the evidence is not enough, it answers “uncertain” instead of guessing."],
+  ["Watch it think, live", '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+   "Follow each stage and every window review as the run writes it, or replay a finished diagnosis step by step."],
+  ["See the structure", '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="8" cy="18" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.3 7 15.6 7M7 8.4l.7 7.1M10.4 17.8l5.1-.6M17.9 9.5l.1 5"/>',
+   "Trajectories compile into fact, entity and goal graphs, shown side by side with the debugger's own decisions."],
+];
+
+const STAGES = [
+  ["map", "MAP", "Map the goal", "Reads the task requirements into one authoritative goal map, so every later judgement uses the same yardstick.", "Goal map"],
+  ["route", "ROUTE", "Route to suspects", "Scans the full action–feedback timeline with compiled facts and their provenance, and picks the few windows worth a closer look.", "Review windows"],
+  ["trace", "TRACE", "Trace the evidence", "Reviews each window independently across memory, reflection, plan and action, quoting the exact source text for every candidate.", "Validated candidates"],
+  ["submit", "SUBMIT", "Submit the verdict", "Compares all candidates against the full history and returns one root cause with step, module, fault type and fix — or abstains.", "Root cause or uncertain"],
+];
 
 // Decorative: a trajectory that fails at the end, traced back to the step that caused it.
 function heroArt() {
@@ -59,6 +84,39 @@ export function mountHome(root) {
         <div class="hero-visual">${heroArt()}</div>
       </section>
 
+      <section class="home-section" id="capabilities">
+        <div class="section-head">
+          <div class="h-eyebrow">The problem</div>
+          <h2 class="section-title">Agent failures surface far from their cause.</h2>
+          <p class="section-lede">When an agent fails at the last step, the decision that doomed it usually happened much earlier. Finding it by hand is slow, and an unexplained verdict is hard to act on.</p>
+        </div>
+        <div class="pain-row">
+          ${PAINS.map(([title, text]) => `<div class="pain"><h3>${title}</h3><p>${text}</p></div>`).join("")}
+        </div>
+        <h3 class="solution-title"><span class="h-eyebrow">The solution</span>ProDebugger turns a failed run into a verified diagnosis.</h3>
+        <div class="cap-grid">
+          ${CAPABILITIES.map(([title, paths, text]) => `<article class="cap-card">
+            <span class="cap-icon">${icon(paths)}</span><h3>${title}</h3><p>${text}</p></article>`).join("")}
+        </div>
+      </section>
+
+      <section class="home-section alt" id="how">
+        <div class="section-head">
+          <div class="h-eyebrow">How it works</div>
+          <h2 class="section-title">Four stages, one verified verdict.</h2>
+          <p class="section-lede">Each stage runs in its own isolated model context and hands a structured result to the next, so every conclusion can be traced back to the source.</p>
+        </div>
+        <ol class="stage-row">
+          ${STAGES.map(([id, name, title, text, output], i) => `<li class="stage stage-${id}">
+            <div class="stage-top"><span class="stage-num">0${i + 1}</span><span class="stage-name">${name}</span></div>
+            <h3>${title}</h3><p>${text}</p>
+            <div class="stage-out"><span>Output</span>${output}</div></li>`).join("")}
+        </ol>
+        <div class="how-more">
+          <button type="button" class="h-btn" data-open-diagram>${icon('<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>')}View the technical diagram</button>
+        </div>
+      </section>
+
       <footer class="home-footer">
         <span class="home-brand"><span class="home-mark" aria-hidden="true">[/]</span><span><strong>PRO</strong>DEBUGGER</span></span>
         <nav aria-label="Footer">
@@ -66,11 +124,21 @@ export function mountHome(root) {
         </nav>
         <span class="home-note">Internal preview</span>
       </footer>
+
+      <dialog class="diagram-dialog" aria-label="Technical diagram">
+        <div class="diagram-bar"><strong>MAP → ROUTE → TRACE → SUBMIT · technical diagram</strong>
+          <button type="button" class="h-btn small" data-close-diagram>Close</button></div>
+        <img src="./img/methodology.png" alt="Pipeline from raw trajectory and canonical DSL compilation through MAP, ROUTE, TRACE and SUBMIT, with validation loops and post-run evaluation" decoding="async">
+      </dialog>
     </div>`;
 
+  const dialog = root.querySelector(".diagram-dialog");
   const onClick = event => {
     const target = event.target.closest("[data-scroll]");
     if (target) root.querySelector("#" + target.dataset.scroll)?.scrollIntoView({behavior: "smooth", block: "start"});
+    if (event.target.closest("[data-open-diagram]")) dialog.showModal();
+    // A click on the backdrop lands on the dialog element itself.
+    if (event.target.closest("[data-close-diagram]") || event.target === dialog) dialog.close();
   };
   root.addEventListener("click", onClick);
   window.scrollTo(0, 0);

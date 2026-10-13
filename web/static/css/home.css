@@ -171,5 +171,8 @@ body.page-home .app { padding: 0; }
 @media (max-width: 900px) {
   .home-hero, .case-grid { grid-template-columns: 1fr; }
   .pain-row { grid-template-columns: 1fr; gap: 1.25rem; }
+  .demo-bar { flex-wrap: wrap; row-gap: .4rem; }
+  .demo-dots, .demo-caption { display: none; }
+  .demo-open { margin-left: auto; }
   .home-nav { display: none; }
 }

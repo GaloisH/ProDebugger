@@ -4,12 +4,8 @@ Standalone migration of the DSL debugger experiment (`experiments/dsl` in the or
 OmniDebugger intern repository). The backend audits task/observation parsing and uses evidence-driven SQL retrieval in TRACE. SUBMIT retains its input schema and must select one supplied candidate.
 
 See [README_EVOLUTION.md](README_EVOLUTION.md) for the changes from the initial
-repository to the current backend, and [results/summary/](results/summary/) for
-published experiment summaries and links to their complete trajectory archives.
-
-The same 30-task result directory also includes [six manually authored, source-grounded
-diagnostic demonstrations](results/traces/evidence-query-claims-n30-20261013/constructed/README.md),
-with real offline SQL results and complete stage handoffs. These examples are not measured model results.
+repository to the current backend. Experiment results and trajectory archives are kept
+outside this repository.
 
 ```text
 ProDebugger/
@@ -104,8 +100,7 @@ Branches select only relevant fields; source and Fact rows need no NULL padding.
 Compact queries return sparse rows that omit NULL keys while preserving 0/false/empty
 strings. Source alignment reads available fields and requires unambiguous provenance;
 missing attributes remain unknown. Existing scalar SQL and TRACE candidate schemas
-remain compatible. See the [30-task SQL conversion and prompt review](results/summary/evidence-query-claims-n30-20261013/sql_simplification.md)
-for all 35 converted queries, six authored examples and offline equivalence checks.
+remain compatible.
 
 TRACE is instructed to include concise English `--` comments in its SQL explaining
 the query's purpose, retrieval branches and meaningful filters/bounds. Annotated SQL
@@ -116,8 +111,7 @@ The SQL engine searches the full trajectory, including steps before a ROUTE anch
 optional function bounds narrow an element search, never create a fixed window.
 Prompts guide source-claim verification across memory/reflection/actions/observations
 and include four executable examples from other archived trajectories, without
-benchmark answers. Validate the exact prompt SQL offline with
-`python -B scripts/validate_query_examples.py --corpus artifacts/analysis/corpus-parsing-fixed-20261013`.
+benchmark answers.
 ROUTE preserves every result in the latest tool batch in full, retains marked source
 previews for older large results, and references duplicate results. Three consecutive
 rounds without new successful evidence restrict the next turn to routing or finishing
@@ -389,11 +383,7 @@ Facts and add no semantic or intention parsing.
 
 ## Audited parsing and concurrent runs
 
-Scan every input task/observation (no answer columns); unsupported GAIA raw messages
-are counted separately because they include repeated history/instructions:
-
 ```bash
-.venv/bin/python -B scripts/scan_parse_triggers.py
 .venv/bin/python -B -m unittest discover -s checks -v
 .venv/bin/python -B -m prodebugger.run_experiment --sample-file artifacts/analysis/sample10.json --workers 10 --model openai/gpt-6-luna-pro --base-url https://openrouter.ai/api/v1 --api-key-env OPENROUTER_API_KEY --env-file .env
 ```

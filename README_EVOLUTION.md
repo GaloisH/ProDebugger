@@ -142,8 +142,7 @@ SUBMIT 从已有候选中选择一个具体结果，不能输出 uncertain，也
 
 运行入口仍是 `prodebugger.run_experiment`，线程数由 `--workers` 控制。每个任务记录原始输入、编译记录、解析审核、阶段事件、manager 计划、SQL 与返回结果、TRACE 候选、SUBMIT 输入/响应、实际模型请求/返回消息、用量和最终结果。日志记录供应商实际提供的消息，不宣称包含未返回的内部推理。
 
-- [本轮汇总目录](results/summary/evidence-query-claims-n30-20261013/)：抽样、启动配置、独立评估、查询/协议/解析审计、逐任务表和归档清单。
-- [完整轨迹归档目录](results/traces/evidence-query-claims-n30-20261013/)：按任务打包的完整日志，避免将重复的大型请求文件铺满仓库。
+- 本轮汇总与完整轨迹归档不随仓库提交，单独保存。
 - `artifacts/dsl_debugger/evidence-query-claims-n30-20261013/`：本地运行原始目录。
 
 每个归档使用 SHA-256 校验；解包办法和结果指标以汇总目录中的 README 为准。失败任务保留在 30 个任务的分母内，不通过仅重跑失败任务改善表面成绩。ground truth 只用于运行结束后的离线评估，不进入模型上下文或解析规则。
@@ -158,9 +157,7 @@ SUBMIT 从已有候选中选择一个具体结果，不能输出 uncertain，也
 
 查询和交接实际运行现有离线工具及校验器，保留英文 SQL 注释、精确原文与偏移、解析缺口、同一步模块比较和后续恢复证据。每条使用一个 investigator；单 worker 的根因角色字段按原协议从 SUBMIT 隐藏。没有新增模型调用，也没有修改真实评测结果。
 
-- [六条示范汇总](results/summary/evidence-query-claims-n30-20261013/constructed_summary.md)
-- [完整逐阶段轨迹](results/traces/evidence-query-claims-n30-20261013/constructed/README.md)
-- [可重复生成脚本](scripts/construct_trace_examples.py)：从已提交归档读取并校验输入，拒绝覆盖已有输出；仅结构校验通过不等于因果判断已获独立真值认证。
+示范轨迹、汇总与生成脚本不随仓库提交，单独保存。
 
 ## 9. SQL v6：批量检索、可选字段与提示词整理
 
@@ -169,9 +166,6 @@ SUBMIT 从已有候选中选择一个具体结果，不能输出 uncertain，也
 为全部 30 个任务生成简化查询视图：29 个任务的 35 条 SQL 全部转换，另一个任务原本没有 SQL。5900 行返回、顺序、列名、Fact/step 与来源片段逐项一致；字符减少 22.91%，投影字段项从 3932 降至 1653，NULL 占位全部消除。6 条人工示范也提供简化版本。原始模型请求、压缩归档和成绩保持不变，没有新的模型调用。
 
 检查 MAP、ROUTE、manager、TRACE、SUBMIT、task/observation parser 与 statement parser，清理旧窗口/旧实验描述、重复规则与跨阶段矛盾。修正查询纠错路径、refuted 条件解释、解析截断恢复说明及 source_id 输出歧义。保留真实例子、向前追根因、解析假阳性检查和 SUBMIT 强制选择。111 项本地回归与 4 条真实 SQL 例子通过，未进行 API 效果测试。
-
-- [SQL 简化与全部转换结果](results/summary/evidence-query-claims-n30-20261013/sql_simplification.md)
-- [逐角色提示词审查](results/summary/evidence-query-claims-n30-20261013/prompt_cleanup.md)
 
 ## 验证与边界
 

@@ -9,6 +9,19 @@ async function request(url) {
 
 export const getIndex = async () => (await request("/api/index")).json();
 export const listFiles = async ref => (await request(`/api/files/${enc(ref)}`)).json();
+export const getCatalog = async () => (await request("/api/catalog")).json();
+export const getLaunch = async () => (await request("/api/launch")).json();
+export const getReference = async tid => (await request(`/api/reference/${encodeURIComponent(tid)}`)).json();
+
+// Launcher writes; errors carry the server's message.
+async function post(url, body) {
+  const response = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const value = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(value.error || `${response.status} ${response.statusText}`);
+  return value;
+}
+export const launchRun = spec => post("/api/launch", spec);
+export const stopRun = () => post("/api/launch/stop", {});
 
 export async function getJSON(ref, name, fallback) {
   try {

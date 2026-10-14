@@ -20,6 +20,7 @@ prodebugger/sessions/
 # Local-only tests and editor settings
 **/tests/
 .vscode/
+docs/
 
 # Experiment results and analysis scripts are kept outside the repository
 /results/

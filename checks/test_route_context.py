@@ -92,7 +92,7 @@ class RouteContextChecks(unittest.TestCase):
                 agent = DebuggerAgent(bundle, ReplayClient(out / "replay.json", out), out, DEFAULTS)
                 result = agent.run()
                 self.assertEqual(result["status"], "diagnosed" if outcome == "route" else "uncertain")
-                decision = json.loads((out / "requests/00006.json").read_text())
+                decision = json.loads((out / "requests/00006.json").read_text(encoding="utf-8"))
                 self.assertEqual({s["function"]["name"] for s in decision["tools"]}, {"route_cases", "finish"})
                 if outcome == "route":
                     self.assertEqual(result["stop_reason"], "direct TRACE-candidate comparison completed")

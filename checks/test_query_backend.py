@@ -312,7 +312,7 @@ class BackendChecks(unittest.TestCase):
             self.assertEqual(result["root"]["source_trace_status"], "uncertain")
             self.assertEqual(result["stop_reason"], "direct TRACE-candidate comparison completed")
             self.assertEqual(client.cursor, 6)
-            requests = [json.loads(p.read_text()) for p in sorted((out / "requests").glob("*.json"))]
+            requests = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((out / "requests").glob("*.json"))]
             self.assertEqual([r["phase"] for r in requests], ["MAP", "ROUTE", "MANAGER", "TRACE", "TRACE", "SUBMIT"])
             self.assertEqual(requests[-1]["tools"], [])
             self.assertEqual(len(requests[4]["messages"]), 4)

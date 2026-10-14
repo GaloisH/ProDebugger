@@ -181,7 +181,7 @@ ORDER BY step,module
                 agent = DebuggerAgent(self.bundle, ReplayClient(output / "replay.json", output), output, DEFAULTS)
                 self.assertEqual(agent.run()["status"], "no_candidate")
                 self.assertEqual(len(agent.tools.trace_queries), 1)
-                requests = [json.loads(p.read_text()) for p in sorted((output / "requests").glob("*.json"))]
+                requests = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((output / "requests").glob("*.json"))]
                 if committed:
                     # SQL errors are committed query data, not an invitation to
                     # repair the SQL. The next request offers only assessment.
@@ -217,7 +217,7 @@ ORDER BY step,module
                 self.assertEqual(resumed.run()["status"], "diagnosed")
                 self.assertEqual(resumed.client.by_phase["MANAGER"]["replay_calls"], 1)
                 self.assertEqual(resumed.client.cursor, 6)
-                requests = [json.loads(p.read_text()) for p in sorted((output / "requests").glob("*.json"))]
+                requests = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((output / "requests").glob("*.json"))]
                 worker = json.loads(requests[3]["messages"][1]["content"])
                 submitted = json.loads(requests[5]["messages"][-1]["content"])
                 self.assertEqual(worker["manager_assignment"]["agent_id"], "case1")

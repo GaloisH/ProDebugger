@@ -15,6 +15,7 @@
 .phase-count { font-size: .75rem; }
 .phase-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--line-strong); }
 .phase-MAP { --c: var(--map); } .phase-ROUTE { --c: var(--route); } .phase-TRACE { --c: var(--trace); } .phase-SUBMIT { --c: var(--submit); }
+.phase-MANAGER { --c: var(--manager); } .phase-PARSE { --c: var(--parse); }
 .phase-pill.is-done { color: var(--text); border-color: color-mix(in srgb, var(--c) 55%, var(--line)); }
 .phase-pill.is-done .phase-dot { background: var(--c); }
 .phase-pill.is-current { color: var(--text); border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }

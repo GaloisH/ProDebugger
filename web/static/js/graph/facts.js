@@ -245,8 +245,8 @@ export function createSubview(api, createCanvas) {
       const hadModel = state.model;
       state.model = model;
       if (!model.dsl) { api.stage.innerHTML = `<p class="empty">No compiled record yet.</p>`; return; }
-      const events = model.debugger?.events || [];
-      const latest = events.filter(e => e.fids?.length).at(-1);
+      const calls = model.debugger?.calls || [];
+      const latest = calls.filter(c => c.fids?.length).at(-1);
       state.latest = new Set(api.store.live && latest ? latest.fids : []);
       if (!hadModel || first || state.lo == null) {
         const b = bounds();

@@ -61,6 +61,7 @@
   --amber: #f0cf86; --route-hot: #e9854f;
   /* Debugger phases (trace is terracotta so it stays apart from the amber accent) */
   --map: #7fa7d9; --route: #b39ad6; --trace: #e08a62; --submit: #8cc49a;
+  --manager: #d48fb6; --parse: #8d9aa8;
   --sans: 'IBM Plex Sans', 'Segoe UI', 'Microsoft YaHei UI', Arial, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace;
   --radius: .9rem;

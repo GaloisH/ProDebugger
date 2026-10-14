@@ -58,11 +58,14 @@ function callsFrom(rows, {folder = "", journal = new Map(), factsById} = {}) {
 export function buildCalls(raw, factsById) {
   const journal = new Map((raw.tool_calls || []).filter(r => r.event === "committed").map(r => [r.tool_call_id, r]));
   const calls = callsFrom(raw.usage_rows || [], {journal, factsById});
-  // A TRACE call without tool arguments (e.g. a malformed reply) belongs to the case before it.
-  let current = null;
+  // A TRACE call without tool arguments (pending, or a malformed reply) continues the case
+  // before it until that case is assessed; then it opens the next manager assignment.
+  const order = (raw.manager_plan?.assignments || []).map(a => a.agent_id);
+  let current = null, assessed = false;
   calls.forEach(call => {
     if (call.phase !== "TRACE") return;
-    call.caseId ??= current;
+    if (call.caseId == null) call.caseId = current == null || assessed ? order[order.indexOf(current) + 1] ?? current : current;
+    assessed = call.tools.some(t => t.name === "assess" && !t.error);
     current = call.caseId;
   });
   calls.forEach((call, i) => { call.index = i; call.n = i + 1; });

@@ -1,36 +1,29 @@
-// Dual linked lanes: debugger events (top) and original agent steps (bottom).
-// Cards expand in place; curves connect an event to the steps it cites.
+// Debugger process graph (one node per model call) above the original agent steps.
+// Selecting a node opens it in the side panel and links it to the steps it touched.
 import {getJSON} from "../api.js";
-import {PHASES} from "../case/model.js";
 import {EVAL_CLASS, factChip, icon} from "../case/format.js";
 import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js";
-import {debounce, esc, number, pretty, raw, short} from "../util.js";
-
-const KINDS = ["handoff", "model", "tool", "assessment", "answer", "attempt", "inflight"];
+import {esc, pretty, short} from "../util.js";
+import {callDetail, graphHtml, layoutCalls, overviewHtml, requestHtml} from "./process.js";
 
 export function createView(root, ctx) {
   const state = {
-    model: null, openEvent: null, openStep: null, selEvent: null, selStep: null, hoverEvent: null, hoverStep: null,
-    phases: new Set(PHASES), kinds: new Set(KINDS), search: "", linkedOnly: false, follow: true, seen: 0,
-    requests: new Map(),
+    model: null, sel: null, hover: null, openStep: null, selStep: null, hoverStep: null,
+    follow: true, requests: new Map(), layout: null,
   };
   root.innerHTML = `
     <div class="traj-head">
-      <div><div class="eyebrow">Execution path</div><h2 class="traj-title">Debugger trajectory ↔ agent trajectory</h2>
-        <p class="traj-hint" id="tj-hint">Open a card to inspect it. Hover or select a debugger event to trace the steps it cites; select a step to see every event that looked at it.</p></div>
+      <div><div class="eyebrow">Execution path</div><h2 class="traj-title">Debugger process ↔ agent trajectory</h2>
+        <p class="traj-hint" id="tj-hint">Each node is one model call. Select a node to inspect it; select a step to see every call that touched it.</p></div>
       <div class="traj-tools">
-        <input class="input" id="tj-search" type="search" placeholder="Search events…" aria-label="Search debugger events">
-        <button class="btn" id="tj-linked" aria-pressed="false" title="Show only events citing the selected step">Linked to step</button>
-        <button class="btn" id="tj-follow" aria-pressed="true" title="Scroll to new events while the run is live">Follow latest</button>
+        <button class="btn" id="tj-follow" aria-pressed="true" title="Scroll to the newest call while the run is live">Follow latest</button>
       </div>
     </div>
-    <div class="traj-filters" id="tj-filters"></div>
     <div class="lanes" id="tj-lanes">
-      <section class="lane lane-debugger" aria-label="Debugger events">
-        <div class="lane-label"><span class="eyebrow">Debugger</span><span id="tj-dbg-count" class="lane-count"></span><span class="lane-nav"><button class="btn" data-pan="tj-dbg" data-dir="-1" aria-label="Scroll debugger lane left">←</button><button class="btn" data-pan="tj-dbg" data-dir="1" aria-label="Scroll debugger lane right">→</button></span></div>
-        <div class="lane-overview" id="tj-dbg-overview"></div>
-        <div class="lane-scroll" id="tj-dbg" tabindex="0"><div class="lane-track" id="tj-dbg-track"></div></div>
-      </section>
+      <div class="proc" id="tj-proc">
+        <section class="proc-graph" aria-label="Debugger model calls"><div class="proc-scroll" id="tj-graph" tabindex="0"></div></section>
+        <aside class="proc-side" id="tj-side" aria-label="Selected call"></aside>
+      </div>
       <div class="lane-gap" aria-hidden="true"></div>
       <section class="lane lane-steps" aria-label="Agent steps">
         <div class="lane-label"><span class="eyebrow">Agent</span><span id="tj-step-count" class="lane-count"></span><span class="lane-nav"><button class="btn" data-pan="tj-steps" data-dir="-1" aria-label="Scroll agent lane left">←</button><button class="btn" data-pan="tj-steps" data-dir="1" aria-label="Scroll agent lane right">→</button></span></div>
@@ -40,118 +33,43 @@ export function createView(root, ctx) {
       <svg class="lane-links" id="tj-links" aria-hidden="true"></svg>
     </div>`;
   const $ = id => root.querySelector("#" + id);
-  const dbg = $("tj-dbg"), steps = $("tj-steps"), lanes = $("tj-lanes");
+  const graph = $("tj-graph"), side = $("tj-side"), steps = $("tj-steps"), lanes = $("tj-lanes");
 
   // ---------- derived lookups ----------
   function stepIndex(model) {
     const facts = new Map(), evals = new Map(), refs = new Map();
     model.dsl?.facts.forEach(f => { if (!facts.has(f.t)) facts.set(f.t, []); facts.get(f.t).push(f); });
     model.evaluations.forEach(e => { if (!evals.has(e.t)) evals.set(e.t, []); evals.get(e.t).push(e); });
-    model.debugger?.events.forEach(e => e.steps.forEach(t => { if (!refs.has(t)) refs.set(t, []); refs.get(t).push(e.index); }));
+    model.debugger?.calls.forEach(c => c.steps.forEach(t => { if (!refs.has(t)) refs.set(t, []); refs.get(t).push(c.index); }));
     return {facts, evals, refs, maxRefs: Math.max(1, ...[...refs.values()].map(v => v.length))};
   }
 
-  function visibleEvents() {
-    const d = state.model?.debugger;
-    if (!d) return [];
-    const q = state.search.toLowerCase();
-    return d.events.filter(e => state.phases.has(e.phase) && state.kinds.has(e.kind) &&
-      (!state.linkedOnly || state.selStep == null || e.steps.includes(state.selStep)) &&
-      (!q || `${e.title} ${e.subtitle} ${e.kind}`.toLowerCase().includes(q) || (q.length > 2 && pretty(e.data).toLowerCase().includes(q))));
-  }
+  const callOf = key => key === "parse" ? "parse" : state.model?.debugger?.calls[Number(key)];
 
-  // ---------- debugger lane ----------
-  function eventDetail(e) {
-    const steps = e.steps.length ? `<div class="detail-block"><h4>Cited steps</h4><div class="chip-row">${e.steps.map(t => `<button class="step-chip" data-goto-step="${t}">S${String(t).padStart(2, "0")}</button>`).join("")}</div></div>` : "";
-    const facts = e.fids?.length ? `<div class="detail-block tone-violet"><h4>Cited facts · ${e.fids.length}</h4><div class="chip-col">${e.fids.slice(0, 40).map(fid => factChip(state.model.dsl.factsById.get(fid))).join("")}${e.fids.length > 40 ? `<span class="muted">+${e.fids.length - 40} more</span>` : ""}</div></div>` : "";
-    let body = "";
-    if (e.kind === "handoff") {
-      const h = e.data;
-      body = `<div class="detail-block tone-info"><h4>${esc(h.from || "START")} → ${esc(h.to)}</h4><dl class="kv">${Object.entries(h).filter(([k]) => !["schema", "from", "to"].includes(k)).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(typeof v === "object" ? short(JSON.stringify(v), 220) : v)}</dd>`).join("")}</dl></div>
-        <details class="detail-block"><summary>Full handoff</summary>${raw(h)}</details>`;
-    } else if (e.kind === "model") {
-      const m = e.data, u = e.usage || {};
-      const calls = (m.tool_calls || []).map(c => {
-        let args = c.function?.arguments;
-        try { args = JSON.parse(args); } catch { /* keep text */ }
-        return `<div class="call"><span class="mono call-name">${esc(c.function?.name)}</span>${raw(args)}</div>`;
-      }).join("");
-      body = `${m.reasoning_content ? `<details class="detail-block tone-violet" open><summary>Reasoning</summary><div class="text-box">${esc(m.reasoning_content)}</div></details>` : ""}
-        ${m.content ? `<div class="detail-block tone-info"><h4>Response</h4><div class="text-box">${esc(m.content)}</div></div>` : ""}
-        ${calls ? `<div class="detail-block"><h4>Tool calls · ${(m.tool_calls || []).length}</h4>${calls}</div>` : ""}
-        <div class="detail-block"><h4>Usage</h4><dl class="kv"><dt>model</dt><dd>${esc(u.response_model || u.requested_model || "—")}</dd><dt>input</dt><dd>${number(u.input_tokens)}</dd><dt>output</dt><dd>${number(u.output_tokens)}</dd><dt>time</dt><dd>${esc(u.timestamp_utc || "—")}</dd></dl>
-        ${u.request_file ? `<button class="btn" data-request="${esc(u.request_file)}">Load full request</button><div class="request-box" data-request-box="${esc(u.request_file)}">${requestHtml(u.request_file)}</div>` : ""}</div>`;
-    } else if (e.kind === "tool") {
-      const c = e.data, result = c.result?.data ?? c.result;
-      body = `<div class="detail-block tone-info"><h4>Arguments</h4>${raw(c.arguments)}</div>
-        <div class="detail-block tone-teal"><h4>Result</h4>${typeof result === "string" ? `<div class="text-box">${esc(result)}</div>` : raw(result)}</div>`;
-    } else if (e.kind === "assessment") {
-      const w = e.data;
-      body = `<div class="detail-block tone-info"><h4>Window ${esc(w.window_id)}</h4><dl class="kv">${Object.entries(w.window || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</dd>`).join("")}</dl></div>
-        ${(w.candidates || []).map(c => `<div class="detail-block candidate tone-${c.status === "error" ? "bad" : "warn"}">
-          <h4><span class="badge ${c.status === "error" ? "bad" : "warn"}">${esc(c.status)}</span> <button class="step-chip" data-goto-step="${c.step}">S${String(c.step).padStart(2, "0")}</button> ${esc(c.module || "")} · <span class="mono">${esc(c.fault_class || "")}</span></h4>
-          ${c.output_quote ? `<blockquote>${esc(c.output_quote)}</blockquote>` : ""}<p>${esc(c.proposition || "")}</p>
-          <details><summary>Reasoning & evidence</summary>${raw(c)}</details></div>`).join("")}
-        ${w.conclusion ? `<details class="detail-block"><summary>Window conclusion</summary>${raw(w.conclusion)}</details>` : ""}`;
-    } else if (e.kind === "answer") {
-      const r = e.data.result || {};
-      body = `<div class="detail-block tone-${r.accepted ? "ok" : "warn"}"><h4>${esc(r.status || "answer")}</h4><p>${esc(r.reasoning || r.stop_reason || "")}</p></div>
-        <details class="detail-block"><summary>Raw answer</summary>${raw(e.data.raw_answer)}</details>`;
-    } else {
-      body = raw(e.data);
-    }
-    return `<div class="card-detail">${body}${steps}${facts}</div>`;
-  }
-
-  function requestHtml(file) {
-    const r = state.requests.get(file);
-    if (!r) return "";
-    if (r === "loading") return `<p class="muted">Loading…</p>`;
-    if (r.error) return `<p class="error-box">${esc(r.error)}</p>`;
-    const messages = r.messages || [];
-    return `<p class="muted">${messages.length} messages · ${esc(r.requested_model || "")}</p>${messages.map((m, i) =>
-      `<details><summary>#${i + 1} ${esc(m.role)}${m.tool_call_id ? ` · ${esc(m.tool_call_id)}` : ""}</summary>${raw(m.content ?? m)}</details>`).join("")}`;
-  }
-
-  function eventCard(e, isNew) {
-    const open = state.openEvent === e.index;
-    const cls = ["ev-card", `kind-${e.kind}`, `phase-${e.phase}`, open && "is-open", state.selEvent === e.index && "is-selected",
-                 e.status === "error" && "is-error", isNew && "is-new"].filter(Boolean).join(" ");
-    const steps = e.steps.length ? `<span class="ev-steps">→ ${e.steps.slice(0, 4).map(t => `S${t}`).join(" ")}${e.steps.length > 4 ? ` +${e.steps.length - 4}` : ""}</span>` : "";
-    return `<article class="${cls}" data-ev="${e.index}">
-      <div class="card-meta">
-        <div class="card-top"><span class="mono card-idx">#${String(e.index + 1).padStart(3, "0")}</span><button class="card-toggle" data-toggle-ev="${e.index}" aria-expanded="${open}" aria-label="${open ? "Collapse" : "Expand"} event">${open ? "−" : "+"}</button></div>
-        <span class="card-icon">${icon(e.kind)}</span>
-        <h3 class="card-title">${esc(e.title)}</h3>
-        <p class="card-sub mono">${esc(short(e.subtitle, open ? 200 : 48))}</p>
-        <div class="card-foot">${e.status === "error" ? '<span class="badge bad">error</span>' : ""}${e.kind === "inflight" ? '<span class="badge live"><span class="live-dot"></span>waiting</span>' : ""}${steps}</div>
-      </div>
-      ${open ? eventDetail(e) : ""}
-    </article>`;
-  }
-
-  function renderDebugger() {
+  // ---------- process graph ----------
+  function renderGraph() {
     const d = state.model.debugger;
-    // Compiled sessions have no debugger run: show the agent lane alone.
-    root.querySelector(".lane-debugger").hidden = !d;
+    $("tj-proc").hidden = !d;
     root.querySelector(".lane-gap").hidden = !d;
     root.querySelector(".traj-tools").hidden = !d;
     if (!d) {
       $("tj-hint").textContent = "Compiled session: no debugger run yet. Open a step to inspect its roles, facts and rule evaluations.";
       return;
     }
-    const list = visibleEvents();
-    const groups = [];
-    list.forEach(e => {
-      const g = groups[groups.length - 1];
-      if (g && g.phase === e.phase) g.items.push(e); else groups.push({phase: e.phase, items: [e]});
-    });
-    const seen = state.seen;
-    $("tj-dbg-track").innerHTML = groups.map(g => `<div class="phase-group phase-${g.phase}"><div class="phase-label"><span class="phase-dot"></span>${esc(g.phase)}<span class="muted">${g.items.length}</span></div><div class="phase-cards">${g.items.map(e => eventCard(e, seen && e.index >= seen)).join("")}</div></div>`).join("")
-      || `<p class="empty lane-empty">No events match the filters.</p>`;
-    state.seen = d.events.length;
-    $("tj-dbg-count").textContent = `${list.length} / ${d.events.length} events`;
-    $("tj-dbg-overview").innerHTML = d.events.map(e => `<button class="tick phase-${e.phase} ${list.includes(e) ? "" : "is-dim"} ${e.status === "error" ? "is-error" : ""}" data-jump-ev="${e.index}" title="#${e.index + 1} ${esc(e.title)}"></button>`).join("");
+    state.layout = layoutCalls(d.calls, d.parse);
+    graph.innerHTML = d.calls.length || d.parse ? graphHtml(state.layout, state.sel)
+      : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
+  }
+
+  function renderSide() {
+    const d = state.model.debugger;
+    if (!d) return;
+    const call = state.sel == null ? null : callOf(state.sel);
+    const top = side.scrollTop;
+    side.innerHTML = call ? callDetail(call, {parse: d.parse, requests: state.requests, factsById: state.model.dsl?.factsById, model: state.model})
+      : overviewHtml(d);
+    side.scrollTop = call && state.sideKey === state.sel ? top : 0;
+    state.sideKey = state.sel;
   }
 
   // ---------- step lane ----------
@@ -204,7 +122,7 @@ export function createView(root, ctx) {
         <h3 class="card-title" title="${esc(label)}">${esc(short(label, open ? 120 : 34))}</h3>
         <p class="card-sub">${esc(short(typeof thought === "string" ? thought.split("\n").filter(Boolean).at(-1) : "", open ? 160 : 60))}</p>
         <div class="card-foot">${violated ? `<span class="badge warn">⚠ ${violated} violated</span>` : ""}<span class="badge">${(idx.facts.get(t) || []).length} facts</span></div>
-        ${state.model.debugger ? `<div class="heat" title="${refs} debugger events cite this step"><span style="width:${Math.round(100 * refs / idx.maxRefs)}%"></span></div>` : ""}
+        ${state.model.debugger ? `<div class="heat" title="${refs} model calls touched this step"><span style="width:${Math.round(100 * refs / idx.maxRefs)}%"></span></div>` : ""}
       </div>
       ${open ? stepDetail(step, roles, idx) : ""}
     </article>`;
@@ -223,19 +141,12 @@ export function createView(root, ctx) {
     }).join("");
   }
 
-  function renderFilters() {
-    const d = state.model.debugger;
-    if (!d) { $("tj-filters").innerHTML = ""; return; }
-    const kindsPresent = KINDS.filter(k => d.events.some(e => e.kind === k));
-    $("tj-filters").innerHTML = `<div class="segmented">${PHASES.map(p => `<button class="btn phase-btn phase-${p}" data-phase="${p}" aria-pressed="${state.phases.has(p)}"><span class="phase-dot"></span>${p}</button>`).join("")}</div>
-      <div class="segmented">${kindsPresent.map(k => `<button class="btn" data-kind="${k}" aria-pressed="${state.kinds.has(k)}">${icon(k)}${k}</button>`).join("")}</div>`;
-  }
-
-  // ---------- links between lanes ----------
+  // ---------- links between graph and steps ----------
   function cardRect(el, scroller, base) {
     const r = el.getBoundingClientRect(), s = scroller.getBoundingClientRect();
     const cx = Math.min(Math.max(r.left + r.width / 2, s.left + 8), s.right - 8);
-    return {x: cx - base.left, top: r.top - base.top, bottom: r.bottom - base.top, off: r.right < s.left || r.left > s.right};
+    const off = r.right < s.left || r.left > s.right || r.bottom < s.top || r.top > s.bottom;
+    return {x: cx - base.left, top: r.top - base.top, bottom: Math.min(r.bottom, s.bottom) - base.top, off};
   }
 
   function drawLinks() {
@@ -246,18 +157,19 @@ export function createView(root, ctx) {
     const d = state.model?.debugger;
     if (!d) { svg.innerHTML = ""; return; }
     const pairs = [];
-    const evIdx = state.hoverEvent ?? (state.hoverStep == null ? state.selEvent : null);
-    const stepT = evIdx == null ? (state.hoverStep ?? state.selStep) : null;
-    if (evIdx != null) d.events[evIdx]?.steps.forEach(t => pairs.push([evIdx, t]));
+    const key = state.hover ?? (state.hoverStep == null ? state.sel : null);
+    const stepT = key == null ? (state.hoverStep ?? state.selStep) : null;
+    const call = key == null ? null : callOf(key);
+    if (call && call !== "parse") call.steps.forEach(t => pairs.push([call.index, t]));
     else if (stepT != null) (state.idx.refs.get(stepT) || []).forEach(i => pairs.push([i, stepT]));
-    const transient = state.hoverEvent != null || state.hoverStep != null;
+    const transient = state.hover != null || state.hoverStep != null;
     svg.innerHTML = pairs.slice(0, 80).map(([i, t]) => {
-      const ev = dbg.querySelector(`[data-ev="${i}"]`), st = steps.querySelector(`[data-step="${t}"]`);
-      if (!ev || !st) return "";
-      ev.classList.add("is-linked"); st.classList.add("is-linked");
-      const a = cardRect(ev, dbg, base), b = cardRect(st, steps, base);
+      const node = graph.querySelector(`[data-call="${i}"]`), st = steps.querySelector(`[data-step="${t}"]`);
+      if (!node || !st) return "";
+      node.classList.add("is-linked"); st.classList.add("is-linked");
+      const a = cardRect(node, graph, base), b = cardRect(st, steps, base);
       const y1 = a.bottom, y2 = b.top, mid = (y1 + y2) / 2;
-      const phase = d.events[i].phase;
+      const phase = d.calls[i].phase;
       return `<path class="link phase-${phase} ${a.off || b.off ? "is-off" : ""} ${transient ? "is-preview" : ""}" d="M${a.x},${y1} C${a.x},${mid} ${b.x},${mid} ${b.x},${y2}"/><circle class="link-end phase-${phase}" cx="${b.x}" cy="${y2}" r="3.5"/>`;
     }).join("");
   }
@@ -267,29 +179,50 @@ export function createView(root, ctx) {
   // ---------- render & events ----------
   function render() {
     if (!state.model) return;
-    const keep = {dbg: dbg.scrollLeft, steps: steps.scrollLeft};
-    renderFilters(); renderDebugger(); renderSteps();
-    dbg.scrollLeft = keep.dbg; steps.scrollLeft = keep.steps;
+    const keep = {gx: graph.scrollLeft, gy: graph.scrollTop, steps: steps.scrollLeft};
+    renderGraph(); renderSide(); renderSteps();
+    graph.scrollLeft = keep.gx; graph.scrollTop = keep.gy; steps.scrollLeft = keep.steps;
     scheduleLinks();
+  }
+
+  let programmatic = false;
+  function scrollIntoGraph(el, smooth = true) {
+    if (!el) return;
+    const s = graph.getBoundingClientRect(), r = el.getBoundingClientRect();
+    programmatic = true;
+    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (s.width - r.width) / 2,
+                    top: graph.scrollTop + r.top - s.top - (s.height - r.height) / 2, behavior: smooth ? "smooth" : "auto"});
+    setTimeout(() => { programmatic = false; }, 600);
   }
 
   function scrollToCard(scroller, el, smooth = true) {
     if (!el) return;
     const s = scroller.getBoundingClientRect(), r = el.getBoundingClientRect();
     const target = scroller.scrollLeft + r.left - s.left - (el.classList.contains("is-open") ? 16 : (s.width - r.width) / 2);
-    programmatic = true;
     scroller.scrollTo({left: target, behavior: smooth ? "smooth" : "auto"});
-    setTimeout(() => { programmatic = false; }, 600);
   }
-  let programmatic = false;
 
   function setFollow(on) { state.follow = on; $("tj-follow").setAttribute("aria-pressed", String(on)); }
 
+  function select(key, scroll = false) {
+    state.sel = key;
+    graph.querySelectorAll(".pnode").forEach(n => n.classList.toggle("is-selected", n.dataset.call === key));
+    renderSide();
+    if (scroll) scrollIntoGraph(graph.querySelector(`[data-call="${key}"]`));
+    scheduleLinks();
+  }
+
   function selectStep(t, scroll = true) {
     state.selStep = state.selStep === t && !scroll ? null : t;
-    if (state.linkedOnly) renderDebugger();
     root.querySelectorAll(".st-card").forEach(el => el.classList.toggle("is-selected", Number(el.dataset.step) === state.selStep));
     if (scroll) scrollToCard(steps, steps.querySelector(`[data-step="${t}"]`));
+    scheduleLinks();
+  }
+
+  function scrollToLatest(smooth = false) {
+    const nodes = graph.querySelectorAll(".pnode[data-call]:not([data-call=parse])");
+    const last = [...nodes].sort((a, b) => Number(a.dataset.call) - Number(b.dataset.call)).pop();
+    scrollIntoGraph(last, smooth);
     scheduleLinks();
   }
 
@@ -300,73 +233,56 @@ export function createView(root, ctx) {
     const req = el.closest("[data-request]")?.dataset.request;
     if (req) {
       state.requests.set(req, "loading");
-      const box = root.querySelector(`[data-request-box="${CSS.escape(req)}"]`);
-      if (box) box.innerHTML = requestHtml(req);
+      const paint = () => root.querySelectorAll(`[data-request-box="${CSS.escape(req)}"]`).forEach(box => { box.innerHTML = requestHtml(req, state.requests); });
+      paint();
       try { state.requests.set(req, await getJSON(ctx.ref, req)); } catch (error) { state.requests.set(req, {error: error.message}); }
-      const fresh = root.querySelector(`[data-request-box="${CSS.escape(req)}"]`);
-      if (fresh) fresh.innerHTML = requestHtml(req);
+      paint();
       return;
     }
     const goto = el.closest("[data-goto-step]")?.dataset.gotoStep;
     if (goto) { selectStep(Number(goto)); return; }
     const zoom = el.closest("[data-zoom]");
     if (zoom) { zoom.classList.toggle("is-full"); scheduleLinks(); return; }
+    const node = el.closest(".pnode");
+    if (node) { setFollow(false); select(state.sel === node.dataset.call ? null : node.dataset.call); return; }
     const b = el.closest("button");
-    if (b?.dataset.phase) { const p = b.dataset.phase; state.phases.has(p) ? state.phases.delete(p) : state.phases.add(p); render(); return; }
-    if (b?.dataset.kind) { const k = b.dataset.kind; state.kinds.has(k) ? state.kinds.delete(k) : state.kinds.add(k); render(); return; }
-    if (b?.dataset.jumpEv) { const i = Number(b.dataset.jumpEv); state.selEvent = i; setFollow(false); render(); scrollToCard(dbg, dbg.querySelector(`[data-ev="${i}"]`)); return; }
-    if (b?.dataset.pan) { const lane = $(b.dataset.pan); if (lane === dbg) setFollow(false); lane.scrollBy({left: Number(b.dataset.dir) * lane.clientWidth * .8, behavior: "smooth"}); return; }
+    if (b?.dataset.pan) { $(b.dataset.pan).scrollBy({left: Number(b.dataset.dir) * steps.clientWidth * .8, behavior: "smooth"}); return; }
     if (b?.dataset.jumpStep) { selectStep(Number(b.dataset.jumpStep)); return; }
-    if (b?.id === "tj-linked") { state.linkedOnly = !state.linkedOnly; b.setAttribute("aria-pressed", String(state.linkedOnly)); render(); return; }
-    if (b?.id === "tj-follow") { setFollow(!state.follow); if (state.follow) scrollToEnd(true); return; }
-    if (b?.dataset.toggleEv != null) {
-      const i = Number(b.dataset.toggleEv);
-      state.openEvent = state.openEvent === i ? null : i; state.selEvent = i; setFollow(false);
-      render(); scrollToCard(dbg, dbg.querySelector(`[data-ev="${i}"]`)); return;
-    }
+    if (b?.id === "tj-follow") { setFollow(!state.follow); if (state.follow) scrollToLatest(true); return; }
     if (b?.dataset.toggleStep != null) {
       const t = Number(b.dataset.toggleStep);
       state.openStep = state.openStep === t ? null : t; state.selStep = t;
       render(); scrollToCard(steps, steps.querySelector(`[data-step="${t}"]`)); return;
     }
-    if (el.closest(".card-detail")) return; // reading inside an open card
-    const ev = el.closest("[data-ev]");
-    if (ev) {
-      const i = Number(ev.dataset.ev);
-      state.selEvent = state.selEvent === i ? null : i;
-      root.querySelectorAll(".ev-card").forEach(c => c.classList.toggle("is-selected", Number(c.dataset.ev) === state.selEvent));
-      scheduleLinks(); return;
-    }
+    if (el.closest(".card-detail") || el.closest(".proc-side")) return;
     const st = el.closest("[data-step]");
-    if (st) { selectStep(Number(st.dataset.step), false); }
+    if (st) selectStep(Number(st.dataset.step), false);
   });
 
   root.addEventListener("dblclick", event => {
     if (event.target.closest(".card-detail")) return;
-    const card = event.target.closest("[data-ev], [data-step]");
-    card?.querySelector(".card-toggle")?.click();
+    event.target.closest("[data-step]")?.querySelector(".card-toggle")?.click();
   });
 
   root.addEventListener("pointerover", event => {
-    const ev = event.target.closest(".ev-card"), st = event.target.closest(".st-card");
-    const he = ev && !ev.classList.contains("is-open") ? Number(ev.dataset.ev) : null;
+    const node = event.target.closest(".pnode"), st = event.target.closest(".st-card");
+    const hn = node ? node.dataset.call : null;
     const hs = st && !st.classList.contains("is-open") ? Number(st.dataset.step) : null;
-    if (he !== state.hoverEvent || hs !== state.hoverStep) { state.hoverEvent = he; state.hoverStep = hs; scheduleLinks(); }
+    if (hn !== state.hover || hs !== state.hoverStep) { state.hover = hn; state.hoverStep = hs; scheduleLinks(); }
   });
-  lanes.addEventListener("pointerleave", () => { state.hoverEvent = state.hoverStep = null; scheduleLinks(); });
+  lanes.addEventListener("pointerleave", () => { state.hover = state.hoverStep = null; scheduleLinks(); });
 
   root.addEventListener("keydown", event => {
-    const lane = event.target.closest(".lane-scroll");
-    if (event.key === "Escape") { state.openEvent = state.openStep = null; render(); return; }
+    if (event.key === "Escape") { state.openStep = null; state.sel = null; render(); return; }
+    const lane = event.target.closest(".proc-scroll, .lane-scroll");
     if (!lane || !["ArrowLeft", "ArrowRight", "Enter"].includes(event.key)) return;
     event.preventDefault();
-    if (lane === dbg) {
-      const order = visibleEvents().map(e => e.index);
-      if (!order.length) return;
-      const pos = order.indexOf(state.selEvent);
-      if (event.key === "Enter") { if (state.selEvent != null) { state.openEvent = state.openEvent === state.selEvent ? null : state.selEvent; render(); } return; }
-      state.selEvent = order[Math.max(0, Math.min(order.length - 1, pos + (event.key === "ArrowRight" ? 1 : -1)))];
-      setFollow(false); render(); scrollToCard(dbg, dbg.querySelector(`[data-ev="${state.selEvent}"]`));
+    if (lane === graph) {
+      const calls = state.model.debugger?.calls || [];
+      if (!calls.length) return;
+      const pos = state.sel == null || state.sel === "parse" ? -1 : Number(state.sel);
+      const next = Math.max(0, Math.min(calls.length - 1, pos + (event.key === "ArrowLeft" ? -1 : 1)));
+      setFollow(false); select(String(next), true);
     } else {
       const ts = state.model.steps.map((s, i) => s.t ?? i + 1);
       const pos = ts.indexOf(state.selStep);
@@ -375,41 +291,32 @@ export function createView(root, ctx) {
     }
   });
 
-  $("tj-search").addEventListener("input", debounce(e => { state.search = e.target.value.trim(); render(); }, 200));
-  dbg.addEventListener("scroll", () => {
+  graph.addEventListener("scroll", () => {
     scheduleLinks();
-    if (!programmatic && state.follow && dbg.scrollLeft + dbg.clientWidth < dbg.scrollWidth - 40) setFollow(false);
+    if (!programmatic && state.follow && ctx.store.live) setFollow(false);
   }, {passive: true});
   steps.addEventListener("scroll", scheduleLinks, {passive: true});
+  window.addEventListener("scroll", scheduleLinks, {passive: true});
   const resize = new ResizeObserver(scheduleLinks);
   resize.observe(lanes);
 
-  // Auto-follow jumps (a smooth scroll would be cut short by the next live render).
-  function scrollToEnd(smooth = false) {
-    programmatic = true;
-    dbg.scrollTo({left: dbg.scrollWidth, behavior: smooth ? "smooth" : "auto"});
-    scheduleLinks();
-    setTimeout(() => { programmatic = false; }, smooth ? 700 : 120);
-  }
-
   return {
     update(model, {changed, first}) {
-      const grew = state.model?.debugger && model.debugger && model.debugger.events.length > state.model.debugger.events.length;
+      const before = state.model?.debugger?.calls.length || 0;
       state.model = model;
       state.idx = stepIndex(model);
-      if (!changed.has("all") && !changed.has("messages") && !changed.has("tool_calls") && !changed.has("usage_rows")
-          && !changed.has("canonical_record") && !changed.has("input") && !changed.has("record") && !changed.has("steps")
-          && !changed.has("window_trace") && !changed.has("direct_submit") && !changed.has("evaluations")) return;
+      if (!["all", "usage_rows", "tool_calls", "claim_usage", "parse_audit_usage", "canonical_record", "input", "record", "steps",
+            "evaluations", "result", "route_candidates", "manager_plan", "trace_queries", "parse_audit"].some(k => changed.has(k))) return;
       render();
-      if ((grew || first) && state.follow && ctx.store.live) scrollToEnd();
+      const grew = (model.debugger?.calls.length || 0) > before;
+      if ((grew || first) && state.follow && ctx.store.live) scrollToLatest();
     },
     show(route) {
-      // The first live render happens while the tab is still hidden, so follow again once visible.
-      if (state.follow && ctx.store.live && !route.extra.length) requestAnimationFrame(() => scrollToEnd());
+      if (state.follow && ctx.store.live && !route.extra.length) requestAnimationFrame(() => scrollToLatest());
       if (route.extra[0] === "step" && route.extra[1]) { state.openStep = Number(route.extra[1]); state.selStep = state.openStep; render(); selectStep(state.selStep); }
-      if (route.extra[0] === "event" && route.extra[1]) { const i = Number(route.extra[1]); state.openEvent = state.selEvent = i; setFollow(false); render(); scrollToCard(dbg, dbg.querySelector(`[data-ev="${i}"]`)); }
+      if (route.extra[0] === "call" && route.extra[1]) { setFollow(false); select(String(Number(route.extra[1]) - 1), true); }
       scheduleLinks();
     },
-    destroy() { resize.disconnect(); cancelAnimationFrame(raf); },
+    destroy() { resize.disconnect(); cancelAnimationFrame(raf); window.removeEventListener("scroll", scheduleLinks); },
   };
 }

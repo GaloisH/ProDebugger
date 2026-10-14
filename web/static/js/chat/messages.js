@@ -68,6 +68,9 @@ export function buildMessages(model, {live, chat, reference}) {
     }
   }
 
+  // TRACE without candidates ends the run before SUBMIT.
+  if (d.result?.status === "no_candidate") messages.push({id: "outcome", role: "system", tone: "warn", outcome: d.result});
+
   // Benchmark labels only after the run has ended; the launcher never passes them to the debugger.
   if (!live && d.result && reference) messages.push({id: "reference", role: "reference", reference, result: d.result});
 

@@ -119,7 +119,8 @@ function submitContent(m, ref) {
   const root = r.root;
   const links = `<div class="msg-actions"><a class="btn" href="${caseHref(ref, "result")}">Open result</a><a class="btn" href="${caseHref(ref, "trajectory")}">Trajectory</a></div>`;
   if (!root) {
-    return `<p><span class="badge warn">${esc(r.status || "uncertain")}</span> No candidate survived comparison.</p>
+    const why = r.status === "error" ? "The SUBMIT answer was rejected by validation." : "No candidate survived comparison.";
+    return `<p><span class="badge ${r.status === "error" ? "bad" : "warn"}">${esc(r.status || "uncertain")}</span> ${why}</p>
       ${clamp(r.reasoning || r.stop_reason, "submit-reasoning")}
       ${r.uncertainty ? `<details class="msg-activity" data-key="submit-unc"><summary>What is missing</summary><div class="msg-text">${esc(r.uncertainty)}</div></details>` : ""}${links}`;
   }
@@ -159,6 +160,7 @@ function referenceMessage(m) {
 }
 
 function noticeMessage(m) {
+  if (m.outcome) return `<div class="msg-body"><p><span class="badge warn">no candidate</span> Every investigation finished without an error at a single step, so SUBMIT was skipped.</p>${clamp(m.outcome.stop_reason, "outcome")}</div>`;
   if (m.incomplete) return `<div class="msg-body"><p>This run stopped before SUBMIT wrote a result.</p></div>`;
   const c = m.chat;
   const log = (c.log || []).filter(Boolean);

@@ -6,6 +6,7 @@ import {esc, number, raw, short} from "../util.js";
 import {routeBadge, routeDetail, routeOverview, routeTitle} from "./route.js";
 import {managerDetail, managerOverview, managerTitle, traceBadge, traceDetail, traceOverview, traceSummary, traceTitle} from "./trace.js";
 import {submitDetail, submitOverview, submitTitle} from "./submit.js";
+import {toolList} from "./tools.js";
 
 // Node size and gaps; TRACE rows keep a gutter on the left for the assignment label.
 const W = 184, H = 80, GX = 34, LANE_GAP = 12, GUTTER = 120;
@@ -150,17 +151,6 @@ export function phasesHtml(phases, view) {
 }
 
 // ---------- side panel ----------
-function toolBlock(t, i) {
-  const result = t.result?.data ?? t.result;
-  const tone = t.error ? "bad" : t.committed ? "teal" : "plain";
-  return `<details class="detail-block tone-${tone}" ${t.error ? "open" : ""}>
-    <summary><span class="mono">${esc(t.name)}</span>${t.error ? ' <span class="badge bad">rejected</span>' : t.committed ? "" : ' <span class="badge">pending</span>'}</summary>
-    ${t.error ? `<p>${esc(t.error.message || t.error.code || JSON.stringify(t.error))}</p>` : ""}
-    <h4>Arguments</h4>${raw(t.args)}
-    ${t.committed && !t.error ? `<h4>Result</h4>${typeof result === "string" ? `<div class="text-box">${esc(result)}</div>` : raw(result)}` : ""}
-  </details>`;
-}
-
 function requestBlock(file, requests) {
   if (!file) return "";
   return `<div class="detail-block"><h4>Request</h4><button class="btn" data-request="${esc(file)}">Load full request</button>
@@ -196,7 +186,7 @@ export function callDetail(call, ctx) {
     ${extra}
     ${m.reasoning_content ? `<details class="detail-block tone-violet"><summary>Reasoning</summary><div class="text-box">${esc(m.reasoning_content)}</div></details>` : ""}
     ${m.content ? `<details class="detail-block tone-info" open><summary>Response</summary><div class="text-box">${esc(m.content)}</div></details>` : ""}
-    ${call.tools.length ? `<div class="side-section"><h4>Tool calls · ${call.tools.length}</h4>${call.tools.map(toolBlock).join("")}</div>` : ""}
+    ${call.tools.length ? `<div class="side-section"><h4>Tool calls · ${call.tools.length}</h4>${toolList(call.tools, {facts: ctx.factsById})}</div>` : ""}
     ${call.steps.length ? `<div class="detail-block"><h4>Agent steps · ${call.steps.length}</h4><div class="chip-row">${call.steps.map(t => `<button class="step-chip" data-goto-step="${t}">${S(t)}</button>`).join("")}</div></div>` : ""}
     ${call.fids?.length ? `<details class="detail-block tone-violet"><summary>Facts · ${call.fids.length}</summary><div class="chip-col">${call.fids.slice(0, 40).map(fid => factChip(ctx.factsById?.get(fid))).join("")}${call.fids.length > 40 ? `<span class="muted">+${call.fids.length - 40} more</span>` : ""}</div></details>` : ""}
     ${requestBlock(call.requestFile, ctx.requests)}`;

@@ -190,3 +190,29 @@ pre.sql { max-height: 22rem; overflow: auto; margin: 0; padding: .55rem .65rem; 
 .step-rows summary { display: flex; align-items: center; gap: .45rem; }
 .sql-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: .1rem .45rem; align-items: baseline; padding: .3rem 0; border-top: 1px dashed #ffffff14; font-size: .78rem; }
 .sql-text { grid-column: 1 / -1; color: var(--text-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Tool calls: one summary line per call, coloured by kind (read, check, decision). */
+.tool-rows { display: flex; flex-direction: column; gap: .25rem; }
+.tool-row { --k: var(--info-line); border: 1px solid var(--line); border-left: 3px solid var(--k); border-radius: .45rem; background: var(--surface-2); }
+.tool-row.kind-check { --k: var(--violet-line); }
+.tool-row.kind-decide { --k: var(--accent); }
+.tool-row.is-error { --k: var(--bad-line); background: color-mix(in srgb, var(--bad-bg) 40%, var(--surface-2)); }
+.tool-row.is-pending { border-style: dashed; border-left-style: solid; }
+.tool-row > summary { display: flex; align-items: center; gap: .45rem; min-width: 0; padding: .32rem .5rem; font-size: .78rem; list-style: none; cursor: pointer; }
+.tool-row > summary::-webkit-details-marker { display: none; }
+.tool-row > summary:hover { background: var(--panel-3); }
+.tool-row[open] > summary { border-bottom: 1px solid var(--line); }
+.tool-ico { flex: none; width: .9rem; height: .9rem; fill: none; stroke: var(--k); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tool-name { flex: none; color: var(--text); font-weight: 600; }
+.tool-in { flex: 0 1 auto; max-width: 45%; overflow: hidden; color: var(--text-2); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.tool-out { flex: 1 1 0; min-width: 0; overflow: hidden; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.tool-row.is-error .tool-out { color: var(--bad-ink); }
+.tool-out .badge { padding: 0 .3rem; font-size: .68rem; }
+.tool-body { display: flex; flex-direction: column; gap: .4rem; padding: .5rem .6rem .55rem; font-size: .8rem; }
+.tool-body p { margin: 0; }
+.tool-body .kv { font-size: .78rem; }
+.tool-list { margin: 0; padding-left: 1rem; font-size: .76rem; line-height: 1.5; }
+.tool-list li { overflow-wrap: anywhere; }
+.tool-raw > summary { color: var(--faint); font-size: .72rem; cursor: pointer; }
+.tool-raw h4 { margin: .4rem 0 .25rem; font-size: .72rem; color: var(--muted); }
+.tool-raw .raw { max-height: 16rem; font-size: .72rem; }

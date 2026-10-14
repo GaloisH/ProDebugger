@@ -89,7 +89,7 @@
 .request-box details { margin: .25rem 0; font-size: .8rem; }
 
 /* Connectors */
-.lane-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.lane-links { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .lane-links .link { fill: none; stroke: var(--c, var(--amber)); stroke-width: 2; opacity: .9; }
 .lane-links .link.is-preview { stroke-dasharray: 6 5; animation: link-flow 1s linear infinite; opacity: .8; }
 .lane-links .link.is-off { opacity: .3; }
@@ -127,7 +127,7 @@
 .pn-top .badge, .pn-top .live-dot { margin-left: auto; }
 .pn-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: .84rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
 .pn-foot { color: var(--muted); font-size: .68rem; white-space: nowrap; }
-.proc-side { position: sticky; top: calc(var(--header-h) + .6rem); display: flex; flex-direction: column; gap: .55rem; max-height: calc(100vh - var(--header-h) - 1.5rem); overflow: auto; padding: .8rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--surface-1); }
+.proc-side { position: sticky; z-index: 2; top: calc(var(--header-h) + .6rem); display: flex; flex-direction: column; gap: .55rem; max-height: calc(100vh - var(--header-h) - 1.5rem); overflow: auto; padding: .8rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--surface-1); }
 .side-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .side-head h3 { margin: 0; font-size: 1rem; font-weight: 600; }
 .side-kv { margin: 0; }

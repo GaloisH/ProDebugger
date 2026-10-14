@@ -1,7 +1,26 @@
 // One node per model call. usage.jsonl logs each request as pending then completed
 // (the completed row carries the assistant message); tool_calls.jsonl supplies the
 // committed result of every tool call that message made. Depends only on file formats.
-import {collectRefs} from "./model.js";
+
+const FID_KEYS = new Set(["fid", "fids", "issue_fids", "cites", "refs", "evidence_for", "evidence_against", "supporting_evidence", "counterevidence", "start_refs"]);
+const STEP_KEYS = new Set(["step", "issue_step", "event_step"]);
+
+// Original steps and Facts an event points at, found by walking ids in its arguments/results.
+function collectRefs(value, factsById, limit = 4000) {
+  const steps = new Set(), fids = new Set();
+  let budget = limit;
+  const addFid = fid => { const f = factsById?.get(Number(fid)); if (!f) return; fids.add(f.fid); if (f.t) steps.add(f.t); };
+  (function walk(node, key, depth) {
+    if (budget-- <= 0 || depth > 7 || node == null) return;
+    if (Array.isArray(node)) { node.forEach(v => walk(v, key, depth + 1)); return; }
+    if (typeof node === "object") { for (const [k, v] of Object.entries(node)) walk(v, k, depth + 1); return; }
+    if (typeof node !== "number" && !(typeof node === "string" && /^\d+$/.test(node))) return;
+    if (FID_KEYS.has(key)) addFid(node);
+    else if (STEP_KEYS.has(key) && Number(node) > 0) steps.add(Number(node));
+  })(value, "", 0);
+  const sort = set => [...set].sort((a, b) => a - b);
+  return {steps: sort(steps), fids: sort(fids)};
+}
 
 // Graph bands, in pipeline order. PARSE is folded into one group ahead of MAP.
 export const CALL_PHASES = ["PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"];

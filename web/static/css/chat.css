@@ -187,3 +187,5 @@
   .chat-side { max-height: 16rem; }
   .chat-main { min-height: 36rem; }
 }
+.rule-list { margin: .4rem 0 0; padding-left: 1.1rem; font-size: .84rem; line-height: 1.5; }
+.rule-list li + li { margin-top: .3rem; }

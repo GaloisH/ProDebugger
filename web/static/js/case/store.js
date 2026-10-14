@@ -11,7 +11,7 @@ const RUN_JSON = {canonical_record: "canonical_record.json", input: "input.json"
                   route_candidates: "route_candidates.json", manager_plan: "manager_plan.json",
                   result: "result.json", usage: "usage.json"};
 const RUN_JSONL = {messages: "messages.jsonl", tool_calls: "tool_calls.jsonl", phase_events: "phase_events.jsonl",
-                   usage_rows: "usage.jsonl", window_trace: "window_trace.jsonl", direct_submit: "direct_submit.jsonl",
+                   usage_rows: "usage.jsonl",
                    trace_queries: "trace_queries.jsonl", parse_audit: "parse_audit.jsonl",
                    parse_audit_usage: "parsing/usage.jsonl", claim_usage: "claim_parsing/usage.jsonl"};
 const SESSION_JSON = {record: "record.json", steps: "steps.json"};

@@ -65,7 +65,7 @@ class RecordSQLite(SQLite):
 
 
 def documentation():
-    return Path(__file__).with_name("prompts").joinpath("query_dsl.md").read_text()
+    return Path(__file__).with_name("prompts").joinpath("query_dsl.md").read_text(encoding="utf-8")
 
 
 def _cell(value):

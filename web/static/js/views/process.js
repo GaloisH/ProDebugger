@@ -1,5 +1,6 @@
-// Debugger process: one card per phase that expands in place into its model calls
-// (one node per call). TRACE has one row per manager assignment; PARSE is a single card.
+// Debugger process: a vertical stack of phase cards; each expands in place into a
+// horizontal row of its model calls (one node per call), several at once. TRACE has one
+// row per manager assignment; PARSE is a single card.
 import {CALL_PHASES} from "../case/calls.js";
 import {factChip} from "../case/format.js";
 import {esc, number, raw, short} from "../util.js";
@@ -126,21 +127,21 @@ export function phaseStats(p) {
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 export const expandable = p => !p.parse && p.calls.length > 0;
 
-// open: the expanded phase; selPhase: the phase the selection is in.
+// open: the set of expanded phases; selPhase: the phase the selection is in.
 function phaseCard(p, {open, sel, selPhase}) {
   const s = phaseStats(p);
-  const isOpen = open === p.phase && expandable(p);
+  const isOpen = open.has(p.phase) && expandable(p);
   const selected = selPhase === p.phase && (sel == null || !isOpen);
   const cls = ["ph-card", `phase-${p.phase}`, isOpen && "is-open", selected && "is-selected", s.pending && "is-pending"].filter(Boolean).join(" ");
   const summary = phaseSummary(p);
   return `<article class="${cls}" data-phase="${p.phase}">
     <div class="ph-meta">
       <div class="ph-top"><span class="phase-dot"></span><span class="ph-name mono">${esc(p.phase)}</span>
-        ${s.pending ? '<span class="live-dot" title="In progress"></span>' : ""}
-        ${expandable(p) ? `<button class="card-toggle" data-toggle-phase="${p.phase}" aria-expanded="${isOpen}" aria-label="${isOpen ? "Collapse" : "Expand"} ${esc(p.phase)}">${isOpen ? "−" : "+"}</button>` : ""}</div>
+        ${s.pending ? '<span class="live-dot" title="In progress"></span>' : ""}</div>
       <span class="ph-count">${plural(s.calls, "call")}${p.phase === "TRACE" ? ` · ${plural(p.lanes.length, "row")}` : ""}</span>
       <h3 class="ph-title" title="${esc(summary)}">${esc(summary)}</h3>
       <div class="ph-foot">${s.rejected ? `<span class="badge bad">${s.rejected} rejected</span>` : ""}<span class="mono">${kilo(s.input)} in · ${kilo(s.output)} out${s.seconds != null ? ` · ${secs(s.seconds)}` : ""}</span></div>
+      ${expandable(p) ? `<button class="card-toggle" data-toggle-phase="${p.phase}" aria-expanded="${isOpen}" aria-label="${isOpen ? "Collapse" : "Expand"} ${esc(p.phase)}">${isOpen ? "−" : "+"}</button>` : ""}
     </div>
     ${isOpen ? `<div class="ph-body">${canvasHtml(p, sel)}</div>` : ""}
   </article>`;

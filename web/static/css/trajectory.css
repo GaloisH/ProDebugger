@@ -100,25 +100,32 @@
 .lane-nav { margin-left: auto; display: flex; gap: .3rem; }
 .lane-nav .btn { padding: .15rem .55rem; font-size: .85rem; }
 
-/* Process: one card per phase in a row; the open card widens in place into its call graph. */
+/* Process: a vertical stack of phase cards; an open card shows its calls in a horizontal row. */
 .proc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, 27rem); gap: .8rem; align-items: start; }
 .proc[hidden] { display: none; }
 .proc-graph { min-width: 0; border: 1px solid var(--line); border-radius: 1rem; background: radial-gradient(circle at 1px 1px, #ffffff0b 1px, transparent 0) 0 0 / 22px 22px, var(--surface-1); }
-.proc-scroll { overflow-x: auto; overflow-y: hidden; container-type: inline-size; }
+.proc-scroll { overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - var(--header-h) - 9rem); }
 .proc-scroll:focus-visible { outline-offset: -2px; }
-.ph-track { display: flex; align-items: flex-start; gap: 2.4rem; width: max-content; min-width: 100%; padding: 1rem; }
-.ph-track > * + *::before { content: '→'; position: absolute; top: 2.6rem; left: -1.75rem; width: 1.1rem; text-align: center; color: var(--muted); font-size: 1.1rem; pointer-events: none; }
-.ph-card { position: relative; flex: none; width: 13.5rem; border: 1px solid var(--line-strong); border-top: 3px solid var(--c); border-radius: .9rem; background: var(--panel-2); box-shadow: 0 10px 24px #0000001f; cursor: pointer; transition: border-color .15s, background .15s; }
+.ph-track { display: flex; flex-direction: column; gap: 1.1rem; padding: 1rem; }
+.ph-track > * + *::before { content: '↓'; position: absolute; top: -1.15rem; left: 1.1rem; width: 1rem; line-height: 1.1rem; text-align: center; color: var(--muted); font-size: .9rem; pointer-events: none; }
+.ph-card { position: relative; min-width: 0; border: 1px solid var(--line-strong); border-left: 3px solid var(--c); border-radius: .8rem; background: var(--panel-2); box-shadow: 0 10px 24px #0000001f; cursor: pointer; transition: border-color .15s, background .15s; }
 .ph-card:hover { background: var(--panel-3); }
-.ph-card.is-open { display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); width: auto; max-width: calc(100cqi - 2rem); background: var(--panel-2); cursor: default; }
+.ph-card.is-open { display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); background: var(--panel-2); cursor: default; }
 .ph-card.is-open .ph-meta { cursor: pointer; }
-.ph-card.is-selected, .ph-card.is-linked { border-top-color: var(--c) !important; }
-.ph-card.is-pending { border-style: dashed; border-top-style: solid; }
-.ph-meta { display: flex; flex-direction: column; gap: .3rem; min-width: 0; padding: .65rem .8rem .75rem; }
+.ph-card.is-selected, .ph-card.is-linked { border-left-color: var(--c) !important; }
+.ph-card.is-pending { border-style: dashed; border-left-style: solid; }
+/* Collapsed: one compact line. Open: a column beside the calls. */
+.ph-meta { position: relative; display: flex; flex-direction: column; gap: .3rem; min-width: 0; padding: .65rem 2.6rem .75rem .8rem; }
+.ph-card:not(.is-open) .ph-meta { flex-direction: row; align-items: center; gap: .9rem; padding: .5rem 2.6rem .5rem .9rem; }
+.ph-card:not(.is-open) .ph-top { flex: none; width: 7.5rem; }
+.ph-card:not(.is-open) .ph-count { flex: none; width: 6.5rem; }
+.ph-card:not(.is-open) .ph-title { flex: 1 1 0; min-width: 0; -webkit-line-clamp: 1; }
+.ph-card:not(.is-open) .ph-foot { flex: none; flex-wrap: nowrap; }
+.ph-meta > .card-toggle { position: absolute; top: .55rem; right: .55rem; }
+.ph-card:not(.is-open) .ph-meta > .card-toggle { top: 50%; transform: translateY(-50%); }
 .ph-top { display: flex; align-items: center; gap: .45rem; min-height: 1.6rem; }
 .ph-top .phase-dot, .side-head .phase-dot { background: var(--c); }
 .ph-name { color: var(--c); font-size: .78rem; font-weight: 650; letter-spacing: .08em; }
-.ph-top .card-toggle { margin-left: auto; }
 .ph-count { color: var(--faint); font-family: var(--mono); font-size: .72rem; }
 .ph-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 0; font-size: .95rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
 .ph-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .45rem; color: var(--muted); font-size: .7rem; }

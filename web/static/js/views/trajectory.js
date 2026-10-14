@@ -11,7 +11,7 @@ import {candidateCard, candidatesByStep, planOf} from "./trace.js";
 
 export function createView(root, ctx) {
   const state = {
-    model: null, sel: null, selPhase: null, openPhase: null, hover: null, openStep: null, selStep: null, hoverStep: null,
+    model: null, sel: null, selPhase: null, openPhases: new Set(), hover: null, openStep: null, selStep: null, hoverStep: null,
     follow: true, requests: new Map(), phases: [],
   };
   root.innerHTML = `
@@ -73,12 +73,13 @@ export function createView(root, ctx) {
       return;
     }
     state.phases = layoutPhases(d.calls, d.parse, planFor(d));
-    const body = graph.querySelector(".ph-body");
-    const keep = {x: graph.scrollLeft, body: body?.scrollLeft || 0, open: body ? body.closest(".ph-card").dataset.phase : null};
-    graph.innerHTML = state.phases.length ? phasesHtml(state.phases, {open: state.openPhase, sel: state.sel, selPhase: state.selPhase})
+    // Keep the stack's scroll and each open card's horizontal scroll across re-renders.
+    const top = graph.scrollTop;
+    const bodies = new Map([...graph.querySelectorAll(".ph-body")].map(b => [b.closest(".ph-card").dataset.phase, b.scrollLeft]));
+    graph.innerHTML = state.phases.length ? phasesHtml(state.phases, {open: state.openPhases, sel: state.sel, selPhase: state.selPhase})
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
-    graph.scrollLeft = keep.x;
-    if (keep.open === state.openPhase && graph.querySelector(".ph-body")) graph.querySelector(".ph-body").scrollLeft = keep.body;
+    graph.scrollTop = top;
+    graph.querySelectorAll(".ph-body").forEach(b => { b.scrollLeft = bodies.get(b.closest(".ph-card").dataset.phase) || 0; });
   }
 
   function renderSide() {
@@ -235,7 +236,7 @@ export function createView(root, ctx) {
   }
 
   let programmatic = false;
-  // A node scrolls to the middle of its open card, and the card into view in the phase row.
+  // A node scrolls to the middle of its open card; the card scrolls into view in the phase stack.
   function scrollIntoGraph(el, smooth = true) {
     if (!el) return;
     const behavior = smooth ? "smooth" : "auto";
@@ -247,7 +248,7 @@ export function createView(root, ctx) {
     }
     const card = el.closest(".ph-card") || el;
     const s = graph.getBoundingClientRect(), r = card.getBoundingClientRect();
-    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (card.classList.contains("is-open") ? 16 : (s.width - r.width) / 2), behavior});
+    if (r.top < s.top || r.bottom > s.bottom) graph.scrollTo({top: graph.scrollTop + r.top - s.top - 12, behavior});
     setTimeout(() => { programmatic = false; }, 600);
   }
 
@@ -266,15 +267,17 @@ export function createView(root, ctx) {
     state.sel = key;
     const call = callOf(key);
     if (call) state.selPhase = call.phase;
-    if (call && reveal && expandable(phaseOf(call.phase))) state.openPhase = call.phase;
+    if (call && reveal && expandable(phaseOf(call.phase))) state.openPhases.add(call.phase);
     renderGraph(); renderSide();
     if (scroll && call) scrollIntoGraph(graph.querySelector(`.pnode[data-call="${key}"]`) || cardOf(call.phase), scroll === "smooth");
     scheduleLinks();
   }
 
-  // open: the phase expanded afterwards (accordion: at most one).
-  function selectPhase(name, open = state.openPhase) {
-    state.sel = null; state.selPhase = name; state.openPhase = open;
+  // open: true/false expands or collapses the phase; null leaves it as it is.
+  function selectPhase(name, open = null) {
+    state.sel = null; state.selPhase = name;
+    if (open === true && expandable(phaseOf(name))) state.openPhases.add(name);
+    if (open === false) state.openPhases.delete(name);
     renderGraph(); renderSide();
     scrollIntoGraph(cardOf(name));
     scheduleLinks();
@@ -317,11 +320,10 @@ export function createView(root, ctx) {
     const node = el.closest(".pnode");
     if (node) { setFollow(false); select(state.sel === node.dataset.call ? null : node.dataset.call); return; }
     const toggle = el.closest("[data-toggle-phase]")?.dataset.togglePhase;
-    if (toggle) { setFollow(false); selectPhase(toggle, state.openPhase === toggle ? null : toggle); return; }
+    if (toggle) { setFollow(false); selectPhase(toggle, !state.openPhases.has(toggle)); return; }
     const card = el.closest(".ph-card");
     if (card) {
-      const name = card.dataset.phase;
-      if (!el.closest(".ph-body")) { setFollow(false); selectPhase(name, expandable(phaseOf(name)) ? name : state.openPhase); }
+      if (!el.closest(".ph-body")) { setFollow(false); selectPhase(card.dataset.phase, true); }
       return;
     }
     const b = el.closest("button");
@@ -352,26 +354,30 @@ export function createView(root, ctx) {
   lanes.addEventListener("pointerleave", () => { state.hover = state.hoverStep = null; scheduleLinks(); });
 
   root.addEventListener("keydown", event => {
-    if (event.key === "Escape") { state.openStep = null; state.sel = state.selPhase = state.openPhase = null; render(); return; }
+    if (event.key === "Escape") { state.openStep = null; state.sel = state.selPhase = null; state.openPhases.clear(); render(); return; }
     const lane = event.target.closest(".proc-scroll, .lane-scroll");
-    if (!lane || !["ArrowLeft", "ArrowRight", "Enter"].includes(event.key)) return;
+    const keys = lane === graph ? ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter"] : ["ArrowLeft", "ArrowRight", "Enter"];
+    if (!lane || !keys.includes(event.key)) return;
     event.preventDefault();
     if (lane === graph) {
+      // Up/down move between phase cards, Enter opens or closes one, left/right walk the calls.
       setFollow(false);
+      const names = state.phases.map(p => p.phase);
+      const current = state.selPhase ?? callOf(state.sel)?.phase;
       if (event.key === "Enter") {
-        if (state.selPhase && expandable(phaseOf(state.selPhase))) selectPhase(state.selPhase, state.openPhase === state.selPhase ? null : state.selPhase);
+        if (current) selectPhase(current, !state.openPhases.has(current));
         return;
       }
-      // Inside an open phase the arrows walk the calls (crossing into the next phase); otherwise the cards.
-      const dir = event.key === "ArrowLeft" ? -1 : 1, open = phaseOf(state.openPhase);
-      if (state.sel == null && !open) {
-        const names = state.phases.map(p => p.phase), pos = names.indexOf(state.selPhase);
-        if (names.length) selectPhase(names[pos < 0 ? 0 : Math.max(0, Math.min(names.length - 1, pos + dir))]);
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+        const pos = names.indexOf(current);
+        if (names.length) selectPhase(names[pos < 0 ? 0 : Math.max(0, Math.min(names.length - 1, pos + (event.key === "ArrowUp" ? -1 : 1)))]);
         return;
       }
       const calls = state.model.debugger?.calls || [];
       if (!calls.length) return;
-      const pos = state.sel != null ? Number(state.sel) : dir > 0 ? open.calls[0].index - 1 : open.calls.at(-1).index + 1;
+      const dir = event.key === "ArrowLeft" ? -1 : 1, phase = phaseOf(current);
+      const pos = state.sel != null ? Number(state.sel)
+        : phase?.calls.length ? (dir > 0 ? phase.calls[0].index - 1 : phase.calls.at(-1).index + 1) : -1;
       select(String(Math.max(0, Math.min(calls.length - 1, pos + dir))), "smooth", true);
     } else {
       const ts = state.model.steps.map((s, i) => s.t ?? i + 1);

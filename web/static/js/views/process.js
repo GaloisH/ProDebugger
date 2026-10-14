@@ -5,6 +5,7 @@ import {factChip} from "../case/format.js";
 import {esc, number, raw, short} from "../util.js";
 import {routeBadge, routeDetail, routeTitle} from "./route.js";
 import {managerDetail, managerTitle, traceBadge, traceDetail, traceTitle} from "./trace.js";
+import {submitDetail, submitTitle} from "./submit.js";
 
 const W = 184, H = 80, GX = 34, LANE_GAP = 12, PAD = 14, LABEL = 132;
 // Fan-out into a multi-row band runs down a bus in the label gutter and enters each row from the left.
@@ -20,9 +21,9 @@ export function toolSummary(tools) {
 }
 
 // Phase-specific node titles, badges and side-panel sections.
-const PHASE_TITLE = {ROUTE: routeTitle, MANAGER: managerTitle, TRACE: traceTitle};
+const PHASE_TITLE = {ROUTE: routeTitle, MANAGER: managerTitle, TRACE: traceTitle, SUBMIT: submitTitle};
 const PHASE_BADGE = {ROUTE: routeBadge, TRACE: traceBadge};
-const PHASE_DETAIL = {ROUTE: routeDetail, MANAGER: managerDetail, TRACE: traceDetail};
+const PHASE_DETAIL = {ROUTE: routeDetail, MANAGER: managerDetail, TRACE: traceDetail, SUBMIT: submitDetail};
 
 // Short node title. Phase-specific wording comes first, then a tool summary.
 export function callTitle(call) {

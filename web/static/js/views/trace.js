@@ -158,3 +158,11 @@ export function candidatesByStep(calls) {
   }));
   return out;
 }
+
+// SUBMIT refers to TRACE candidates as trace-window:<assignment>:<1-based index>.
+export function candidateIndex(calls) {
+  const out = new Map();
+  calls.forEach(call => (assessOf(call)?.candidates || []).forEach((c, i) =>
+    out.set(`trace-window:${call.caseId}:${i + 1}`, {candidate: c, call, caseId: call.caseId})));
+  return out;
+}

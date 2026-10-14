@@ -269,6 +269,8 @@ export function createView(root, ctx) {
       paint();
       return;
     }
+    const gotoCall = el.closest("[data-goto-call]")?.dataset.gotoCall;
+    if (gotoCall != null) { setFollow(false); select(gotoCall, "smooth"); return; }
     const goto = el.closest("[data-goto-step]")?.dataset.gotoStep;
     if (goto) { selectStep(Number(goto)); return; }
     const zoom = el.closest("[data-zoom]");

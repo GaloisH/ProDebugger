@@ -30,6 +30,11 @@ export function buildCase(kind, raw) {
   const steps = (kind === "session" ? raw.steps : input.steps) || [];
   const evidenceBlock = raw.evidences?.["abstract.rule"] || record?.evidences?.["abstract.rule"];
   const calls = kind === "run" ? buildCalls(raw, dsl?.factsById) : null;
+  // A rejected SUBMIT answer has no tool call to carry the error; the result names it.
+  const submit = calls?.calls.filter(c => c.phase === "SUBMIT").at(-1);
+  if (submit && raw.result?.status === "error" && raw.result.phase === "SUBMIT") {
+    Object.assign(submit, {rejected: true, rejection: raw.result.stop_reason});
+  }
   return {
     kind,
     trajectoryId: record?.trajectory_id || input.trajectory_id,

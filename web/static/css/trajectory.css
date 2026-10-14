@@ -135,3 +135,14 @@
 .side-section .detail-block + .detail-block { margin-top: .4rem; }
 .proc-side .detail-block h4 { margin-top: .5rem; }
 @media (max-width: 1100px) { .proc { grid-template-columns: minmax(0, 1fr); } .proc-side { position: static; max-height: none; } }
+
+/* ROUTE anchors and parse gaps on the agent steps */
+.tone-gap { --bgc: color-mix(in srgb, var(--parse) 12%, var(--surface-2)); --b: var(--parse); --ink: var(--text-2); border-style: dashed; }
+.tone-route { --bgc: color-mix(in srgb, var(--route) 12%, var(--surface-2)); --b: color-mix(in srgb, var(--route) 60%, transparent); }
+.badge.gap { border: 1px dashed var(--parse); background: transparent; color: var(--text-2); }
+.badge.anchor { border-color: color-mix(in srgb, var(--route) 60%, transparent); background: color-mix(in srgb, var(--route) 18%, transparent); color: var(--route); }
+.step-tick.has-gap { outline: 1px dashed var(--parse); outline-offset: 1px; }
+.step-tick.is-anchor { box-shadow: inset 0 3px 0 var(--route); }
+.step-tick.is-anchor.is-warn { box-shadow: inset 0 3px 0 var(--route), inset 0 -3px 0 var(--amber); }
+.gap-reasons { margin: .3rem 0 0; padding-left: 1rem; font-size: .72rem; }
+.anchor-card h4 { justify-content: flex-start; }

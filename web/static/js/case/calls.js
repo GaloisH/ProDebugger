@@ -54,10 +54,27 @@ function callsFrom(rows, {folder = "", journal = new Map(), factsById} = {}) {
   return calls;
 }
 
+const replyKey = m => (m?.tool_calls || []).map(c => c.id).join(",") || String(m?.content || "").slice(0, 400);
+
+// The user messages the runner sent right before each assistant reply (phase status,
+// handoffs, the route timeline), keyed like the reply itself.
+function inputsByReply(messages) {
+  const out = new Map();
+  let pending = [];
+  for (const row of messages) {
+    const m = row.message || row;
+    if (m.role === "user") pending.push(parse(m.content || ""));
+    else if (m.role === "assistant") { out.set(replyKey(m), pending); pending = []; }
+  }
+  return out;
+}
+
 // Debugger calls in request order, plus the folded PARSE group.
 export function buildCalls(raw, factsById) {
   const journal = new Map((raw.tool_calls || []).filter(r => r.event === "committed").map(r => [r.tool_call_id, r]));
   const calls = callsFrom(raw.usage_rows || [], {journal, factsById});
+  const inputs = inputsByReply(raw.messages || []);
+  calls.forEach(call => { call.inputs = call.message ? inputs.get(replyKey(call.message)) || [] : []; });
   // A TRACE call without tool arguments (pending, or a malformed reply) continues the case
   // before it until that case is assessed; then it opens the next manager assignment.
   const order = (raw.manager_plan?.assignments || []).map(a => a.agent_id);

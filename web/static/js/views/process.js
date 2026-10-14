@@ -3,6 +3,7 @@
 import {CALL_PHASES} from "../case/calls.js";
 import {factChip} from "../case/format.js";
 import {esc, number, raw, short} from "../util.js";
+import {routeBadge, routeDetail, routeTitle} from "./route.js";
 
 const W = 184, H = 80, GX = 34, LANE_GAP = 12, PAD = 14, LABEL = 92;
 const S = t => `S${String(t).padStart(2, "0")}`;
@@ -15,9 +16,16 @@ export function toolSummary(tools) {
   return [...counts].map(([name, n]) => n > 1 ? `${name} ×${n}` : name).join(" · ");
 }
 
+// Phase-specific node titles, badges and side-panel sections.
+const PHASE_TITLE = {ROUTE: routeTitle};
+const PHASE_BADGE = {ROUTE: routeBadge};
+const PHASE_DETAIL = {ROUTE: routeDetail};
+
 // Short node title. Phase-specific wording comes first, then a tool summary.
 export function callTitle(call) {
   if (call.status === "pending") return "Waiting for model…";
+  const special = PHASE_TITLE[call.phase]?.(call);
+  if (special) return special;
   if (call.tools.length) return toolSummary(call.tools);
   return call.message?.content ? "Text answer" : "No output";
 }
@@ -86,7 +94,7 @@ function nodeHtml(node, sel) {
                c.rejected && "is-rejected"].filter(Boolean).join(" ");
   return `<button class="${cls}" data-call="${c.index}" style="${pos}" title="${esc(callTitle(c))}">
     <span class="pn-top"><span class="mono">#${c.n}</span><span>${esc(c.caseId ? short(c.caseId, 18) : c.phase)}</span>
-      ${c.status === "pending" ? '<span class="live-dot"></span>' : errors ? `<span class="badge bad">${errors} error${errors === 1 ? "" : "s"}</span>` : ""}</span>
+      ${c.status === "pending" ? '<span class="live-dot"></span>' : `${PHASE_BADGE[c.phase]?.(c) || ""}${errors ? `<span class="badge bad">${errors} error${errors === 1 ? "" : "s"}</span>` : ""}`}</span>
     <span class="pn-title">${esc(short(callTitle(c), 44))}</span>
     <span class="pn-foot mono">${c.status === "pending" ? esc(c.model || "") : `${kilo(c.usage?.input_tokens)} in · ${kilo(c.usage?.output_tokens)} out · ${secs(c.seconds)}`}</span>
   </button>`;
@@ -139,9 +147,6 @@ function parseDetail(p, requests) {
     ${p.calls.map((c, i) => `<details class="detail-block"><summary><span class="mono">${esc(c.folder)} #${i + 1}</span> · ${kilo(c.usage?.input_tokens)} in · ${secs(c.seconds)}</summary>
       ${c.message?.content ? `<div class="text-box">${esc(c.message.content)}</div>` : ""}${requestBlock(c.requestFile, requests)}</details>`).join("")}`;
 }
-
-// Phase-specific sections are registered per phase and shown above the generic ones.
-export const PHASE_DETAIL = {};
 
 export function callDetail(call, ctx) {
   if (call === "parse") return parseDetail(ctx.parse, ctx.requests);

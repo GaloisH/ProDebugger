@@ -5,6 +5,7 @@ import {EVAL_CLASS, factChip, icon} from "../case/format.js";
 import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js";
 import {esc, pretty, short} from "../util.js";
 import {callDetail, graphHtml, layoutCalls, overviewHtml, requestHtml} from "./process.js";
+import {anchorsByStep, anchorTitle} from "./route.js";
 
 export function createView(root, ctx) {
   const state = {
@@ -41,7 +42,14 @@ export function createView(root, ctx) {
     model.dsl?.facts.forEach(f => { if (!facts.has(f.t)) facts.set(f.t, []); facts.get(f.t).push(f); });
     model.evaluations.forEach(e => { if (!evals.has(e.t)) evals.set(e.t, []); evals.get(e.t).push(e); });
     model.debugger?.calls.forEach(c => c.steps.forEach(t => { if (!refs.has(t)) refs.set(t, []); refs.get(t).push(c.index); }));
-    return {facts, evals, refs, maxRefs: Math.max(1, ...[...refs.values()].map(v => v.length))};
+    // Parse gaps: source text the parser could not account for (unknown, never an agent error).
+    const gaps = new Map();
+    (model.debugger?.parseAudit || []).filter(a => a.status === "unresolved").forEach(a => {
+      if (!gaps.has(a.step)) gaps.set(a.step, []);
+      gaps.get(a.step).push(a);
+    });
+    const anchors = anchorsByStep(model.debugger?.routeCandidates);
+    return {facts, evals, refs, gaps, anchors, maxRefs: Math.max(1, ...[...refs.values()].map(v => v.length))};
   }
 
   const callOf = key => key === "parse" ? "parse" : state.model?.debugger?.calls[Number(key)];
@@ -78,6 +86,20 @@ export function createView(root, ctx) {
     return `<div class="detail-block role-${role} tone-${tone}"><h4>${esc(f.label)}<span class="role-tag">${ROLE_LABEL[role]}</span></h4><div class="text-box" data-zoom>${esc(value)}</div></div>`;
   }
 
+  function gapBlock(gaps) {
+    if (!gaps?.length) return "";
+    return `<div class="detail-block tone-gap"><h4>Parse gap<span class="role-tag">unknown, not an agent error</span></h4>
+      ${gaps.map(a => `${(a.unresolved || []).map(u => `<blockquote>${esc(u.quote)}</blockquote><p class="muted">${esc(u.reason)}</p>`).join("")}
+        <details><summary>${esc(a.kind)} · ${esc(a.source_id || "")}</summary><ul class="gap-reasons">${(a.reasons || []).map(r => `<li class="mono">${esc(r)}</li>`).join("")}</ul></details>`).join("")}
+    </div>`;
+  }
+
+  function anchorBlock(anchors) {
+    if (!anchors?.length) return "";
+    return `<div class="detail-block tone-route"><h4>ROUTE anchor${anchors.length === 1 ? "" : "s"}</h4>
+      ${anchors.map(c => `<p><span class="mono">${esc(c.candidate_id)}</span> · ${(c.goal_links || []).map(esc).join(", ")}</p><div class="text-box" data-zoom>${esc(c.hypothesis || "")}</div>`).join("")}</div>`;
+  }
+
   function stepDetail(step, roles, idx) {
     const t = step.t;
     const facts = idx.facts.get(t) || [];
@@ -94,7 +116,7 @@ export function createView(root, ctx) {
         ${roles.action.map(f => block("action", f, "plain")).join("")}
         ${roles.outcome.length ? roles.outcome.map(f => block("outcome", {...f, label: `${f.label} → S${String(t + 1).padStart(2, "0")}`}, "teal-2")).join("") : `<div class="detail-block muted">No following state (last step).</div>`}</div>
       <div class="detail-col">${roles.reasoning.map(f => block("reasoning", f, "info")).join("") || `<div class="detail-block muted">No reasoning fields.</div>`}</div>
-      <div class="detail-col">
+      <div class="detail-col">${anchorBlock(idx.anchors.get(t))}${gapBlock(idx.gaps.get(t))}
         <div class="detail-block tone-violet"><h4>Facts · ${facts.length}</h4>${Object.entries(bySide).map(([side, list]) => `<div class="fact-group"><span class="eyebrow">${esc(side)}</span><div class="chip-col">${list.map(f => factChip(f, `<span class="slot mono">${esc(f.slot)}</span>`)).join("")}</div></div>`).join("") || `<p class="muted">No facts at this step.</p>`}</div>
         <div class="detail-block tone-ok"><h4>Rule evaluations · ${evals.length}</h4>
           <div class="chip-row">${Object.entries(counts).map(([s, n]) => `<span class="badge ${EVAL_CLASS[s] || ""}">${esc(s)} ${n}</span>`).join("")}</div>
@@ -121,7 +143,7 @@ export function createView(root, ctx) {
         <span class="card-icon">${icon("step")}</span>
         <h3 class="card-title" title="${esc(label)}">${esc(short(label, open ? 120 : 34))}</h3>
         <p class="card-sub">${esc(short(typeof thought === "string" ? thought.split("\n").filter(Boolean).at(-1) : "", open ? 160 : 60))}</p>
-        <div class="card-foot">${violated ? `<span class="badge warn">⚠ ${violated} violated</span>` : ""}<span class="badge">${(idx.facts.get(t) || []).length} facts</span></div>
+        <div class="card-foot">${(idx.anchors.get(t) || []).map(c => `<span class="badge anchor" title="${esc(anchorTitle(c))}">anchor ${esc(c.candidate_id)}</span>`).join("")}${idx.gaps.has(t) ? '<span class="badge gap" title="The parser could not account for part of the source text at this step">parse gap</span>' : ""}${violated ? `<span class="badge warn">⚠ ${violated} violated</span>` : ""}<span class="badge">${(idx.facts.get(t) || []).length} facts</span></div>
         ${state.model.debugger ? `<div class="heat" title="${refs} model calls touched this step"><span style="width:${Math.round(100 * refs / idx.maxRefs)}%"></span></div>` : ""}
       </div>
       ${open ? stepDetail(step, roles, idx) : ""}
@@ -137,7 +159,8 @@ export function createView(root, ctx) {
       const t = s.t ?? i + 1;
       const violated = (idx.evals.get(t) || []).some(e => e.state === "violated");
       const heat = (idx.refs.get(t)?.length || 0) / idx.maxRefs;
-      return `<button class="tick step-tick ${violated ? "is-warn" : ""}" style="--heat:${heat.toFixed(2)}" data-jump-step="${t}" title="S${t}"></button>`;
+      const marks = [violated && "is-warn", idx.gaps.has(t) && "has-gap", idx.anchors.has(t) && "is-anchor"].filter(Boolean).join(" ");
+      return `<button class="tick step-tick ${marks}" style="--heat:${heat.toFixed(2)}" data-jump-step="${t}" title="S${t}${idx.anchors.has(t) ? " · anchor" : ""}${idx.gaps.has(t) ? " · parse gap" : ""}"></button>`;
     }).join("");
   }
 
@@ -168,6 +191,7 @@ export function createView(root, ctx) {
       if (!node || !st) return "";
       node.classList.add("is-linked"); st.classList.add("is-linked");
       const a = cardRect(node, graph, base), b = cardRect(st, steps, base);
+      if (a.off) return ""; // a node scrolled out of the graph would draw across the side panel
       const y1 = a.bottom, y2 = b.top, mid = (y1 + y2) / 2;
       const phase = d.calls[i].phase;
       return `<path class="link phase-${phase} ${a.off || b.off ? "is-off" : ""} ${transient ? "is-preview" : ""}" d="M${a.x},${y1} C${a.x},${mid} ${b.x},${mid} ${b.x},${y2}"/><circle class="link-end phase-${phase}" cx="${b.x}" cy="${y2}" r="3.5"/>`;
@@ -204,11 +228,12 @@ export function createView(root, ctx) {
 
   function setFollow(on) { state.follow = on; $("tj-follow").setAttribute("aria-pressed", String(on)); }
 
-  function select(key, scroll = false) {
+  // scroll: "smooth" for keyboard moves; "jump" for deep links, which a following re-render must not cut short.
+  function select(key, scroll = null) {
     state.sel = key;
     graph.querySelectorAll(".pnode").forEach(n => n.classList.toggle("is-selected", n.dataset.call === key));
     renderSide();
-    if (scroll) scrollIntoGraph(graph.querySelector(`[data-call="${key}"]`));
+    if (scroll) scrollIntoGraph(graph.querySelector(`[data-call="${key}"]`), scroll === "smooth");
     scheduleLinks();
   }
 
@@ -282,7 +307,7 @@ export function createView(root, ctx) {
       if (!calls.length) return;
       const pos = state.sel == null || state.sel === "parse" ? -1 : Number(state.sel);
       const next = Math.max(0, Math.min(calls.length - 1, pos + (event.key === "ArrowLeft" ? -1 : 1)));
-      setFollow(false); select(String(next), true);
+      setFollow(false); select(String(next), "smooth");
     } else {
       const ts = state.model.steps.map((s, i) => s.t ?? i + 1);
       const pos = ts.indexOf(state.selStep);
@@ -310,11 +335,12 @@ export function createView(root, ctx) {
       render();
       const grew = (model.debugger?.calls.length || 0) > before;
       if ((grew || first) && state.follow && ctx.store.live) scrollToLatest();
+      else if (first && state.sel != null) scrollIntoGraph(graph.querySelector(`[data-call="${state.sel}"]`), false);
     },
     show(route) {
       if (state.follow && ctx.store.live && !route.extra.length) requestAnimationFrame(() => scrollToLatest());
       if (route.extra[0] === "step" && route.extra[1]) { state.openStep = Number(route.extra[1]); state.selStep = state.openStep; render(); selectStep(state.selStep); }
-      if (route.extra[0] === "call" && route.extra[1]) { setFollow(false); select(String(Number(route.extra[1]) - 1), true); }
+      if (route.extra[0] === "call" && route.extra[1]) { setFollow(false); select(String(Number(route.extra[1]) - 1), "jump"); }
       scheduleLinks();
     },
     destroy() { resize.disconnect(); cancelAnimationFrame(raf); window.removeEventListener("scroll", scheduleLinks); },

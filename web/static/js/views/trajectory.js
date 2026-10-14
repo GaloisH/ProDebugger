@@ -5,7 +5,7 @@ import {getJSON} from "../api.js";
 import {EVAL_CLASS, factChip, icon} from "../case/format.js";
 import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js";
 import {esc, pretty, short} from "../util.js";
-import {callDetail, expandable, layoutPhases, overviewHtml, phaseDetail, phasesHtml, requestHtml} from "./process.js";
+import {callDetail, expandable, layoutPhases, layoutProcess, overviewHtml, phaseDetail, processHtml, requestHtml} from "./process.js";
 import {anchorsByStep, anchorTitle} from "./route.js";
 import {candidateCard, candidatesByStep, planOf} from "./trace.js";
 
@@ -73,13 +73,10 @@ export function createView(root, ctx) {
       return;
     }
     state.phases = layoutPhases(d.calls, d.parse, planFor(d));
-    // Keep the stack's scroll and each open card's horizontal scroll across re-renders.
-    const top = graph.scrollTop;
-    const bodies = new Map([...graph.querySelectorAll(".ph-body")].map(b => [b.closest(".ph-card").dataset.phase, b.scrollLeft]));
-    graph.innerHTML = state.phases.length ? phasesHtml(state.phases, {open: state.openPhases, sel: state.sel, selPhase: state.selPhase})
+    const keep = {x: graph.scrollLeft, y: graph.scrollTop};
+    graph.innerHTML = state.phases.length ? processHtml(layoutProcess(state.phases, state.openPhases), {sel: state.sel, selPhase: state.selPhase})
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
-    graph.scrollTop = top;
-    graph.querySelectorAll(".ph-body").forEach(b => { b.scrollLeft = bodies.get(b.closest(".ph-card").dataset.phase) || 0; });
+    graph.scrollLeft = keep.x; graph.scrollTop = keep.y;
   }
 
   function renderSide() {
@@ -179,10 +176,8 @@ export function createView(root, ctx) {
   }
 
   // ---------- links between graph and steps ----------
-  // scroller: the element el scrolls in; inner: a nested scroller inside it (an open phase card).
-  function cardRect(el, scroller, base, inner = null) {
-    const r = el.getBoundingClientRect(), o = scroller.getBoundingClientRect(), i = inner?.getBoundingClientRect() || o;
-    const s = {left: Math.max(o.left, i.left), right: Math.min(o.right, i.right), top: Math.max(o.top, i.top), bottom: Math.min(o.bottom, i.bottom)};
+  function cardRect(el, scroller, base) {
+    const r = el.getBoundingClientRect(), s = scroller.getBoundingClientRect();
     const cx = Math.min(Math.max(r.left + r.width / 2, s.left + 8), s.right - 8);
     const off = r.right < s.left || r.left > s.right || r.bottom < s.top || r.top > s.bottom;
     return {x: cx - base.left, top: r.top - base.top, bottom: Math.min(r.bottom, s.bottom) - base.top, off};
@@ -217,7 +212,7 @@ export function createView(root, ctx) {
       if (!node || !st || seen.has(id) || seen.size >= 80) return "";
       seen.add(id);
       node.classList.add("is-linked"); st.classList.add("is-linked");
-      const a = cardRect(node, graph, base, node.closest(".ph-body")), b = cardRect(st, steps, base);
+      const a = cardRect(node, graph, base), b = cardRect(st, steps, base);
       if (a.off) return ""; // a node scrolled out of view would draw across the side panel
       const y1 = a.bottom, y2 = b.top, mid = (y1 + y2) / 2;
       return `<path class="link phase-${c.phase} ${b.off ? "is-off" : ""} ${transient ? "is-preview" : ""}" d="M${a.x},${y1} C${a.x},${mid} ${b.x},${mid} ${b.x},${y2}"/><circle class="link-end phase-${c.phase}" cx="${b.x}" cy="${y2}" r="3.5"/>`;
@@ -236,19 +231,15 @@ export function createView(root, ctx) {
   }
 
   let programmatic = false;
-  // A node scrolls to the middle of its open card; the card scrolls into view in the phase stack.
+  // A node scrolls to the middle of the graph; a card to its left edge, as much of it in view as fits.
   function scrollIntoGraph(el, smooth = true) {
     if (!el) return;
-    const behavior = smooth ? "smooth" : "auto";
+    const s = graph.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const card = el.classList.contains("ph-card");
     programmatic = true;
-    const body = el.closest(".ph-body");
-    if (body) {
-      const s = body.getBoundingClientRect(), r = el.getBoundingClientRect();
-      body.scrollTo({left: body.scrollLeft + r.left - s.left - (s.width - r.width) / 2, behavior});
-    }
-    const card = el.closest(".ph-card") || el;
-    const s = graph.getBoundingClientRect(), r = card.getBoundingClientRect();
-    if (r.top < s.top || r.bottom > s.bottom) graph.scrollTo({top: graph.scrollTop + r.top - s.top - 12, behavior});
+    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (card ? 12 : (s.width - r.width) / 2),
+                    top: graph.scrollTop + r.top - s.top - (card && r.height > s.height ? 12 : (s.height - r.height) / 2),
+                    behavior: smooth ? "smooth" : "auto"});
     setTimeout(() => { programmatic = false; }, 600);
   }
 
@@ -323,7 +314,7 @@ export function createView(root, ctx) {
     if (toggle) { setFollow(false); selectPhase(toggle, !state.openPhases.has(toggle)); return; }
     const card = el.closest(".ph-card");
     if (card) {
-      if (!el.closest(".ph-body")) { setFollow(false); selectPhase(card.dataset.phase, true); }
+      setFollow(false); selectPhase(card.dataset.phase, true);
       return;
     }
     const b = el.closest("button");
@@ -347,7 +338,7 @@ export function createView(root, ctx) {
 
   root.addEventListener("pointerover", event => {
     const node = event.target.closest(".pnode"), card = event.target.closest(".ph-card"), st = event.target.closest(".st-card");
-    const hn = node ? node.dataset.call : card && !event.target.closest(".ph-body") ? "phase:" + card.dataset.phase : null;
+    const hn = node ? node.dataset.call : card ? "phase:" + card.dataset.phase : null;
     const hs = st && !st.classList.contains("is-open") ? Number(st.dataset.step) : null;
     if (hn !== state.hover || hs !== state.hoverStep) { state.hover = hn; state.hoverStep = hs; scheduleLinks(); }
   });

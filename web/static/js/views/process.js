@@ -1,6 +1,7 @@
-// Debugger process: a vertical stack of phase cards; each expands in place into a
-// horizontal row of its model calls (one node per call), several at once. TRACE has one
-// row per manager assignment; PARSE is a single card.
+// Debugger process: one band per phase, top to bottom, on a single canvas. Each phase is a
+// card that expands to the right into its model calls (one node per call), several at once.
+// Handoff edges join consecutive phases: from every row's last node (or the collapsed card)
+// to every row's first node (or the card). TRACE has one row per manager assignment.
 import {CALL_PHASES} from "../case/calls.js";
 import {factChip} from "../case/format.js";
 import {esc, number, raw, short} from "../util.js";
@@ -9,8 +10,11 @@ import {managerDetail, managerOverview, managerTitle, traceBadge, traceDetail, t
 import {submitDetail, submitOverview, submitTitle} from "./submit.js";
 import {toolList} from "./tools.js";
 
-// Node size and gaps; TRACE rows keep a gutter on the left for the assignment label.
-const W = 184, H = 80, GX = 34, LANE_GAP = 12, GUTTER = 120;
+// Card (collapsed, and the left column of an open card), node size and gaps.
+const CW = 216, CH = 124, W = 184, H = 80, GX = 34, LANE_GAP = 12, BAND_GAP = 44, PADX = 20, PADY = 14;
+// Where an open card's nodes start. TRACE rows: assignment label, then the fan-out bus
+// carrying the MANAGER handoff, then the anchor-case label on the edge into each row.
+const NODE_X = CW + 24, LANE_LABEL_X = CW + 12, BUS = CW + 108, TRACE_X = CW + 150;
 const S = t => `S${String(t).padStart(2, "0")}`;
 const kilo = n => n == null ? "—" : n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(n);
 const secs = s => s == null ? "" : s >= 60 ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, "0")}s` : `${s < 10 ? s.toFixed(1) : Math.round(s)}s`;
@@ -35,8 +39,8 @@ export function callTitle(call) {
   return call.message?.content ? "Text answer" : "No output";
 }
 
-// One card per phase, in pipeline order. Each phase lays out its own calls left to right;
-// TRACE has one row per manager assignment, in the plan's order. PARSE is a single card.
+// Phases in pipeline order, each with its calls grouped into rows: TRACE has one row per
+// manager assignment, in the plan's order. PARSE is a single card without rows.
 // plan: the manager's investigation plan.
 export function layoutPhases(calls, parse, plan) {
   const assignments = new Map((plan?.assignments || []).map((a, i) => [a.agent_id, {...a, order: i}]));
@@ -58,19 +62,58 @@ export function layoutPhases(calls, parse, plan) {
   phases.find(p => p.phase === "TRACE")?.lanes.sort((a, b) => (a.assignment?.order ?? 1e9) - (b.assignment?.order ?? 1e9));
   const rank = p => { const i = CALL_PHASES.indexOf(p.phase); return i < 0 ? 1e9 : i; };
   phases.sort((a, b) => rank(a) - rank(b));
-  for (const p of phases) {
-    const left = p.phase === "TRACE" ? GUTTER : 0;
-    p.lanes.forEach((lane, li) => {
-      lane.y = li * (H + LANE_GAP);
-      lane.nodes.forEach((node, k) => { node.x = left + k * (W + GX); node.y = lane.y; });
-    });
-    p.width = left + Math.max(0, ...p.lanes.map(l => l.nodes.length)) * (W + GX) - GX;
-    p.height = p.lanes.length * H + Math.max(0, p.lanes.length - 1) * LANE_GAP;
-    // Sequence within a row; a retry after a rejected tool call is drawn dashed red.
-    p.edges = p.lanes.flatMap(lane => lane.nodes.slice(1).map((node, k) =>
-      ({from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)})));
-  }
   return phases;
+}
+
+export const expandable = p => !p.parse && p.calls.length > 0;
+
+// Positions every card and node on one canvas. open: the set of expanded phases.
+export function layoutProcess(phases, open) {
+  const edges = [];
+  let y = 0, width = CW;
+  for (const p of phases) {
+    p.open = open.has(p.phase) && expandable(p);
+    p.y = y;
+    if (p.open) {
+      const x0 = p.phase === "TRACE" ? TRACE_X : NODE_X;
+      p.lanes.forEach((lane, li) => {
+        lane.y = y + PADY + li * (H + LANE_GAP);
+        lane.nodes.forEach((node, k) => Object.assign(node, {x: x0 + k * (W + GX), y: lane.y, w: W, h: H}));
+        // Sequence within a row; a retry after a rejected tool call is drawn dashed red.
+        lane.nodes.slice(1).forEach((node, k) => edges.push({kind: "seq", from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)}));
+      });
+      p.width = x0 + Math.max(...p.lanes.map(l => l.nodes.length)) * (W + GX) - GX + PADX;
+      p.height = Math.max(CH, PADY * 2 + p.lanes.length * H + (p.lanes.length - 1) * LANE_GAP);
+      p.entries = p.lanes.map(l => l.nodes[0]);
+      p.exits = p.lanes.map(l => l.nodes.at(-1));
+    } else {
+      p.width = CW; p.height = CH;
+      p.entries = p.exits = [{x: 0, y, w: CW, h: CH}];
+    }
+    width = Math.max(width, p.width);
+    y += p.height + BAND_GAP;
+  }
+  // Fan-out into a multi-row phase runs along the gap above it, down the bus and into each
+  // row from the left; fan-in leaves each row on the right and merges past the longest row.
+  // Edges into a TRACE row are labelled with the ROUTE case it was assigned.
+  phases.forEach((p, i) => {
+    const next = phases[i + 1];
+    if (!next) return;
+    const right = Math.max(...p.exits.map(a => a.x + a.w)) + 16;
+    const route = next.entries.length > 1 ? "fanout" : p.exits.length > 1 ? "fanin" : "curve";
+    next.entries.forEach((b, j) => p.exits.forEach((a, k) => edges.push({kind: "handoff", from: a, to: b, route, right, gap: next.y - BAND_GAP / 2,
+      label: k === 0 && p.phase === "MANAGER" && next.open ? next.lanes[j].assignment?.anchor_case_id : null})));
+  });
+  return {phases, edges, width: width + 8, height: Math.max(0, y - BAND_GAP)};
+}
+
+function edgePath(e) {
+  const a = e.from, b = e.to;
+  if (e.kind === "seq") return `M${a.x + a.w},${a.y + a.h / 2} L${b.x - 6},${b.y + b.h / 2}`;
+  if (e.route === "fanout") return `M${a.x + a.w / 2},${a.y + a.h} V${e.gap} H${BUS} V${b.y + b.h / 2} H${b.x - 6}`;
+  if (e.route === "fanin") return `M${a.x + a.w},${a.y + a.h / 2} H${e.right} V${e.gap} H${b.x + b.w / 2} V${b.y - 6}`;
+  const x1 = a.x + a.w / 2, y1 = a.y + a.h, x2 = b.x + b.w / 2, y2 = b.y - 6, dy = Math.max(18, (y2 - y1) / 2);
+  return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
 }
 
 function nodeHtml(node, sel) {
@@ -85,17 +128,6 @@ function nodeHtml(node, sel) {
     <span class="pn-title">${esc(short(callTitle(c), 44))}</span>
     <span class="pn-foot mono">${c.status === "pending" ? esc(c.model || "") : `${kilo(c.usage?.input_tokens)} in · ${kilo(c.usage?.output_tokens)} out · ${secs(c.seconds)}`}</span>
   </button>`;
-}
-
-function canvasHtml(p, sel) {
-  return `<div class="proc-canvas" style="width:${p.width}px;height:${p.height}px">
-    ${p.phase === "TRACE" ? p.lanes.map(l => `<span class="proc-lane-label" style="top:${l.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 16))}</span>${l.assignment?.anchor_case_id ? `<span class="badge anchor" title="ROUTE anchor case">${esc(l.assignment.anchor_case_id)}</span>` : ""}</span>`).join("") : ""}
-    <svg class="proc-edges" width="${p.width}" height="${p.height}" aria-hidden="true">
-      <defs><marker id="proc-arrow-${p.phase}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
-      ${p.edges.map(e => `<path class="proc-edge ${e.retry ? "is-retry" : ""}" d="M${e.from.x + W},${e.from.y + H / 2} L${e.to.x - 6},${e.to.y + H / 2}" marker-end="url(#proc-arrow-${p.phase})"/>`).join("")}
-    </svg>
-    ${p.lanes.flatMap(l => l.nodes).map(n => nodeHtml(n, sel)).join("")}
-  </div>`;
 }
 
 // ---------- phase cards ----------
@@ -125,30 +157,38 @@ export function phaseStats(p) {
 }
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-export const expandable = p => !p.parse && p.calls.length > 0;
 
-// open: the set of expanded phases; selPhase: the phase the selection is in.
-function phaseCard(p, {open, sel, selPhase}) {
+// sel: the selected call; selPhase: the phase the selection is in.
+function phaseCard(p, {sel, selPhase}) {
   const s = phaseStats(p);
-  const isOpen = open.has(p.phase) && expandable(p);
-  const selected = selPhase === p.phase && (sel == null || !isOpen);
-  const cls = ["ph-card", `phase-${p.phase}`, isOpen && "is-open", selected && "is-selected", s.pending && "is-pending"].filter(Boolean).join(" ");
+  const selected = selPhase === p.phase && (sel == null || !p.open);
+  const cls = ["ph-card", `phase-${p.phase}`, p.open && "is-open", selected && "is-selected", s.pending && "is-pending"].filter(Boolean).join(" ");
   const summary = phaseSummary(p);
-  return `<article class="${cls}" data-phase="${p.phase}">
-    <div class="ph-meta">
+  return `<article class="${cls}" data-phase="${p.phase}" style="left:0;top:${p.y}px;width:${p.width}px;height:${p.height}px">
+    <div class="ph-meta" style="width:${CW}px">
       <div class="ph-top"><span class="phase-dot"></span><span class="ph-name mono">${esc(p.phase)}</span>
-        ${s.pending ? '<span class="live-dot" title="In progress"></span>' : ""}</div>
+        ${s.pending ? '<span class="live-dot" title="In progress"></span>' : ""}${s.rejected ? `<span class="badge bad" title="Calls with a rejected tool call">${s.rejected} rejected</span>` : ""}</div>
       <span class="ph-count">${plural(s.calls, "call")}${p.phase === "TRACE" ? ` · ${plural(p.lanes.length, "row")}` : ""}</span>
       <h3 class="ph-title" title="${esc(summary)}">${esc(summary)}</h3>
-      <div class="ph-foot">${s.rejected ? `<span class="badge bad">${s.rejected} rejected</span>` : ""}<span class="mono">${kilo(s.input)} in · ${kilo(s.output)} out${s.seconds != null ? ` · ${secs(s.seconds)}` : ""}</span></div>
-      ${expandable(p) ? `<button class="card-toggle" data-toggle-phase="${p.phase}" aria-expanded="${isOpen}" aria-label="${isOpen ? "Collapse" : "Expand"} ${esc(p.phase)}">${isOpen ? "−" : "+"}</button>` : ""}
+      <div class="ph-foot mono">${kilo(s.input)} in · ${kilo(s.output)} out${s.seconds != null ? ` · ${secs(s.seconds)}` : ""}</div>
+      ${expandable(p) ? `<button class="card-toggle" data-toggle-phase="${p.phase}" aria-expanded="${p.open}" aria-label="${p.open ? "Collapse" : "Expand"} ${esc(p.phase)}">${p.open ? "−" : "+"}</button>` : ""}
     </div>
-    ${isOpen ? `<div class="ph-body">${canvasHtml(p, sel)}</div>` : ""}
   </article>`;
 }
 
-export function phasesHtml(phases, view) {
-  return `<div class="ph-track">${phases.map(p => phaseCard(p, view)).join("")}</div>`;
+export function processHtml(layout, view) {
+  const {phases, edges, width, height} = layout;
+  const open = phases.filter(p => p.open);
+  return `<div class="proc-canvas" style="width:${width}px;height:${height}px">
+    ${phases.map(p => phaseCard(p, view)).join("")}
+    ${open.filter(p => p.phase === "TRACE").flatMap(p => p.lanes).map(l => `<span class="proc-lane-label" style="left:${LANE_LABEL_X}px;top:${l.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 14))}</span></span>`).join("")}
+    <svg class="proc-edges" width="${width}" height="${height}" aria-hidden="true">
+      <defs><marker id="proc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+      ${edges.map(e => `<path class="proc-edge ${e.kind} ${e.retry ? "is-retry" : ""}" d="${edgePath(e)}" marker-end="url(#proc-arrow)"/>`).join("")}
+    </svg>
+    ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" style="left:${(BUS + e.to.x) / 2}px;top:${e.to.y + H / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
+    ${open.flatMap(p => p.lanes.flatMap(l => l.nodes)).map(n => nodeHtml(n, view.sel)).join("")}
+  </div>`;
 }
 
 // ---------- side panel ----------

@@ -100,42 +100,37 @@
 .lane-nav { margin-left: auto; display: flex; gap: .3rem; }
 .lane-nav .btn { padding: .15rem .55rem; font-size: .85rem; }
 
-/* Process: a vertical stack of phase cards; an open card shows its calls in a horizontal row. */
+/* Process: one band per phase on a single canvas. A phase card expands to the right into its
+   calls; handoff edges join consecutive phases at the nodes (open) or the card (collapsed). */
 .proc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, 27rem); gap: .8rem; align-items: start; }
 .proc[hidden] { display: none; }
 .proc-graph { min-width: 0; border: 1px solid var(--line); border-radius: 1rem; background: radial-gradient(circle at 1px 1px, #ffffff0b 1px, transparent 0) 0 0 / 22px 22px, var(--surface-1); }
-.proc-scroll { overflow-x: hidden; overflow-y: auto; max-height: calc(100vh - var(--header-h) - 9rem); }
+.proc-scroll { overflow: auto; max-height: calc(100vh - var(--header-h) - 9rem); padding: 1rem; }
 .proc-scroll:focus-visible { outline-offset: -2px; }
-.ph-track { display: flex; flex-direction: column; gap: 1.1rem; padding: 1rem; }
-.ph-track > * + *::before { content: '↓'; position: absolute; top: -1.15rem; left: 1.1rem; width: 1rem; line-height: 1.1rem; text-align: center; color: var(--muted); font-size: .9rem; pointer-events: none; }
-.ph-card { position: relative; min-width: 0; border: 1px solid var(--line-strong); border-left: 3px solid var(--c); border-radius: .8rem; background: var(--panel-2); box-shadow: 0 10px 24px #0000001f; cursor: pointer; transition: border-color .15s, background .15s; }
+.proc-canvas { position: relative; }
+.ph-card { position: absolute; z-index: 0; border: 1px solid var(--line-strong); border-top: 3px solid var(--c); border-radius: .8rem; background: var(--panel-2); box-shadow: 0 10px 24px #0000001f; cursor: pointer; transition: border-color .15s, background .15s; }
 .ph-card:hover { background: var(--panel-3); }
-.ph-card.is-open { display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); background: var(--panel-2); cursor: default; }
-.ph-card.is-open .ph-meta { cursor: pointer; }
-.ph-card.is-selected, .ph-card.is-linked { border-left-color: var(--c) !important; }
-.ph-card.is-pending { border-style: dashed; border-left-style: solid; }
-/* Collapsed: one compact line. Open: a column beside the calls. */
-.ph-meta { position: relative; display: flex; flex-direction: column; gap: .3rem; min-width: 0; padding: .65rem 2.6rem .75rem .8rem; }
-.ph-card:not(.is-open) .ph-meta { flex-direction: row; align-items: center; gap: .9rem; padding: .5rem 2.6rem .5rem .9rem; }
-.ph-card:not(.is-open) .ph-top { flex: none; width: 7.5rem; }
-.ph-card:not(.is-open) .ph-count { flex: none; width: 6.5rem; }
-.ph-card:not(.is-open) .ph-title { flex: 1 1 0; min-width: 0; -webkit-line-clamp: 1; }
-.ph-card:not(.is-open) .ph-foot { flex: none; flex-wrap: nowrap; }
-.ph-meta > .card-toggle { position: absolute; top: .55rem; right: .55rem; }
-.ph-card:not(.is-open) .ph-meta > .card-toggle { top: 50%; transform: translateY(-50%); }
-.ph-top { display: flex; align-items: center; gap: .45rem; min-height: 1.6rem; }
+.ph-card.is-open { background: color-mix(in srgb, var(--panel-2) 55%, transparent); }
+.ph-card.is-open:hover { background: color-mix(in srgb, var(--panel-3) 45%, transparent); }
+.ph-card.is-selected, .ph-card.is-linked { border-top-color: var(--c) !important; }
+.ph-card.is-pending { border-style: dashed; border-top-style: solid; }
+.ph-meta { position: relative; display: flex; flex-direction: column; gap: .25rem; box-sizing: border-box; height: 100%; min-width: 0; padding: .55rem .8rem .6rem; }
+.ph-card.is-open .ph-meta { border-right: 1px solid var(--line); }
+.ph-meta > .card-toggle { position: absolute; top: .45rem; right: .45rem; }
+.ph-top { display: flex; align-items: center; gap: .45rem; min-height: 1.4rem; padding-right: 1.8rem; }
+.ph-top .badge { padding: 0 .35rem; font-size: .66rem; }
 .ph-top .phase-dot, .side-head .phase-dot { background: var(--c); }
 .ph-name { color: var(--c); font-size: .78rem; font-weight: 650; letter-spacing: .08em; }
 .ph-count { color: var(--faint); font-family: var(--mono); font-size: .72rem; }
-.ph-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 0; font-size: .95rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
-.ph-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .45rem; color: var(--muted); font-size: .7rem; }
-.ph-body { min-width: 0; overflow-x: auto; padding: .9rem 1rem 1rem; border-left: 1px solid var(--line); }
-.proc-canvas { position: relative; }
-.proc-lane-label { position: absolute; left: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; max-width: 6.6rem; color: var(--text-2); font-size: .7rem; transform: translateY(-50%); cursor: help; }
-.proc-lane-label .mono { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.proc-edges { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+.ph-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 0; font-size: .9rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.ph-foot { overflow: hidden; color: var(--muted); font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.proc-lane-label { position: absolute; z-index: 2; max-width: 5.6rem; overflow: hidden; color: var(--text-2); font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-50%); cursor: help; }
+.proc-edges { position: absolute; z-index: 1; inset: 0; overflow: visible; pointer-events: none; }
 .proc-edge { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+.proc-edge.handoff { stroke: var(--edge-dim); stroke-dasharray: 2 4; }
 .proc-edge.is-retry { stroke: var(--bad-line); stroke-dasharray: 5 4; }
+.badge.proc-edge-label { position: absolute; z-index: 2; padding: .05rem .35rem; background: color-mix(in srgb, var(--route) 22%, var(--surface-1)); font-size: .66rem; transform: translate(-50%, -50%); pointer-events: none; }
+.pnode { z-index: 2; }
 .call-list { display: flex; flex-direction: column; gap: .15rem; }
 .call-group + .call-group { margin-top: .45rem; }
 .call-group .eyebrow { display: block; margin: 0 0 .15rem .4rem; font-size: .66rem; }

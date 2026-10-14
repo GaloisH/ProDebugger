@@ -74,45 +74,9 @@ export function createView(root, ctx) {
     }
     state.phases = layoutPhases(d.calls, d.parse, planFor(d));
     const keep = {x: graph.scrollLeft, y: graph.scrollTop};
-    const before = new Map([...graph.querySelectorAll(".ph-card")].map(c =>
-      [c.dataset.phase, {top: c.style.top, width: c.style.width, height: c.style.height, open: c.classList.contains("is-open")}]));
     graph.innerHTML = state.phases.length ? processHtml(layoutProcess(state.phases, state.openPhases), {sel: state.sel, selPhase: state.selPhase})
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
     graph.scrollLeft = keep.x; graph.scrollTop = keep.y;
-    animateLayout(before);
-  }
-
-  // Opening or closing a phase grows or shrinks its card from the old size, slides the bands
-  // below into place, brings the calls in from the left one by one, and fades the edges back in.
-  let settle = 0;
-  function animateLayout(before) {
-    if (!before.size || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const cards = [...graph.querySelectorAll(".ph-card")];
-    const changed = cards.filter(c => {
-      const old = before.get(c.dataset.phase);
-      return old && (old.top !== c.style.top || old.width !== c.style.width || old.height !== c.style.height);
-    });
-    if (!changed.length) return;
-    const canvas = graph.querySelector(".proc-canvas");
-    const moving = [];
-    changed.forEach(c => {
-      const old = before.get(c.dataset.phase), now = {top: c.style.top, width: c.style.width, height: c.style.height};
-      const band = graph.querySelectorAll(`[data-band="${c.dataset.phase}"]`);
-      if (c.classList.contains("is-open") && !old.open) band.forEach(el => el.classList.add("is-entering"));
-      else {
-        // An open band that only moved: its calls travel with the card.
-        const dy = parseFloat(old.top) - parseFloat(now.top);
-        if (dy) band.forEach(el => { el.style.translate = `0 ${dy}px`; moving.push(el); });
-      }
-      Object.assign(c.style, {top: old.top, width: old.width, height: old.height});
-      moving.push([c, now]);
-    });
-    canvas.classList.add("is-settling");
-    void canvas.offsetWidth; // apply the old geometry before transitioning to the new one
-    canvas.classList.add("is-animating");
-    moving.forEach(m => Array.isArray(m) ? Object.assign(m[0].style, m[1]) : (m.style.translate = ""));
-    clearTimeout(settle);
-    settle = setTimeout(() => { canvas.classList.remove("is-animating", "is-settling"); scheduleLinks(); }, 420);
   }
 
   function renderSide() {
@@ -267,14 +231,14 @@ export function createView(root, ctx) {
   }
 
   let programmatic = false;
-  // A node scrolls to the middle of the graph; a card to its left edge, as much of it in view as fits.
+  // A node scrolls to the middle of the graph; a card to its top edge, as much of it in view as fits.
   function scrollIntoGraph(el, smooth = true) {
     if (!el) return;
     const s = graph.getBoundingClientRect(), r = el.getBoundingClientRect();
     const card = el.classList.contains("ph-card");
     programmatic = true;
-    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (card ? 12 : (s.width - r.width) / 2),
-                    top: graph.scrollTop + r.top - s.top - (card && r.height > s.height ? 12 : (s.height - r.height) / 2),
+    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (card && r.width > s.width ? 12 : (s.width - r.width) / 2),
+                    top: graph.scrollTop + r.top - s.top - (card ? 12 : (s.height - r.height) / 2),
                     behavior: smooth ? "smooth" : "auto"});
     setTimeout(() => { programmatic = false; }, 600);
   }
@@ -387,7 +351,7 @@ export function createView(root, ctx) {
     if (!lane || !keys.includes(event.key)) return;
     event.preventDefault();
     if (lane === graph) {
-      // Up/down move between phase cards, Enter opens or closes one, left/right walk the calls.
+      // Left/right move between phase cards, Enter opens or closes one, up/down walk the calls.
       setFollow(false);
       const names = state.phases.map(p => p.phase);
       const current = state.selPhase ?? callOf(state.sel)?.phase;
@@ -395,14 +359,14 @@ export function createView(root, ctx) {
         if (current) selectPhase(current, !state.openPhases.has(current));
         return;
       }
-      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
         const pos = names.indexOf(current);
-        if (names.length) selectPhase(names[pos < 0 ? 0 : Math.max(0, Math.min(names.length - 1, pos + (event.key === "ArrowUp" ? -1 : 1)))]);
+        if (names.length) selectPhase(names[pos < 0 ? 0 : Math.max(0, Math.min(names.length - 1, pos + (event.key === "ArrowLeft" ? -1 : 1)))]);
         return;
       }
       const calls = state.model.debugger?.calls || [];
       if (!calls.length) return;
-      const dir = event.key === "ArrowLeft" ? -1 : 1, phase = phaseOf(current);
+      const dir = event.key === "ArrowUp" ? -1 : 1, phase = phaseOf(current);
       const pos = state.sel != null ? Number(state.sel)
         : phase?.calls.length ? (dir > 0 ? phase.calls[0].index - 1 : phase.calls.at(-1).index + 1) : -1;
       select(String(Math.max(0, Math.min(calls.length - 1, pos + dir))), "smooth", true);

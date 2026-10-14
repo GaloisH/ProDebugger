@@ -1,7 +1,7 @@
-// Debugger process: one band per phase, top to bottom, on a single canvas. Each phase is a
-// card that expands to the right into its model calls (one node per call), several at once.
-// Handoff edges join consecutive phases: from every row's last node (or the collapsed card)
-// to every row's first node (or the card). TRACE has one row per manager assignment.
+// Debugger process: one column per phase, left to right, on a single canvas. Each phase is a
+// card that expands downwards into its model calls (one node per call), several at once.
+// Handoff edges join consecutive phases: from every column's last node (or the collapsed card)
+// to every column's first node (or the card). TRACE has one column per manager assignment.
 import {CALL_PHASES} from "../case/calls.js";
 import {factChip} from "../case/format.js";
 import {esc, number, raw, short} from "../util.js";
@@ -10,11 +10,11 @@ import {managerDetail, managerOverview, managerTitle, traceBadge, traceDetail, t
 import {submitDetail, submitOverview, submitTitle} from "./submit.js";
 import {toolList} from "./tools.js";
 
-// Card (collapsed, and the left column of an open card), node size and gaps.
-const CW = 216, CH = 124, W = 184, H = 80, GX = 34, LANE_GAP = 12, BAND_GAP = 44, PADX = 20, PADY = 14;
-// Where an open card's nodes start. TRACE rows: assignment label, then the fan-out bus
-// carrying the MANAGER handoff, then the anchor-case label on the edge into each row.
-const NODE_X = CW + 24, LANE_LABEL_X = CW + 12, BUS = CW + 108, TRACE_X = CW + 150;
+// Card (collapsed, and the header of an open card), node size and gaps.
+const CW = 216, CH = 124, W = 184, H = 80, GY = 34, LANE_GAP = 12, BAND_GAP = 44, PAD = 20;
+// Where an open card's nodes start. TRACE columns: assignment label, then the fan-out bus
+// carrying the MANAGER handoff, then the anchor-case label on the edge into each column.
+const NODE_Y = CH + 24, LANE_LABEL_Y = CH + 10, BUS = CH + 40, TRACE_Y = CH + 78;
 const S = t => `S${String(t).padStart(2, "0")}`;
 const kilo = n => n == null ? "—" : n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(n);
 const secs = s => s == null ? "" : s >= 60 ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, "0")}s` : `${s < 10 ? s.toFixed(1) : Math.round(s)}s`;
@@ -39,7 +39,7 @@ export function callTitle(call) {
   return call.message?.content ? "Text answer" : "No output";
 }
 
-// Phases in pipeline order, each with its calls grouped into rows: TRACE has one row per
+// Phases in pipeline order, each with its calls grouped into columns: TRACE has one column per
 // manager assignment, in the plan's order. PARSE is a single card without rows.
 // plan: the manager's investigation plan.
 export function layoutPhases(calls, parse, plan) {
@@ -70,59 +70,60 @@ export const expandable = p => !p.parse && p.calls.length > 0;
 // Positions every card and node on one canvas. open: the set of expanded phases.
 export function layoutProcess(phases, open) {
   const edges = [];
-  let y = 0, width = CW;
+  let x = 0, height = CH;
   for (const p of phases) {
     p.open = open.has(p.phase) && expandable(p);
-    p.y = y;
+    p.x = x;
     if (p.open) {
-      const x0 = p.phase === "TRACE" ? TRACE_X : NODE_X;
+      const y0 = p.phase === "TRACE" ? TRACE_Y : NODE_Y;
+      const span = p.lanes.length * W + (p.lanes.length - 1) * LANE_GAP;
+      p.width = Math.max(CW, span + PAD * 2);
       p.lanes.forEach((lane, li) => {
-        lane.y = y + PADY + li * (H + LANE_GAP);
-        lane.nodes.forEach((node, k) => Object.assign(node, {x: x0 + k * (W + GX), y: lane.y, w: W, h: H, band: p.phase, k}));
-        // Sequence within a row; a retry after a rejected tool call is drawn dashed red.
+        lane.x = x + (p.width - span) / 2 + li * (W + LANE_GAP);
+        lane.nodes.forEach((node, k) => Object.assign(node, {x: lane.x, y: y0 + k * (H + GY), w: W, h: H}));
+        // Sequence within a column; a retry after a rejected tool call is drawn dashed red.
         lane.nodes.slice(1).forEach((node, k) => edges.push({kind: "seq", from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)}));
       });
-      p.width = x0 + Math.max(...p.lanes.map(l => l.nodes.length)) * (W + GX) - GX + PADX;
-      p.height = Math.max(CH, PADY * 2 + p.lanes.length * H + (p.lanes.length - 1) * LANE_GAP);
+      p.height = y0 + Math.max(...p.lanes.map(l => l.nodes.length)) * (H + GY) - GY + PAD;
       p.entries = p.lanes.map(l => l.nodes[0]);
       p.exits = p.lanes.map(l => l.nodes.at(-1));
     } else {
       p.width = CW; p.height = CH;
-      p.entries = p.exits = [{x: 0, y, w: CW, h: CH}];
+      p.entries = p.exits = [{x, y: 0, w: CW, h: CH}];
     }
-    width = Math.max(width, p.width);
-    y += p.height + BAND_GAP;
+    height = Math.max(height, p.height);
+    x += p.width + BAND_GAP;
   }
-  // Fan-out into a multi-row phase runs along the gap above it, down the bus and into each
-  // row from the left; fan-in leaves each row on the right and merges past the longest row.
-  // Edges into a TRACE row are labelled with the ROUTE case it was assigned.
+  // Fan-out into a multi-column phase runs along the gap before it, across the bus and into
+  // each column from above; fan-in leaves each column at the bottom and merges below the
+  // longest one. Edges into a TRACE column are labelled with the ROUTE case it was assigned.
   phases.forEach((p, i) => {
     const next = phases[i + 1];
     if (!next) return;
-    const right = Math.max(...p.exits.map(a => a.x + a.w)) + 16;
+    const bottom = Math.max(...p.exits.map(a => a.y + a.h)) + 12;
     const route = next.entries.length > 1 ? "fanout" : p.exits.length > 1 ? "fanin" : "curve";
-    next.entries.forEach((b, j) => p.exits.forEach((a, k) => edges.push({kind: "handoff", from: a, to: b, route, right, gap: next.y - BAND_GAP / 2,
+    next.entries.forEach((b, j) => p.exits.forEach((a, k) => edges.push({kind: "handoff", from: a, to: b, route, bottom, gap: next.x - BAND_GAP / 2,
       label: k === 0 && p.phase === "MANAGER" && next.open ? next.lanes[j].assignment?.anchor_case_id : null})));
   });
-  return {phases, edges, width: width + 8, height: Math.max(0, y - BAND_GAP)};
+  return {phases, edges, width: Math.max(0, x - BAND_GAP), height: height + 8};
 }
 
 function edgePath(e) {
   const a = e.from, b = e.to;
-  if (e.kind === "seq") return `M${a.x + a.w},${a.y + a.h / 2} L${b.x - 6},${b.y + b.h / 2}`;
-  if (e.route === "fanout") return `M${a.x + a.w / 2},${a.y + a.h} V${e.gap} H${BUS} V${b.y + b.h / 2} H${b.x - 6}`;
-  if (e.route === "fanin") return `M${a.x + a.w},${a.y + a.h / 2} H${e.right} V${e.gap} H${b.x + b.w / 2} V${b.y - 6}`;
-  const x1 = a.x + a.w / 2, y1 = a.y + a.h, x2 = b.x + b.w / 2, y2 = b.y - 6, dy = Math.max(18, (y2 - y1) / 2);
-  return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+  if (e.kind === "seq") return `M${a.x + a.w / 2},${a.y + a.h} L${b.x + b.w / 2},${b.y - 6}`;
+  if (e.route === "fanout") return `M${a.x + a.w},${a.y + a.h / 2} H${e.gap} V${BUS} H${b.x + b.w / 2} V${b.y - 6}`;
+  if (e.route === "fanin") return `M${a.x + a.w / 2},${a.y + a.h} V${e.bottom} H${e.gap} V${b.y + b.h / 2} H${b.x - 6}`;
+  const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x - 6, y2 = b.y + b.h / 2, dx = Math.max(18, (x2 - x1) / 2);
+  return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
 }
 
 function nodeHtml(node, sel) {
-  const pos = `left:${node.x}px;top:${node.y}px;width:${W}px;height:${H}px;--i:${Math.min(node.k, 12)}`;
+  const pos = `left:${node.x}px;top:${node.y}px;width:${W}px;height:${H}px`;
   const c = node.call;
   const errors = c.tools.filter(t => t.error).length;
   const cls = ["pnode", `phase-${c.phase}`, sel === String(c.index) && "is-selected", c.status === "pending" && "is-pending",
                c.rejected && "is-rejected"].filter(Boolean).join(" ");
-  return `<button class="${cls}" data-call="${c.index}" data-band="${node.band}" style="${pos}" title="${esc(callTitle(c))}">
+  return `<button class="${cls}" data-call="${c.index}" style="${pos}" title="${esc(callTitle(c))}">
     <span class="pn-top"><span class="mono">#${c.n}</span><span>${esc(c.caseId ? short(c.caseId, 18) : c.phase)}</span>
       ${c.status === "pending" ? '<span class="live-dot"></span>' : `${PHASE_BADGE[c.phase]?.(c) || ""}${errors ? `<span class="badge bad">${errors} error${errors === 1 ? "" : "s"}</span>` : ""}`}</span>
     <span class="pn-title">${esc(short(callTitle(c), 44))}</span>
@@ -164,11 +165,11 @@ function phaseCard(p, {sel, selPhase}) {
   const selected = selPhase === p.phase && (sel == null || !p.open);
   const cls = ["ph-card", `phase-${p.phase}`, p.open && "is-open", selected && "is-selected", s.pending && "is-pending"].filter(Boolean).join(" ");
   const summary = phaseSummary(p);
-  return `<article class="${cls}" data-phase="${p.phase}" style="left:0;top:${p.y}px;width:${p.width}px;height:${p.height}px">
-    <div class="ph-meta" style="width:${CW}px">
+  return `<article class="${cls}" data-phase="${p.phase}" style="left:${p.x}px;top:0;width:${p.width}px;height:${p.height}px">
+    <div class="ph-meta" style="height:${CH}px">
       <div class="ph-top"><span class="phase-dot"></span><span class="ph-name mono">${esc(p.phase)}</span>
         ${s.pending ? '<span class="live-dot" title="In progress"></span>' : ""}${s.rejected ? `<span class="badge bad" title="Calls with a rejected tool call">${s.rejected} rejected</span>` : ""}</div>
-      <span class="ph-count">${plural(s.calls, "call")}${p.phase === "TRACE" ? ` · ${plural(p.lanes.length, "row")}` : ""}</span>
+      <span class="ph-count">${plural(s.calls, "call")}${p.phase === "TRACE" ? ` · ${plural(p.lanes.length, "column")}` : ""}</span>
       <h3 class="ph-title" title="${esc(summary)}">${esc(summary)}</h3>
       <div class="ph-foot mono">${kilo(s.input)} in · ${kilo(s.output)} out${s.seconds != null ? ` · ${secs(s.seconds)}` : ""}</div>
       ${expandable(p) ? `<button class="card-toggle" data-toggle-phase="${p.phase}" aria-expanded="${p.open}" aria-label="${p.open ? "Collapse" : "Expand"} ${esc(p.phase)}">${p.open ? "−" : "+"}</button>` : ""}
@@ -181,12 +182,12 @@ export function processHtml(layout, view) {
   const open = phases.filter(p => p.open);
   return `<div class="proc-canvas" style="width:${width}px;height:${height}px">
     ${phases.map(p => phaseCard(p, view)).join("")}
-    ${open.filter(p => p.phase === "TRACE").flatMap(p => p.lanes).map(l => `<span class="proc-lane-label" data-band="TRACE" style="left:${LANE_LABEL_X}px;top:${l.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 14))}</span></span>`).join("")}
+    ${open.filter(p => p.phase === "TRACE").flatMap(p => p.lanes).map(l => `<span class="proc-lane-label" style="left:${l.x + W / 2}px;top:${LANE_LABEL_Y}px;max-width:${W}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 14))}</span></span>`).join("")}
     <svg class="proc-edges" width="${width}" height="${height}" aria-hidden="true">
       <defs><marker id="proc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
       ${edges.map(e => `<path class="proc-edge ${e.kind} ${e.retry ? "is-retry" : ""}" d="${edgePath(e)}" marker-end="url(#proc-arrow)"/>`).join("")}
     </svg>
-    ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" data-band="TRACE" style="left:${(BUS + e.to.x) / 2}px;top:${e.to.y + H / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
+    ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" style="left:${e.to.x + W / 2}px;top:${(BUS + e.to.y) / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
     ${open.flatMap(p => p.lanes.flatMap(l => l.nodes)).map(n => nodeHtml(n, view.sel)).join("")}
   </div>`;
 }

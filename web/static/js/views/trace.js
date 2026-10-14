@@ -149,6 +149,35 @@ export function traceDetail(call, ctx) {
   return head + (t?.error ? `<div class="detail-block tone-bad"><h4>${esc(t.name)} rejected</h4><p>${esc(t.error.message || t.error.code)}</p></div>` : "");
 }
 
+// ---------- phase cards ----------
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const laneCandidates = lane => lane.nodes.flatMap(n => assessOf(n.call)?.candidates || []);
+
+export function traceSummary(p) {
+  const n = p.lanes.reduce((s, l) => s + laneCandidates(l).length, 0);
+  return `${plural(p.lanes.length, "assignment")} · ${plural(n, "candidate")}`;
+}
+
+export function managerOverview(p) {
+  const call = [...p.calls].reverse().find(planOf);
+  const plan = call && planOf(call);
+  if (!plan) return "";
+  return `<div class="side-section"><h4>Assignments · ${plan.assignments.length} <button class="btn" data-goto-call="${call.index}">Open #${call.n}</button></h4>
+    ${plan.assignments.map(a => `<div class="detail-block"><h4><span class="mono">${esc(a.agent_id)}</span><span class="badge anchor" title="anchor case">${esc(a.anchor_case_id)}</span></h4><p>${esc(short(a.question || "", 220))}</p></div>`).join("")}
+    ${(plan.decision_rules || []).length ? `<p class="muted">${plural(plan.decision_rules.length, "decision rule")}; open the call to read them.</p>` : ""}</div>`;
+}
+
+export function traceOverview(p) {
+  return `<div class="side-section"><h4>Assignments · ${p.lanes.length}</h4>${p.lanes.map(lane => {
+    const assessed = lane.nodes.map(n => n.call).filter(assessOf).at(-1);
+    const cands = assessed ? assessOf(assessed).candidates || [] : [];
+    return `<div class="detail-block"><h4><span class="mono">${esc(lane.key)}</span>${lane.assignment?.anchor_case_id ? `<span class="badge anchor">${esc(lane.assignment.anchor_case_id)}</span>` : ""}</h4>
+      ${!assessed ? `<p class="muted">Not assessed yet.</p>` : cands.length ? cands.map(c => `<div class="cand-row"><span class="badge ${c.status === "error" ? "bad" : "warn"}">${esc(c.status)}</span><button class="step-chip" data-goto-step="${c.step}">${S(c.step)}</button><strong>${esc(c.module || "")}</strong><span class="mono muted">${esc(c.fault_class || "")}</span>${c.is_root_cause === false ? '<span class="badge">not root</span>' : ""}</div>`).join("")
+        : `<p class="muted">No candidate.</p>`}
+      ${assessed ? `<button class="link" data-goto-call="${assessed.index}">Assessment #${assessed.n}</button>` : ""}</div>`;
+  }).join("")}</div>`;
+}
+
 // Latest TRACE candidates by step, for the agent step lane.
 export function candidatesByStep(calls) {
   const out = new Map();

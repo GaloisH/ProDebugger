@@ -70,6 +70,18 @@ export function routeDetail(call) {
   return parts.join("");
 }
 
+// Phase overview: the accepted anchors (or the early finish) that ROUTE handed on.
+export function routeOverview(p) {
+  const last = [...p.calls].reverse().map(c => ({call: c, d: decision(c)})).find(x => x.d && !x.d.error);
+  const reads = p.calls.flatMap(c => c.tools).filter(t => !["route_cases", "finish", "reroute"].includes(t.name)).length;
+  const head = `<p class="muted">${reads} evidence read${reads === 1 ? "" : "s"} before the decision.</p>`;
+  if (!last) return head;
+  const goto = `<button class="btn" data-goto-call="${last.call.index}">Open #${last.call.n}</button>`;
+  if (last.d.name === "finish") return head + `<div class="detail-block tone-warn"><h4>Finish <span class="badge warn">${esc(last.d.args?.status || "?")}</span></h4><div class="text-box">${esc(last.d.args?.reason || "")}</div>${goto}</div>`;
+  const cases = last.d.args?.candidates || [];
+  return head + `<div class="side-section"><h4>Anchor cases · ${cases.length} ${goto}</h4>${cases.map(anchorCard).join("")}</div>`;
+}
+
 // Latest accepted anchors, keyed by step, for the agent step lane.
 export function anchorsByStep(routeCandidates) {
   const versions = Array.isArray(routeCandidates) ? routeCandidates : [];

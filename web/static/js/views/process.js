@@ -1,15 +1,14 @@
-// Debugger process graph: one node per model call, one horizontal band per phase.
-// TRACE has one row per manager assignment; PARSE calls fold into one group node.
+// Debugger process: one card per phase that expands in place into its model calls
+// (one node per call). TRACE has one row per manager assignment; PARSE is a single card.
 import {CALL_PHASES} from "../case/calls.js";
 import {factChip} from "../case/format.js";
 import {esc, number, raw, short} from "../util.js";
-import {routeBadge, routeDetail, routeTitle} from "./route.js";
-import {managerDetail, managerTitle, traceBadge, traceDetail, traceTitle} from "./trace.js";
-import {submitDetail, submitTitle} from "./submit.js";
+import {routeBadge, routeDetail, routeOverview, routeTitle} from "./route.js";
+import {managerDetail, managerOverview, managerTitle, traceBadge, traceDetail, traceOverview, traceSummary, traceTitle} from "./trace.js";
+import {submitDetail, submitOverview, submitTitle} from "./submit.js";
 
-const W = 184, H = 80, GX = 34, LANE_GAP = 12, PAD = 14, LABEL = 132;
-// Fan-out into a multi-row band runs down a bus in the label gutter and enters each row from the left.
-const BUS = LABEL - 34;
+// Node size and gaps; TRACE rows keep a gutter on the left for the assignment label.
+const W = 184, H = 80, GX = 34, LANE_GAP = 12, GUTTER = 120;
 const S = t => `S${String(t).padStart(2, "0")}`;
 const kilo = n => n == null ? "—" : n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(n);
 const secs = s => s == null ? "" : s >= 60 ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, "0")}s` : `${s < 10 ? s.toFixed(1) : Math.round(s)}s`;
@@ -34,77 +33,46 @@ export function callTitle(call) {
   return call.message?.content ? "Text answer" : "No output";
 }
 
-// plan: the manager's investigation plan; TRACE rows follow its assignment order.
-export function layoutCalls(calls, parse, plan) {
+// One card per phase, in pipeline order. Each phase lays out its own calls left to right;
+// TRACE has one row per manager assignment, in the plan's order. PARSE is a single card.
+// plan: the manager's investigation plan.
+export function layoutPhases(calls, parse, plan) {
   const assignments = new Map((plan?.assignments || []).map((a, i) => [a.agent_id, {...a, order: i}]));
-  const bands = [];
-  const band = phase => {
-    let b = bands.find(x => x.phase === phase);
-    if (!b) { b = {phase, lanes: []}; bands.push(b); }
-    return b;
+  const phases = [];
+  const phase = name => {
+    let p = phases.find(x => x.phase === name);
+    if (!p) { p = {phase: name, lanes: [], calls: []}; phases.push(p); }
+    return p;
   };
-  if (parse) band("PARSE").lanes.push({key: "parse", nodes: [{kind: "parse", id: "parse", parse}]});
+  if (parse) phase("PARSE").parse = parse;
   for (const call of calls) {
-    const b = band(CALL_PHASES.includes(call.phase) ? call.phase : "OTHER");
+    const p = phase(CALL_PHASES.includes(call.phase) ? call.phase : "OTHER");
     const key = call.phase === "TRACE" ? call.caseId || "?" : "main";
-    let lane = b.lanes.find(l => l.key === key);
-    if (!lane) { lane = {key, nodes: [], assignment: call.phase === "TRACE" ? assignments.get(key) : null}; b.lanes.push(lane); }
-    lane.nodes.push({kind: "call", id: String(call.index), call});
+    let lane = p.lanes.find(l => l.key === key);
+    if (!lane) { lane = {key, nodes: [], assignment: call.phase === "TRACE" ? assignments.get(key) : null}; p.lanes.push(lane); }
+    lane.nodes.push({call});
+    p.calls.push(call);
   }
-  const trace = bands.find(b => b.phase === "TRACE");
-  trace?.lanes.sort((a, b) => (a.assignment?.order ?? 1e9) - (b.assignment?.order ?? 1e9));
-  bands.sort((a, b) => CALL_PHASES.indexOf(a.phase) - CALL_PHASES.indexOf(b.phase));
-  let y = 0, width = LABEL + W;
-  for (const b of bands) {
-    b.y = y;
-    b.lanes.forEach((lane, li) => {
-      lane.y = y + PAD + li * (H + LANE_GAP);
-      lane.nodes.forEach((node, k) => { node.x = LABEL + k * (W + GX); node.y = lane.y; });
-      width = Math.max(width, LABEL + lane.nodes.length * (W + GX));
+  phases.find(p => p.phase === "TRACE")?.lanes.sort((a, b) => (a.assignment?.order ?? 1e9) - (b.assignment?.order ?? 1e9));
+  const rank = p => { const i = CALL_PHASES.indexOf(p.phase); return i < 0 ? 1e9 : i; };
+  phases.sort((a, b) => rank(a) - rank(b));
+  for (const p of phases) {
+    const left = p.phase === "TRACE" ? GUTTER : 0;
+    p.lanes.forEach((lane, li) => {
+      lane.y = li * (H + LANE_GAP);
+      lane.nodes.forEach((node, k) => { node.x = left + k * (W + GX); node.y = lane.y; });
     });
-    b.height = PAD * 2 + b.lanes.length * H + (b.lanes.length - 1) * LANE_GAP;
-    y += b.height;
+    p.width = left + Math.max(0, ...p.lanes.map(l => l.nodes.length)) * (W + GX) - GX;
+    p.height = p.lanes.length * H + Math.max(0, p.lanes.length - 1) * LANE_GAP;
+    // Sequence within a row; a retry after a rejected tool call is drawn dashed red.
+    p.edges = p.lanes.flatMap(lane => lane.nodes.slice(1).map((node, k) =>
+      ({from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)})));
   }
-  // Within a lane: sequence (a retry after a rejected tool call is drawn dashed red).
-  // Between consecutive bands: every lane's last node feeds every lane's first node.
-  const edges = [];
-  bands.forEach((b, i) => {
-    b.lanes.forEach(lane => lane.nodes.slice(1).forEach((node, k) => {
-      const prev = lane.nodes[k];
-      edges.push({kind: "seq", from: prev, to: node, retry: Boolean(prev.call?.rejected)});
-    }));
-    const next = bands[i + 1];
-    // Fan-out into a multi-row band enters each row from the left bus; fan-in leaves each
-    // row on the right and merges on a bus past the longest row. Edges into a TRACE row
-    // are labelled with the ROUTE case it was assigned.
-    if (!next) return;
-    const right = Math.max(...b.lanes.map(l => l.nodes.at(-1).x + W)) + 18;
-    b.lanes.forEach(a => next.lanes.forEach(c =>
-      edges.push({kind: "handoff", from: a.nodes[a.nodes.length - 1], to: c.nodes[0], retry: false,
-                  route: next.lanes.length > 1 ? "fanout" : b.lanes.length > 1 ? "fanin" : "curve",
-                  top: next.y + 7, right, label: b.phase === "MANAGER" ? c.assignment?.anchor_case_id : null})));
-  });
-  return {bands, edges, width: width + 8, height: y};
-}
-
-function edgePath(e) {
-  const a = e.from, b = e.to;
-  if (e.kind === "seq") return `M${a.x + W},${a.y + H / 2} L${b.x - 6},${b.y + H / 2}`;
-  if (e.route === "fanout") return `M${a.x + W / 2},${a.y + H} V${e.top} H${BUS} V${b.y + H / 2} H${b.x - 6}`;
-  if (e.route === "fanin") return `M${a.x + W},${a.y + H / 2} H${e.right} V${b.y - 16} H${b.x + W / 2} V${b.y - 6}`;
-  const x1 = a.x + W / 2, y1 = a.y + H, x2 = b.x + W / 2, y2 = b.y - 6, dy = Math.max(18, (y2 - y1) / 2);
-  return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+  return phases;
 }
 
 function nodeHtml(node, sel) {
   const pos = `left:${node.x}px;top:${node.y}px;width:${W}px;height:${H}px`;
-  if (node.kind === "parse") {
-    const p = node.parse;
-    return `<button class="pnode phase-PARSE ${sel === "parse" ? "is-selected" : ""} ${p.pending ? "is-pending" : ""}" data-call="parse" style="${pos}">
-      <span class="pn-top"><span class="mono">PARSE</span><span>${p.calls.length} call${p.calls.length === 1 ? "" : "s"}</span></span>
-      <span class="pn-title">Source parsing</span>
-      <span class="pn-foot mono">${kilo(p.input)} in · ${kilo(p.output)} out · ${secs(p.seconds)}</span></button>`;
-  }
   const c = node.call;
   const errors = c.tools.filter(t => t.error).length;
   const cls = ["pnode", `phase-${c.phase}`, sel === String(c.index) && "is-selected", c.status === "pending" && "is-pending",
@@ -117,18 +85,68 @@ function nodeHtml(node, sel) {
   </button>`;
 }
 
-export function graphHtml(layout, sel) {
-  const {bands, edges, width, height} = layout;
-  return `<div class="proc-canvas" style="width:${width}px;height:${height}px">
-    ${bands.map(b => `<div class="proc-band phase-${b.phase}" style="top:${b.y}px;height:${b.height}px"><span class="proc-band-label"><span class="phase-dot"></span>${b.phase}</span>
-      ${b.phase === "TRACE" ? b.lanes.map(l => `<span class="proc-lane-label" style="top:${l.y - b.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 12))}</span></span>`).join("") : ""}</div>`).join("")}
-    <svg class="proc-edges" width="${width}" height="${height}" aria-hidden="true">
-      <defs><marker id="proc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
-      ${edges.map(e => `<path class="proc-edge ${e.kind} ${e.retry ? "is-retry" : ""}" d="${edgePath(e)}" marker-end="url(#proc-arrow)"/>`).join("")}
+function canvasHtml(p, sel) {
+  return `<div class="proc-canvas" style="width:${p.width}px;height:${p.height}px">
+    ${p.phase === "TRACE" ? p.lanes.map(l => `<span class="proc-lane-label" style="top:${l.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 16))}</span>${l.assignment?.anchor_case_id ? `<span class="badge anchor" title="ROUTE anchor case">${esc(l.assignment.anchor_case_id)}</span>` : ""}</span>`).join("") : ""}
+    <svg class="proc-edges" width="${p.width}" height="${p.height}" aria-hidden="true">
+      <defs><marker id="proc-arrow-${p.phase}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+      ${p.edges.map(e => `<path class="proc-edge ${e.retry ? "is-retry" : ""}" d="M${e.from.x + W},${e.from.y + H / 2} L${e.to.x - 6},${e.to.y + H / 2}" marker-end="url(#proc-arrow-${p.phase})"/>`).join("")}
     </svg>
-    ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" style="left:${(BUS + e.to.x) / 2}px;top:${e.to.y + H / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
-    ${bands.flatMap(b => b.lanes.flatMap(l => l.nodes)).map(n => nodeHtml(n, sel)).join("")}
+    ${p.lanes.flatMap(l => l.nodes).map(n => nodeHtml(n, sel)).join("")}
   </div>`;
+}
+
+// ---------- phase cards ----------
+// Phase-wide conclusion lines; other phases use the latest call with a phase-specific title.
+const PHASE_SUMMARY = {TRACE: traceSummary};
+
+function phaseSummary(p) {
+  if (p.phase === "PARSE") return "Source parsing";
+  const own = PHASE_SUMMARY[p.phase]?.(p);
+  if (own) return own;
+  for (const call of [...p.calls].reverse()) {
+    const title = call.status === "pending" ? null : PHASE_TITLE[p.phase]?.(call);
+    if (title) return title;
+  }
+  const tools = p.calls.flatMap(c => c.tools);
+  return tools.length ? toolSummary(tools) : p.calls.at(-1) ? callTitle(p.calls.at(-1)) : "";
+}
+
+export function phaseStats(p) {
+  if (p.parse) return {calls: p.parse.calls.length, input: p.parse.input, output: p.parse.output, seconds: p.parse.seconds, rejected: 0, pending: p.parse.pending};
+  const sum = key => p.calls.reduce((s, c) => s + (Number(c.usage?.[key]) || 0), 0);
+  // Wall time: TRACE assignments run in parallel, so summing call durations would overstate it.
+  const starts = p.calls.map(c => c.start).filter(t => t != null), ends = p.calls.map(c => c.end).filter(t => t != null);
+  return {calls: p.calls.length, input: sum("input_tokens"), output: sum("output_tokens"),
+          seconds: starts.length && ends.length ? (Math.max(...ends) - Math.min(...starts)) / 1000 : null,
+          rejected: p.calls.filter(c => c.rejected).length, pending: p.calls.some(c => c.status === "pending")};
+}
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+export const expandable = p => !p.parse && p.calls.length > 0;
+
+// open: the expanded phase; selPhase: the phase the selection is in.
+function phaseCard(p, {open, sel, selPhase}) {
+  const s = phaseStats(p);
+  const isOpen = open === p.phase && expandable(p);
+  const selected = selPhase === p.phase && (sel == null || !isOpen);
+  const cls = ["ph-card", `phase-${p.phase}`, isOpen && "is-open", selected && "is-selected", s.pending && "is-pending"].filter(Boolean).join(" ");
+  const summary = phaseSummary(p);
+  return `<article class="${cls}" data-phase="${p.phase}">
+    <div class="ph-meta">
+      <div class="ph-top"><span class="phase-dot"></span><span class="ph-name mono">${esc(p.phase)}</span>
+        ${s.pending ? '<span class="live-dot" title="In progress"></span>' : ""}
+        ${expandable(p) ? `<button class="card-toggle" data-toggle-phase="${p.phase}" aria-expanded="${isOpen}" aria-label="${isOpen ? "Collapse" : "Expand"} ${esc(p.phase)}">${isOpen ? "−" : "+"}</button>` : ""}</div>
+      <span class="ph-count">${plural(s.calls, "call")}${p.phase === "TRACE" ? ` · ${plural(p.lanes.length, "row")}` : ""}</span>
+      <h3 class="ph-title" title="${esc(summary)}">${esc(summary)}</h3>
+      <div class="ph-foot">${s.rejected ? `<span class="badge bad">${s.rejected} rejected</span>` : ""}<span class="mono">${kilo(s.input)} in · ${kilo(s.output)} out${s.seconds != null ? ` · ${secs(s.seconds)}` : ""}</span></div>
+    </div>
+    ${isOpen ? `<div class="ph-body">${canvasHtml(p, sel)}</div>` : ""}
+  </article>`;
+}
+
+export function phasesHtml(phases, view) {
+  return `<div class="ph-track">${phases.map(p => phaseCard(p, view)).join("")}</div>`;
 }
 
 // ---------- side panel ----------
@@ -167,7 +185,6 @@ function parseDetail(p, requests) {
 }
 
 export function callDetail(call, ctx) {
-  if (call === "parse") return parseDetail(ctx.parse, ctx.requests);
   const u = call.usage || {}, m = call.message || {};
   const extra = PHASE_DETAIL[call.phase]?.(call, ctx) || "";
   return `<header class="side-head"><span class="phase-dot phase-${call.phase}"></span><h3>#${call.n} · ${esc(call.phase)}${call.caseId ? ` · ${esc(call.caseId)}` : ""}</h3>
@@ -185,12 +202,33 @@ export function callDetail(call, ctx) {
     ${requestBlock(call.requestFile, ctx.requests)}`;
 }
 
-export function overviewHtml(d) {
-  const by = new Map();
-  d.calls.forEach(c => by.set(c.phase, (by.get(c.phase) || 0) + 1));
+// ---------- phase overview (a phase card is selected, no call) ----------
+const PHASE_OVERVIEW = {ROUTE: routeOverview, MANAGER: managerOverview, TRACE: traceOverview, SUBMIT: submitOverview};
+
+const callRow = c => `<button class="call-row ${c.rejected ? "is-rejected" : ""}" data-goto-call="${c.index}">
+  <span class="mono muted">#${c.n}</span><span class="call-row-title">${esc(callTitle(c))}</span>
+  ${c.status === "pending" ? '<span class="live-dot"></span>' : c.rejected ? '<span class="badge bad">rejected</span>' : ""}
+  <small class="mono">${kilo(c.usage?.input_tokens)}${c.seconds != null ? ` · ${secs(c.seconds)}` : ""}</small></button>`;
+
+export function phaseDetail(p, ctx) {
+  if (p.parse) return parseDetail(p.parse, ctx.requests);
+  const s = phaseStats(p);
+  const rows = p.lanes.length > 1
+    ? p.lanes.map(l => `<div class="call-group"><span class="eyebrow mono">${esc(l.key)}</span>${l.nodes.map(n => callRow(n.call)).join("")}</div>`).join("")
+    : p.calls.map(callRow).join("");
+  return `<header class="side-head"><span class="phase-dot phase-${p.phase}"></span><h3>${esc(p.phase)}</h3>
+      ${s.pending ? '<span class="badge live"><span class="live-dot"></span>running</span>' : ""}</header>
+    <dl class="kv side-kv"><dt>calls</dt><dd>${s.calls}${s.rejected ? ` · <span class="badge bad">${s.rejected} rejected</span>` : ""}</dd>
+      <dt>tokens</dt><dd>${number(s.input)} in · ${number(s.output)} out</dd>
+      ${s.seconds != null ? `<dt>time</dt><dd>${secs(s.seconds)}</dd>` : ""}</dl>
+    ${PHASE_OVERVIEW[p.phase]?.(p, ctx) || ""}
+    <div class="side-section"><h4>Calls · ${p.calls.length}</h4><div class="call-list">${rows}</div></div>`;
+}
+
+export function overviewHtml(d, phases) {
   const tokens = d.calls.reduce((s, c) => s + (c.usage?.input_tokens || 0) + (c.usage?.output_tokens || 0), 0);
   return `<header class="side-head"><h3>Debugger process</h3></header>
-    <p class="muted">Each node is one model call. Select a node to read its output and tool calls; the agent steps it touched light up below.</p>
-    <dl class="kv side-kv">${d.parse ? `<dt>PARSE</dt><dd>${d.parse.calls.length} calls</dd>` : ""}${[...by].map(([p, n]) => `<dt>${esc(p)}</dt><dd>${n} call${n === 1 ? "" : "s"}</dd>`).join("")}
+    <p class="muted">Each card is one phase. Open a card to see its model calls, one node per call; select a phase or a call to read it here. The agent steps it touched light up below.</p>
+    <dl class="kv side-kv">${phases.map(p => `<dt><button class="link" data-goto-phase="${p.phase}">${esc(p.phase)}</button></dt><dd>${esc(short(phaseSummary(p), 60))}</dd>`).join("")}
       <dt>tokens</dt><dd>${number(tokens)}</dd>${d.result ? `<dt>status</dt><dd>${esc(d.result.status)}</dd>` : ""}</dl>`;
 }

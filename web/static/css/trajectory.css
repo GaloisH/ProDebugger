@@ -100,22 +100,45 @@
 .lane-nav { margin-left: auto; display: flex; gap: .3rem; }
 .lane-nav .btn { padding: .15rem .55rem; font-size: .85rem; }
 
-/* Process graph: bands per phase, one node per model call, side panel on the right. */
+/* Process: one card per phase in a row; the open card widens in place into its call graph. */
 .proc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, 27rem); gap: .8rem; align-items: start; }
 .proc[hidden] { display: none; }
 .proc-graph { min-width: 0; border: 1px solid var(--line); border-radius: 1rem; background: radial-gradient(circle at 1px 1px, #ffffff0b 1px, transparent 0) 0 0 / 22px 22px, var(--surface-1); }
-.proc-scroll { overflow: auto; max-height: calc(100vh - var(--header-h) - 9rem); padding: .4rem .8rem .8rem 0; }
+.proc-scroll { overflow-x: auto; overflow-y: hidden; container-type: inline-size; }
 .proc-scroll:focus-visible { outline-offset: -2px; }
+.ph-track { display: flex; align-items: flex-start; gap: 2.4rem; width: max-content; min-width: 100%; padding: 1rem; }
+.ph-track > * + *::before { content: '→'; position: absolute; top: 2.6rem; left: -1.75rem; width: 1.1rem; text-align: center; color: var(--muted); font-size: 1.1rem; pointer-events: none; }
+.ph-card { position: relative; flex: none; width: 13.5rem; border: 1px solid var(--line-strong); border-top: 3px solid var(--c); border-radius: .9rem; background: var(--panel-2); box-shadow: 0 10px 24px #0000001f; cursor: pointer; transition: border-color .15s, background .15s; }
+.ph-card:hover { background: var(--panel-3); }
+.ph-card.is-open { display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); width: auto; max-width: calc(100cqi - 2rem); background: var(--panel-2); cursor: default; }
+.ph-card.is-open .ph-meta { cursor: pointer; }
+.ph-card.is-selected, .ph-card.is-linked { border-top-color: var(--c) !important; }
+.ph-card.is-pending { border-style: dashed; border-top-style: solid; }
+.ph-meta { display: flex; flex-direction: column; gap: .3rem; min-width: 0; padding: .65rem .8rem .75rem; }
+.ph-top { display: flex; align-items: center; gap: .45rem; min-height: 1.6rem; }
+.ph-top .phase-dot, .side-head .phase-dot { background: var(--c); }
+.ph-name { color: var(--c); font-size: .78rem; font-weight: 650; letter-spacing: .08em; }
+.ph-top .card-toggle { margin-left: auto; }
+.ph-count { color: var(--faint); font-family: var(--mono); font-size: .72rem; }
+.ph-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin: 0; font-size: .95rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.ph-foot { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .45rem; color: var(--muted); font-size: .7rem; }
+.ph-body { min-width: 0; overflow-x: auto; padding: .9rem 1rem 1rem; border-left: 1px solid var(--line); }
 .proc-canvas { position: relative; }
-.proc-band { position: absolute; left: 0; right: 0; border-bottom: 1px dashed var(--line); }
-.proc-band:last-of-type { border-bottom: 0; }
-.proc-band-label { position: sticky; left: 0; display: inline-flex; align-items: center; gap: .4rem; margin: .9rem 0 0 .9rem; color: var(--c); font-family: var(--mono); font-size: .74rem; font-weight: 650; letter-spacing: .08em; }
-.proc-band-label .phase-dot, .side-head .phase-dot { background: var(--c); }
-.proc-lane-label { position: absolute; left: .9rem; max-width: 5rem; overflow: hidden; color: var(--text-2); font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; transform: translateY(-50%); cursor: help; }
+.proc-lane-label { position: absolute; left: 0; display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; max-width: 6.6rem; color: var(--text-2); font-size: .7rem; transform: translateY(-50%); cursor: help; }
+.proc-lane-label .mono { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .proc-edges { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
 .proc-edge { fill: none; stroke: var(--edge); stroke-width: 1.4; }
-.proc-edge.handoff { stroke: var(--edge-dim); stroke-dasharray: 2 4; }
 .proc-edge.is-retry { stroke: var(--bad-line); stroke-dasharray: 5 4; }
+.call-list { display: flex; flex-direction: column; gap: .15rem; }
+.call-group + .call-group { margin-top: .45rem; }
+.call-group .eyebrow { display: block; margin: 0 0 .15rem .4rem; font-size: .66rem; }
+.call-row { display: flex; align-items: center; gap: .5rem; width: 100%; padding: .3rem .4rem; border: 0; border-radius: .4rem; background: none; color: var(--text); text-align: left; font: inherit; font-size: .8rem; cursor: pointer; }
+.call-row:hover { background: var(--panel-3); }
+.call-row.is-rejected .call-row-title { color: var(--bad-ink); }
+.call-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.call-row small { flex: none; color: var(--faint); font-size: .7rem; }
+.cand-row { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; padding: .2rem 0; font-size: .8rem; }
+.side-section h4 .btn { margin-left: auto; padding: .1rem .5rem; font-size: .74rem; font-weight: 500; }
 .pnode { position: absolute; display: flex; flex-direction: column; justify-content: space-between; gap: .15rem; padding: .5rem .65rem; border: 1px solid var(--line-strong); border-top: 3px solid var(--c); border-radius: .7rem; background: var(--panel-2); color: var(--text); text-align: left; font: inherit; cursor: pointer; box-shadow: 0 10px 22px -16px #000; transition: border-color .15s, background .15s; }
 .pnode:hover { background: var(--panel-3); }
 .pnode.is-selected { border-color: var(--accent); border-top-color: var(--c); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 33%, transparent); }
@@ -131,7 +154,7 @@
 .side-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
 .side-head h3 { margin: 0; font-size: 1rem; font-weight: 600; }
 .side-kv { margin: 0; }
-.side-section h4 { margin: .2rem 0 .4rem; font-size: .82rem; }
+.side-section > h4 { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .2rem 0 .4rem; font-size: .82rem; }
 .side-section .detail-block + .detail-block { margin-top: .4rem; }
 .proc-side .detail-block h4 { margin-top: .5rem; }
 @media (max-width: 1100px) { .proc { grid-template-columns: minmax(0, 1fr); } .proc-side { position: static; max-height: none; } }
@@ -148,7 +171,6 @@
 .anchor-card h4 { justify-content: flex-start; }
 
 /* MANAGER and TRACE */
-.badge.proc-edge-label { position: absolute; z-index: 1; padding: .05rem .35rem; background: color-mix(in srgb, var(--route) 22%, var(--surface-1)); font-size: .66rem; transform: translate(-50%, -50%); pointer-events: none; }
 .badge.cand { border-color: var(--trace); background: color-mix(in srgb, var(--trace) 22%, transparent); color: var(--trace); }
 .badge.cand.not-root { border-style: dashed; background: transparent; }
 .step-tick.is-candidate { background: var(--trace); }

@@ -22,6 +22,16 @@ export function submitTitle(call) {
 
 const traceLink = hit => hit ? `<button class="btn" data-goto-call="${hit.call.index}">TRACE #${hit.call.n} · ${esc(hit.caseId)}</button>` : "";
 
+// Phase overview: the latest answer and the candidate it chose.
+export function submitOverview(p, ctx) {
+  const call = [...p.calls].reverse().find(answerOf);
+  const a = call && answerOf(call);
+  if (!a) return "";
+  const hit = candidateIndex(ctx.model?.debugger?.calls || []).get(a.selected_candidate_id);
+  return `<div class="side-section"><h4>Answer ${a.status ? `<span class="badge ${a.status === "diagnosed" ? "ok" : "warn"}">${esc(a.status)}</span>` : ""}${call.rejection ? ' <span class="badge bad">rejected</span>' : ""} <button class="btn" data-goto-call="${call.index}">Open #${call.n}</button></h4>
+    ${hit ? candidateCard(hit.candidate) : a.selected_candidate_id ? `<p class="mono">${esc(a.selected_candidate_id)}</p>` : `<p class="muted">No candidate selected.</p>`}</div>`;
+}
+
 export function submitDetail(call, ctx) {
   const a = answerOf(call);
   const calls = ctx.model?.debugger?.calls || [];

@@ -1,22 +1,23 @@
-// Debugger process graph (one node per model call) above the original agent steps.
-// Selecting a node opens it in the side panel and links it to the steps it touched.
+// Debugger process (one card per phase, expanding into one node per model call) above the
+// original agent steps. Selecting a phase or call opens it in the side panel and links it
+// to the steps it touched.
 import {getJSON} from "../api.js";
 import {EVAL_CLASS, factChip, icon} from "../case/format.js";
 import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js";
 import {esc, pretty, short} from "../util.js";
-import {callDetail, graphHtml, layoutCalls, overviewHtml, requestHtml} from "./process.js";
+import {callDetail, expandable, layoutPhases, overviewHtml, phaseDetail, phasesHtml, requestHtml} from "./process.js";
 import {anchorsByStep, anchorTitle} from "./route.js";
 import {candidateCard, candidatesByStep, planOf} from "./trace.js";
 
 export function createView(root, ctx) {
   const state = {
-    model: null, sel: null, hover: null, openStep: null, selStep: null, hoverStep: null,
-    follow: true, requests: new Map(), layout: null,
+    model: null, sel: null, selPhase: null, openPhase: null, hover: null, openStep: null, selStep: null, hoverStep: null,
+    follow: true, requests: new Map(), phases: [],
   };
   root.innerHTML = `
     <div class="traj-head">
       <div><div class="eyebrow">Execution path</div><h2 class="traj-title">Debugger process ↔ agent trajectory</h2>
-        <p class="traj-hint" id="tj-hint">Each node is one model call. Select a node to inspect it; select a step to see every call that touched it.</p></div>
+        <p class="traj-hint" id="tj-hint">Each card is one debugger phase; open it to see its model calls. Select a phase or call to inspect it; select a step to see every call that touched it.</p></div>
       <div class="traj-tools">
         <button class="btn" id="tj-follow" aria-pressed="true" title="Scroll to the newest call while the run is live">Follow latest</button>
       </div>
@@ -57,7 +58,9 @@ export function createView(root, ctx) {
   // manager_plan.json once saved; the committed plan_trace result while live.
   const planFor = d => d.managerPlan || d.calls.map(planOf).filter(Boolean).at(-1) || null;
 
-  const callOf = key => key === "parse" ? "parse" : state.model?.debugger?.calls[Number(key)];
+  const callOf = key => key == null ? null : state.model?.debugger?.calls[Number(key)];
+  const phaseOf = name => state.phases.find(p => p.phase === name);
+  const cardOf = name => graph.querySelector(`.ph-card[data-phase="${name}"]`);
 
   // ---------- process graph ----------
   function renderGraph() {
@@ -69,20 +72,25 @@ export function createView(root, ctx) {
       $("tj-hint").textContent = "Compiled session: no debugger run yet. Open a step to inspect its roles, facts and rule evaluations.";
       return;
     }
-    state.layout = layoutCalls(d.calls, d.parse, planFor(d));
-    graph.innerHTML = d.calls.length || d.parse ? graphHtml(state.layout, state.sel)
+    state.phases = layoutPhases(d.calls, d.parse, planFor(d));
+    const body = graph.querySelector(".ph-body");
+    const keep = {x: graph.scrollLeft, body: body?.scrollLeft || 0, open: body ? body.closest(".ph-card").dataset.phase : null};
+    graph.innerHTML = state.phases.length ? phasesHtml(state.phases, {open: state.openPhase, sel: state.sel, selPhase: state.selPhase})
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
+    graph.scrollLeft = keep.x;
+    if (keep.open === state.openPhase && graph.querySelector(".ph-body")) graph.querySelector(".ph-body").scrollLeft = keep.body;
   }
 
   function renderSide() {
     const d = state.model.debugger;
     if (!d) return;
-    const call = state.sel == null ? null : callOf(state.sel);
+    const call = callOf(state.sel), phase = call ? null : phaseOf(state.selPhase);
+    const detailCtx = {requests: state.requests, factsById: state.model.dsl?.factsById, model: state.model, managerPlan: planFor(d)};
+    const key = call ? state.sel : phase ? "phase:" + phase.phase : null;
     const top = side.scrollTop;
-    side.innerHTML = call ? callDetail(call, {parse: d.parse, requests: state.requests, factsById: state.model.dsl?.factsById, model: state.model, managerPlan: planFor(d)})
-      : overviewHtml(d);
-    side.scrollTop = call && state.sideKey === state.sel ? top : 0;
-    state.sideKey = state.sel;
+    side.innerHTML = call ? callDetail(call, detailCtx) : phase ? phaseDetail(phase, detailCtx) : overviewHtml(d, state.phases);
+    side.scrollTop = key != null && state.sideKey === key ? top : 0;
+    state.sideKey = key;
   }
 
   // ---------- step lane ----------
@@ -170,8 +178,10 @@ export function createView(root, ctx) {
   }
 
   // ---------- links between graph and steps ----------
-  function cardRect(el, scroller, base) {
-    const r = el.getBoundingClientRect(), s = scroller.getBoundingClientRect();
+  // scroller: the element el scrolls in; inner: a nested scroller inside it (an open phase card).
+  function cardRect(el, scroller, base, inner = null) {
+    const r = el.getBoundingClientRect(), o = scroller.getBoundingClientRect(), i = inner?.getBoundingClientRect() || o;
+    const s = {left: Math.max(o.left, i.left), right: Math.min(o.right, i.right), top: Math.max(o.top, i.top), bottom: Math.min(o.bottom, i.bottom)};
     const cx = Math.min(Math.max(r.left + r.width / 2, s.left + 8), s.right - 8);
     const off = r.right < s.left || r.left > s.right || r.bottom < s.top || r.top > s.bottom;
     return {x: cx - base.left, top: r.top - base.top, bottom: Math.min(r.bottom, s.bottom) - base.top, off};
@@ -185,21 +195,31 @@ export function createView(root, ctx) {
     const d = state.model?.debugger;
     if (!d) { svg.innerHTML = ""; return; }
     const pairs = [];
-    const key = state.hover ?? (state.hoverStep == null ? state.sel : null);
+    const current = state.sel ?? (state.selPhase ? "phase:" + state.selPhase : null);
+    const key = state.hover ?? (state.hoverStep == null ? current : null);
     const stepT = key == null ? (state.hoverStep ?? state.selStep) : null;
-    const call = key == null ? null : callOf(key);
-    if (call && call !== "parse") call.steps.forEach(t => pairs.push([call.index, t]));
-    else if (stepT != null) (state.idx.refs.get(stepT) || []).forEach(i => pairs.push([i, stepT]));
+    if (key?.startsWith("phase:")) {
+      // A whole phase touches too many steps for curves: light up its card and the steps only.
+      cardOf(key.slice(6))?.classList.add("is-linked");
+      new Set(d.calls.filter(c => c.phase === key.slice(6)).flatMap(c => c.steps)).forEach(t => steps.querySelector(`[data-step="${t}"]`)?.classList.add("is-linked"));
+      svg.innerHTML = "";
+      return;
+    }
+    if (key != null) callOf(key)?.steps.forEach(t => pairs.push([callOf(key), t]));
+    else if (stepT != null) (state.idx.refs.get(stepT) || []).forEach(i => pairs.push([d.calls[i], stepT]));
     const transient = state.hover != null || state.hoverStep != null;
-    svg.innerHTML = pairs.slice(0, 80).map(([i, t]) => {
-      const node = graph.querySelector(`[data-call="${i}"]`), st = steps.querySelector(`[data-step="${t}"]`);
-      if (!node || !st) return "";
+    // A call in a collapsed phase links from its phase card: one curve per card and step.
+    const seen = new Set();
+    svg.innerHTML = pairs.map(([c, t]) => {
+      const node = graph.querySelector(`.pnode[data-call="${c.index}"]`) || cardOf(c.phase), st = steps.querySelector(`[data-step="${t}"]`);
+      const id = `${node?.dataset.call ?? c.phase}:${t}`;
+      if (!node || !st || seen.has(id) || seen.size >= 80) return "";
+      seen.add(id);
       node.classList.add("is-linked"); st.classList.add("is-linked");
-      const a = cardRect(node, graph, base), b = cardRect(st, steps, base);
-      if (a.off) return ""; // a node scrolled out of the graph would draw across the side panel
+      const a = cardRect(node, graph, base, node.closest(".ph-body")), b = cardRect(st, steps, base);
+      if (a.off) return ""; // a node scrolled out of view would draw across the side panel
       const y1 = a.bottom, y2 = b.top, mid = (y1 + y2) / 2;
-      const phase = d.calls[i].phase;
-      return `<path class="link phase-${phase} ${a.off || b.off ? "is-off" : ""} ${transient ? "is-preview" : ""}" d="M${a.x},${y1} C${a.x},${mid} ${b.x},${mid} ${b.x},${y2}"/><circle class="link-end phase-${phase}" cx="${b.x}" cy="${y2}" r="3.5"/>`;
+      return `<path class="link phase-${c.phase} ${b.off ? "is-off" : ""} ${transient ? "is-preview" : ""}" d="M${a.x},${y1} C${a.x},${mid} ${b.x},${mid} ${b.x},${y2}"/><circle class="link-end phase-${c.phase}" cx="${b.x}" cy="${y2}" r="3.5"/>`;
     }).join("");
   }
   let raf = 0;
@@ -215,12 +235,19 @@ export function createView(root, ctx) {
   }
 
   let programmatic = false;
+  // A node scrolls to the middle of its open card, and the card into view in the phase row.
   function scrollIntoGraph(el, smooth = true) {
     if (!el) return;
-    const s = graph.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const behavior = smooth ? "smooth" : "auto";
     programmatic = true;
-    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (s.width - r.width) / 2,
-                    top: graph.scrollTop + r.top - s.top - (s.height - r.height) / 2, behavior: smooth ? "smooth" : "auto"});
+    const body = el.closest(".ph-body");
+    if (body) {
+      const s = body.getBoundingClientRect(), r = el.getBoundingClientRect();
+      body.scrollTo({left: body.scrollLeft + r.left - s.left - (s.width - r.width) / 2, behavior});
+    }
+    const card = el.closest(".ph-card") || el;
+    const s = graph.getBoundingClientRect(), r = card.getBoundingClientRect();
+    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (card.classList.contains("is-open") ? 16 : (s.width - r.width) / 2), behavior});
     setTimeout(() => { programmatic = false; }, 600);
   }
 
@@ -234,11 +261,22 @@ export function createView(root, ctx) {
   function setFollow(on) { state.follow = on; $("tj-follow").setAttribute("aria-pressed", String(on)); }
 
   // scroll: "smooth" for keyboard moves; "jump" for deep links, which a following re-render must not cut short.
-  function select(key, scroll = null) {
+  // reveal: expand the call's phase so its node is visible.
+  function select(key, scroll = null, reveal = false) {
     state.sel = key;
-    graph.querySelectorAll(".pnode").forEach(n => n.classList.toggle("is-selected", n.dataset.call === key));
-    renderSide();
-    if (scroll) scrollIntoGraph(graph.querySelector(`[data-call="${key}"]`), scroll === "smooth");
+    const call = callOf(key);
+    if (call) state.selPhase = call.phase;
+    if (call && reveal && expandable(phaseOf(call.phase))) state.openPhase = call.phase;
+    renderGraph(); renderSide();
+    if (scroll && call) scrollIntoGraph(graph.querySelector(`.pnode[data-call="${key}"]`) || cardOf(call.phase), scroll === "smooth");
+    scheduleLinks();
+  }
+
+  // open: the phase expanded afterwards (accordion: at most one).
+  function selectPhase(name, open = state.openPhase) {
+    state.sel = null; state.selPhase = name; state.openPhase = open;
+    renderGraph(); renderSide();
+    scrollIntoGraph(cardOf(name));
     scheduleLinks();
   }
 
@@ -250,9 +288,8 @@ export function createView(root, ctx) {
   }
 
   function scrollToLatest(smooth = false) {
-    const nodes = graph.querySelectorAll(".pnode[data-call]:not([data-call=parse])");
-    const last = [...nodes].sort((a, b) => Number(a.dataset.call) - Number(b.dataset.call)).pop();
-    scrollIntoGraph(last, smooth);
+    const last = state.model?.debugger?.calls.at(-1);
+    if (last) scrollIntoGraph(graph.querySelector(`.pnode[data-call="${last.index}"]`) || cardOf(last.phase), smooth);
     scheduleLinks();
   }
 
@@ -270,13 +307,23 @@ export function createView(root, ctx) {
       return;
     }
     const gotoCall = el.closest("[data-goto-call]")?.dataset.gotoCall;
-    if (gotoCall != null) { setFollow(false); select(gotoCall, "smooth"); return; }
+    if (gotoCall != null) { setFollow(false); select(gotoCall, "smooth", true); return; }
+    const gotoPhase = el.closest("[data-goto-phase]")?.dataset.gotoPhase;
+    if (gotoPhase) { setFollow(false); selectPhase(gotoPhase); return; }
     const goto = el.closest("[data-goto-step]")?.dataset.gotoStep;
     if (goto) { selectStep(Number(goto)); return; }
     const zoom = el.closest("[data-zoom]");
     if (zoom) { zoom.classList.toggle("is-full"); scheduleLinks(); return; }
     const node = el.closest(".pnode");
     if (node) { setFollow(false); select(state.sel === node.dataset.call ? null : node.dataset.call); return; }
+    const toggle = el.closest("[data-toggle-phase]")?.dataset.togglePhase;
+    if (toggle) { setFollow(false); selectPhase(toggle, state.openPhase === toggle ? null : toggle); return; }
+    const card = el.closest(".ph-card");
+    if (card) {
+      const name = card.dataset.phase;
+      if (!el.closest(".ph-body")) { setFollow(false); selectPhase(name, expandable(phaseOf(name)) ? name : state.openPhase); }
+      return;
+    }
     const b = el.closest("button");
     if (b?.dataset.pan) { $(b.dataset.pan).scrollBy({left: Number(b.dataset.dir) * steps.clientWidth * .8, behavior: "smooth"}); return; }
     if (b?.dataset.jumpStep) { selectStep(Number(b.dataset.jumpStep)); return; }
@@ -297,24 +344,35 @@ export function createView(root, ctx) {
   });
 
   root.addEventListener("pointerover", event => {
-    const node = event.target.closest(".pnode"), st = event.target.closest(".st-card");
-    const hn = node ? node.dataset.call : null;
+    const node = event.target.closest(".pnode"), card = event.target.closest(".ph-card"), st = event.target.closest(".st-card");
+    const hn = node ? node.dataset.call : card && !event.target.closest(".ph-body") ? "phase:" + card.dataset.phase : null;
     const hs = st && !st.classList.contains("is-open") ? Number(st.dataset.step) : null;
     if (hn !== state.hover || hs !== state.hoverStep) { state.hover = hn; state.hoverStep = hs; scheduleLinks(); }
   });
   lanes.addEventListener("pointerleave", () => { state.hover = state.hoverStep = null; scheduleLinks(); });
 
   root.addEventListener("keydown", event => {
-    if (event.key === "Escape") { state.openStep = null; state.sel = null; render(); return; }
+    if (event.key === "Escape") { state.openStep = null; state.sel = state.selPhase = state.openPhase = null; render(); return; }
     const lane = event.target.closest(".proc-scroll, .lane-scroll");
     if (!lane || !["ArrowLeft", "ArrowRight", "Enter"].includes(event.key)) return;
     event.preventDefault();
     if (lane === graph) {
+      setFollow(false);
+      if (event.key === "Enter") {
+        if (state.selPhase && expandable(phaseOf(state.selPhase))) selectPhase(state.selPhase, state.openPhase === state.selPhase ? null : state.selPhase);
+        return;
+      }
+      // Inside an open phase the arrows walk the calls (crossing into the next phase); otherwise the cards.
+      const dir = event.key === "ArrowLeft" ? -1 : 1, open = phaseOf(state.openPhase);
+      if (state.sel == null && !open) {
+        const names = state.phases.map(p => p.phase), pos = names.indexOf(state.selPhase);
+        if (names.length) selectPhase(names[pos < 0 ? 0 : Math.max(0, Math.min(names.length - 1, pos + dir))]);
+        return;
+      }
       const calls = state.model.debugger?.calls || [];
       if (!calls.length) return;
-      const pos = state.sel == null || state.sel === "parse" ? -1 : Number(state.sel);
-      const next = Math.max(0, Math.min(calls.length - 1, pos + (event.key === "ArrowLeft" ? -1 : 1)));
-      setFollow(false); select(String(next), "smooth");
+      const pos = state.sel != null ? Number(state.sel) : dir > 0 ? open.calls[0].index - 1 : open.calls.at(-1).index + 1;
+      select(String(Math.max(0, Math.min(calls.length - 1, pos + dir))), "smooth", true);
     } else {
       const ts = state.model.steps.map((s, i) => s.t ?? i + 1);
       const pos = ts.indexOf(state.selStep);
@@ -342,7 +400,7 @@ export function createView(root, ctx) {
       render();
       const grew = (model.debugger?.calls.length || 0) > before;
       if ((grew || first) && state.follow && ctx.store.live) scrollToLatest();
-      else if (first && state.sel != null) scrollIntoGraph(graph.querySelector(`[data-call="${state.sel}"]`), false);
+      else if (first && state.sel != null) scrollIntoGraph(cardOf(callOf(state.sel)?.phase), false);
     },
     show(route) {
       if (state.follow && ctx.store.live && !route.extra.length) requestAnimationFrame(() => scrollToLatest());

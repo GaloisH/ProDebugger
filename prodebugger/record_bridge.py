@@ -149,6 +149,7 @@ def project(record) -> D.Record:
                                       for c in fields["constraints"])
         goals.append(D.Goal(**fields))
     result = D.Record(record.tid, kinds, relations, record.task, goals)
+    result.claim_scopes = plain(getattr(record, 'claim_scopes', {}))
     for entity in record.E.values():
         result.ent(entity.kind, entity.index)
     for fact in record.F:
@@ -177,11 +178,14 @@ class Bundle:
                       "task": record.task, "ir_version": record.ir_version,
                       "kinds": record.kinds.declared(), "relations": record.relations.declared(),
                       "entities": record.E, "goals": record.goals, "facts": self.projection.F,
+                      "parse_audits": getattr(record, "parse_audits", []),
                       "source_steps": record.source_steps, "intentions": record.intentions,
+                      "claim_scopes": getattr(record, 'claim_scopes', {}),
+                      "agent_statements": getattr(record, 'agent_statements', []),
                       "process_notes": record.process_notes, "commit_values": record.commit_values})
 
 
-def build_bundle(source: dict) -> Bundle:
+def build_bundle(source: dict, *, audited=None, output=None, config=None, online=False) -> Bundle:
     source = {k: source[k] for k in ("trajectory_id", "task_type", "task", "steps")}
     valid_id(source["trajectory_id"])
     if source["task_type"] not in PROFILES:
@@ -203,12 +207,28 @@ def build_bundle(source: dict) -> Bundle:
     if [s.t for s in steps] != list(range(1, len(steps) + 1)):
         raise ValueError("steps must be consecutive and one-based")
     source = {**source, "steps": plain(steps)}
-    record = compiler.build(source["trajectory_id"], source["task"], steps, PROFILES[source["task_type"]])
+    from .parse_audit import prepare, compilation_input
+    profile = PROFILES[source["task_type"]]
+    audited = audited if audited is not None else prepare(source, output, config, online=online)
+    parsed = compilation_input(audited, profile, source["task"])
+    record = compiler.build(source["trajectory_id"], source["task"], steps, profile, parsed=parsed)
+    from .claim_parser import source_cards
+    record.agent_statements = source_cards(source)
     projection = project(record)
     evaluations = detect_abstract_rules(projection)
+    incomplete = [a for a in parsed["audits"] if a["status"] == "unresolved"]
+    for evaluation in evaluations:
+        relevant = [a["source_id"] for a in incomplete if a["step"] <= (evaluation.get("t") or 0)]
+        if relevant and evaluation["state"] == "violated":
+            evaluation["state"] = "unknown"
+            evaluation["details"] = {**evaluation["details"], "reason": "parse_incomplete", "parse_gaps": relevant}
+    for group in projection.evidences.values():
+        group.items[:] = [e for e in group.items if not any(a["step"] <= e.t for a in incomplete)]
     versions = source_versions()
+    from .direct_submit import POLICY
     return Bundle(record, projection, evaluations, source,
-                  digest({"source": source, "versions": versions, "policy": "window-candidates-submit/v3",
+                  digest({"source": source, "versions": versions, "audited_parse": audited,
+                          "trace_protocol": "evidence-query-step/v2-elements", "policy": POLICY,
                           "canonical_facts": projection.F, "goals": projection.goals}), versions)
 
 

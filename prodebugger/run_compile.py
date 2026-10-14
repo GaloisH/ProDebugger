@@ -7,6 +7,7 @@ import hashlib
 import os
 import json
 import re
+import sys
 from dataclasses import asdict
 from pathlib import Path
 
@@ -44,13 +45,18 @@ def compile_trajectory(trajectory_id: str, data_dir: Path = DATA, *,
     if len(rows) != 1:
         raise ValueError(f"Expected one trajectory for {trajectory_id!r}, found {len(rows)} in {data_dir}")
     row = rows[0]
-    record = parse_benchmark_instance(row, with_evidence=False)
-    evaluations = detect_abstract_rules(record)
-    _, steps = parse_steps(row)
+    sys.path.insert(0, str(HERE.parent))
+    from prodebugger.record_bridge import parquet_source, build_bundle
+    output = (Path(output_dir) if output_dir is not None else HERE / "sessions") / trajectory_id
+    output.mkdir(parents=True, exist_ok=True)
+    bundle = build_bundle(parquet_source(trajectory_id, data_dir), output=output)
+    record, evaluations = bundle.projection, bundle.evaluations
     payload = {
         "trajectory_id": record.tid,
         "task_type": row["task_type"],
         "task": record.task,
+        "parse_audits": bundle.record.parse_audits,
+        "parsing_mode": "offline-strict-audit; online backoff is available through run_experiment",
         "kinds": [asdict(kind) for kind in record.kinds.declared().values()],
         "relations": [asdict(relation) for relation in record.relations.declared().values()],
         "entities": [asdict(entity) for entity in record.E.values()],
@@ -62,9 +68,7 @@ def compile_trajectory(trajectory_id: str, data_dir: Path = DATA, *,
         },
     }
     payload.update(rules=export_rules(), evaluations=evaluations)
-    output = (Path(output_dir) if output_dir is not None else HERE / "sessions") / trajectory_id
-    output.mkdir(parents=True, exist_ok=True)
-    outputs = {"record": payload, **payload, "steps": [asdict(step) for step in steps]}
+    outputs = {"record": payload, **payload, "steps": bundle.source["steps"]}
     for name, value in outputs.items():
         text = json.dumps(value, ensure_ascii=False, indent=2, default=sorted, allow_nan=False)
         (output / f"{name}.json").write_text(text + "\n", encoding="utf-8")

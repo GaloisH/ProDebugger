@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from kinds import Kinds
 from relations import Relations, FUNCTIONAL, MUTABLE, OBSERVED
 from record import Constraint, Entity, Goal, Record
+from semantic_scope import memory_scope, decision_clause
 
 name = "alfworld"
 
@@ -30,8 +31,9 @@ _STATE = {"clean": "clean", "cool": "cool", "cold": "cool",
 def kinds() -> Kinds:
     K = Kinds()
     K.declare("thing")
-    K.declare("place", "thing")
     K.declare("object", "thing")
+    # Receptacles are physical objects too (e.g. a lamp on a desk).
+    K.declare("place", "object")
     K.declare("portable", "object")
     K.declare("agent", "thing")
     K.declare("attribute")
@@ -50,7 +52,7 @@ def relations() -> Relations:
     R.declare("holding", 2, (FUNCTIONAL, MUTABLE, OBSERVED), key=(0,),
               arg_kinds=("agent", "portable"), value_types=("boolean",))
     R.declare("in", 2, (FUNCTIONAL, MUTABLE, OBSERVED), key=(0,),
-              arg_kinds=("portable", "place"), value_types=("boolean",))
+              arg_kinds=("object", "object"), value_types=("boolean",))
     R.declare("open", 1, (MUTABLE,), key=(0,),
               arg_kinds=("place",), value_types=("boolean",))
     R.declare("has", 3, (FUNCTIONAL, MUTABLE), key=(0, 1),
@@ -59,6 +61,11 @@ def relations() -> Relations:
               arg_kinds=("thing", "place"), value_types=("boolean",))
     R.declare("effect", 1, (MUTABLE,), key=(0,),
               arg_kinds=("agent",), value_types=("string",))
+    # Scoped absence observations; these never negate every world relation.
+    R.declare("visible_empty", 1, (MUTABLE,), key=(0,),
+              arg_kinds=("thing",), value_types=("boolean",))
+    R.declare("inventory_empty", 1, (MUTABLE,), key=(0,),
+              arg_kinds=("agent",), value_types=("boolean",))
     R.declare("admissibility", 1, (FUNCTIONAL,), key=(0,),
               arg_kinds=("int",), value_types=("string",))
     R.declare("go", 1, (MUTABLE,), arg_kinds=("place",), value_types=("string",))
@@ -82,6 +89,8 @@ def relations() -> Relations:
     R.declare("satisfied", 1, (FUNCTIONAL, MUTABLE), key=(0,),
               arg_kinds=("req",), value_types=("boolean", "null"))
     R.declare("recalled_nothing", 1, (MUTABLE,), key=(0,),
+              arg_kinds=("agent",), value_types=("boolean",))
+    R.declare("memory_unparsed", 1, (MUTABLE,), key=(0,),
               arg_kinds=("agent",), value_types=("boolean",))
     R.declare("recalled_summary", 1, (MUTABLE,), key=(0,),
               arg_kinds=("agent",), value_types=("string",))
@@ -123,7 +132,7 @@ def domain_briefing() -> Dict[str, Any]:
         "evidence_rules": [
             "seeing an object in a receptacle is not holding it",
             "holding an object is not placing it at the requested destination",
-            "placing the right object does not satisfy clean/cool/hot unless that state was recorded first",
+            "placement alone does not verify clean/cool/hot; missing state observations leave satisfaction unknown, not false",
             "Nothing happens is the observed effect of the previous action",
             "there is no irreversible commit; a cutoff can remain recoverable through its last action",
         ],
@@ -337,40 +346,48 @@ _MEM_HOLD = re.compile(
 
 
 def parse_memory(text: str, known_values: Dict[str, List[str]] = None) -> List[Dict[str, Any]]:
-    t = " ".join((text or "").split())
+    t = text or ""
     out: List[Dict[str, Any]] = []
     seen = set()
+    def emit(match, rel, args):
+        scope = memory_scope(t, match.start(), match.end())
+        if scope is None:
+            return
+        key = (rel, tuple(args), scope['temporal'], scope['event_step'], scope['polarity'])
+        if key in seen:
+            return
+        seen.add(key)
+        out.append({'rel': rel, 'args': args, 'value': scope['polarity'] == 'positive',
+                    'value_type': 'boolean', 'span': scope['source_context'], 'claim_scope': scope})
     for match in _MEM_IN.finditer(t):
         a, ai, b, bi = match.groups()
         obj, place = _canon(a, ai), _canon(b, bi)
         if obj[0] != "portable" or place[0] == "portable":
             continue
-        key = ("in", obj, place)
-        if key not in seen:
-            seen.add(key)
-            out.append({"rel": "in", "args": [obj, place], "value": True,
-                        "value_type": "boolean", "span": match.group(0)})
+        emit(match, 'in', [obj, place])
     for match in _MEM_HOLD.finditer(t):
         a, ai = match.groups()
         obj = _canon(a, ai)
         if obj[0] != "portable":
             continue
-        key = ("holding", obj)
-        if key not in seen:
-            seen.add(key)
-            out.append({"rel": "holding", "args": [("agent", "self"), obj],
-                        "value": True, "value_type": "boolean",
-                        "span": match.group(0)})
+        emit(match, 'holding', [('agent', 'self'), obj])
     for match in _MEM_AT.finditer(t):
         a, ai = match.groups()
         place = _canon(a, ai)
         if place[0] == "portable":
             continue
-        key = ("at", place)
-        if key not in seen:
-            seen.add(key)
-            out.append({"rel": "at", "args": [("agent", "self"), place],
-                        "value": True, "value_type": "boolean", "span": match.group(0)})
+        before = t[:match.start()]
+        # Looking at something is not being at it; a destination in a command
+        # is not an arrival. Admit only explicit location/arrival assertions.
+        if re.search(r'\b(?:look(?:ing)?|examine|point|aim)\s*$', before, re.I):
+            continue
+        word = match.group().lower().split()[0]
+        if word == 'to' and not re.search(r'\b(?:went|moved|returned)\s*$', before, re.I):
+            continue
+        if word == 'at' and not (re.search(r'(?:^|[.:\n])\s*[\-\"\']*\s*$', before)
+                or re.search(r'\b(?:arrive|arrived|am|was|were|is|are|currently|now)(?:\s+not)?\s*$', before, re.I)):
+            continue
+        emit(match, 'at', [('agent', 'self'), place])
     return out
 
 
@@ -385,12 +402,12 @@ _COMMAND = re.compile(
     r")\b", re.I)
 
 _VERB_ONLY = (
-    (re.compile(r"\bgo to\b", re.I), "go"),
+    (re.compile(r"\b(?:go(?: back)? to|move (?:towards?|to))\b", re.I), "go"),
     (re.compile(r"\b(?:take|pick up)\b", re.I), "take"),
-    (re.compile(r"\b(?:move|put|place)\b", re.I), "put"),
+    (re.compile(r"\b(?:move(?! (?:towards?|to)\b)|put|place)\b", re.I), "put"),
     (re.compile(r"\bopen\b", re.I), "open_action"),
     (re.compile(r"\bclose\b", re.I), "close"),
-    (re.compile(r"\b(?:examine|inspect|look at)\b", re.I), "look"),
+    (re.compile(r"\b(?:examine|inspect|look|check inventory)\b", re.I), "look"),
     (re.compile(r"\bclean\b", re.I), "clean"),
     (re.compile(r"\b(?:heat|warm)\b", re.I), "heat"),
     (re.compile(r"\bcool\b", re.I), "cool"),
@@ -476,9 +493,12 @@ def _effects(verb: str) -> Tuple[str, ...]:
 
 def parse_intention(plan_text: Optional[str], admissible: List[str],
                     goals: Iterable[Goal] = ()) -> Optional[Dict[str, Any]]:
-    text = " ".join((plan_text or "").split())
-    if not text:
+    if not plan_text:
         return None
+    text = decision_clause(plan_text)
+    if not text:
+        return {'rel': None, 'args': None, 'serves': tuple(g.entity() for g in goals),
+                'extraction': 'unresolved_decision_scope', 'confidence': 0.0}
     low = text.lower()
     # Use the first planning declaration.  Taking the last occurrence lets a
     # later rationale ("this should help") hide the actual intended operation
@@ -488,10 +508,10 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
     anchors = [x for x in anchors if x >= 0]
     anchor = min(anchors) if anchors else -1
     matches = list(_COMMAND.finditer(text))
-    if not matches:
+    if not matches or matches[0].start() != 0:
         focus = text[max(0, anchor):] if anchor >= 0 else text
         candidates = [(m.start(), verb) for pattern, verb in _VERB_ONLY
-                      for m in pattern.finditer(focus)]
+                      for m in pattern.finditer(focus) if m.start() == 0]
         if not candidates:
             return {
                 "rel": None, "args": None, "parameters": (), "execution_options": (),
@@ -510,16 +530,18 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
             "rel": verb, "args": None, "parameters": (), "execution_options": (),
             "serves": tuple(g.entity() for g in goals), "mentions": (),
             "preconditions": _preconditions(verb), "expected_effects": _effects(verb),
-            "commitment": commitment, "extraction": "action_grammar_verb",
-            "confidence": 0.62,
+            "commitment": commitment, "extraction": "decision_clause:verb_only",
+            "confidence": 0.85,
         }
     after = [m for m in matches if m.start() >= anchor] if anchor >= 0 else []
-    direct_match = after[0] if after else matches[-1]
+    direct_match = matches[0]
     direct = _command(direct_match.group(0))
     verb, args = direct["rel"], direct["args"]
     options = []
     for m in matches:
         if m is direct_match:
+            continue
+        if not re.search(r'\bor\s+[\"\']*$', text[direct_match.end():m.start()], re.I):
             continue
         parsed = _command(m.group(0))
         lo, hi = sorted((m.end(), direct_match.end()))
@@ -553,12 +575,23 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
     )
     adm_norm = {" ".join(a.lower().split()) for a in admissible}
     exact = " ".join(direct_match.group(0).lower().split()) in adm_norm
+    # A named manipulation/inspection may first require navigating to its
+    # explicit source, destination or instrument. Ground this option in the
+    # offered controls, never in the action that was actually emitted.
+    if not exact and verb in {'open_action', 'close', 'look', 'use', 'take', 'put', 'clean', 'cool', 'heat'}:
+        destination = args[-1] if args else None
+        if destination and destination[0] in RECEPTACLES:
+            navigation = f'go to {destination[0]} {destination[1]}'
+            if navigation in adm_norm:
+                options.append({'verb': 'go', 'args': [destination], 'role': 'prerequisite',
+                                'span': direct_match.group(0), 'preconditions': _preconditions('go'),
+                                'expected_effects': _effects('go')})
     return {
         "rel": verb, "args": args, "parameters": tuple(params),
         "execution_options": tuple(options), "serves": serves,
         "mentions": mentions, "preconditions": _preconditions(verb),
         "expected_effects": _effects(verb), "commitment": commitment,
-        "extraction": "environment_control" if exact else "action_grammar",
+        "extraction": "decision_clause:full",
         "confidence": 0.98 if exact else 0.82,
     }
 
@@ -609,14 +642,19 @@ def evaluate_discharges(action: Dict[str, Any], goals: Iterable[Goal],
             attr = record.ent("attribute", c.property.index)
             val = record.ent("value", "true")
             fact = record.in_force("has", (obj, attr, val), step)
-            ok = fact is not None and fact.value is True
-            state_ok = state_ok and ok
+            # Missing observation is unknown, never evidence that an object is
+            # dirty/cold/etc. Keep explicit negatives distinct from absence.
+            ok = fact.value if fact is not None and type(fact.value) is bool else None
+            state_ok = False if state_ok is False or ok is False else (None if ok is None or state_ok is None else True)
             if fact is not None:
                 state_evidence.append(fact.fid)
+        met = False if not object_ok or not destination_ok else state_ok
         out.append({
-            "rel": "in", "args": [action["args"][0], action["args"][1]],
-            "value": bool(object_ok and destination_ok and state_ok),
-            "value_type": "boolean", "purpose": goal.entity(),
+            # This is a goal verification, not an observation of location.
+            # A dirty bowl successfully placed on a shelf is still on the shelf.
+            "rel": "satisfied", "args": [(goal.entity().kind, goal.entity().index)],
+            "value": met,
+            "value_type": "null" if met is None else "boolean", "purpose": goal.entity(),
             "span": action.get("span", ""), "basis": tuple(state_evidence),
             "components": {"object": object_ok, "destination": destination_ok,
                            "state": state_ok},

@@ -2,14 +2,19 @@
 from __future__ import annotations
 
 import json
-import asyncio
 from pathlib import Path
 
 from .debug_tools import DebugTools, PHASE_TOOLS, SCHEMAS
 from .evidence_tools import BudgetExceeded, ToolError
 from .llm_client import PHASES, json_lines
 from .record_bridge import append_json, digest, plain, read_json, write_json
-from .window_trace import MODE, SCHEMA as WINDOW_SCHEMA, packet as window_packet, coverage as window_coverage
+from .window_trace import SCHEMA as WINDOW_SCHEMA
+from .query_trace import MODE, packet as trace_packet, coverage as window_coverage
+from .query_dsl import documentation
+from .route_context import compact as compact_route_context, progress as route_progress
+from .evidence_quality import evidence_quality
+from .benchmark_scope import scope as benchmark_scope
+from .trace_manager import SCHEMA as MANAGER_SCHEMA, packet as manager_packet
 from .direct_submit import POLICY, commit as commit_direct, packet as submit_packet, parse as parse_submit
 from local_judgement import SLOTS
 
@@ -21,16 +26,23 @@ class DebuggerAgent:
         self.bundle, self.client, self.output, self.config = bundle, client, Path(output), config
         self.tools = DebugTools(bundle, self.output, config["max_tool_calls"], config["window_size"],
                                 trace_top_p=config.get("trace_top_p", 5), trace_top_k=config.get("trace_top_k", 2))
+        from .claim_parser import ClaimParser
+        from .llm_client import LLMClient
+        self.tools.claim_parser = ClaimParser(bundle.source, self.output, config=config,
+                                              online=isinstance(client, LLMClient))
         self.phase_messages = {p: [] for p in PHASES}
         self.active_phase = None
         self.turns, self.text_only_turns = 0, 0
         self.trace_failures = {}
+        self.trace_histories = {}
+        self.manager_history = []
+        self.manager_failures = 0
         self.consumed_model_state = client.snapshot()
         checkpoint = self.output / "checkpoint.json"
         if resume:
             state = read_json(checkpoint)
-            if state.get("schema") != "debugger-checkpoint/v4":
-                raise ToolError("source_mismatch", "direct SUBMIT checkpoints require v4; start a new run")
+            if state.get("schema") != "debugger-checkpoint/v6":
+                raise ToolError("source_mismatch", "managed TRACE checkpoints require v6; start a new run")
             if state["canonical_fingerprint"] != bundle.fingerprint:
                 raise ToolError("source_mismatch", "input/compiler/rules/prompt changed; use a new run")
             self.tools.restore(json_lines(self.output / "tool_calls.jsonl"),
@@ -39,9 +51,12 @@ class DebuggerAgent:
             self.active_phase = state["active_phase"]
             self.text_only_turns = state.get("text_only_turns", 0)
             self.trace_failures = state.get("trace_failures", {})
+            self.trace_histories = state.get("trace_histories", {})
+            self.manager_history = state.get("manager_history", [])
+            self.manager_failures = state.get("manager_failures", 0)
             self.consumed_model_state = state["model_state"]
             client.restore(state["model_state"])
-            if client.recovered_message and client.recovered_phase != "TRACE":
+            if client.recovered_message and client.recovered_phase not in {"TRACE", "MANAGER"}:
                 if client.recovered_phase != self.active_phase:
                     raise ToolError("source_mismatch", "durable model response phase differs from checkpoint")
                 self._assistant(client.recovered_message)
@@ -61,16 +76,14 @@ class DebuggerAgent:
         if phase == "TRACE":
             return {"schema": "debugger-handoff/v1", "from": self.active_phase, "to": phase,
                     "versions": {"window_version": self.tools.windows.version}, "evaluation_mode": MODE,
-                    "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": self.tools.trace_top_k,
-                                         "top_k_unit": "distinct_root_steps_per_window"},
-                    "instruction": "Original window text is supplied directly. Rank evidence-supported root steps and retain "
-                                   "at most top_k distinct steps per independent window using assess only. "
-                                   "Keep materially competing module/class attributions within retained steps."}
+                    "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": 1},
+                    "instruction": "The manager assigns investigations and conditional interpretation rules from all ROUTE evidence. "
+                                   "Each investigator gets anchor evidence, allocated excerpts, one SQL query, then one step in assess."}
         state = {"schema": "debugger-handoff/v1", "from": self.active_phase, "to": phase,
                  "versions": {"window_version": self.tools.windows.version}, "goal_map": self.tools.goal_map,
                  "coverage": window_coverage(self.tools),
-                 "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": self.tools.trace_top_k,
-                                      "top_k_unit": "distinct_root_steps_per_window"},
+                 "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": 1,
+                                      "top_k_unit": "distinct_root_steps_per_case"},
                  "route_history": self.tools.route_history,
                  "instruction": "Current shared state supersedes old versions. Hypotheses and prior judgements are leads, not local evidence. Re-read scoped raw material when needed."}
         # Carry transition tool outputs without forwarding the previous model's messages or reasoning.
@@ -81,7 +94,7 @@ class DebuggerAgent:
                     break
                 if m["role"] == "tool":
                     event = self.tools.completed.get(m["tool_call_id"], {})
-                    if event.get("name") in {"trace_window", "reroute", "assess"}:
+                    if event.get("name") in {"route_cases", "reroute", "assess"}:
                         outputs.append({"tool": event["name"], "result": json.loads(m["content"])})
         state["transition_results"] = list(reversed(outputs))
         return plain(state)
@@ -102,6 +115,11 @@ class DebuggerAgent:
                 "next_env_text": feedback,
                 "module_fids": {m: [f.fid for f in facts if f.t == t and f.side == "mind" and f.slot == slot]
                                 for m, slot in SLOTS.items()},
+                "statement_discovery": {m: {"topics": sorted({topic for c in self.bundle.record.agent_statements
+                    if c["step"] == t and c["module"] == m for topic in c["topics"]}),
+                    "unresolved_clauses": sum(c["coverage"] == "unresolved" for c in self.bundle.record.agent_statements
+                                              if c["step"] == t and c["module"] == m)}
+                    for m in ("memory", "reflection", "plan")},
                 "recorded_goal_observations": [{"fid": f.fid, "relation": f.rel,
                     "arguments": plain(f.args), "value": plain(f.value), "quote": f.span}
                     for f in facts if f.t == t and f.side == "env"
@@ -114,10 +132,13 @@ class DebuggerAgent:
         return {"schema": "route-timeline/v1", "task": self.bundle.source["task"],
             "requirement_ids": sorted(self.tools.index.requirements), "steps": rows,
             "complete": True, "step_count": len(rows),
+            "evidence_quality": evidence_quality(self.bundle.record, len(rows)),
             "instruction": "step equals original trajectory step and Fact.t. module_fids belong to that row's step. "
                 "scope.step only controls visibility, not a returned Fact's location. "
                 "Feedback is original post-action text; repeat/no-effect signals are leads, not faults. "
                 "Empty recorded_goal_observations means no such compiled observation, not proof of no progress. "
+                "statement_discovery topics are lexical leads, not asserted propositions or fault signals. "
+                "Unresolved clause counts measure parser coverage, never agent omissions. "
                 "Use tools to read full modules at candidate steps before declaring causal anchors."}
 
     def _activate(self, phase):
@@ -127,13 +148,14 @@ class DebuggerAgent:
         handoff = self._handoff(phase)
         self.active_phase = phase
         if not self.messages:
+            metadata = {"trajectory_id": self.bundle.record.tid,
+                        "task": self.bundle.record.task, "steps": len(self.bundle.source["steps"]),
+                        "submission_policy": POLICY,
+                        "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": 1,
+                                             "top_k_unit": "distinct_root_steps_per_case"}}
             self.messages.extend([
                 {"role": "system", "content": PROMPTS[phase].read_text(encoding="utf-8")},
-                {"role": "user", "content": json.dumps({"trajectory_id": self.bundle.record.tid,
-                 "task": self.bundle.record.task, "steps": len(self.bundle.source["steps"]),
-                 "W": self.config["window_size"], "submission_policy": POLICY,
-                 "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": self.tools.trace_top_k,
-                                      "top_k_unit": "distinct_root_steps_per_window"}}, ensure_ascii=False)}])
+                {"role": "user", "content": json.dumps(metadata, ensure_ascii=False)}])
             for m in self.messages:
                 self._log_message(m)
         message = {"role": "user", "content": json.dumps(handoff, ensure_ascii=False)}
@@ -148,11 +170,13 @@ class DebuggerAgent:
         self.text_only_turns = 0
 
     def checkpoint(self):
-        write_json(self.output / "checkpoint.json", {"schema": "debugger-checkpoint/v4",
+        write_json(self.output / "checkpoint.json", {"schema": "debugger-checkpoint/v6",
                    "canonical_fingerprint": self.bundle.fingerprint, "phase": self.tools.phase,
                    "active_phase": self.active_phase,
                    "turns": self.turns, "text_only_turns": self.text_only_turns,
                    "trace_failures": self.trace_failures,
+                   "trace_histories": self.trace_histories,
+                   "manager_history": self.manager_history, "manager_failures": self.manager_failures,
                    "tool_calls": self.tools.call_count, "model_state": self.consumed_model_state,
                    "phase_messages": self.phase_messages})
 
@@ -191,111 +215,149 @@ class DebuggerAgent:
         self.checkpoint()
 
     def _context(self):
-        """Bound old tool packets structurally, retaining the full transcript on disk."""
-        messages = plain(self.messages)
-        # Latest packets stay complete. Earlier views can be requested again by ID.
-        for i, message in enumerate(messages[:-4]):
-            if message["role"] == "tool" and len(message["content"].encode("utf-8")) > 12000:
-                result = json.loads(message["content"])
-                message["content"] = json.dumps({"schema": "debugger-context-summary/v1",
-                    "tool_call_id": message["tool_call_id"], "scope": result.get("scope"),
-                    "original_digest": digest(result), "truncated": True,
-                    "instruction": "Full output is in the event log; request a scoped view again if needed."})
-            elif message["role"] == "user":
+        """Preserve a whole fresh tool batch, with evidence-bearing older summaries."""
+        messages = compact_route_context(self.messages, self.tools.completed)
+        for message in messages:
+            if message["role"] == "user":
                 value = json.loads(message["content"])
                 if value.get("schema") == "debugger-handoff/v1" and value.get("transition_results"):
                     value["transition_results"] = [{"tool": row["tool"],
                         "original_digest": digest(row["result"]), "truncated": True,
-                        "instruction": "Re-read scoped views or a previous trace_window page for raw material."}
+                        "instruction": "Re-read scoped views for raw material."}
                         for row in value["transition_results"]]
                     message["content"] = json.dumps(value, ensure_ascii=False)
         return messages
 
-    def _trace(self):
-        """Concurrent isolated window requests; validation and commits stay serial."""
-        asyncio.run(self._window_trace())
-
-    async def _window_trace(self):
-        base = plain(self.messages[:3])
-        # Recover every durable concurrent response, not only the last ledger row.
-        recovered = {}
-        for row in json_lines(self.output / "usage.jsonl"):
-            if row.get("phase") != "TRACE" or row.get("event") != "completed":
-                continue
-            request = read_json(self.output / row["request_file"])
-            inputs = json.loads(request["messages"][3]["content"])
-            recovered[inputs["window"]["candidate_id"]] = row["message"]
-        semaphore = asyncio.Semaphore(self.tools.trace_top_p)
-
-        async def evaluate(window):
-            wid = window["candidate_id"]
-            if wid in self.tools.window_conclusions:
+    def _manage_trace(self):
+        """One isolated manager conversation; committed allocation survives restart."""
+        if self.tools.manager_plan is not None:
+            return
+        if not self.manager_history:
+            self.manager_history = [
+                {"role": "system", "content": PROMPTS["TRACE"].with_name("manager.md").read_text(encoding="utf-8")},
+                {"role": "user", "content": json.dumps(manager_packet(self.tools), ensure_ascii=False)}]
+            self._log_message(self.manager_history[-1])
+            self.checkpoint()
+        history = self.manager_history
+        while self.tools.manager_plan is None and self.manager_failures < 3:
+            if history[-1]["role"] != "assistant":
+                if self.turns >= self.config["max_turns"]:
+                    raise BudgetExceeded("assistant turn limit reached")
+                if self.client.recovered_message and self.client.recovered_phase == "MANAGER":
+                    message = self.client.recovered_message
+                    self.client.recovered_message = None
+                else:
+                    message = self.client.complete(plain(history), [MANAGER_SCHEMA], phase="MANAGER")
+                history.append(plain(message))
+                self._assistant(message)
+            calls = history[-1].get("tool_calls") or []
+            result = None
+            if len(calls) == 1 and calls[0].get("function", {}).get("name") == "plan_trace":
+                self._dispatch(calls[0])
+                result = json.loads(self.messages[-1]["content"])
+                history.append(plain(self.messages[-1]))
+            if result is None:
+                for call in calls:
+                    history.append({"role": "tool", "tool_call_id": call["id"],
+                                    "content": json.dumps({"error": "Use exactly one plan_trace call"})})
+            if result is not None and "error" not in result:
+                self.checkpoint()
                 return
-            inputs = window_packet(self.tools, window)
-            history = base + [{"role": "user", "content": json.dumps(inputs, ensure_ascii=False)}]
-            self._log_message(history[-1])
-            key = digest(inputs)
-            async with semaphore:
-                while self.trace_failures.get(key, 0) < 3:
-                    if wid in recovered:
-                        message = recovered.pop(wid)
-                    else:
-                        message = await self.client.complete_async(history, [WINDOW_SCHEMA], phase="TRACE")
-                    self._assistant(message)
-                    history.append(plain(message))
+            self.manager_failures += 1
+            correction = {"role": "user", "content": json.dumps({
+                "error": result.get("error") if result else "Use exactly one plan_trace call",
+                "instruction": "Correct the allocation using only supplied sources. Include supported/refuted/unknown criteria and conditional rules; do not claim findings."})}
+            history.append(correction)
+            self._log_message(correction)
+            self.checkpoint()
+        if self.tools.manager_plan is None:
+            raise ToolError("invalid_manager_plan", "manager plan validation failed three times")
+
+    def _trace(self):
+        """One durable query/assessment conversation per manager assignment."""
+        self._manage_trace()
+        query_schema = next(s for s in SCHEMAS if s["function"]["name"] == "query_logs")
+        for case in self.tools.windows.windows:
+            cid = case["candidate_id"]
+            if cid in self.tools.window_conclusions:
+                continue
+            if cid not in self.trace_histories:
+                inputs = {**trace_packet(self.tools, case), "benchmark_scope": benchmark_scope(),
+                          "candidate_limits": {"top_k": 1}, "query_language": documentation()}
+                self.trace_histories[cid] = [
+                    {"role": "system", "content": PROMPTS["TRACE"].read_text(encoding="utf-8")},
+                    {"role": "user", "content": json.dumps(inputs, ensure_ascii=False)}]
+                self._log_message(self.trace_histories[cid][-1])
+                self.checkpoint()
+            history = self.trace_histories[cid]
+            self.tools.current_trace_case = cid
+            try:
+                while cid not in self.tools.window_conclusions:
+                    name = "assess" if cid in self.tools.trace_queries else "query_logs"
+                    failure_key = cid + ":" + name
+                    if self.trace_failures.get(failure_key, 0) >= 3:
+                        break
+                    # Persisted assistant calls may need dispatch after a restart.
+                    if history[-1]["role"] != "assistant":
+                        if self.turns >= self.config["max_turns"]:
+                            raise BudgetExceeded("assistant turn limit reached")
+                        if self.client.recovered_message and self.client.recovered_phase == "TRACE":
+                            message = self.client.recovered_message
+                            self.client.recovered_message = None
+                        else:
+                            message = self.client.complete(plain(history),
+                                [query_schema if name == "query_logs" else WINDOW_SCHEMA], phase="TRACE")
+                        history.append(plain(message))
+                        self._assistant(message)  # checkpoints history before mutation
+                    message = history[-1]
                     calls = message.get("tool_calls") or []
                     result = None
-                    if len(calls) == 1 and calls[0].get("function", {}).get("name") == "assess":
-                        self.tools.current_trace_window = wid
-                        try:
-                            self._dispatch(calls[0])
+                    if len(calls) == 1:
+                        call = calls[0]
+                        # A committed query can precede the history checkpoint.
+                        prior = self.tools.completed.get(call.get("id"))
+                        actual = call.get("function", {}).get("name")
+                        if actual == name or prior is not None:
+                            self._dispatch(call)
                             result = json.loads(self.messages[-1]["content"])
                             history.append(plain(self.messages[-1]))
-                        finally:
-                            del self.tools.current_trace_window
-                    else:
+                    if result is None:
                         for call in calls:
                             history.append({"role": "tool", "tool_call_id": call["id"],
-                                "content": json.dumps({"error": "Use exactly one assess call"})})
+                                "content": json.dumps({"error": "Use exactly one " + name + " call"})})
                     if result is not None and "error" not in result:
-                        return
-                    self.trace_failures[key] = self.trace_failures.get(key, 0) + 1
-                    quote_source = None
-                    if len(calls) == 1:
-                        try:
-                            rejected = json.loads(calls[0]["function"]["arguments"])
-                            quote_source = []
-                            for index, candidate in enumerate(rejected.get("candidates", []), 1):
-                                t, module = candidate.get("step"), candidate.get("module")
-                                if type(t) is int and t in inputs["evaluation_steps"] and module in {"memory", "reflection", "plan", "action"}:
-                                    quote_source.append({"candidate_index": index, "step": t, "module": module,
-                                        "original_module_text": self.bundle.source["steps"][t - 1]["parts"].get(module)})
-                        except (ValueError, TypeError, KeyError):
-                            pass
+                        # A SQL validation error is query data and still consumes
+                        # the single query opportunity. No SQL repair is offered.
+                        self.checkpoint()
+                        continue
+                    self.trace_failures[failure_key] = self.trace_failures.get(failure_key, 0) + 1
                     correction = {"role": "user", "content": json.dumps({
-                        "error": result.get("error") if result else "Use exactly one assess call",
-                        "quote_source": quote_source,
-                        "instruction": "Correct this same window. Submit its ranked list with at most top_k distinct root steps in one assess call. "
-                                       "Keep materially competing module/class attributions at retained steps; do not force candidates. "
-                                       "output_quote must be copied from the selected module's original_module_text; "
-                                       "a plan quote cannot be an action quote. Verify the claim itself too."})}
+                        "error": result.get("error") if result else "Use exactly one " + name + " call",
+                        "instruction": (
+                            "Call query_logs exactly once with the active candidate ID and one SQL string. "
+                            "The query has not been committed; correct the tool-call arguments using query_language."
+                            if cid not in self.tools.trace_queries else
+                            "Call assess with at most one step and exact module quotes from existing evidence. "
+                            "Use empty candidates with uncertainty if insufficient. Retrieval is closed.")})}
                     history.append(correction)
                     self._log_message(correction)
                     self.checkpoint()
-
-        outcomes = await asyncio.gather(*(evaluate(w) for w in self.tools.windows.windows), return_exceptions=True)
-        # All requests are joined before reporting any failure/budget termination.
-        for outcome in outcomes:
-            if isinstance(outcome, BaseException):
-                raise outcome
+            finally:
+                del self.tools.current_trace_case
         if window_coverage(self.tools)["trace_complete"]:
-            self.tools.phase = "SUBMIT"
+            if any(e["candidates"] for e in self.tools.window_conclusions.values()):
+                self.tools.phase = "SUBMIT"
+            else:
+                self.tools.result = self.tools.stop_result("no_candidate", "TRACE completed with no candidates; SUBMIT skipped")
         else:
-            self.tools.result = self.tools.stop_result("uncertain", "window TRACE validation failed three times")
-            self.tools.result["coverage"] = window_coverage(self.tools)
+            self.tools.result = self.tools.stop_result("uncertain", "TRACE response validation failed three times")
         self.checkpoint()
 
     def _direct_submit(self):
+        if not submit_packet(self.tools)["candidates"]:
+            self.tools.result = self.tools.stop_result("no_candidate", "TRACE completed with no candidates; SUBMIT skipped")
+            self.checkpoint()
+            return
         if self.messages[-1]["role"] == "assistant":
             message = self.messages[-1]
             try:
@@ -303,7 +365,7 @@ class DebuggerAgent:
                     raise ToolError("invalid_direct_submit", "SUBMIT has no tools; return plain JSON")
                 commit_direct(self.tools, parse_submit(message.get("content")), self.turns)
             except (ValueError, TypeError, KeyError) as exc:
-                self.tools.result = self.tools.stop_result("uncertain", f"direct SUBMIT response rejected: {exc}")
+                self.tools.result = self.tools.stop_result("error", f"direct SUBMIT response rejected: {exc}")
                 self.tools.result.update(policy=POLICY, uncertainty=str(exc))
             self.checkpoint()
             return
@@ -327,6 +389,11 @@ class DebuggerAgent:
                     continue
                 pending = self._pending_calls()
                 if pending:
+                    if (self.tools.phase == "ROUTE"
+                            and route_progress(self.messages, self.tools.completed)["consecutive_rounds_without_new_evidence"] >= 3
+                            and any(c.get("function", {}).get("name") not in {"route_cases", "finish"} for c in pending)):
+                        self.tools.result = self.tools.stop_result("uncertain", "ROUTE requested more retrieval after a decision-only turn")
+                        break
                     for call in pending:
                         if self.tools.result is not None:
                             break
@@ -335,13 +402,23 @@ class DebuggerAgent:
                 self._activate(self.tools.phase)
                 if self.turns >= self.config["max_turns"]:
                     raise BudgetExceeded("assistant turn limit reached")
+                progress = route_progress(self.messages, self.tools.completed) if self.tools.phase == "ROUTE" else {}
+                stalled = progress.get("consecutive_rounds_without_new_evidence", 0)
+                if stalled >= 4:
+                    self.tools.result = self.tools.stop_result("uncertain", "ROUTE made no valid decision after a decision-only turn")
+                    break
+                decision_only = stalled >= 3
                 self.messages.append({"role": "user", "content": json.dumps({
                     "phase": self.tools.phase, "coverage": window_coverage(self.tools),
                     "remaining_tool_calls": self.tools.max_tool_calls - self.tools.call_count,
-                    "instruction": "Continue through tools. Re-route or finish uncertain if evidence cannot support submission."})})
+                    "retrieval_progress": progress,
+                    "instruction": ("Repeated retrieval added no evidence. Reuse the retained results and call route_cases for supported leads, or finish uncertain. No more retrieval this turn."
+                                    if decision_only else "Read the original task and requirements before routing."
+                                    if self.tools.phase == "MAP" else "Use the evidence to route plausible causes for TRACE, or finish uncertain if unsupported. Do not repeat an unchanged retrieval.")})})
                 self._log_message(self.messages[-1])
                 self.checkpoint()
-                schemas = [s for s in SCHEMAS if s["function"]["name"] in PHASE_TOOLS[self.tools.phase]]
+                allowed = {"route_cases", "finish"} if decision_only else PHASE_TOOLS[self.tools.phase]
+                schemas = [s for s in SCHEMAS if s["function"]["name"] in allowed]
                 message = self.client.complete(self._context(), schemas, phase=self.active_phase)
                 self._assistant(message)
                 if not message.get("tool_calls"):
@@ -359,6 +436,10 @@ class DebuggerAgent:
                       route_history=self.tools.route_history, usage={**self.client.snapshot(),
                       "tool_calls": self.tools.call_count, "assistant_turns": self.turns})
         result["evaluation_mode"] = MODE
+        if self.tools.claim_parser.folder:
+            usage_path = self.tools.claim_parser.folder / "usage_summary.json"
+            if usage_path.exists():
+                result["usage"]["claim_parsing"] = read_json(usage_path)
         result["policy"] = POLICY
         self.tools.save()
         self.checkpoint()

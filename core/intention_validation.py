@@ -69,7 +69,7 @@ def _constraint_binding(R: Record, goal: Goal, step: int,
     in_action = [x for x in expected if _norm(x) and _norm(x) in _norm(action_span)]
     decisions = [f for f in R.by_step(step) if f.slot == "chk"
                  and f.purpose is not None and str(f.purpose) == str(q)
-                 and f.rel == goal.rel and f.value is not None]
+                 and f.rel in {goal.rel, "satisfied"} and f.value is not None]
 
     if decisions:
         relation = "satisfies" if any(f.value is True for f in decisions) else "substitutes"
@@ -106,6 +106,7 @@ def _constraint_binding(R: Record, goal: Goal, step: int,
         "explicit_in_action": bool(in_action),
         "recorded_met_before_or_at_step": _recorded_met(R, goal, step),
         "evidence_fids": evidence,
+        "interpretation_limit": "Literal mentions and selective plan extraction are not semantic coverage; unmentioned does not mean ignored. Decisions are compiled checks, not observed outcomes.",
     }
 
 
@@ -156,7 +157,7 @@ def _preconditions(R: Record, step: int, names, action) -> List[Dict[str, Any]]:
             evidence = [f.fid for f in R.F if f.rel == "holding" and f.side == "env"
                         and f.t <= step and f.value is True
                         and any(a in f.args for a in objects)]
-            status = "sat" if admissibility == "well_formed" or evidence else "viol"
+            status = "sat" if admissibility == "well_formed" or evidence else "unk"
             detail = evidence
         elif name == "tool_or_appliance_available":
             status = "sat" if admissibility == "well_formed" else "unk"
@@ -171,8 +172,11 @@ def _preconditions(R: Record, step: int, names, action) -> List[Dict[str, Any]]:
                 if (g.status_mode != "tracked"
                         or any(x.mode == "observation" for x in specs)):
                     unresolved.append(str(g.entity()))
-                else:
+                elif any(f.slot == "chk" and f.value is False and f.t <= step
+                         and f.purpose == g.entity() and f.rel in {g.rel, "satisfied"} for f in R.F):
                     unmet.append(str(g.entity()))
+                else:
+                    unresolved.append(str(g.entity()))
             if unmet:
                 status = "viol"
             elif unresolved:
@@ -289,6 +293,7 @@ def validate_intention(R: Record, step: int) -> Dict[str, Any]:
     result = {
         "entity": str(entity),
         "status": "parsed",
+        "extraction_coverage": "selective_heuristic_not_semantically_audited",
         "plan_action_alignment": alignment,
         "constraint_bindings": [
             _constraint_binding(R, g, step, plan.span if plan else "",

@@ -4,11 +4,11 @@ from .evidence_tools import ToolError
 from .record_bridge import digest
 from local_judgement import MODULES, SLOTS
 
-MODE = "independent-window-candidates/v2"
-FIELDS = ("status", "step", "module", "fault_class", "output_quote",
+MODE = "independent-window-candidates/v3-root-role"
+FIELDS = ("status", "is_root_cause", "step", "module", "fault_class", "output_quote",
           "proposition", "reasoning", "immediate_effect", "uncertainty", "requirement_links")
 SCHEMA = {"type": "function", "function": {"name": "assess",
-    "description": "Submit ranked error/uncertain candidates for at most the supplied top_k distinct root steps. Keep same-step module alternatives; empty list requires uncertainty.",
+    "description": "Assess one original step with same-step module alternatives. Distinguish whether a fault exists (status) from whether it originates the investigated evidence (is_root_cause: true/false/null). A confident non-root fault still returns its step. Empty list requires uncertainty.",
     "parameters": {"type": "object", "additionalProperties": False,
         "required": ["window_id", "candidates", "uncertainty"], "properties": {
         "window_id": {"type": "string"}, "uncertainty": {"type": "string"},
@@ -16,8 +16,9 @@ SCHEMA = {"type": "function", "function": {"name": "assess",
         "type": "object", "additionalProperties": False, "required": list(FIELDS),
         "properties": {
             **{k: {"type": "string"} for k in FIELDS if k not in
-               {"status", "step", "module", "fault_class", "requirement_links"}},
+               {"status", "is_root_cause", "step", "module", "fault_class", "requirement_links"}},
             "status": {"enum": ["error", "uncertain"]},
+            "is_root_cause": {"type": ["boolean", "null"], "description": "true: supported origin candidate for this ROUTE evidence chain; false: this fault is not its root; null: causal role unresolved. Explain using reasoning and uncertainty."},
             "step": {"type": "integer", "minimum": 1},
             "module": {"enum": list(ALLOWED)},
             "fault_class": {"type": ["string", "null"]},
@@ -46,6 +47,10 @@ def packet(tools, window):
 
 
 def coverage(tools):
+    from .query_trace import MODE as QUERY_MODE
+    if getattr(tools, "trace_protocol", None) == QUERY_MODE:
+        from .query_trace import coverage as query_coverage
+        return query_coverage(tools)
     windows = tools.windows.windows
     selected = sorted({t for w in windows for t in range(w["lo"], w["hi"] + 1)})
     completed = [w for w in tools.windows.windows if w["candidate_id"] in tools.window_conclusions]
@@ -75,6 +80,10 @@ def normalize_candidate(tools, answer, window):
             raise ToolError("invalid_window_root", f"{key} must be a string")
     if not answer["reasoning"].strip() or not answer["proposition"].strip():
         raise ToolError("invalid_window_root", "reasoning and proposition are required")
+    if answer["is_root_cause"] is not None and type(answer["is_root_cause"]) is not bool:
+        raise ToolError("invalid_window_root", "is_root_cause must be true, false or null")
+    if answer["is_root_cause"] is None and not answer["uncertainty"].strip():
+        raise ToolError("invalid_window_root", "unresolved causal role requires uncertainty")
     links = answer["requirement_links"]
     if not isinstance(links, list) or any(not isinstance(k, str) or k not in tools.index.requirements for k in links):
         raise ToolError("invalid_window_root", "invalid requirement_links")

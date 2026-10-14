@@ -7,8 +7,20 @@ from .record_bridge import append_json, digest, plain
 from local_judgement import SLOTS
 from .submit_evidence import directed_context
 
-POLICY = "window-candidates-submit/v3"
+POLICY = "window-candidates-submit/v5-manager-forced-choice"
 from .window_trace import coverage as window_coverage
+
+
+def disclose_root_roles(candidates):
+    """Only show roles for distinct, definite TRACE step judgements.
+
+    A single judgement, same-step alternatives, or one uncertain judgement plus
+    one definite judgement does not establish the requested comparison context.
+    These annotations are evidence for SUBMIT, never a candidate eligibility gate.
+    """
+    definite = [c for c in candidates if c["assessment"]["status"] == "error"
+                and type(c["assessment"].get("is_root_cause")) is bool]
+    return len({c["step"] for c in definite}) >= 2 and len({c["window"]["candidate_id"] for c in definite}) >= 2
 
 
 def parse(content):
@@ -26,6 +38,7 @@ def parse(content):
 
 
 def packet(tools):
+    from .trace_manager import submit_guidance
     candidates = []
     for window in tools.windows.windows:
         event = tools.window_conclusions.get(window["candidate_id"])
@@ -35,7 +48,12 @@ def packet(tools):
             t = judgement["step"]
             candidates.append({"candidate_id": f"trace-window:{window['candidate_id']}:{index}",
                 "window": {k: window[k] for k in ("candidate_id", "lo", "hi")},
-                "step": t, "module": judgement["module"], "assessment": judgement})
+                "step": t, "module": judgement["module"], "assessment": plain(judgement)})
+    show_roles = disclose_root_roles(candidates)
+    for candidate in candidates:
+        judgement = candidate["assessment"]
+        if not show_roles or judgement["status"] != "error" or type(judgement.get("is_root_cause")) is not bool:
+            candidate["assessment"].pop("is_root_cause", None)
     coverage = window_coverage(tools)
     return {"schema": "direct-submit-input/v2", "policy": POLICY,
             "task": tools.bundle.source["task"], "benchmark_scope": scope(),
@@ -47,11 +65,12 @@ def packet(tools):
                 "candidate_ids": [c["candidate_id"] for c in candidates if c["window"]["candidate_id"] == w["candidate_id"]],
                 "uncertainty": tools.window_conclusions[w["candidate_id"]]["conclusion"]["uncertainty"]}
                 for w in tools.windows.windows if w["candidate_id"] in tools.window_conclusions],
-            **directed_context(tools.bundle.source, candidates),
-            "instruction": "Compare these TRACE suspects once and return one answer. "
-                           "Use shared local context and bounded related source excerpts; no complete history is supplied. "
-                           "Retrieval hints do not prove dependency, recovery or absence. Omitted evidence remains unknown. "
-                           "There are no tools. No labels or reference answer are supplied."}
+            **directed_context(tools.bundle.source, candidates), **submit_guidance(tools),
+            "instruction": "Select one existing candidate and return the required diagnosed JSON without tools. "
+                           "Compare actual source support, causal dependence and recovery; qualify remaining evidence gaps. "
+                           "Local context and related excerpts are incomplete evidence, not a complete execution history."
+                           + (" Known root-role opinions are disclosed for distinct definite worker findings; "
+                              "they are not eligibility rules or votes." if show_roles else "")}
 
 
 def _text(value, field, required=True):
@@ -68,6 +87,10 @@ def normalize(tools, answer):
     if not inputs["coverage"]["trace_complete"]:
         raise ToolError("invalid_direct_submit", "TRACE coverage is incomplete")
     candidates = {c["candidate_id"]: c for c in inputs["candidates"]}
+    if not candidates:
+        raise ToolError("invalid_direct_submit", "no TRACE candidates; skip SUBMIT and record no_candidate")
+    if answer["status"] != "diagnosed":
+        raise ToolError("invalid_direct_submit", "SUBMIT status must be diagnosed; select one existing candidate, including a TRACE uncertain candidate")
     comparisons = answer["comparisons"]
     if not isinstance(comparisons, list):
         raise ToolError("invalid_direct_submit", "comparisons must be a list")
@@ -111,15 +134,6 @@ def normalize(tools, answer):
                 "status": "error", "proposition": judgement["proposition"],
                 "reasoning": reason, "goal_links": judgement["requirement_links"],
                 "supporting_fids": list(dict.fromkeys([fid, *judgement["evidence_for"]])), "counterevidence": judgement["evidence_against"]}
-    elif answer["status"] == "uncertain":
-        if selected is not None:
-            raise ToolError("invalid_direct_submit", "uncertain must have null selected_candidate_id")
-        if answer["fault_class"] is not None or answer["output_quote"] != "":
-            raise ToolError("invalid_direct_submit", "uncertain must have null fault_class and empty output_quote")
-        _text(answer["uncertainty"], "uncertainty")
-        _text(answer["repair"], "repair", False)
-    else:
-        raise ToolError("invalid_direct_submit", "status must be diagnosed or uncertain")
     return {"schema": "debugger-result/v1", "status": answer["status"], "accepted": root is not None,
             "policy": POLICY, "root": root, "reasoning": reason,
             "supporting_evidence": root["supporting_fids"] if root else [],

@@ -186,7 +186,9 @@ class EvidenceIndex:
     def trace(self, starts, *, scope, direction="backward", edge_types=None, depth=3,
               max_nodes=80, steps=None):
         scope = self.scope(scope)
-        integer(depth, "depth", 0, 8); integer(max_nodes, "max_nodes", 1, 500)
+        integer(depth, "depth", 0, 8)
+        if max_nodes is not None:
+            integer(max_nodes, "max_nodes", 1, 500)
         if direction not in {"backward", "forward", "goal"}:
             raise ToolError("invalid_arguments", "invalid trace direction")
         kinds = set(edge_types if edge_types is not None else ["basis", "situation", "purpose"])
@@ -206,7 +208,7 @@ class EvidenceIndex:
             node, d = queue.popleft()
             if node in nodes:
                 continue
-            if len(nodes) >= max_nodes:
+            if max_nodes is not None and len(nodes) >= max_nodes:
                 truncated = True
                 break
             if node.startswith("fact:"):

@@ -18,7 +18,7 @@ def validate_cause(module, item):
                  r"(?:literal|surrounding) (?:single |double )?quot|quoted (?:string|form|command|action)|"
                  r"(?:rather than|instead of) (?:the )?bare|unquoted", reason, re.I):
         raise ToolError("excluded_benchmark_cause", "Action formatting/spelling/quoted-vs-bare causes are excluded, "
-                        "even under invalid_action/parameter_error/misalignment. Evaluate semantic choices or use uncertain.")
+                        "even under invalid_action/parameter_error/misalignment. Evaluate supported semantic choices within the current phase's output contract.")
 
 
 def scope():

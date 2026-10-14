@@ -4,8 +4,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from .record_bridge import append_json, digest, plain, write_json
-from .evidence_tools import BudgetExceeded, EvidenceIndex, ToolError, TraceWindows, integer
-from .window_trace import SCHEMA as WINDOW_SCHEMA, commit as commit_window, coverage
+from .evidence_tools import BudgetExceeded, EvidenceIndex, ToolError, integer
+from .window_trace import SCHEMA as WINDOW_SCHEMA, coverage
+from .query_trace import TraceCases, MODE as TRACE_MODE, commit as commit_window, query as query_logs
 from .direct_submit import POLICY, commit as commit_direct, packet as submit_packet
 
 import operators as OPS
@@ -27,7 +28,10 @@ def schema(name, description, properties, required=()):
                            "additionalProperties": False}}}
 
 
+from .trace_manager import SCHEMA as MANAGER_SCHEMA, commit as commit_manager
+
 SCHEMAS = [
+    MANAGER_SCHEMA,
     schema("view", "Read requirements, entity, scan, episodes, local_audits, changes or packet. Local scope hides next agent outputs.",
            {"spec": TEXT, "scope": SCOPE}, ["spec", "scope"]),
     schema("view_evidence", "Read native rule candidates and their original facts. No candidates does not prove no failure.",
@@ -42,8 +46,10 @@ SCHEMAS = [
               "max_nodes": {"type": "integer", "minimum": 1, "maximum": 500},
               "steps": {"type": "array", "items": INT, "minItems": 2, "maxItems": 2}}, [key, "scope"])
       for name, key in [("trace_evidence", "eid"), ("trace_fact", "fid")]],
-    schema("trace_window", "Declare candidate windows in ROUTE. W includes the anchor; TRACE evaluates each window independently.",
-           {"candidates": ROWS, "W": {"type": "integer", "minimum": 1}}, ["candidates"]),
+    schema("route_cases", "Declare evidence-backed anchors for the TRACE manager to combine or allocate to investigators.",
+           {"candidates": ROWS}, ["candidates"]),
+    schema("query_logs", "One element-scoped SQL query over the full trajectory, including steps BEFORE the anchor. Prefer literal term/module lists and UNION ALL BY NAME; omit NULL placeholders and return only needed fields. Use query_context step bounds and relation names; omit optional bounds for full-range element search. Full steps/modules/fact dumps and RAW_STEP are forbidden. Track entities/states/actions or search specific source claims. Invalid SQL consumes the opportunity.",
+           {"candidate_id": TEXT, "sql": {**TEXT, "description": "One SQL query with concise English -- comments inside this string: begin with -- Purpose:, then explain each retrieval branch and meaningful filters/bounds. Use newline separators, not # comments. Comments describe the inquiry, not assumed findings. Use single-quoted literal arguments and specific search terms, never generic 'search' for plan/reflection. No aggregate row/byte/source/function budgets; no full-step access."}}, ["candidate_id", "sql"]),
     WINDOW_SCHEMA,
     *[schema(name, "Inspect one original Fact with explicit visibility scope.",
              {"fid": INT, "scope": SCOPE}, ["fid", "scope"])
@@ -56,15 +62,15 @@ SCHEMAS = [
            {"fid": INT, "span": {"type": "integer", "minimum": 0, "maximum": 8}, "scope": SCOPE}, ["fid", "scope"]),
     *[schema(name, "Update candidate shortlist.", {"fids": FIDS}, ["fids"]) for name in ("hold", "drop")],
     schema("contrast", "Record a comparison of two or more original Facts.", {"fids": FIDS}, ["fids"]),
-    schema("reroute", "Return to ROUTE when origin falls outside a window or rivals need more evidence.", {"reason": TEXT}, ["reason"]),
+    schema("reroute", "Return to ROUTE to revise evidence cases.", {"reason": TEXT}, ["reason"]),
     schema("finish", "Finish without a diagnosed root. no_failure requires all modelled and unmodelled goals resolved; otherwise uncertain.",
            {"status": {"enum": ["uncertain", "no_failure"]}, "reason": TEXT}, ["status", "reason"]),
 ]
 SCHEMA_BY_NAME = {s["function"]["name"]: s for s in SCHEMAS}
 READ_TOOLS = {"view", "view_evidence", "trace_evidence", "trace_fact", "check", "span", "back", "up",
               "state", "versions", "neighbours", "hold", "drop", "contrast", "finish"}
-PHASE_TOOLS = {"MAP": {"view", "finish"}, "ROUTE": READ_TOOLS | {"trace_window", "reroute"},
-               "TRACE": {"assess"}, "SUBMIT": set()}
+PHASE_TOOLS = {"MAP": {"view", "finish"}, "ROUTE": READ_TOOLS | {"route_cases", "reroute"},
+               "TRACE": {"plan_trace", "query_logs", "assess"}, "SUBMIT": set()}
 
 
 def validate_json(value, contract, path="arguments"):
@@ -103,7 +109,13 @@ class DebugTools:
         self.bundle, self.output = bundle, output
         self.index = EvidenceIndex(bundle)
         self.session = Session(bundle.record)
-        self.windows = TraceWindows(self.index)
+        self.windows = TraceCases(self.index)
+        self.trace_protocol = TRACE_MODE
+        self.trace_queries = {}
+        self.route_cases = []
+        self.manager_plan = None
+        from .claim_parser import ClaimParser
+        self.claim_parser = ClaimParser(bundle.source)
         self.max_tool_calls, self.default_W = max_tool_calls, W
         self.trace_top_p = integer(trace_top_p, "trace_top_p", 1)
         self.trace_top_k = integer(trace_top_k, "trace_top_k", 1)
@@ -115,7 +127,9 @@ class DebugTools:
         self.route_history = []
         self.handlers = {"view": self._view, "view_evidence": self.index.view,
                          "trace_evidence": self._trace_evidence, "trace_fact": self._trace_fact,
-                         "trace_window": self._trace_window, "assess": commit_window,
+                         "route_cases": self._trace_window, "assess": commit_window,
+                         "plan_trace": lambda **kw: commit_manager(self, **kw),
+                         "query_logs": lambda **kw: query_logs(self, **kw),
                          "reroute": self._reroute, "finish": self._finish}
         for op in ("check", "span", "back", "up", "state", "versions", "neighbours", "hold", "drop", "contrast"):
             self.handlers[op] = lambda _op=op, **kw: self._operator(_op, **kw)
@@ -167,6 +181,9 @@ class DebugTools:
             out["truncation"] = {"truncated": True, "sections": truncated,
                                  "instruction": "Use view with steps:lo:hi and section:<field>, or trace_fact/span for omitted source material."}
         out["requested_query"] = requested_spec
+        out["parse_audit"] = {"unresolved": [{"step": a["step"], "kind": a["kind"], "reasons": a["reasons"]}
+            for a in getattr(self.bundle.record, "parse_audits", []) if a["status"] == "unresolved"],
+            "instruction": "Parse gaps are unknowns, not evidence of agent failure; inspect original text."}
         if source == "requirements" and scope["mode"] == "global" and "|" not in spec:
             self.goal_map = plain(out)
             if self.phase == "MAP":
@@ -180,16 +197,19 @@ class DebugTools:
     def _trace_fact(self, fid, **kwargs):
         return self.index.trace([fid], **kwargs)
 
-    def _trace_window(self, candidates, W=None):
+    def _trace_window(self, candidates):
         if self.goal_map is None:
             raise ToolError("protocol_incomplete", "MAP must read requirements first")
         if isinstance(candidates, list) and len(candidates) > self.trace_top_p:
-            raise ToolError("invalid_arguments", f"trace_window permits at most trace_top_p={self.trace_top_p} ranked anchors; "
+            raise ToolError("invalid_arguments", f"route_cases permits at most trace_top_p={self.trace_top_p} ranked anchors; "
                             "compare the evidence and resubmit the strongest anchors, not a chronological prefix")
         version = self.windows.version
-        self.windows.configure(candidates, self.default_W if W is None else W)
+        self.windows.configure(candidates)
         if self.windows.version != version:
             self.window_conclusions.clear()
+            self.trace_queries.clear()
+            self.route_cases = plain(self.windows.windows)
+            self.manager_plan = None
             self.result = None
             self.route_history.append(plain({"version": self.windows.version, "windows": self.windows.windows}))
         self.phase = "TRACE"
@@ -232,7 +252,8 @@ class DebugTools:
             raise ToolError("invalid_arguments", "invalid finish status or reason")
         if status == "no_failure":
             requirements = self._view("requirements", GLOBAL).get("requirements", [])
-            if not requirements or any(row.get("status", {}).get("state") != "satisfied" for row in requirements):
+            if (not requirements or any(row.get("status", {}).get("state") != "satisfied" for row in requirements)
+                    or any(a["status"] == "unresolved" for a in getattr(self.bundle.record, "parse_audits", []))):
                 raise ToolError("protocol_incomplete", "all requirements must be observed satisfied")
         self.result = self.stop_result(status, reason)
         return self.result
@@ -282,6 +303,8 @@ class DebugTools:
             append_json(self.output / "tool_calls.jsonl", event)
             if name == "assess" and "data" in result:
                 append_json(self.output / "window_trace.jsonl", result["data"])
+            if name == "query_logs" and "data" in result:
+                append_json(self.output / "trace_queries.jsonl", result["data"])
             self.save()
         return result
 
@@ -292,7 +315,8 @@ class DebugTools:
             output = self.execute(event["name"], event["arguments"], event["tool_call_id"], record=False)
             if digest(output) != event["result_digest"]:
                 raise ToolError("source_mismatch", "event replay output differs from checkpoint source")
-        if self.window_conclusions and coverage(self)["trace_complete"]:
+        if (self.window_conclusions and coverage(self)["trace_complete"]
+                and any(e["candidates"] for e in self.window_conclusions.values())):
             self.phase = "SUBMIT"
         for event in direct_events:
             if event["after_tool_calls"] != self.call_count:
@@ -303,6 +327,7 @@ class DebugTools:
         if not self.output:
             return
         for name, data in {"goal_map": self.goal_map, "route_candidates": self.route_history,
+                           "manager_plan": self.manager_plan,
                            "trace_windows": coverage(self),
                            "trace_graph": [e["result"]["data"] for e in self.events
                                            if e["name"] in {"trace_evidence", "trace_fact"} and "data" in e["result"]]}.items():

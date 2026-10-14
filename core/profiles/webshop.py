@@ -7,6 +7,7 @@ discharged. If the core needed changing to accommodate this, the abstraction
 would be wrong; it did not.
 """
 import re
+from semantic_scope import memory_scope, decision_clause
 from typing import Any, Dict, List, Optional
 
 from kinds import Kinds
@@ -83,6 +84,8 @@ def relations() -> Relations:
               value_types=("string",))
     R.declare("visible", 2, (MUTABLE, OBSERVED), key=(0,),
               arg_kinds=("product", "page"), value_types=("boolean",))
+    R.declare("result_total", 1, (MUTABLE,), key=(0,),
+              arg_kinds=("listing",), value_types=("number",))
     R.declare("offers", 2, (MUTABLE,), arg_kinds=("product", "attribute"),
               value_types=("boolean",))
     R.declare("chosen", 2, (FUNCTIONAL, MUTABLE, OBSERVED), key=(0,),
@@ -98,6 +101,8 @@ def relations() -> Relations:
     R.declare("satisfied", 1, (FUNCTIONAL, MUTABLE), key=(0,), arg_kinds=("req",),
               value_types=("null", "boolean"))
     R.declare("recalled_nothing", 1, (MUTABLE,), key=(0,), arg_kinds=("agent",),
+              value_types=("boolean",))
+    R.declare("memory_unparsed", 1, (MUTABLE,), key=(0,), arg_kinds=("agent",),
               value_types=("boolean",))
     # Keep the complete memory slot as evidence in addition to the entity-level
     # claims extracted from it. A lossy memory can be the fault even when every
@@ -438,7 +443,12 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
     if not plan_text:
         return None
     goals = goals or []
-    t = " ".join(plan_text.split())
+    t = decision_clause(plan_text)
+    if not t:
+        return {'rel': None, 'args': None, 'serves': tuple(g.entity() for g in goals),
+                'extraction': 'unresolved_decision_scope', 'confidence': 0.0}
+    t = re.sub(r'^clicking\b', 'click', t, flags=re.I)
+    t = re.sub(r'^(?:returning|going|moving)\b', 'navigate', t, flags=re.I)
     m = _DECL.search(t)
     # The text is already isolated from the plan slot, so a missing declaration
     # marker is uncertainty about explicitness, not evidence that no intention
@@ -453,16 +463,23 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
     else:
         m = None
         tail = t
-    extraction_source = "explicit_declaration" if m else "plan_slot_inference"
+    extraction_source = "decision_clause"
     low = tail.lower()
     verb_match = _VERB.search(tail)
     verb = _VERB_MAP.get(verb_match.group(1).lower()) if verb_match else None
     objects = None
     parameters = []
     execution_options = []
+    command = _ACT.search(tail)
+    explicit_control = False
+    if command and (command.start() == 0 or re.fullmatch(r'click\s+(?:on\s+)?[\"\']*', tail[:command.start()], re.I)):
+        verb = command.group(1).lower()
+        arg = command.group(2).strip().strip('\"\'').lower()
+        objects = [_act_entity('', arg)] if verb == 'click' else [('value', arg[:80])]
+        explicit_control = True
 
     pid = PID.search(tail)
-    if pid:
+    if pid and objects is None:
         verb = verb or "click"
         objects = [("product", pid.group(0).lower())]
 
@@ -472,7 +489,8 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
         for ctl in sorted(offered, key=len, reverse=True):
             if ctl == "search":
                 continue
-            if ctl in low and not PID.match(ctl):
+            target = re.sub(r'^(?:click|select|open|examine)\s*(?:on\s+)?[\[\"\']*', '', low)
+            if (re.match(re.escape(ctl) + r'(?:$|[^\w])', target) and not PID.match(ctl)):
                 # A canonical clickable control names the immediate action even
                 # if the surrounding explanation also says "search results".
                 verb = "click"
@@ -489,13 +507,18 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
         (("previous page",), "< prev"),
         (("next page", "following page"), "next >"),
     )
+    results_return = bool(re.search(r'\b(?:back|return|revisit)\b.*?\bsearch results\b', head))
+    if results_return and not explicit_control:
+        verb = 'click'
+        objects = ([('page', '<_prev')] if '< prev' in offered and
+                   offered & {'description', 'features', 'reviews', 'buy now'} else None)
     for phrases, control in head_navigation:
-        if any(p in head for p in phrases) and control in offered:
+        if not explicit_control and not results_return and any(p in head for p in phrases) and control in offered:
             verb = "click"
             objects = [_act_entity("", control)]
             break
 
-    if objects is None:
+    if objects is None and not results_return:
         navigation_phrases = (
             ("back to search", "back to search"),
             ("return to the search", "back to search"),
@@ -512,9 +535,8 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
                 break
 
     numbered_page = re.search(r"\bpage\s+(\d+)\b", head)
-    if objects is None and numbered_page and "next >" in offered \
-            and verb == "click":
-        objects = [_act_entity("", "next >")]
+    if objects is None and numbered_page and verb == "click":
+        # A page number alone does not establish forward navigation.
         parameters.append({"name": "destination_page",
                            "value": int(numbered_page.group(1)),
                            "value_type": "number",
@@ -555,6 +577,13 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
             "preconditions": ["action_admissible"],
             "expected_effects": ["result_listing_observed"],
         })
+    for ctl in sorted(offered):
+        if re.search(r'\bor\s+(?:(?:click|select|open)\s+(?:on\s+)?)?[\"\']*' +
+                     re.escape(ctl) + r'(?!\w)', low):
+            execution_options.append({'verb': 'click', 'args': [_act_entity('', ctl)],
+                                      'role': 'alternative', 'span': t,
+                                      'preconditions': ['action_admissible'],
+                                      'expected_effects': ['page_transition_observed']})
 
     mentioned = []
     for g in goals:
@@ -601,8 +630,6 @@ def parse_intention(plan_text: Optional[str], admissible: List[str],
     else:
         confidence = 0.4
         binding_label = "unbound"
-    if extraction_source == "plan_slot_inference":
-        confidence = min(confidence, 0.65)
     extraction = f"{extraction_source}:{binding_label}"
 
     return {
@@ -630,28 +657,45 @@ def parse_memory(text: str, known_values: Dict[str, List[str]] = None) -> List[D
     attribute claim binds as a selection only where the page has offered that
     attribute, which is what the caller passes; before then the run was in no
     position to select anything and the same words are the brief restated."""
-    t = " ".join((text or "").split())
+    t = text or ""
     known_values = known_values or {}
     out: List[Dict[str, Any]] = []
     seen = set()
-    for pid in {p.lower() for p in PID.findall(t)}:
+    for pid in sorted({p.lower() for p in PID.findall(t)}):
         if ("visible", pid) in seen:
             continue
         seen.add(("visible", pid))
         m = re.search(pid, t, re.I)
+        scope = memory_scope(t, m.start(), m.end())
+        if scope is None or scope['polarity'] != 'positive':
+            continue
         out.append({"rel": "visible", "args": [("product", pid), ("listing", UNBOUND)],
-                    "value": True, "span": m.group(0) if m else ""})
+                    "value": True, "span": scope['source_context'], "claim_scope": scope})
     low = t.lower()
     for attr, values in known_values.items():
         for v in values:
             v = str(v).lower()
-            if len(v) < 3 or v not in low:
+            if not v:
                 continue
             if ("chosen", attr) in seen:
                 continue
-            seen.add(("chosen", attr))
-            m = re.search(re.escape(v), t, re.I)
-            out.append({"rel": "chosen", "args": [("attribute", attr), ("value", v)],
-                        "value": v, "span": m.group(0) if m else ""})
-            break
+            for m in re.finditer(r'(?<!\w)' + re.escape(v) + r'(?!\w)', t, re.I):
+                scope = memory_scope(t, m.start(), m.end())
+                if scope is None or scope['polarity'] != 'positive':
+                    continue
+                prefix = t[scope['source_start']:m.start()].lower()
+                # An explicit completed selection is required, with the owner
+                # attribute or a unique offered value. Description/requirements
+                # and prospective selections stay in the verbatim summary.
+                explicit = re.search(r'\b(?:i |we |the user |the agent )?(?:have |has |had )?(?:selected|chose|clicked)\s+(?:on\s+)?(?:the\s+)?(?:' + re.escape(attr.replace('_', ' ')) + r'\s+)?[\"\']*$', prefix)
+                assignment = re.search(r'\b(?:selected\s+' + re.escape(attr.replace('_', ' ')) + r'|'+ re.escape(attr.replace('_', ' ')) + r'\s+(?:is|was)\s+selected)\s*(?:is|was|:|=|as|to)?\s*[\"\']*$', prefix)
+                owners = {a for a, vs in known_values.items() if v in [str(x).lower() for x in vs]}
+                if not assignment and not (explicit and (len(owners) == 1 or attr.replace('_', ' ') in prefix)):
+                    continue
+                seen.add(("chosen", attr))
+                out.append({"rel": "chosen", "args": [("attribute", attr), ("value", v)],
+                            "value": v, "span": scope['source_context'], "claim_scope": scope})
+                break
+            if ('chosen', attr) in seen:
+                break
     return out

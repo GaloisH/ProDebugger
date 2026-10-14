@@ -2,7 +2,6 @@
 .traj-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; }
 .traj-title { margin: .2rem 0 .2rem; font-size: 1.6rem; font-weight: 600; }
 .traj-hint { margin: 0; color: var(--muted); font-size: .9rem; }
-.traj-tools { display: flex; gap: .5rem; align-items: center; }
 .muted { color: var(--muted); }
 .link { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline dotted; }
 
@@ -105,9 +104,9 @@
 .proc { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, 27rem); gap: .8rem; align-items: start; }
 .proc[hidden] { display: none; }
 .proc-graph { min-width: 0; border: 1px solid var(--line); border-radius: 1rem; background: radial-gradient(circle at 1px 1px, #ffffff0b 1px, transparent 0) 0 0 / 22px 22px, var(--surface-1); }
-.proc-scroll { overflow: auto; max-height: calc(100vh - var(--header-h) - 9rem); padding: 1rem; }
-.proc-scroll:focus-visible { outline-offset: -2px; }
-.proc-canvas { position: relative; }
+.proc-view { overflow: hidden; max-height: calc(100vh - var(--header-h) - 9rem); padding: 1rem; }
+.proc-view:focus-visible { outline-offset: -2px; }
+.proc-canvas { position: relative; transform-origin: 0 0; }
 .ph-card { position: absolute; z-index: 0; border: 1px solid var(--line-strong); border-top: 3px solid var(--c); border-radius: .8rem; background: var(--panel-2); box-shadow: 0 10px 24px #0000001f; cursor: pointer; transition: border-color .15s, background .15s; }
 .ph-card:hover { background: var(--panel-3); }
 .ph-card.is-open { background: color-mix(in srgb, var(--panel-2) 55%, transparent); }

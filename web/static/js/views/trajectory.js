@@ -12,19 +12,16 @@ import {candidateCard, candidatesByStep, planOf} from "./trace.js";
 export function createView(root, ctx) {
   const state = {
     model: null, sel: null, selPhase: null, openPhases: new Set(), hover: null, openStep: null, selStep: null, hoverStep: null,
-    follow: true, requests: new Map(), phases: [],
+    requests: new Map(), phases: [],
   };
   root.innerHTML = `
     <div class="traj-head">
       <div><div class="eyebrow">Execution path</div><h2 class="traj-title">Debugger process ↔ agent trajectory</h2>
         <p class="traj-hint" id="tj-hint">Each card is one debugger phase; open it to see its model calls. Select a phase or call to inspect it; select a step to see every call that touched it.</p></div>
-      <div class="traj-tools">
-        <button class="btn" id="tj-follow" aria-pressed="true" title="Scroll to the newest call while the run is live">Follow latest</button>
-      </div>
     </div>
     <div class="lanes" id="tj-lanes">
       <div class="proc" id="tj-proc">
-        <section class="proc-graph" aria-label="Debugger model calls"><div class="proc-scroll" id="tj-graph" tabindex="0"></div></section>
+        <section class="proc-graph" aria-label="Debugger model calls"><div class="proc-view" id="tj-graph" tabindex="0"></div></section>
         <aside class="proc-side" id="tj-side" aria-label="Selected call"></aside>
       </div>
       <div class="lane-gap" aria-hidden="true"></div>
@@ -67,16 +64,30 @@ export function createView(root, ctx) {
     const d = state.model.debugger;
     $("tj-proc").hidden = !d;
     root.querySelector(".lane-gap").hidden = !d;
-    root.querySelector(".traj-tools").hidden = !d;
     if (!d) {
       $("tj-hint").textContent = "Compiled session: no debugger run yet. Open a step to inspect its roles, facts and rule evaluations.";
       return;
     }
     state.phases = layoutPhases(d.calls, d.parse, planFor(d));
-    const keep = {x: graph.scrollLeft, y: graph.scrollTop};
     graph.innerHTML = state.phases.length ? processHtml(layoutProcess(state.phases, state.openPhases), {sel: state.sel, selPhase: state.selPhase})
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
-    graph.scrollLeft = keep.x; graph.scrollTop = keep.y;
+    fitGraph();
+  }
+
+  // The whole graph always fits its frame: a canvas wider than the frame or taller than its
+  // max-height is scaled down (never up), and the negative margins give back the space it frees.
+  function fitGraph() {
+    const canvas = graph.querySelector(".proc-canvas");
+    if (!canvas) return;
+    const cs = getComputedStyle(graph);
+    const w = parseFloat(canvas.style.width), h = parseFloat(canvas.style.height);
+    const roomW = graph.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const roomH = parseFloat(cs.maxHeight) - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (roomW <= 0) return; // hidden tab: refit once the frame has a width
+    const scale = Math.min(1, roomW / w, roomH / h);
+    canvas.style.transform = scale < 1 ? `scale(${scale})` : "";
+    canvas.style.marginRight = `${w * (scale - 1)}px`;
+    canvas.style.marginBottom = `${h * (scale - 1)}px`;
   }
 
   function renderSide() {
@@ -224,23 +235,10 @@ export function createView(root, ctx) {
   // ---------- render & events ----------
   function render() {
     if (!state.model) return;
-    const keep = {gx: graph.scrollLeft, gy: graph.scrollTop, steps: steps.scrollLeft};
+    const keep = steps.scrollLeft;
     renderGraph(); renderSide(); renderSteps();
-    graph.scrollLeft = keep.gx; graph.scrollTop = keep.gy; steps.scrollLeft = keep.steps;
+    steps.scrollLeft = keep;
     scheduleLinks();
-  }
-
-  let programmatic = false;
-  // A node scrolls to the middle of the graph; a card to its top edge, as much of it in view as fits.
-  function scrollIntoGraph(el, smooth = true) {
-    if (!el) return;
-    const s = graph.getBoundingClientRect(), r = el.getBoundingClientRect();
-    const card = el.classList.contains("ph-card");
-    programmatic = true;
-    graph.scrollTo({left: graph.scrollLeft + r.left - s.left - (card && r.width > s.width ? 12 : (s.width - r.width) / 2),
-                    top: graph.scrollTop + r.top - s.top - (card ? 12 : (s.height - r.height) / 2),
-                    behavior: smooth ? "smooth" : "auto"});
-    setTimeout(() => { programmatic = false; }, 600);
   }
 
   function scrollToCard(scroller, el, smooth = true) {
@@ -250,17 +248,13 @@ export function createView(root, ctx) {
     scroller.scrollTo({left: target, behavior: smooth ? "smooth" : "auto"});
   }
 
-  function setFollow(on) { state.follow = on; $("tj-follow").setAttribute("aria-pressed", String(on)); }
-
-  // scroll: "smooth" for keyboard moves; "jump" for deep links, which a following re-render must not cut short.
   // reveal: expand the call's phase so its node is visible.
-  function select(key, scroll = null, reveal = false) {
+  function select(key, reveal = false) {
     state.sel = key;
     const call = callOf(key);
     if (call) state.selPhase = call.phase;
     if (call && reveal && expandable(phaseOf(call.phase))) state.openPhases.add(call.phase);
     renderGraph(); renderSide();
-    if (scroll && call) scrollIntoGraph(graph.querySelector(`.pnode[data-call="${key}"]`) || cardOf(call.phase), scroll === "smooth");
     scheduleLinks();
   }
 
@@ -270,7 +264,6 @@ export function createView(root, ctx) {
     if (open === true && expandable(phaseOf(name))) state.openPhases.add(name);
     if (open === false) state.openPhases.delete(name);
     renderGraph(); renderSide();
-    scrollIntoGraph(cardOf(name));
     scheduleLinks();
   }
 
@@ -278,12 +271,6 @@ export function createView(root, ctx) {
     state.selStep = state.selStep === t && !scroll ? null : t;
     root.querySelectorAll(".st-card").forEach(el => el.classList.toggle("is-selected", Number(el.dataset.step) === state.selStep));
     if (scroll) scrollToCard(steps, steps.querySelector(`[data-step="${t}"]`));
-    scheduleLinks();
-  }
-
-  function scrollToLatest(smooth = false) {
-    const last = state.model?.debugger?.calls.at(-1);
-    if (last) scrollIntoGraph(graph.querySelector(`.pnode[data-call="${last.index}"]`) || cardOf(last.phase), smooth);
     scheduleLinks();
   }
 
@@ -301,26 +288,22 @@ export function createView(root, ctx) {
       return;
     }
     const gotoCall = el.closest("[data-goto-call]")?.dataset.gotoCall;
-    if (gotoCall != null) { setFollow(false); select(gotoCall, "smooth", true); return; }
+    if (gotoCall != null) { select(gotoCall, true); return; }
     const gotoPhase = el.closest("[data-goto-phase]")?.dataset.gotoPhase;
-    if (gotoPhase) { setFollow(false); selectPhase(gotoPhase); return; }
+    if (gotoPhase) { selectPhase(gotoPhase); return; }
     const goto = el.closest("[data-goto-step]")?.dataset.gotoStep;
     if (goto) { selectStep(Number(goto)); return; }
     const zoom = el.closest("[data-zoom]");
     if (zoom) { zoom.classList.toggle("is-full"); scheduleLinks(); return; }
     const node = el.closest(".pnode");
-    if (node) { setFollow(false); select(state.sel === node.dataset.call ? null : node.dataset.call); return; }
+    if (node) { select(state.sel === node.dataset.call ? null : node.dataset.call); return; }
     const toggle = el.closest("[data-toggle-phase]")?.dataset.togglePhase;
-    if (toggle) { setFollow(false); selectPhase(toggle, !state.openPhases.has(toggle)); return; }
+    if (toggle) { selectPhase(toggle, !state.openPhases.has(toggle)); return; }
     const card = el.closest(".ph-card");
-    if (card) {
-      setFollow(false); selectPhase(card.dataset.phase, true);
-      return;
-    }
+    if (card) { selectPhase(card.dataset.phase, true); return; }
     const b = el.closest("button");
     if (b?.dataset.pan) { $(b.dataset.pan).scrollBy({left: Number(b.dataset.dir) * steps.clientWidth * .8, behavior: "smooth"}); return; }
     if (b?.dataset.jumpStep) { selectStep(Number(b.dataset.jumpStep)); return; }
-    if (b?.id === "tj-follow") { setFollow(!state.follow); if (state.follow) scrollToLatest(true); return; }
     if (b?.dataset.toggleStep != null) {
       const t = Number(b.dataset.toggleStep);
       state.openStep = state.openStep === t ? null : t; state.selStep = t;
@@ -346,13 +329,12 @@ export function createView(root, ctx) {
 
   root.addEventListener("keydown", event => {
     if (event.key === "Escape") { state.openStep = null; state.sel = state.selPhase = null; state.openPhases.clear(); render(); return; }
-    const lane = event.target.closest(".proc-scroll, .lane-scroll");
+    const lane = event.target.closest(".proc-view, .lane-scroll");
     const keys = lane === graph ? ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter"] : ["ArrowLeft", "ArrowRight", "Enter"];
     if (!lane || !keys.includes(event.key)) return;
     event.preventDefault();
     if (lane === graph) {
       // Left/right move between phase cards, Enter opens or closes one, up/down walk the calls.
-      setFollow(false);
       const names = state.phases.map(p => p.phase);
       const current = state.selPhase ?? callOf(state.sel)?.phase;
       if (event.key === "Enter") {
@@ -369,7 +351,7 @@ export function createView(root, ctx) {
       const dir = event.key === "ArrowUp" ? -1 : 1, phase = phaseOf(current);
       const pos = state.sel != null ? Number(state.sel)
         : phase?.calls.length ? (dir > 0 ? phase.calls[0].index - 1 : phase.calls.at(-1).index + 1) : -1;
-      select(String(Math.max(0, Math.min(calls.length - 1, pos + dir))), "smooth", true);
+      select(String(Math.max(0, Math.min(calls.length - 1, pos + dir))), true);
     } else {
       const ts = state.model.steps.map((s, i) => s.t ?? i + 1);
       const pos = ts.indexOf(state.selStep);
@@ -378,33 +360,33 @@ export function createView(root, ctx) {
     }
   });
 
-  graph.addEventListener("scroll", () => {
-    scheduleLinks();
-    if (!programmatic && state.follow && ctx.store.live) setFollow(false);
-  }, {passive: true});
   steps.addEventListener("scroll", scheduleLinks, {passive: true});
   window.addEventListener("scroll", scheduleLinks, {passive: true});
   const resize = new ResizeObserver(scheduleLinks);
   resize.observe(lanes);
+  // Refit when the frame changes width (window resize, side panel wrapping below).
+  let fitWidth = 0;
+  const refit = new ResizeObserver(() => {
+    if (graph.clientWidth === fitWidth) return;
+    fitWidth = graph.clientWidth;
+    fitGraph(); scheduleLinks();
+  });
+  refit.observe(graph);
+  window.addEventListener("resize", fitGraph);
 
   return {
-    update(model, {changed, first}) {
-      const before = state.model?.debugger?.calls.length || 0;
+    update(model, {changed}) {
       state.model = model;
       state.idx = stepIndex(model);
       if (!["all", "usage_rows", "tool_calls", "claim_usage", "parse_audit_usage", "canonical_record", "input", "record", "steps",
             "evaluations", "result", "route_candidates", "manager_plan", "trace_queries", "parse_audit"].some(k => changed.has(k))) return;
       render();
-      const grew = (model.debugger?.calls.length || 0) > before;
-      if ((grew || first) && state.follow && ctx.store.live) scrollToLatest();
-      else if (first && state.sel != null) scrollIntoGraph(cardOf(callOf(state.sel)?.phase), false);
     },
     show(route) {
-      if (state.follow && ctx.store.live && !route.extra.length) requestAnimationFrame(() => scrollToLatest());
       if (route.extra[0] === "step" && route.extra[1]) { state.openStep = Number(route.extra[1]); state.selStep = state.openStep; render(); selectStep(state.selStep); }
-      if (route.extra[0] === "call" && route.extra[1]) { setFollow(false); select(String(Number(route.extra[1]) - 1), "jump"); }
+      if (route.extra[0] === "call" && route.extra[1]) select(String(Number(route.extra[1]) - 1));
       scheduleLinks();
     },
-    destroy() { resize.disconnect(); cancelAnimationFrame(raf); window.removeEventListener("scroll", scheduleLinks); },
+    destroy() { resize.disconnect(); refit.disconnect(); cancelAnimationFrame(raf); window.removeEventListener("scroll", scheduleLinks); window.removeEventListener("resize", fitGraph); },
   };
 }

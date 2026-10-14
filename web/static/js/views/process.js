@@ -78,7 +78,7 @@ export function layoutProcess(phases, open) {
       const x0 = p.phase === "TRACE" ? TRACE_X : NODE_X;
       p.lanes.forEach((lane, li) => {
         lane.y = y + PADY + li * (H + LANE_GAP);
-        lane.nodes.forEach((node, k) => Object.assign(node, {x: x0 + k * (W + GX), y: lane.y, w: W, h: H}));
+        lane.nodes.forEach((node, k) => Object.assign(node, {x: x0 + k * (W + GX), y: lane.y, w: W, h: H, band: p.phase, k}));
         // Sequence within a row; a retry after a rejected tool call is drawn dashed red.
         lane.nodes.slice(1).forEach((node, k) => edges.push({kind: "seq", from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)}));
       });
@@ -117,12 +117,12 @@ function edgePath(e) {
 }
 
 function nodeHtml(node, sel) {
-  const pos = `left:${node.x}px;top:${node.y}px;width:${W}px;height:${H}px`;
+  const pos = `left:${node.x}px;top:${node.y}px;width:${W}px;height:${H}px;--i:${Math.min(node.k, 12)}`;
   const c = node.call;
   const errors = c.tools.filter(t => t.error).length;
   const cls = ["pnode", `phase-${c.phase}`, sel === String(c.index) && "is-selected", c.status === "pending" && "is-pending",
                c.rejected && "is-rejected"].filter(Boolean).join(" ");
-  return `<button class="${cls}" data-call="${c.index}" style="${pos}" title="${esc(callTitle(c))}">
+  return `<button class="${cls}" data-call="${c.index}" data-band="${node.band}" style="${pos}" title="${esc(callTitle(c))}">
     <span class="pn-top"><span class="mono">#${c.n}</span><span>${esc(c.caseId ? short(c.caseId, 18) : c.phase)}</span>
       ${c.status === "pending" ? '<span class="live-dot"></span>' : `${PHASE_BADGE[c.phase]?.(c) || ""}${errors ? `<span class="badge bad">${errors} error${errors === 1 ? "" : "s"}</span>` : ""}`}</span>
     <span class="pn-title">${esc(short(callTitle(c), 44))}</span>
@@ -181,12 +181,12 @@ export function processHtml(layout, view) {
   const open = phases.filter(p => p.open);
   return `<div class="proc-canvas" style="width:${width}px;height:${height}px">
     ${phases.map(p => phaseCard(p, view)).join("")}
-    ${open.filter(p => p.phase === "TRACE").flatMap(p => p.lanes).map(l => `<span class="proc-lane-label" style="left:${LANE_LABEL_X}px;top:${l.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 14))}</span></span>`).join("")}
+    ${open.filter(p => p.phase === "TRACE").flatMap(p => p.lanes).map(l => `<span class="proc-lane-label" data-band="TRACE" style="left:${LANE_LABEL_X}px;top:${l.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 14))}</span></span>`).join("")}
     <svg class="proc-edges" width="${width}" height="${height}" aria-hidden="true">
       <defs><marker id="proc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
       ${edges.map(e => `<path class="proc-edge ${e.kind} ${e.retry ? "is-retry" : ""}" d="${edgePath(e)}" marker-end="url(#proc-arrow)"/>`).join("")}
     </svg>
-    ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" style="left:${(BUS + e.to.x) / 2}px;top:${e.to.y + H / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
+    ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" data-band="TRACE" style="left:${(BUS + e.to.x) / 2}px;top:${e.to.y + H / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
     ${open.flatMap(p => p.lanes.flatMap(l => l.nodes)).map(n => nodeHtml(n, view.sel)).join("")}
   </div>`;
 }

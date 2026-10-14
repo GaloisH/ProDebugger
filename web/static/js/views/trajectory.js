@@ -74,9 +74,45 @@ export function createView(root, ctx) {
     }
     state.phases = layoutPhases(d.calls, d.parse, planFor(d));
     const keep = {x: graph.scrollLeft, y: graph.scrollTop};
+    const before = new Map([...graph.querySelectorAll(".ph-card")].map(c =>
+      [c.dataset.phase, {top: c.style.top, width: c.style.width, height: c.style.height, open: c.classList.contains("is-open")}]));
     graph.innerHTML = state.phases.length ? processHtml(layoutProcess(state.phases, state.openPhases), {sel: state.sel, selPhase: state.selPhase})
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
     graph.scrollLeft = keep.x; graph.scrollTop = keep.y;
+    animateLayout(before);
+  }
+
+  // Opening or closing a phase grows or shrinks its card from the old size, slides the bands
+  // below into place, brings the calls in from the left one by one, and fades the edges back in.
+  let settle = 0;
+  function animateLayout(before) {
+    if (!before.size || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const cards = [...graph.querySelectorAll(".ph-card")];
+    const changed = cards.filter(c => {
+      const old = before.get(c.dataset.phase);
+      return old && (old.top !== c.style.top || old.width !== c.style.width || old.height !== c.style.height);
+    });
+    if (!changed.length) return;
+    const canvas = graph.querySelector(".proc-canvas");
+    const moving = [];
+    changed.forEach(c => {
+      const old = before.get(c.dataset.phase), now = {top: c.style.top, width: c.style.width, height: c.style.height};
+      const band = graph.querySelectorAll(`[data-band="${c.dataset.phase}"]`);
+      if (c.classList.contains("is-open") && !old.open) band.forEach(el => el.classList.add("is-entering"));
+      else {
+        // An open band that only moved: its calls travel with the card.
+        const dy = parseFloat(old.top) - parseFloat(now.top);
+        if (dy) band.forEach(el => { el.style.translate = `0 ${dy}px`; moving.push(el); });
+      }
+      Object.assign(c.style, {top: old.top, width: old.width, height: old.height});
+      moving.push([c, now]);
+    });
+    canvas.classList.add("is-settling");
+    void canvas.offsetWidth; // apply the old geometry before transitioning to the new one
+    canvas.classList.add("is-animating");
+    moving.forEach(m => Array.isArray(m) ? Object.assign(m[0].style, m[1]) : (m.style.translate = ""));
+    clearTimeout(settle);
+    settle = setTimeout(() => { canvas.classList.remove("is-animating", "is-settling"); scheduleLinks(); }, 420);
   }
 
   function renderSide() {

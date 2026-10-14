@@ -218,3 +218,15 @@ pre.sql { max-height: 22rem; overflow: auto; margin: 0; padding: .55rem .65rem; 
 .tool-raw > summary { color: var(--faint); font-size: .72rem; cursor: pointer; }
 .tool-raw h4 { margin: .4rem 0 .25rem; font-size: .72rem; color: var(--muted); }
 .tool-raw .raw { max-height: 16rem; font-size: .72rem; }
+
+/* Opening and closing a phase: cards resize and bands slide, calls enter one by one, edges fade back in. */
+.proc-canvas.is-animating .ph-card { transition: top .34s ease, width .34s ease, height .34s ease, background .15s; }
+.proc-canvas.is-animating [data-band]:not(.is-entering) { transition: translate .34s ease; }
+.proc-canvas.is-settling .proc-edges { opacity: 0; }
+.proc-canvas .proc-edges { transition: opacity .25s ease .12s; }
+.proc-canvas.is-settling .proc-edges { transition: none; }
+[data-band].is-entering { animation: band-enter .3s ease both; animation-delay: calc(.12s + var(--i, 0) * 45ms); }
+.badge[data-band].is-entering { animation-name: band-enter-label; }
+@keyframes band-enter { from { opacity: 0; transform: translateX(-16px); } }
+@keyframes band-enter-label { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { [data-band].is-entering { animation: none; } }

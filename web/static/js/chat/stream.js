@@ -54,7 +54,7 @@ function requestMessage(m) {
   const chat = m.chat;
   const how = chat ? (chat.mode === "replay" ? `Replay of ${esc(chat.source?.[0] || "a finished run")}` : "Live run")
     : "Started from the command line";
-  const chips = [m.taskType, cfg.model, cfg.reasoning_effort && `effort ${cfg.reasoning_effort}`, cfg.window_size && `W=${cfg.window_size}`]
+  const chips = [m.taskType, cfg.model, cfg.reasoning_effort && `effort ${cfg.reasoning_effort}`]
     .filter(Boolean).map(c => `<span class="chip">${esc(c)}</span>`).join("");
   return `<div class="msg-body">
     <div class="msg-meta"><strong>${chat ? "You" : "Request"}</strong><span>${how}</span>${chat?.launched_at ? `<span>${esc(new Date(chat.launched_at).toLocaleString("en-CA", {hour12: false}))}</span>` : ""}</div>
@@ -81,14 +81,15 @@ function anchorRows(anchors, assessed) {
     const w = assessed?.get(a.candidate_id);
     const state = assessed ? (w ? `<span class="badge ok">${(w.candidates || []).length} candidate${(w.candidates || []).length === 1 ? "" : "s"}</span>` : `<span class="badge">pending</span>`) : "";
     return `<li><span class="mono anchor-id">${esc(a.candidate_id)}</span>${stepChip(a.issue_step)}
-      <span class="muted mono">${a.lo != null ? `window ${S(a.lo)}–${S(a.hi)}` : ""}</span>${state}
+      <span class="muted mono">${(a.goal_links || []).map(esc).join(" · ")}</span>${state}
       ${assessed ? "" : `<p>${esc(short(a.hypothesis, 260))}</p>`}</li>`;
   }).join("")}</ol>`;
 }
 
 function routeContent(m) {
-  if (!m.anchors.length) return `<p class="muted">Following evidence and entity history to rank issue anchors…</p>`;
-  return `<p>${m.anchors.length} issue anchor${m.anchors.length === 1 ? "" : "s"} selected for TRACE.</p>${anchorRows(m.anchors)}`;
+  if (m.finish) return `<p><span class="badge warn">${esc(m.finish.status || "finished")}</span> ROUTE ended without anchor cases.</p>${clamp(m.finish.reason, "route-finish")}`;
+  if (!m.anchors.length) return `<p class="muted">Reading the timeline and original modules to find anchor cases…</p>`;
+  return `<p>${m.anchors.length} anchor case${m.anchors.length === 1 ? "" : "s"} handed to the TRACE manager.</p>${anchorRows(m.anchors)}`;
 }
 
 function traceContent(m) {

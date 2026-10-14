@@ -40,7 +40,7 @@ const USE_CASES = [
 
 const STAGES = [
   ["map", "MAP", "Map the goal", "Reads the task requirements into one authoritative goal map, so every later judgement uses the same yardstick.", "Goal map"],
-  ["route", "ROUTE", "Route to suspects", "Scans the full action–feedback timeline with compiled facts and their provenance, and picks the few windows worth a closer look.", "Review windows"],
+  ["route", "ROUTE", "Route to suspects", "Reads the full action–feedback timeline and the original modules, tests parser gaps as rival explanations, and declares a few evidence-backed anchor cases.", "Anchor cases"],
   ["trace", "TRACE", "Trace the evidence", "Reviews each window independently across memory, reflection, plan and action, quoting the exact source text for every candidate.", "Validated candidates"],
   ["submit", "SUBMIT", "Submit the verdict", "Compares all candidates against the full history and returns one root cause with step, module, fault type and fix — or abstains.", "Root cause or uncertain"],
 ];

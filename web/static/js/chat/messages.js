@@ -22,12 +22,19 @@ function goalMap(d) {
   return d.phaseEvents.find(e => e.from === "MAP")?.handoff?.goal_map || null;
 }
 
-// ROUTE anchors: route_candidates.json at the end, the trace_window call while live.
+// ROUTE anchors: route_candidates.json at the end, the accepted route_cases call while live.
 function anchors(d) {
   const versions = Array.isArray(d.routeCandidates) ? d.routeCandidates : [];
   if (versions.length) return versions[versions.length - 1].windows || [];
-  const call = d.events.filter(e => e.kind === "tool" && e.title === "trace_window" && e.data.event === "committed").pop();
-  return call?.data.arguments?.candidates || [];
+  const accepted = e => e.kind === "tool" && e.title === "route_cases" && e.data.event === "committed" && !("error" in (e.data.result || {}));
+  return d.events.filter(accepted).pop()?.data.arguments?.candidates || [];
+}
+
+// An early ROUTE finish (uncertain / no_failure) ends the run before TRACE.
+function routeFinish(d) {
+  const e = d.events.filter(x => x.kind === "tool" && x.phase === "ROUTE" && x.title === "finish" && x.data.event === "committed"
+                                 && !("error" in (x.data.result || {}))).pop();
+  return e?.data.arguments || null;
 }
 
 export function buildMessages(model, {live, chat, reference}) {
@@ -43,7 +50,7 @@ export function buildMessages(model, {live, chat, reference}) {
     const base = {role: "assistant", phase, working: phase === current, activity: activity(byPhase[phase]),
                   seconds: d.usage?.by_phase?.[phase]?.latency_seconds};
     if (phase === "MAP") messages.push({...base, id: "MAP", goalMap: goalMap(d)});
-    if (phase === "ROUTE") messages.push({...base, id: "ROUTE", anchors: anchors(d), done: reached.includes("TRACE")});
+    if (phase === "ROUTE") messages.push({...base, id: "ROUTE", anchors: anchors(d), finish: routeFinish(d), done: reached.includes("TRACE")});
     if (phase === "TRACE") {
       const assessed = new Map(d.windows.map(w => [w.window_id, w]));
       messages.push({...base, id: "TRACE", anchors: anchors(d), assessed, coverage: d.traceWindows});

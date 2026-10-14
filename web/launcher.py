@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WEB = Path(__file__).resolve().parent
 # Config keys forwarded to run_experiment from the newest online manifest.
-FORWARD = ("model", "base_url", "api_key_env", "env_file", "reasoning_effort", "window_size",
+FORWARD = ("model", "base_url", "api_key_env", "env_file", "reasoning_effort",
            "trace_top_p", "trace_top_k", "max_turns", "max_tool_calls", "max_input_tokens",
            "max_output_tokens", "max_tokens", "timeout", "retries",
            "map_model", "route_model", "trace_model", "submit_model")
@@ -146,11 +146,6 @@ class Launcher:
                 if overrides["reasoning_effort"] not in EFFORTS:
                     raise LaunchError(400, "invalid reasoning effort")
                 config["reasoning_effort"] = overrides["reasoning_effort"]
-            if overrides.get("window_size") not in (None, ""):
-                size = int(overrides["window_size"])
-                if not 1 <= size <= 30:
-                    raise LaunchError(400, "window size must be between 1 and 30")
-                config["window_size"] = size
             if not config.get("model"):
                 raise LaunchError(400, "no model configured; choose one under Advanced")
             command = [self.python, "-B", "-m", "prodebugger.run_experiment", tid, "--run-id", run_id,

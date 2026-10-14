@@ -1,4 +1,6 @@
 // Normalises raw run/session files into one case model. Depends only on file formats.
+import {buildCalls} from "./calls.js";
+
 export const PHASES = ["MAP", "ROUTE", "TRACE", "SUBMIT"];
 export const entityId = e => e ? `${e.kind}:${e.index}` : "";
 
@@ -140,6 +142,7 @@ export function buildCase(kind, raw) {
   const debuggerRaw = {messages: raw.messages || [], tool_calls: raw.tool_calls || [], usage_rows: raw.usage_rows || [],
                        window_trace: raw.window_trace || [], direct_submit: raw.direct_submit || []};
   const events = kind === "run" ? buildEvents(debuggerRaw, dsl?.factsById) : [];
+  const calls = kind === "run" ? buildCalls(raw, dsl?.factsById) : null;
   return {
     kind,
     trajectoryId: record?.trajectory_id || input.trajectory_id,
@@ -152,6 +155,8 @@ export function buildCase(kind, raw) {
     evaluations: raw.evaluations || record?.evaluations || [],
     debugger: kind === "run" ? {
       events, spans: phaseSpans(events), phaseEvents: raw.phase_events || [],
+      calls: calls.calls, parse: calls.parse, managerPlan: raw.manager_plan,
+      traceQueries: raw.trace_queries || [], parseAudit: raw.parse_audit || [],
       windows: raw.window_trace || [], traceWindows: raw.trace_windows, traceGraph: raw.trace_graph,
       routeCandidates: raw.route_candidates, goalMap: raw.goal_map, result: raw.result, usage: raw.usage,
       manifest: raw.manifest,

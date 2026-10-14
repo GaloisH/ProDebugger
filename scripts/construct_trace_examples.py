@@ -19,6 +19,7 @@ from prodebugger.debug_tools import DebugTools, GLOBAL
 from prodebugger.query_trace import packet as trace_packet
 from prodebugger.trace_manager import packet as manager_packet
 from prodebugger.direct_submit import packet as submit_packet, commit as submit_commit
+from prodebugger.query_simplify import simplify_sql
 from scripts.audit_trace_queries import restore_archived_facts
 from local_judgement import SLOTS
 
@@ -54,7 +55,7 @@ def sql_for(spec, last):
         "       NULL AS start,NULL AS end,fid,source_kind,parse_status,\n"
         "       rel,args,slot,side,value,value_type,assertion_time,claim_scope,claim_polarity\n"
         f"FROM TRACK_ENTITY({literal(spec['entity'])},1,{last})")
-    return (f"-- Purpose: {spec['sql_purpose']}\n"
+    return simplify_sql(f"-- Purpose: {spec['sql_purpose']}\n"
             "-- Search entity-specific history before the anchor and later recovery; never retrieve whole steps.\n"
             "WITH evidence AS (\n" + "\nUNION\n".join(branches) +
             "\n)\n-- Deduplicate overlapping excerpts while retaining exact source offsets.\n"
@@ -170,7 +171,7 @@ def build_one(spec, output, archive_index):
     write_json(output / "query_result.json", response)
 
     for row in response["rows"]:
-        if row["source_id"] is None:
+        if row.get("source_id") is None:
             continue
         text = original(source, row["step"], row["module"])
         ensure(text[row["start"]:row["end"]] == row["text"], "Source offsets do not match original")
@@ -180,7 +181,7 @@ def build_one(spec, output, archive_index):
         ensure(quote in original(source, step, module), f"Invented quote at {tid}/{step}/{module}: {quote}")
         if step == anchor:
             return True
-        return any(row["step"] == step and row["module"] == module and quote in (row["text"] or "")
+        return any(row.get("step") == step and row.get("module") == module and quote in (row.get("text") or "")
                    for row in response["rows"])
 
     ensure(all(visible(n) for n in spec["evidence_notes"]), f"Reasoning cites unreturned evidence for {tid}")

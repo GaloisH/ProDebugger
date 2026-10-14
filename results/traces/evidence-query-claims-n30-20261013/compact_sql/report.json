@@ -1,0 +1,1504 @@
+{
+  "schema": "compact-sql-migration/v1",
+  "run": "evidence-query-claims-n30-20261013",
+  "method": "AST translation plus offline execution; exact ordered-row equality after dropping null-valued keys; exact source-fragment equality; no model calls",
+  "original_artifacts_unchanged": true,
+  "summary": {
+    "tasks": 30,
+    "tasks_with_queries": 29,
+    "queries": 35,
+    "verified_queries": 35,
+    "rows": 5900,
+    "null_values_omitted": 1146,
+    "model_api_calls": 0,
+    "before": {
+      "chars": 128679,
+      "selects": 941,
+      "projection_fields": 3932,
+      "null_placeholders": 18,
+      "element_calls": 697
+    },
+    "after": {
+      "chars": 99201,
+      "selects": 546,
+      "projection_fields": 1653,
+      "null_placeholders": 0,
+      "element_calls": 315
+    },
+    "query_chars_reduction_percent": 22.91
+  },
+  "constructed_summary": {
+    "tasks": 6,
+    "tasks_with_queries": 6,
+    "queries": 6,
+    "verified_queries": 6,
+    "rows": 322,
+    "null_values_omitted": 2601,
+    "model_api_calls": 0,
+    "before": {
+      "chars": 20560,
+      "selects": 57,
+      "projection_fields": 924,
+      "null_placeholders": 423,
+      "element_calls": 51
+    },
+    "after": {
+      "chars": 14434,
+      "selects": 57,
+      "projection_fields": 501,
+      "null_placeholders": 0,
+      "element_calls": 51
+    },
+    "query_chars_reduction_percent": 29.8
+  },
+  "tasks": [
+    {
+      "trajectory_id": "GPT-4o_019_alfworld_task_019",
+      "source_archive_sha256": "fe6e11091335331edab4af0173c2e5e7b5010715c7a49931cd76d901b2a1b517",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "ladle_origin",
+          "before": {
+            "chars": 2883,
+            "selects": 18,
+            "projection_fields": 119,
+            "null_placeholders": 8,
+            "element_calls": 12
+          },
+          "after": {
+            "chars": 2399,
+            "selects": 13,
+            "projection_fields": 66,
+            "null_placeholders": 0,
+            "element_calls": 7
+          },
+          "rows": 75,
+          "null_values_omitted": 205,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "f810e7715dab79300f287a6095d6c1ee0134b9dde2fb7731f4513efa0eeff55d"
+        },
+        {
+          "candidate_id": "ladle_dependence",
+          "before": {
+            "chars": 3140,
+            "selects": 21,
+            "projection_fields": 75,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "after": {
+            "chars": 2896,
+            "selects": 17,
+            "projection_fields": 41,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 95,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "2f13b3b86551caf11dd1d6cef9e64ff4530631480e153392c440fc42a2d4b111"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_006_alfworld_task_006",
+      "source_archive_sha256": "95a4563035f815a9f8392e19d5faa763f924483576d3d75c3b91a2505ab9c460",
+      "historical_status": "no_candidate",
+      "queries": [
+        {
+          "candidate_id": "search_policy_check",
+          "before": {
+            "chars": 4452,
+            "selects": 32,
+            "projection_fields": 195,
+            "null_placeholders": 1,
+            "element_calls": 27
+          },
+          "after": {
+            "chars": 2895,
+            "selects": 15,
+            "projection_fields": 70,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 456,
+          "null_values_omitted": 456,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "289a0ba64dfd7ddaa4a616bd4a0e16c19db89280a3c6ec9c0ed9795dd87a94b4"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_055_alfworld_task_055",
+      "source_archive_sha256": "d4a12dd41e80a5d10da9e376a8b29c6f9f07d1d6a6febc192b4ac946bc25742c",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "bowl_clean_completion",
+          "before": {
+            "chars": 4806,
+            "selects": 38,
+            "projection_fields": 152,
+            "null_placeholders": 0,
+            "element_calls": 32
+          },
+          "after": {
+            "chars": 3484,
+            "selects": 20,
+            "projection_fields": 62,
+            "null_placeholders": 0,
+            "element_calls": 14
+          },
+          "rows": 262,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "63f087f2a56fd4b0b66f432b8e8508c6da63ff7fa417124fe576e6673f5c3658"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_047_alfworld_task_047",
+      "source_archive_sha256": "707f04b3bf6bfa3e87542b1e954a8fddc17c5f3162b247c080ce35b72b202460",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "history_and_reliance",
+          "before": {
+            "chars": 3726,
+            "selects": 28,
+            "projection_fields": 85,
+            "null_placeholders": 0,
+            "element_calls": 19
+          },
+          "after": {
+            "chars": 3253,
+            "selects": 19,
+            "projection_fields": 49,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 132,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "af9d4721cb2d5aee8aae55d8fc84c9533871745bd3d847cb55a78a7f00633576"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_037_alfworld_task_037",
+      "source_archive_sha256": "6e8203b0338914eaaa4df318d7d335388a225d27e4bb90104e79ec1246b83e0d",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "desk_strategy_trace",
+          "before": {
+            "chars": 4393,
+            "selects": 32,
+            "projection_fields": 184,
+            "null_placeholders": 0,
+            "element_calls": 25
+          },
+          "after": {
+            "chars": 2981,
+            "selects": 16,
+            "projection_fields": 61,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "rows": 474,
+          "null_values_omitted": 90,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "f315d87af18983b30cab151c9cae5c79645aa783bb37e965e5bf42d0cbf6274d"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_013_chat_b000_t00_e12-f27d2887",
+      "source_archive_sha256": "fb575c1eb097dccc4f10c7beb3bfbde8427839bb641aaf4934018be55c65761e",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "constraint_origin",
+          "before": {
+            "chars": 3090,
+            "selects": 30,
+            "projection_fields": 48,
+            "null_placeholders": 0,
+            "element_calls": 19
+          },
+          "after": {
+            "chars": 2617,
+            "selects": 16,
+            "projection_fields": 31,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "rows": 134,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "7c1286130411fc61e81e4632053361de289e58f92222ec87bae802892eaebe6c"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_011_chat_b000_t00_e10-69d80a84",
+      "source_archive_sha256": "18c508740f12c95db73233631e1a70e82e9314f4931ab8a3219f90a65e8cf008",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "search_plan_causality",
+          "before": {
+            "chars": 6930,
+            "selects": 47,
+            "projection_fields": 188,
+            "null_placeholders": 0,
+            "element_calls": 36
+          },
+          "after": {
+            "chars": 4915,
+            "selects": 21,
+            "projection_fields": 51,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 375,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "a86cd087a4aa00310a736d8b24a38c077465a074e79173c8140e39d9f3ed188b"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_011_chat_b000_t00_e11-1cc61441",
+      "source_archive_sha256": "c4e40c386791958320305ea04e6ae17a9f8691360cb22049298186d5d5c01d7d",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "fit_conflict_trace",
+          "before": {
+            "chars": 4278,
+            "selects": 30,
+            "projection_fields": 120,
+            "null_placeholders": 0,
+            "element_calls": 22
+          },
+          "after": {
+            "chars": 3236,
+            "selects": 17,
+            "projection_fields": 44,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "rows": 134,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "d3d8418b9bffd8c09aa9074dc28e203dc968d1d18be825b792d23a1aeed13ff0"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_009_chat_b000_t00_e08-6a7bac22",
+      "source_archive_sha256": "50859ae69ce2b2d8cdfbd829f3d095d2fa0b502dca0fb21ab9d2f9ad5a14a3c5",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "search_strategy_trace",
+          "before": {
+            "chars": 3665,
+            "selects": 23,
+            "projection_fields": 92,
+            "null_placeholders": 0,
+            "element_calls": 16
+          },
+          "after": {
+            "chars": 2905,
+            "selects": 14,
+            "projection_fields": 35,
+            "null_placeholders": 0,
+            "element_calls": 7
+          },
+          "rows": 133,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "8d3afef2a96f294cd614da65ab6590f2422f7e756dfeb2ff022ccd6e67e2ed88"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d",
+      "source_archive_sha256": "c4721e751d3157a44ce2d5fad5e64eb046f68359296ac1205633e3e4255a6622",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "product_claim_trace",
+          "before": {
+            "chars": 4469,
+            "selects": 35,
+            "projection_fields": 119,
+            "null_placeholders": 0,
+            "element_calls": 28
+          },
+          "after": {
+            "chars": 3378,
+            "selects": 18,
+            "projection_fields": 51,
+            "null_placeholders": 0,
+            "element_calls": 11
+          },
+          "rows": 83,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "0d2dc14cb7fba21a6f046b52eef88a2062189bb0a4031c348b912598d63eb039"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_002_id_2___chat_b000_t00_e04-7e3c13ba",
+      "source_archive_sha256": "dfc15d85b41eaf25f1d0ac86d1c435109e70b95f05065cf2a4f2e04fdd9f6d1c",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "early_desk_loop",
+          "before": {
+            "chars": 3857,
+            "selects": 24,
+            "projection_fields": 96,
+            "null_placeholders": 0,
+            "element_calls": 14
+          },
+          "after": {
+            "chars": 3506,
+            "selects": 20,
+            "projection_fields": 50,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 144,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "d3e4231348e2a289da619769a6cc5bdb652f3d8563ae23857660b231fec35b1d"
+        },
+        {
+          "candidate_id": "post_discovery_reversal",
+          "before": {
+            "chars": 3032,
+            "selects": 20,
+            "projection_fields": 60,
+            "null_placeholders": 2,
+            "element_calls": 10
+          },
+          "after": {
+            "chars": 3205,
+            "selects": 20,
+            "projection_fields": 58,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 202,
+          "null_values_omitted": 28,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "f9e3c78ca23c60cc85a0f4bd3881519e698dea67b5ef18bc99a35c166c109784"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_012_alfworld_task_012",
+      "source_archive_sha256": "5cca83d84afbbe5e2a6110f1852d103543641b65331d0463c0a50a151e428de2",
+      "historical_status": "uncertain",
+      "queries": []
+    },
+    {
+      "trajectory_id": "GPT-4o_002_alfworld_task_002",
+      "source_archive_sha256": "2bd2c810e15570c55dac158b35b66124cbbdfb0f1b3cd820a70bb2d017636a20",
+      "historical_status": "error",
+      "queries": [
+        {
+          "candidate_id": "apple_search_decision",
+          "before": {
+            "chars": 4148,
+            "selects": 37,
+            "projection_fields": 133,
+            "null_placeholders": 0,
+            "element_calls": 26
+          },
+          "after": {
+            "chars": 2829,
+            "selects": 18,
+            "projection_fields": 48,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 336,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "69c8ffe534ed12dea5adcb62cac7ed85eb4abee4b59301ce0e90ed4bf20912c2"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_011_id_11___chat_b006_t00_e01-5b8f974f",
+      "source_archive_sha256": "b6ca43d479282636ff4d096afbb88c775cb10c45bb30dbbd8ef1ef45d439f594",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "cabinet12_belief_trace",
+          "before": {
+            "chars": 3185,
+            "selects": 24,
+            "projection_fields": 96,
+            "null_placeholders": 0,
+            "element_calls": 19
+          },
+          "after": {
+            "chars": 2429,
+            "selects": 14,
+            "projection_fields": 41,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "rows": 109,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "21f0850a2c3dd2a47c52853f3b578942b85fcbdbc527908850d2cd2c8404d977"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_026_alfworld_task_026",
+      "source_archive_sha256": "7cdbebcb7f939522b98731ebc285d05bf4b6aece29bffa9023610d67b4f11588",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "retry_feedback",
+          "before": {
+            "chars": 3132,
+            "selects": 23,
+            "projection_fields": 92,
+            "null_placeholders": 0,
+            "element_calls": 18
+          },
+          "after": {
+            "chars": 2381,
+            "selects": 13,
+            "projection_fields": 37,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 112,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "e392ca3ef87928a51e1b95aae2272ed794e598cc901b6c5cafad08fdf63af5cb"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_024_alfworld_task_024",
+      "source_archive_sha256": "53cf7a2158e9b7c6db6bf2ec35ed77fd5c7de1b6022726900109ccc0ae286578",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "cooling_origin",
+          "before": {
+            "chars": 2856,
+            "selects": 18,
+            "projection_fields": 90,
+            "null_placeholders": 0,
+            "element_calls": 12
+          },
+          "after": {
+            "chars": 2832,
+            "selects": 13,
+            "projection_fields": 70,
+            "null_placeholders": 0,
+            "element_calls": 7
+          },
+          "rows": 105,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "c95113733b2d690082a4d42c87426b0ff9235f0ddd5d3147057ce6d69f9661b7"
+        },
+        {
+          "candidate_id": "completion_dependence",
+          "before": {
+            "chars": 2621,
+            "selects": 22,
+            "projection_fields": 73,
+            "null_placeholders": 0,
+            "element_calls": 17
+          },
+          "after": {
+            "chars": 1931,
+            "selects": 12,
+            "projection_fields": 33,
+            "null_placeholders": 0,
+            "element_calls": 7
+          },
+          "rows": 102,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "9d247f1b9ecc0654290e0e25698f5122ba00fa1487c124a60dd7561330d4491c"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_021_alfworld_task_021",
+      "source_archive_sha256": "0fa53d08647143bee467cca4103052c38bc3aaa66cb8ffec2622c64a033cc93c",
+      "historical_status": "no_candidate",
+      "queries": [
+        {
+          "candidate_id": "semantic_scope_check",
+          "before": {
+            "chars": 4221,
+            "selects": 30,
+            "projection_fields": 172,
+            "null_placeholders": 0,
+            "element_calls": 23
+          },
+          "after": {
+            "chars": 3214,
+            "selects": 17,
+            "projection_fields": 81,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 231,
+          "null_values_omitted": 15,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "e10891d9045891fe2ab16efd45f14949cc4ec78cd17d82920ae704e23670dab6"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_013_alfworld_task_013",
+      "source_archive_sha256": "1f2686b53c898e63a7607d21826fe6681b6462d535a7303516f518bab258f9a9",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "identity_origin",
+          "before": {
+            "chars": 3708,
+            "selects": 28,
+            "projection_fields": 94,
+            "null_placeholders": 0,
+            "element_calls": 22
+          },
+          "after": {
+            "chars": 2813,
+            "selects": 15,
+            "projection_fields": 42,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "rows": 132,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "25c9267af94919b584c112c975e030c07057b4f6d2bee33e7ba316e0a7fffc56"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_024_id_24___chat_b013_t00_e01-5b8f974f",
+      "source_archive_sha256": "af02d5bcfc2a8760291cb8834fbd59b1fb7bbdf677854d664f55b0ce2b092b74",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "ladle_search",
+          "before": {
+            "chars": 4414,
+            "selects": 39,
+            "projection_fields": 141,
+            "null_placeholders": 0,
+            "element_calls": 28
+          },
+          "after": {
+            "chars": 3110,
+            "selects": 20,
+            "projection_fields": 53,
+            "null_placeholders": 0,
+            "element_calls": 11
+          },
+          "rows": 246,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "34154d4dc19c5ae5fa42473339d6b7bf98c3c6acf1656c7785da166d810b3156"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_011_alfworld_task_011",
+      "source_archive_sha256": "7278e0ef978763c983a30025ccc09deb2f9003b79b614f4ac335520fecf2bbc8",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "fridge_sequence",
+          "before": {
+            "chars": 2845,
+            "selects": 21,
+            "projection_fields": 111,
+            "null_placeholders": 2,
+            "element_calls": 14
+          },
+          "after": {
+            "chars": 1724,
+            "selects": 9,
+            "projection_fields": 28,
+            "null_placeholders": 0,
+            "element_calls": 4
+          },
+          "rows": 216,
+          "null_values_omitted": 216,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "0f169488bdad100a8aaf60d3f0ae9c1d7276c3a590a31c2323eb82cdba6e4216"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_012_chat_b000_t00_e11-1cc61441",
+      "source_archive_sha256": "ad70f41a8421b5dbca85d61ea9b8be2bc1696d121579c5e31d7663b33e22e2bd",
+      "historical_status": "no_candidate",
+      "queries": [
+        {
+          "candidate_id": "shirt_query_causality",
+          "before": {
+            "chars": 2271,
+            "selects": 15,
+            "projection_fields": 48,
+            "null_placeholders": 0,
+            "element_calls": 11
+          },
+          "after": {
+            "chars": 1775,
+            "selects": 8,
+            "projection_fields": 20,
+            "null_placeholders": 0,
+            "element_calls": 4
+          },
+          "rows": 48,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "fae6107b0c5f422062f05d8f1e686ef8db2f716980bbaa52a072429f2dbed82a"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_007_chat_b000_t00_e07-d50ae81f",
+      "source_archive_sha256": "0077e29d4ad09e80545b6a12761cb8d0cb29422652c20bf027af567f231fafe6",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "search_causality",
+          "before": {
+            "chars": 4205,
+            "selects": 32,
+            "projection_fields": 129,
+            "null_placeholders": 0,
+            "element_calls": 25
+          },
+          "after": {
+            "chars": 4098,
+            "selects": 27,
+            "projection_fields": 91,
+            "null_placeholders": 0,
+            "element_calls": 20
+          },
+          "rows": 235,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "1689a41e5e64a2435ba6bedc64ba843e074c8a3a75eb4a85a86e40b926eab249"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_005_chat_b000_t00_e04-7e3c13ba",
+      "source_archive_sha256": "1a05ad4da4a363b1eb4a47731a850f0f1ef4de9733b7d51b475d8d72c2555079",
+      "historical_status": "no_candidate",
+      "queries": [
+        {
+          "candidate_id": "query_strategy_origin",
+          "before": {
+            "chars": 4163,
+            "selects": 27,
+            "projection_fields": 163,
+            "null_placeholders": 2,
+            "element_calls": 22
+          },
+          "after": {
+            "chars": 3082,
+            "selects": 14,
+            "projection_fields": 63,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "rows": 250,
+          "null_values_omitted": 10,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "ee5672e00c9fce8b781aae2a50aa35b6a673718b747d308abec05fc172ee12a4"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_003_chat_b000_t00_e02-1e119842",
+      "source_archive_sha256": "f1f5065cb897581308f4c30d197524a2923b94f9acc95d56685e0142c0987476",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "origin_premise",
+          "before": {
+            "chars": 3847,
+            "selects": 32,
+            "projection_fields": 116,
+            "null_placeholders": 0,
+            "element_calls": 28
+          },
+          "after": {
+            "chars": 2188,
+            "selects": 10,
+            "projection_fields": 28,
+            "null_placeholders": 0,
+            "element_calls": 6
+          },
+          "rows": 108,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "bacd0b434f9f6945bf7f408939229cf2a63ed4d8a321a0e8cad137979f4d251d"
+        },
+        {
+          "candidate_id": "downstream_reliance",
+          "before": {
+            "chars": 3211,
+            "selects": 25,
+            "projection_fields": 100,
+            "null_placeholders": 0,
+            "element_calls": 19
+          },
+          "after": {
+            "chars": 2664,
+            "selects": 17,
+            "projection_fields": 50,
+            "null_placeholders": 0,
+            "element_calls": 11
+          },
+          "rows": 85,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "12a3a9d058df74e3f72cf04a4fe2b971292b6a281c9cb8c94c6d6b336580b61c"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f",
+      "source_archive_sha256": "2740b50addae8d452d8423c46dff741094dd191ec8aa709f01d0ce0d822c4b50",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "color_purchase_causality",
+          "before": {
+            "chars": 4147,
+            "selects": 32,
+            "projection_fields": 128,
+            "null_placeholders": 0,
+            "element_calls": 26
+          },
+          "after": {
+            "chars": 2758,
+            "selects": 14,
+            "projection_fields": 38,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 113,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "873ddc602fb9761b38b9cb7ad4c6f85fc1984cb8b0c49e804f602aae27b4621b"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_014_chat_b000_t00_e13-c39f2c41",
+      "source_archive_sha256": "deb31dd9bb4770c5990084941ee4829f38e4bb5f8e6e8ed4327de6a5291786d6",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "initial_result_assessment",
+          "before": {
+            "chars": 2850,
+            "selects": 19,
+            "projection_fields": 76,
+            "null_placeholders": 0,
+            "element_calls": 14
+          },
+          "after": {
+            "chars": 2292,
+            "selects": 12,
+            "projection_fields": 33,
+            "null_placeholders": 0,
+            "element_calls": 7
+          },
+          "rows": 84,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "3cead906607ba109e7fa3be9a10d283131ca47aa286cbed6b7273b226c6fe68d"
+        },
+        {
+          "candidate_id": "variant_assessment_and_reliance",
+          "before": {
+            "chars": 3774,
+            "selects": 20,
+            "projection_fields": 194,
+            "null_placeholders": 3,
+            "element_calls": 16
+          },
+          "after": {
+            "chars": 1953,
+            "selects": 10,
+            "projection_fields": 16,
+            "null_placeholders": 0,
+            "element_calls": 6
+          },
+          "rows": 64,
+          "null_values_omitted": 124,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "318e7229ba14717dfd254e225c92f409814670f81b1f3c27f71ccb46b594c34e"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_015_chat_b000_t00_e14-1d03d2d8",
+      "source_archive_sha256": "04b4ade9ed42c88c81432c68dbcaa9a8f84a97dce3555adf772f9fe82b624ec0",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "variant_verification_causality",
+          "before": {
+            "chars": 4202,
+            "selects": 32,
+            "projection_fields": 128,
+            "null_placeholders": 0,
+            "element_calls": 28
+          },
+          "after": {
+            "chars": 2690,
+            "selects": 12,
+            "projection_fields": 36,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 107,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "22d0fa9f50eb8bac249520dec9bce8afea724f15b1f000e7c2d2c2549bcca396"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Llama3.3-70B-Turbo_014_webshop_task_014",
+      "source_archive_sha256": "dd29856afce2ce745d46e5b732025f56cf3fcb14275335cb948897f5d63a2ade",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "early_assessment",
+          "before": {
+            "chars": 2972,
+            "selects": 20,
+            "projection_fields": 80,
+            "null_placeholders": 0,
+            "element_calls": 15
+          },
+          "after": {
+            "chars": 2666,
+            "selects": 15,
+            "projection_fields": 45,
+            "null_placeholders": 0,
+            "element_calls": 10
+          },
+          "rows": 123,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "9966703488ea3b061e94006d658b159b2568c778b91fa0c3a9e3707ba42d2ae4"
+        },
+        {
+          "candidate_id": "repeat_strategy",
+          "before": {
+            "chars": 3165,
+            "selects": 25,
+            "projection_fields": 94,
+            "null_placeholders": 0,
+            "element_calls": 19
+          },
+          "after": {
+            "chars": 2189,
+            "selects": 12,
+            "projection_fields": 30,
+            "null_placeholders": 0,
+            "element_calls": 6
+          },
+          "rows": 64,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "bb8ac58cccaa5a56043e3fbb5f1d97628d562f0d1bd70cabae036a90abf5f452"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Llama3.3-70B-Turbo_017_webshop_task_017",
+      "source_archive_sha256": "3133bacf66247df894dfc443ca714f6b47b96f245329c6dea8d5cbf4fff28560",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "product_fit_and_reliance",
+          "before": {
+            "chars": 3525,
+            "selects": 24,
+            "projection_fields": 96,
+            "null_placeholders": 0,
+            "element_calls": 16
+          },
+          "after": {
+            "chars": 3231,
+            "selects": 20,
+            "projection_fields": 56,
+            "null_placeholders": 0,
+            "element_calls": 12
+          },
+          "rows": 255,
+          "null_values_omitted": 2,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "d6b50e518db4d8e92026f0d2b928470e849bcd2937e6c5630bc731605d32ad49"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84",
+      "source_archive_sha256": "23fe3a344b0c7ef7c627bb1805f176e94ba0f5b041b26d8c443907b3a9f4da63",
+      "historical_status": "diagnosed",
+      "queries": [
+        {
+          "candidate_id": "shirt_color_and_search_causality",
+          "before": {
+            "chars": 2496,
+            "selects": 18,
+            "projection_fields": 45,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "after": {
+            "chars": 2682,
+            "selects": 18,
+            "projection_fields": 45,
+            "null_placeholders": 0,
+            "element_calls": 9
+          },
+          "rows": 76,
+          "null_values_omitted": 0,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "b614b66c5773c3cd2a3cda9b6681a3d2c0cf001330e3d2b233a5f1545590e37d"
+        }
+      ]
+    }
+  ],
+  "constructed_examples": [
+    {
+      "trajectory_id": "GPT-4o_019_alfworld_task_019",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "source_query_result_sha256": "7767bb37984c192addbcae44946a3265b4b1c310b918d17fb972cb1d53276292",
+      "queries": [
+        {
+          "candidate_id": "investigate_origin_and_recovery",
+          "before": {
+            "chars": 3246,
+            "selects": 9,
+            "projection_fields": 145,
+            "null_placeholders": 66,
+            "element_calls": 8
+          },
+          "after": {
+            "chars": 2292,
+            "selects": 9,
+            "projection_fields": 79,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 52,
+          "null_values_omitted": 437,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "c9fa16647f89f202cc5245593fec9ed0eee44474b6dd2150f03ba9f68afc9fbe"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_055_alfworld_task_055",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "source_query_result_sha256": "6c8aab43b8398eb7644b04c35c4bffff90c5d2717a1576afa41574d6235268b0",
+      "queries": [
+        {
+          "candidate_id": "investigate_origin_and_recovery",
+          "before": {
+            "chars": 3239,
+            "selects": 9,
+            "projection_fields": 145,
+            "null_placeholders": 66,
+            "element_calls": 8
+          },
+          "after": {
+            "chars": 2285,
+            "selects": 9,
+            "projection_fields": 79,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 47,
+          "null_values_omitted": 351,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "0e89c1bc5e91f47ea01fd53f56c394c89e30636c245b3e0f146b35b623b4d704"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "source_query_result_sha256": "3954f5ecbd9681939f9b9f5b0b72251d83a2c612b9c76ace4488bf3bb73b4c36",
+      "queries": [
+        {
+          "candidate_id": "investigate_origin_and_recovery",
+          "before": {
+            "chars": 4724,
+            "selects": 13,
+            "projection_fields": 217,
+            "null_placeholders": 102,
+            "element_calls": 12
+          },
+          "after": {
+            "chars": 3234,
+            "selects": 13,
+            "projection_fields": 115,
+            "null_placeholders": 0,
+            "element_calls": 12
+          },
+          "rows": 44,
+          "null_values_omitted": 362,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "48f9d4f2648db37a921847627e976a95a07356b2bbde55aa546e363e2d71081d"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "GPT-4o_013_alfworld_task_013",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "source_query_result_sha256": "194519f5263273c600856ae8dbafed6aead5d766444821f150382a99e6e8e230",
+      "queries": [
+        {
+          "candidate_id": "investigate_origin_and_recovery",
+          "before": {
+            "chars": 2924,
+            "selects": 8,
+            "projection_fields": 127,
+            "null_placeholders": 57,
+            "element_calls": 7
+          },
+          "after": {
+            "chars": 2104,
+            "selects": 8,
+            "projection_fields": 70,
+            "null_placeholders": 0,
+            "element_calls": 7
+          },
+          "rows": 38,
+          "null_values_omitted": 289,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "0e65929eb0d080701d992bb4bf93a1a66d7957f178808089a1b0b31828caef19"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_013_chat_b000_t00_e13-eb20423f",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "source_query_result_sha256": "26ff7b06e79118f4e627270eb178934b1ca66b92e8925b5ce684f7d09dd8f9fd",
+      "queries": [
+        {
+          "candidate_id": "investigate_origin_and_recovery",
+          "before": {
+            "chars": 3205,
+            "selects": 9,
+            "projection_fields": 145,
+            "null_placeholders": 66,
+            "element_calls": 8
+          },
+          "after": {
+            "chars": 2251,
+            "selects": 9,
+            "projection_fields": 79,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 64,
+          "null_values_omitted": 516,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "4a63887749b95aded805c7d25a47f9220bf702e6f68ec7aef0e97a58277f203a"
+        }
+      ]
+    },
+    {
+      "trajectory_id": "Qwen3-8B_010_chat_b000_t00_e10-69d80a84",
+      "synthetic": true,
+      "include_in_benchmark": false,
+      "source_query_result_sha256": "6ac5ef1ae8c5eeaef6b6c7eea1907fc19af03d694359da64952029561361bb97",
+      "queries": [
+        {
+          "candidate_id": "investigate_origin_and_recovery",
+          "before": {
+            "chars": 3222,
+            "selects": 9,
+            "projection_fields": 145,
+            "null_placeholders": 66,
+            "element_calls": 8
+          },
+          "after": {
+            "chars": 2268,
+            "selects": 9,
+            "projection_fields": 79,
+            "null_placeholders": 0,
+            "element_calls": 8
+          },
+          "rows": 77,
+          "null_values_omitted": 646,
+          "checks": {
+            "old_engine_reproduces_saved_rows": true,
+            "ordered_rows_equal_ignoring_null_keys": true,
+            "columns_equal": true,
+            "source_fragments_equal": true,
+            "returned_steps_equal": true,
+            "returned_fids_equal": true,
+            "no_null_values_in_sparse_rows": true
+          },
+          "query_sha256": "3b8dea09fdee393f146eca9c1cf466efe037d752bb2d8a7c5a334263f79cad30"
+        }
+      ]
+    }
+  ]
+}

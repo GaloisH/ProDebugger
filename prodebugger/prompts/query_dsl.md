@@ -1,9 +1,53 @@
-# Record SQL v5: element investigation with source-bound agent statements
+# Record SQL v6: compact queries and optional evidence fields
 
 One read-only SQLite SELECT, including WITH, JOIN, UNION, conditions, grouping,
 ordering and aggregates. Each case gets ONE query including errors. Compose targeted
 element functions in that query to test a hypothesis AND its strongest rival.
 There is no aggregate row, byte, source-count or function-count retrieval budget.
+
+PREFERRED COMPACT FORM
+Batch repeated element searches and merge heterogeneous evidence BY NAME. Do not
+write a long UNION branch for every term/module or pad missing fields with NULL.
+
+```sql
+-- Purpose: compare clean-bowl assertions with independently recorded actions.
+WITH claims AS (
+ -- Retrieve targeted source excerpts across related mental modules in one call.
+ SELECT source_id,step,module,text,source_kind
+ FROM SEARCH_TEXT(('clean','bowl'),('memory','reflection','plan'))
+), actions AS (
+ -- Preserve action provenance and arguments without inventing source offsets.
+ SELECT step,'action' AS module,span AS text,fid,args,source_kind
+ FROM TRACK_ACTION(('take','put'))
+)
+-- Align by field name; source-only and Fact-only fields are optional.
+SELECT * FROM claims
+UNION ALL BY NAME SELECT * FROM actions
+ORDER BY step,module;
+```
+
+- SEARCH_TEXT and FIND_CLAIMS accept a string or a parenthesized list of quoted
+  strings in either of their first two arguments. TRACK_ACTION accepts a string
+  or such a list of relation names. Bounds remain two scalar integer literals.
+  Lists form the ordered Cartesian product, first argument outermost, equivalent
+  to UNION ALL of scalar calls. Repeated/overlapping searches retain duplicate
+  rows. Never use columns, expressions, nested lists or subqueries as arguments.
+- UNION ALL BY NAME aligns columns by their aliases, preserving duplicates.
+  UNION BY NAME aligns and deduplicates. Column order need not match across
+  branches. Give computed fields meaningful AS names. WHERE, JOIN, CTE, ORDER BY,
+  LIMIT and aggregates retain SQL semantics. Use aliases inside CTE SELECTs,
+  rather than a column-name list after the CTE name.
+- Compact queries return row_format=sparse/v1: each JSON row includes only its
+  non-NULL fields. columns lists the available output names; it is not a list of
+  mandatory keys in every row. Zero, false and empty strings are retained.
+  A missing key means unavailable/unknown, never false or absence in the world.
+  SQL predicates such as IS NULL still operate on aligned NULL values internally.
+- A batch is atomic: an invalid member makes that entire batch unavailable.
+  Independent UNION ALL branches can still be recovered under the existing
+  failure rules. Never interpret the partial return as a complete search.
+- Legacy scalar functions and positional UNION remain supported. Prefer the
+  compact syntax in new queries. Keep SELECT * only for an already-targeted
+  element or a CTE whose columns you intentionally chose; no full-log access.
 
 Include concise English `--` comments in the SQL string itself. Begin with
 `-- Purpose: ...` to state the question being tested, then explain each CTE/retrieval
@@ -27,7 +71,7 @@ BASIC QUERY CHECKLIST
 - Use query_context.relation_names. In ALFWorld: examine/look -> look,
   move/put -> put, go -> go, open action -> open_action; open is the state relation.
   TRACK_ACTION('examine') is invalid. WebShop actions include search and click.
-- Arguments to table functions are LITERALS, not columns/subqueries. CTEs can join
+- Arguments to table functions are LITERALS (or the documented string lists), not columns/subqueries. CTEs can join
   already materialized results, but SOURCE(found.fid,'phrase') is unsupported.
   Use known anchor IDs or SEARCH_TEXT to retrieve a missing source directly.
   For a discovered claim, retrieve targeted peer-module excerpts using literal
@@ -112,16 +156,19 @@ Search bounds and terms must focus on a causal question; don't request every fie
 
 Source-bound statement cards:
 The response also has agent_statements for returned mental text and already-visible
-anchor/assigned evidence. Keep step,module,text (or exact fid,span) in your SELECT
-to enable source alignment; preserve source_id/start/end to disambiguate repeated
+anchor/assigned evidence. There is no mandatory all-fields row template. Return
+step,module,text (or exact fid,span) when you want source-aligned mental statements;
+the parser reads only present non-null fields. Omit unrelated attributes rather
+than writing NULL placeholders. Preserve source_id and/or offsets to disambiguate repeated
 identical clauses. Intermediate hits removed by WHERE/LIMIT do not produce cards.
 Statements preserve original quote, polarity, modality, subjects/details and literal
 qualifiers. Links express the author's stated reasons/conditions/expectations, not
 verified evidence support. Partial clauses are never expanded from hidden text.
 References can bind pronouns to exact earlier already-visible clauses in the same
 module. They establish language reference only, not world truth or causal support.
-Unresolved clauses are batched into at most ONE parser request after your query;
-cached statements are reused. This grants no additional investigation/query turn.
+Unresolved visible clauses are batched into one logical parsing pass after your query;
+cached statements are reused. Truncated parser responses may be recovered for missing
+units only, without new sources or an additional investigation/query turn.
 model_reviewed means source-validated model extraction, not guaranteed semantic
 completeness or world truth. Always compare the accompanying original quote.
 
@@ -136,7 +183,7 @@ WITH checks AS (
  SELECT * FROM SEARCH_TEXT('drawer','plan')
 )
 SELECT * FROM checks
-UNION ALL SELECT * FROM plans WHERE step IN (SELECT step FROM checks)
+UNION ALL BY NAME SELECT * FROM plans WHERE step IN (SELECT step FROM checks)
 ORDER BY step,module;
 ```
 This pattern exposes differences in what modules claim; it does not itself prove
@@ -152,8 +199,7 @@ Metadata text is bounded. JSON uses json_extract; constraints preserve the contr
 not proof that it was violated. Unmentioned terms in a parsed plan do not mean ignored.
 
 REAL SOURCE EXAMPLES
-These queries were executed on archived trajectories, separate from the current
-10-task evaluation. They teach retrieval, not benchmark answers or fault labels.
+These queries were checked against archived original trajectories offline. They teach retrieval, not benchmark answers or fault labels.
 Use the current case's phrases, IDs and bounds; never copy an example mechanically.
 Result notes describe source support and limits, not a required diagnosis.
 
@@ -165,25 +211,53 @@ drawer-2 portion is supported; historical opening is not a claim of current loca
 ```sql
 -- Purpose: verify the drawer-2 memory against opening feedback and possible parsing errors.
 WITH claims AS (
- -- Search earlier memories through step 12, preserving the original text and module.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer 2','memory',1,12)
+  -- Search earlier memories through step 12, preserving the original text and module.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('drawer 2', 'memory', 1, 12)
 ), peers AS (
- -- Inspect the related drawer reasoning and intended next action at discovered claim steps.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer','reflection',1,12)
- UNION ALL SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer','plan',1,12)
+  -- Inspect the related drawer reasoning and intended next action at discovered claim steps.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('drawer', ('reflection', 'plan'), 1, 12)
 ), observations AS (
- -- Verify the same drawer in original observations; a room listing does not prove opening.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('drawer 2','observation',1,12)
+  -- Verify the same drawer in original observations; a room listing does not prove opening.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('drawer 2', 'observation', 1, 12)
 ), attempts AS (
- -- Keep open_action attempts for drawer:2; an attempted action does not prove success.
- SELECT step,'action' AS module,span AS text,source_kind
- FROM TRACK_ACTION('open_action',1,12) WHERE json_extract(args,'$[0]')='drawer:2'
+  -- Keep open_action attempts for drawer:2; an attempted action does not prove success.
+  SELECT
+  step, 'action' AS module, span AS text, source_kind
+  FROM TRACK_ACTION('open_action', 1, 12)
+  WHERE
+    JSON_EXTRACT(args, '$[0]') = 'drawer:2'
 )
 -- Compare claims, actions and feedback by original step; Observation numbers are not Fact IDs.
-SELECT * FROM claims
-UNION ALL SELECT * FROM peers WHERE step IN (SELECT step FROM claims)
-UNION ALL SELECT * FROM observations
-UNION ALL SELECT * FROM attempts ORDER BY step,module;
+SELECT
+*
+FROM claims
+UNION ALL BY NAME
+SELECT
+*
+FROM peers
+WHERE
+  step IN (
+    SELECT
+    step
+    FROM claims
+  )
+UNION ALL BY NAME
+SELECT
+*
+FROM observations
+UNION ALL BY NAME
+SELECT
+*
+FROM attempts
+ORDER BY
+  step,
+  module;
 ```
 Observed return: memory 12 and its related reflection/plan excerpts, action 9,
 observations 1/9/10. Peer steps are discovered by SQL, not guessed in advance.
@@ -199,20 +273,38 @@ achieved in Observation 11. Search earlier reflection and independent state supp
 ```sql
 -- Purpose: trace earlier completion claims and independently verify placement and cleanliness.
 WITH claims AS (
- -- Search earlier completion assertions, including claims preceding the repeated anchor claim.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('has been completed','reflection',1,19)
+  -- Search earlier completion assertions, including claims preceding the repeated anchor claim.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('has been completed', 'reflection', 1, 19)
 ), placement AS (
- -- Check placement using movement feedback; movement alone does not establish cleanliness.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('You move the cup 1','observation',1,19)
+  -- Check placement using movement feedback; movement alone does not establish cleanliness.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('You move the cup 1', 'observation', 1, 19)
 ), cleanliness AS (
- -- Bind the same cup and clean attribute; unrelated true properties do not establish clean state.
- SELECT step,'state' AS module,span AS text,source_kind
- FROM TRACK_STATE('portable:cup_1','has',1,19)
- WHERE json_extract(args,'$[1]')='attribute:clean'
+  -- Bind the same cup and clean attribute; unrelated true properties do not establish clean state.
+  SELECT
+  step, 'state' AS module, span AS text, source_kind
+  FROM TRACK_STATE('portable:cup_1', 'has', 1, 19)
+  WHERE
+    JSON_EXTRACT(args, '$[1]') = 'attribute:clean'
 )
 -- Preserve each evidence source; no clean row means unknown, not that the cup is dirty.
-SELECT * FROM claims UNION ALL SELECT * FROM placement
-UNION ALL SELECT * FROM cleanliness ORDER BY step,module;
+SELECT
+*
+FROM claims
+UNION ALL BY NAME
+SELECT
+*
+FROM placement
+UNION ALL BY NAME
+SELECT
+*
+FROM cleanliness
+ORDER BY
+  step,
+  module;
 ```
 Observed return: reflection 11/12/15/18 and placement observation 11; no clean
 assignment. The earlier reflection quote is available for attribution if justified.
@@ -227,19 +319,36 @@ says: “The action "click[159- yellow]" confirms the color selection, while
 ```sql
 -- Purpose: verify the claimed size click and distinguish available options from selected size.
 WITH clicks AS (
- -- Track click elements for product navigation, color selection and purchase.
- SELECT step,'action' AS module,CAST(value AS TEXT) AS text,source_kind
- FROM TRACK_ACTION('click',1,5)
+  -- Track click elements for product navigation, color selection and purchase.
+  SELECT
+  step, 'action' AS module, CAST(value AS TEXT) AS text, source_kind
+  FROM TRACK_ACTION('click', 1, 5)
 ), claims AS (
- -- Retrieve the disputed action claim verbatim; memory does not prove an action occurred.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('click[x-large]','memory',1,5)
+  -- Retrieve the disputed action claim verbatim; memory does not prove an action occurred.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('click[x-large]', 'memory', 1, 5)
 ), options AS (
- -- Steps 3 through 5 follow this product's opening at 2; retrieve only size-related excerpts.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('x-large','observation',3,5)
+  -- Steps 3 through 5 follow this product's opening at 2; retrieve only size-related excerpts.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('x-large', 'observation', 3, 5)
 )
 -- Check whether the claimed click precedes purchase; option text is not click evidence.
-SELECT * FROM clicks UNION ALL SELECT * FROM claims
-UNION ALL SELECT * FROM options ORDER BY step,module;
+SELECT
+*
+FROM clicks
+UNION ALL BY NAME
+SELECT
+*
+FROM claims
+UNION ALL BY NAME
+SELECT
+*
+FROM options
+ORDER BY
+  step,
+  module;
 ```
 Observed clicks: product ID at 2, 159- yellow at 3 and 4, buy now at 5. The memory
 quote and page option x-large are returned. No x-large click is in these retrieved
@@ -255,19 +364,36 @@ the actual searches and explicit plans; omitted query keywords alone are insuffi
 ```sql
 -- Purpose: verify the initial-search claim and fit-type planning changes, including recovery.
 WITH searches AS (
- -- Track original search arguments from step 1; the late anchor does not hide earlier actions.
- SELECT step,'action' AS module,CAST(value AS TEXT) AS text,source_kind
- FROM TRACK_ACTION('search',1,22)
+  -- Track original search arguments from step 1; the late anchor does not hide earlier actions.
+  SELECT
+  step, 'action' AS module, CAST(value AS TEXT) AS text, source_kind
+  FROM TRACK_ACTION('search', 1, 22)
 ), claims AS (
- -- Find the exact initial-search claim; the memory itself does not verify historical actions.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('initial search query','memory',1,22)
+  -- Find the exact initial-search claim; the memory itself does not verify historical actions.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('initial search query', 'memory', 1, 22)
 ), intentions AS (
- -- Retrieve fit-type plans to distinguish changed requirements, exploration and recovery.
- SELECT step,module,text,source_kind FROM SEARCH_TEXT('fit type','plan',1,22)
+  -- Retrieve fit-type plans to distinguish changed requirements, exploration and recovery.
+  SELECT
+  step, module, text, source_kind
+  FROM SEARCH_TEXT('fit type', 'plan', 1, 22)
 )
 -- Compare actions, memories and plans with recovery evidence; earlier time alone is not causality.
-SELECT * FROM searches UNION ALL SELECT * FROM claims
-UNION ALL SELECT * FROM intentions ORDER BY step,module;
+SELECT
+*
+FROM searches
+UNION ALL BY NAME
+SELECT
+*
+FROM claims
+UNION ALL BY NAME
+SELECT
+*
+FROM intentions
+ORDER BY
+  step,
+  module;
 ```
 Observed return: search actions 1/4/12/22, memory 22, plans 4/12/22. The query
 described as initial matches action 12 rather than action 1. Plan 12 discusses

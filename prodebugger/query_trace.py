@@ -83,11 +83,9 @@ def packet(tools, case):
             "rule_evidence": [e for e in tools.index.evidence.values() if set(e["refs"]) & set(case["issue_fids"])],
             "parse_audits": [a for a in getattr(tools.bundle.record, "parse_audits", []) if a["step"] in {0, step["t"]}],
             "evidence_quality": evidence_quality(tools.bundle.record, step["t"]),
-            "instruction": "ROUTE hypothesis is a lead, not proof. Only the cited anchor source is supplied. "
-                           "Manager-assigned verbatim excerpts may supplement it. The assignment is a starting point, not a search whitelist. "
-                           "Compare the supplied anchor modules; compose your one SQL query to collect relevant claims in other modules at discovered steps, "
-                           "independent actions/feedback, and evidence for a competing cause. You may select a better-supported step/module beyond the assigned targets. "
-                           "Full steps/modules and RAW_STEP are forbidden. Verify parsed assertions with targeted source excerpts; absence is unknown."}
+            "instruction": "The anchor and assigned excerpts are the initial evidence, not full-history coverage. "
+                           "Investigate the manager question and rivals with one element SQL query, then assess at most one step. "
+                           "The anchor is not a retrieval boundary; source claims and parsing metadata are not verified facts."}
 
 
 def query(tools, candidate_id, sql):

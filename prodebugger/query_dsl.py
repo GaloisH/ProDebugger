@@ -4,14 +4,16 @@ import json
 import re
 import sqlite3
 import time
+from itertools import product
 from pathlib import Path
 import sqlglot
 from sqlglot import exp
 from sqlglot.dialects.sqlite import SQLite
 from .record_bridge import plain, digest
 from .evidence_quality import RAW_MODULE_RELATIONS, evidence_quality, fact_quality
+from .query_syntax import BATCH_ARGUMENTS, lower_named_unions
 
-VERSION = "record-sql/v5-agent-statements"
+VERSION = "record-sql/v6-sparse-evidence"
 FACT_SCHEMA = "fid INTEGER, step INTEGER, rel TEXT, args TEXT, slot TEXT, side TEXT, value, value_type TEXT, span TEXT, purpose TEXT, source_kind TEXT, parse_status TEXT, value_clipped INTEGER, assertion_time INTEGER, claim_scope TEXT, claim_polarity TEXT"
 SOURCE_SCHEMA = "source_id TEXT, fid INTEGER, step INTEGER, module TEXT, start INTEGER, end INTEGER, text TEXT, matched TEXT, source_kind TEXT, parse_status TEXT"
 SCHEMAS = {
@@ -84,12 +86,14 @@ class QueryEngine:
         self.function_scopes = []
         self.function_errors, self.repairs, self.skipped_branches = [], [], []
         self.source_catalog = []
+        self.table_schemas = {}
         self._populate()
 
     def close(self):
         self.conn.close()
 
     def _table(self, name, schema, rows):
+        self.table_schemas[name] = schema
         self.conn.execute(f'CREATE TABLE "{name}" ({schema})')
         rows = list(rows)
         if rows:
@@ -123,6 +127,12 @@ class QueryEngine:
         self.conn.create_function("contains", 2, lambda a, b: None if a is None or b is None else int(str(b) in str(a)))
 
     def _literal(self, node, name, position, function_index):
+        if isinstance(node, exp.Tuple):
+            if position not in BATCH_ARGUMENTS.get(name, set()) or not node.expressions:
+                raise ValueError("literal lists are supported only for SEARCH_TEXT/FIND_CLAIMS terms/modules and TRACK_ACTION relations")
+            if any(not isinstance(item, exp.Literal) or not item.is_string for item in node.expressions):
+                raise ValueError("batch items must be single-quoted literal strings; no expressions, columns or nested lists")
+            return [item.this for item in node.expressions]
         if isinstance(node, exp.Literal):
             return node.this if node.is_string else int(node.this)
         if (position in TEXT_ARGUMENTS.get(name, set()) and isinstance(node, exp.Column)
@@ -192,10 +202,11 @@ class QueryEngine:
             if (type(row.get("step")) is int and isinstance(row.get("module"), str)
                     and isinstance(row.get("text"), str)):
                 matches = list(catalog.get((row["step"], row["module"], row["text"]), {}).values())
-                if "source_id" in row:
+                if row.get("source_id") is not None:
                     matches = [r for r in matches if r[0] == row["source_id"]]
-                if "start" in row and "end" in row:
-                    matches = [r for r in matches if (r[4], r[5]) == (row["start"], row["end"])]
+                for key, index in (("start", 4), ("end", 5)):
+                    if row.get(key) is not None:
+                        matches = [r for r in matches if type(row[key]) is int and r[index] == row[key]]
                 original = matches[0] if len(matches) == 1 else None
                 if original and original[3] in MENTAL:
                     f = fragment(self.tools.bundle.source, original[2], original[3], original[4], original[5])
@@ -214,6 +225,17 @@ class QueryEngine:
         return list(found.values())
 
     def _function(self, name, args):
+        if any(isinstance(arg, list) for arg in args):
+            # A batch is atomic on failure. Successful subcalls are not silently
+            # presented as a complete result if any requested element is invalid.
+            collected, schema = [], None
+            for values in product(*[arg if isinstance(arg, list) else [arg] for arg in args]):
+                current, rows = self._function(name, list(values))
+                if schema is not None and current != schema:
+                    raise ValueError("batch source schemas disagree")
+                schema = current
+                collected.extend(rows)
+            return schema, collected
         r, idx = self.record, self.tools.index
         fids, schema, rows, limits, truncated = set(), FACT_SCHEMA, None, {}, False
         if name in {"ABOUT", "TRACK_ENTITY"}:
@@ -378,6 +400,9 @@ class QueryEngine:
         if len(trees) != 1 or not isinstance(trees[0], (exp.Select, exp.Union, exp.Intersect, exp.Except)):
             raise ValueError("exactly one SELECT query (optionally WITH/set operations) is permitted")
         tree = trees[0]
+        sparse = any(n.args.get("by_name") for n in tree.find_all(exp.Union)) or any(
+            isinstance(arg, exp.Tuple) for t in tree.find_all(exp.Table)
+            if isinstance(t.this, exp.Anonymous) for arg in t.this.expressions)
         if any(w.args.get("recursive") for w in tree.find_all(exp.With)) or tree.find(exp.Into):
             raise ValueError("recursive CTEs and SELECT INTO are not supported")
         tables, ctes = set(SCHEMAS), {cte.alias_or_name.lower() for cte in tree.find_all(exp.CTE)}
@@ -411,6 +436,10 @@ class QueryEngine:
                 raise ValueError("full-log access forbidden: steps/modules/facts are not SQL tables. Use TRACK_ENTITY, TRACK_STATE, TRACK_ACTION, SOURCE or SEARCH_TEXT")
         if not function_count:
             raise ValueError("query must investigate an element using at least one element function")
+        if any(n.args.get("by_name") for n in tree.find_all(exp.SetOperation)):
+            if any(not isinstance(n, exp.Union) and n.args.get("by_name") for n in tree.find_all(exp.SetOperation)):
+                raise ValueError("BY NAME is supported for UNION/UNION ALL only")
+            tree = lower_named_unions(tree, self.table_schemas)
         self._isolate_failed_branches(tree, failed)
         for alias in tree.find_all(exp.Alias):
             if alias.alias.lower() in {"fid", "step"} and not isinstance(alias.this, exp.Null):
@@ -435,7 +464,8 @@ class QueryEngine:
             raise ValueError("duplicate output columns; use explicit aliases")
         rows, size, cap = [], 0, False
         for row in cursor:
-            item = dict(row); cost = len(json.dumps(item, ensure_ascii=False).encode())
+            item = {key: value for key, value in dict(row).items() if value is not None or not sparse}
+            cost = len(json.dumps(item, ensure_ascii=False).encode())
             if ((max_rows is not None and len(rows) >= max_rows)
                     or (max_bytes is not None and size + cost > max_bytes)):
                 cap = True; break
@@ -446,6 +476,7 @@ class QueryEngine:
         from .claim_parser import cards, payload
         fragments = self._visible_claim_fragments(rows)
         return {"schema": VERSION, "query": sql, "query_digest": digest(sql), "columns": columns, "rows": rows,
+                "row_format": "sparse/v1" if sparse else "dense/v1",
                 "claim_fragments": fragments,
                 "agent_statements": payload(cards(self.tools.bundle.source, fragments)),
                 "returned_rows": len(rows), "truncated": cap or any(f["truncated"] for f in self.function_scopes),
@@ -458,7 +489,7 @@ class QueryEngine:
                 "limits": {"rows": max_rows, "bytes": max_bytes, "vm_operations": 2000000,
                            "raw_source_chars": None, "function_calls": None, "excerpt_chars": EXCERPT_CHARS},
                 "evidence_quality": evidence_quality(self.record, self.tools.index.length),
-                "limitations": "Element results only, never complete steps. Failed function branches are UNAVAILABLE, not zero matches or counterevidence. "
+                "limitations": "Element results only, never complete steps. In sparse rows, absent fields mean SQL NULL/unknown, not false; columns lists the union of available fields. Failed function branches are UNAVAILABLE, not zero matches or counterevidence. "
                     "Inspect partial/function_errors/skipped_branches and repairs. No aggregate row/byte/source/function budget is imposed. "
                     "Explicit SQL LIMIT, filters, graph depth, phrase-centered excerpts and column selection can omit evidence. "
                     "Empty results and missing facts mean unknown, not an agent error. Inspect original source before accepting a parsed premise."}

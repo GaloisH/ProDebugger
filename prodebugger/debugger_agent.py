@@ -150,12 +150,9 @@ class DebuggerAgent:
         if not self.messages:
             metadata = {"trajectory_id": self.bundle.record.tid,
                         "task": self.bundle.record.task, "steps": len(self.bundle.source["steps"]),
-                        "W": self.config["window_size"], "submission_policy": POLICY,
-                        "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": self.tools.trace_top_k,
-                                             "top_k_unit": "distinct_root_steps_per_window"}}
-            if phase != "SUBMIT":
-                metadata.pop("W")
-                metadata["candidate_limits"].update(top_k=1, top_k_unit="distinct_root_steps_per_case")
+                        "submission_policy": POLICY,
+                        "candidate_limits": {"top_p": self.tools.trace_top_p, "top_k": 1,
+                                             "top_k_unit": "distinct_root_steps_per_case"}}
             self.messages.extend([
                 {"role": "system", "content": PROMPTS[phase].read_text(encoding="utf-8")},
                 {"role": "user", "content": json.dumps(metadata, ensure_ascii=False)}])
@@ -336,9 +333,12 @@ class DebuggerAgent:
                     self.trace_failures[failure_key] = self.trace_failures.get(failure_key, 0) + 1
                     correction = {"role": "user", "content": json.dumps({
                         "error": result.get("error") if result else "Use exactly one " + name + " call",
-                        "instruction": "Use " + name + ". Return at most one step, with exact module quotes "
-                                       "already present in your evidence or query results. If evidence is insufficient, "
-                                       "assess an empty candidate list with uncertainty. No additional retrieval."})}
+                        "instruction": (
+                            "Call query_logs exactly once with the active candidate ID and one SQL string. "
+                            "The query has not been committed; correct the tool-call arguments using query_language."
+                            if cid not in self.tools.trace_queries else
+                            "Call assess with at most one step and exact module quotes from existing evidence. "
+                            "Use empty candidates with uncertainty if insufficient. Retrieval is closed.")})}
                     history.append(correction)
                     self._log_message(correction)
                     self.checkpoint()

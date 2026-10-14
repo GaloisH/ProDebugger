@@ -66,15 +66,11 @@ def packet(tools):
                 "uncertainty": tools.window_conclusions[w["candidate_id"]]["conclusion"]["uncertainty"]}
                 for w in tools.windows.windows if w["candidate_id"] in tools.window_conclusions],
             **directed_context(tools.bundle.source, candidates), **submit_guidance(tools),
-            "instruction": "Compare these TRACE suspects once and return one answer. "
-                           "Select exactly one supplied candidate and return status=diagnosed; SUBMIT cannot abstain or return uncertain. "
-                           "TRACE uncertain is an evidence qualification, not an exclusion from selection. "
-                           "Keep residual uncertainty in the uncertainty text and do not invent supporting evidence. "
-                           "Use shared local context and bounded related source excerpts; no complete history is supplied. "
-                           "Retrieval hints do not prove dependency, recovery or absence. Omitted evidence remains unknown. "
-                           "There are no tools. No labels or reference answer are supplied."
-                           + (" Root-role annotations are supplied because multiple distinct steps have definite TRACE judgements. "
-                              "Compare them against original evidence; they are not eligibility rules or votes." if show_roles else "")}
+            "instruction": "Select one existing candidate and return the required diagnosed JSON without tools. "
+                           "Compare actual source support, causal dependence and recovery; qualify remaining evidence gaps. "
+                           "Local context and related excerpts are incomplete evidence, not a complete execution history."
+                           + (" Known root-role opinions are disclosed for distinct definite worker findings; "
+                              "they are not eligibility rules or votes." if show_roles else "")}
 
 
 def _text(value, field, required=True):

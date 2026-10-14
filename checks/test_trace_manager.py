@@ -159,6 +159,39 @@ ORDER BY step,module
         write_json(output / "replay.json", messages)
         return DebuggerAgent(self.bundle, ReplayClient(output / "replay.json", output), output, DEFAULTS)
 
+    def test_trace_correction_tracks_whether_query_opportunity_was_consumed(self):
+        for committed in (False, True):
+            with self.subTest(committed=committed), tempfile.TemporaryDirectory() as directory:
+                output = Path(directory)
+                arguments = {"candidate_id": "case1"}
+                if committed:
+                    arguments["sql"] = "SELECT * FROM RAW_STEP(1)"
+                messages = [
+                    call("map", "view", {"spec": "requirements", "scope": {"mode": "global"}}),
+                    call("route", "route_cases", {"candidates": [self.case]}),
+                    call("manager", "plan_trace", manager_answer()),
+                    call("bad", "query_logs", arguments),
+                ]
+                if not committed:
+                    messages.append(call("query", "query_logs", {"candidate_id": "case1",
+                        "sql": "SELECT * FROM SEARCH_TEXT('decision 1','plan')"}))
+                messages.append(call("assess", "assess", {"window_id": "case1", "candidates": [],
+                    "uncertainty": "The evidence does not establish a fault."}))
+                write_json(output / "replay.json", messages)
+                agent = DebuggerAgent(self.bundle, ReplayClient(output / "replay.json", output), output, DEFAULTS)
+                self.assertEqual(agent.run()["status"], "no_candidate")
+                self.assertEqual(len(agent.tools.trace_queries), 1)
+                requests = [json.loads(p.read_text()) for p in sorted((output / "requests").glob("*.json"))]
+                if committed:
+                    # SQL errors are committed query data, not an invitation to
+                    # repair the SQL. The next request offers only assessment.
+                    self.assertEqual(requests[4]["messages"][-1]["role"], "tool")
+                    self.assertEqual([t["function"]["name"] for t in requests[4]["tools"]], ["assess"])
+                else:
+                    correction = json.loads(requests[4]["messages"][-1]["content"])["instruction"]
+                    self.assertIn("not been committed", correction)
+                    self.assertNotIn("Retrieval is closed", correction)
+
     def test_durable_manager_response_and_commit_do_not_duplicate_requests_after_resume(self):
         for point in ("response", "commit"):
             with self.subTest(point=point), tempfile.TemporaryDirectory() as directory:

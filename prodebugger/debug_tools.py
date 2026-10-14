@@ -46,9 +46,9 @@ SCHEMAS = [
               "max_nodes": {"type": "integer", "minimum": 1, "maximum": 500},
               "steps": {"type": "array", "items": INT, "minItems": 2, "maxItems": 2}}, [key, "scope"])
       for name, key in [("trace_evidence", "eid"), ("trace_fact", "fid")]],
-    schema("route_cases", "Declare evidence-backed TRACE tasks. Each gets one SQL query and returns one step.",
+    schema("route_cases", "Declare evidence-backed anchors for the TRACE manager to combine or allocate to investigators.",
            {"candidates": ROWS}, ["candidates"]),
-    schema("query_logs", "One element-scoped SQL query over the full trajectory, including steps BEFORE the anchor. Use query_context step bounds and relation names; omit optional bounds for full-range element search. Full steps/modules/fact dumps and RAW_STEP are forbidden. Track entities/states/actions or search specific source claims. Invalid SQL consumes the opportunity.",
+    schema("query_logs", "One element-scoped SQL query over the full trajectory, including steps BEFORE the anchor. Prefer literal term/module lists and UNION ALL BY NAME; omit NULL placeholders and return only needed fields. Use query_context step bounds and relation names; omit optional bounds for full-range element search. Full steps/modules/fact dumps and RAW_STEP are forbidden. Track entities/states/actions or search specific source claims. Invalid SQL consumes the opportunity.",
            {"candidate_id": TEXT, "sql": {**TEXT, "description": "One SQL query with concise English -- comments inside this string: begin with -- Purpose:, then explain each retrieval branch and meaningful filters/bounds. Use newline separators, not # comments. Comments describe the inquiry, not assumed findings. Use single-quoted literal arguments and specific search terms, never generic 'search' for plan/reflection. No aggregate row/byte/source/function budgets; no full-step access."}}, ["candidate_id", "sql"]),
     WINDOW_SCHEMA,
     *[schema(name, "Inspect one original Fact with explicit visibility scope.",

@@ -92,13 +92,21 @@ functions (`TRACK_ENTITY`, `TRACK_STATE`, `TRACK_ACTION`, `TRACE_FACT`, `STATE_A
 are documented in [Record SQL](prodebugger/prompts/query_dsl.md). Queries are read-only,
 audited; invalid SQL also consumes the one opportunity. Quotes must exist
 in returned raw source, allocated exact excerpts or the initial anchor. The mode is `evidence-query-step/v2-elements`.
-Record SQL v4 accepts token-bounded letter/digit codes such as `4T` and normalizes
+Record SQL retains support for token-bounded letter/digit codes such as `4T` and normalizes
 double-quoted literals only in known string argument slots. Invalid known-function
 arguments may suppress dependent top-level `UNION ALL` arms while preserving
 independent arms. `partial`, `function_errors`, `skipped_branches` and `repairs`
 reach both TRACE and SUBMIT: suppressed evidence is unavailable, never zero matches.
 Full-log access and other prohibited SQL still fail; recovery makes no extra model
 call and does not widen search scope.
+Record SQL v6 batches repeated terms/modules and supports `UNION ALL BY NAME`.
+Branches select only relevant fields; source and Fact rows need no NULL padding.
+Compact queries return sparse rows that omit NULL keys while preserving 0/false/empty
+strings. Source alignment reads available fields and requires unambiguous provenance;
+missing attributes remain unknown. Existing scalar SQL and TRACE candidate schemas
+remain compatible. See the [30-task SQL conversion and prompt review](results/summary/evidence-query-claims-n30-20261013/sql_simplification.md)
+for all 35 converted queries, six authored examples and offline equivalence checks.
+
 TRACE is instructed to include concise English `--` comments in its SQL explaining
 the query's purpose, retrieval branches and meaningful filters/bounds. Annotated SQL
 is preserved in `trace_queries.jsonl` (`query`) and `tool_calls.jsonl` (`arguments.sql`)

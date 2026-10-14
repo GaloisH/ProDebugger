@@ -1,5 +1,7 @@
 # 30 任务、30 worker 实验汇总
 
+新增 [SQL 简化结果](sql_simplification.md)与[逐 agent 提示词审查](prompt_cleanup.md)：覆盖全部 30 个任务的 35 条实际查询及 6 条示范查询；仅离线转换核对，下面的原实验成绩保持不变。
+
 运行 `evidence-query-claims-n30-20261013`；模型 `openai/gpt-6-luna-pro`；耗时 844.64 秒。
 
 同目录新增 [6 条逐阶段构造示范汇总](constructed_summary.md)，完整轨迹见 [constructed/](../../traces/evidence-query-claims-n30-20261013/constructed/README.md)。这些示范的决策由人工编写，SQL 返回为真实离线执行；下列数字仍是原 30 条实际运行结果。

@@ -162,6 +162,17 @@ SUBMIT 从已有候选中选择一个具体结果，不能输出 uncertain，也
 - [完整逐阶段轨迹](results/traces/evidence-query-claims-n30-20261013/constructed/README.md)
 - [可重复生成脚本](scripts/construct_trace_examples.py)：从已提交归档读取并校验输入，拒绝覆盖已有输出；仅结构校验通过不等于因果判断已获独立真值认证。
 
+## 9. SQL v6：批量检索、可选字段与提示词整理
+
+新增关键词/模块列表参数和 `UNION ALL BY NAME`，减少重复检索分支和统一列模板。结果以 sparse/v1 省略 NULL 字段，保留 0、false、空字符串；语义卡片只读取实际返回字段，仍要求原文唯一对齐。SQL 内部 NULL 与排序/聚合语义不变，旧标量 SQL 兼容，TRACE 单 step 候选格式不变。
+
+为全部 30 个任务生成简化查询视图：29 个任务的 35 条 SQL 全部转换，另一个任务原本没有 SQL。5900 行返回、顺序、列名、Fact/step 与来源片段逐项一致；字符减少 22.91%，投影字段项从 3932 降至 1653，NULL 占位全部消除。6 条人工示范也提供简化版本。原始模型请求、压缩归档和成绩保持不变，没有新的模型调用。
+
+检查 MAP、ROUTE、manager、TRACE、SUBMIT、task/observation parser 与 statement parser，清理旧窗口/旧实验描述、重复规则与跨阶段矛盾。修正查询纠错路径、refuted 条件解释、解析截断恢复说明及 source_id 输出歧义。保留真实例子、向前追根因、解析假阳性检查和 SUBMIT 强制选择。111 项本地回归与 4 条真实 SQL 例子通过，未进行 API 效果测试。
+
+- [SQL 简化与全部转换结果](results/summary/evidence-query-claims-n30-20261013/sql_simplification.md)
+- [逐角色提示词审查](results/summary/evidence-query-claims-n30-20261013/prompt_cleanup.md)
+
 ## 验证与边界
 
 ```bash

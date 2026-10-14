@@ -1,0 +1,51 @@
+{
+  "model_api_calls": 0,
+  "reviewed_roles": [
+    "MAP",
+    "ROUTE",
+    "MANAGER",
+    "TRACE",
+    "SUBMIT",
+    "task_observation_parser",
+    "statement_parser"
+  ],
+  "prompt_sizes": [
+    {
+      "prompt": "map.md",
+      "before_chars": 1475,
+      "after_chars": 464
+    },
+    {
+      "prompt": "route.md",
+      "before_chars": 8205,
+      "after_chars": 8205
+    },
+    {
+      "prompt": "manager.md",
+      "before_chars": 16019,
+      "after_chars": 11359
+    },
+    {
+      "prompt": "trace.md",
+      "before_chars": 18569,
+      "after_chars": 9873
+    },
+    {
+      "prompt": "submit.md",
+      "before_chars": 11003,
+      "after_chars": 5951
+    },
+    {
+      "prompt": "query_dsl.md",
+      "before_chars": 20492,
+      "after_chars": 23490
+    }
+  ],
+  "main_agent_chars_before": 55271,
+  "main_agent_chars_after": 35852,
+  "main_agent_reduction_percent": 35.13,
+  "regression_tests_passed": 111,
+  "real_sql_examples_passed": 4,
+  "measured_model_accuracy_change": null,
+  "real_manager_examples_passed": 2
+}

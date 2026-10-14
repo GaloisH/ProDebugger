@@ -4,8 +4,11 @@ import {CALL_PHASES} from "../case/calls.js";
 import {factChip} from "../case/format.js";
 import {esc, number, raw, short} from "../util.js";
 import {routeBadge, routeDetail, routeTitle} from "./route.js";
+import {managerDetail, managerTitle, traceBadge, traceDetail, traceTitle} from "./trace.js";
 
-const W = 184, H = 80, GX = 34, LANE_GAP = 12, PAD = 14, LABEL = 92;
+const W = 184, H = 80, GX = 34, LANE_GAP = 12, PAD = 14, LABEL = 132;
+// Fan-out into a multi-row band runs down a bus in the label gutter and enters each row from the left.
+const BUS = LABEL - 34;
 const S = t => `S${String(t).padStart(2, "0")}`;
 const kilo = n => n == null ? "—" : n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(n);
 const secs = s => s == null ? "" : s >= 60 ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, "0")}s` : `${s < 10 ? s.toFixed(1) : Math.round(s)}s`;
@@ -17,9 +20,9 @@ export function toolSummary(tools) {
 }
 
 // Phase-specific node titles, badges and side-panel sections.
-const PHASE_TITLE = {ROUTE: routeTitle};
-const PHASE_BADGE = {ROUTE: routeBadge};
-const PHASE_DETAIL = {ROUTE: routeDetail};
+const PHASE_TITLE = {ROUTE: routeTitle, MANAGER: managerTitle, TRACE: traceTitle};
+const PHASE_BADGE = {ROUTE: routeBadge, TRACE: traceBadge};
+const PHASE_DETAIL = {ROUTE: routeDetail, MANAGER: managerDetail, TRACE: traceDetail};
 
 // Short node title. Phase-specific wording comes first, then a tool summary.
 export function callTitle(call) {
@@ -30,7 +33,9 @@ export function callTitle(call) {
   return call.message?.content ? "Text answer" : "No output";
 }
 
-export function layoutCalls(calls, parse) {
+// plan: the manager's investigation plan; TRACE rows follow its assignment order.
+export function layoutCalls(calls, parse, plan) {
+  const assignments = new Map((plan?.assignments || []).map((a, i) => [a.agent_id, {...a, order: i}]));
   const bands = [];
   const band = phase => {
     let b = bands.find(x => x.phase === phase);
@@ -42,9 +47,11 @@ export function layoutCalls(calls, parse) {
     const b = band(CALL_PHASES.includes(call.phase) ? call.phase : "OTHER");
     const key = call.phase === "TRACE" ? call.caseId || "?" : "main";
     let lane = b.lanes.find(l => l.key === key);
-    if (!lane) { lane = {key, nodes: []}; b.lanes.push(lane); }
+    if (!lane) { lane = {key, nodes: [], assignment: call.phase === "TRACE" ? assignments.get(key) : null}; b.lanes.push(lane); }
     lane.nodes.push({kind: "call", id: String(call.index), call});
   }
+  const trace = bands.find(b => b.phase === "TRACE");
+  trace?.lanes.sort((a, b) => (a.assignment?.order ?? 1e9) - (b.assignment?.order ?? 1e9));
   bands.sort((a, b) => CALL_PHASES.indexOf(a.phase) - CALL_PHASES.indexOf(b.phase));
   let y = 0, width = LABEL + W;
   for (const b of bands) {
@@ -66,8 +73,15 @@ export function layoutCalls(calls, parse) {
       edges.push({kind: "seq", from: prev, to: node, retry: Boolean(prev.call?.rejected)});
     }));
     const next = bands[i + 1];
-    if (next) b.lanes.forEach(a => next.lanes.forEach(c =>
-      edges.push({kind: "handoff", from: a.nodes[a.nodes.length - 1], to: c.nodes[0], retry: false})));
+    // Fan-out into a multi-row band enters each row from the left bus; fan-in leaves each
+    // row on the right and merges on a bus past the longest row. Edges into a TRACE row
+    // are labelled with the ROUTE case it was assigned.
+    if (!next) return;
+    const right = Math.max(...b.lanes.map(l => l.nodes.at(-1).x + W)) + 18;
+    b.lanes.forEach(a => next.lanes.forEach(c =>
+      edges.push({kind: "handoff", from: a.nodes[a.nodes.length - 1], to: c.nodes[0], retry: false,
+                  route: next.lanes.length > 1 ? "fanout" : b.lanes.length > 1 ? "fanin" : "curve",
+                  top: next.y + 7, right, label: b.phase === "MANAGER" ? c.assignment?.anchor_case_id : null})));
   });
   return {bands, edges, width: width + 8, height: y};
 }
@@ -75,6 +89,8 @@ export function layoutCalls(calls, parse) {
 function edgePath(e) {
   const a = e.from, b = e.to;
   if (e.kind === "seq") return `M${a.x + W},${a.y + H / 2} L${b.x - 6},${b.y + H / 2}`;
+  if (e.route === "fanout") return `M${a.x + W / 2},${a.y + H} V${e.top} H${BUS} V${b.y + H / 2} H${b.x - 6}`;
+  if (e.route === "fanin") return `M${a.x + W},${a.y + H / 2} H${e.right} V${b.y - 16} H${b.x + W / 2} V${b.y - 6}`;
   const x1 = a.x + W / 2, y1 = a.y + H, x2 = b.x + W / 2, y2 = b.y - 6, dy = Math.max(18, (y2 - y1) / 2);
   return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
 }
@@ -104,11 +120,12 @@ export function graphHtml(layout, sel) {
   const {bands, edges, width, height} = layout;
   return `<div class="proc-canvas" style="width:${width}px;height:${height}px">
     ${bands.map(b => `<div class="proc-band phase-${b.phase}" style="top:${b.y}px;height:${b.height}px"><span class="proc-band-label"><span class="phase-dot"></span>${b.phase}</span>
-      ${b.phase === "TRACE" ? b.lanes.map(l => `<span class="proc-lane-label mono" style="top:${l.y - b.y + H + 1}px">${esc(short(l.key, 22))}</span>`).join("") : ""}</div>`).join("")}
+      ${b.phase === "TRACE" ? b.lanes.map(l => `<span class="proc-lane-label" style="top:${l.y - b.y + H / 2}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 12))}</span></span>`).join("") : ""}</div>`).join("")}
     <svg class="proc-edges" width="${width}" height="${height}" aria-hidden="true">
       <defs><marker id="proc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
       ${edges.map(e => `<path class="proc-edge ${e.kind} ${e.retry ? "is-retry" : ""}" d="${edgePath(e)}" marker-end="url(#proc-arrow)"/>`).join("")}
     </svg>
+    ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" style="left:${(BUS + e.to.x) / 2}px;top:${e.to.y + H / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
     ${bands.flatMap(b => b.lanes.flatMap(l => l.nodes)).map(n => nodeHtml(n, sel)).join("")}
   </div>`;
 }

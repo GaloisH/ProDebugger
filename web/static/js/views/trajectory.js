@@ -6,6 +6,7 @@ import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js";
 import {esc, pretty, short} from "../util.js";
 import {callDetail, graphHtml, layoutCalls, overviewHtml, requestHtml} from "./process.js";
 import {anchorsByStep, anchorTitle} from "./route.js";
+import {candidateCard, candidatesByStep, planOf} from "./trace.js";
 
 export function createView(root, ctx) {
   const state = {
@@ -49,8 +50,12 @@ export function createView(root, ctx) {
       gaps.get(a.step).push(a);
     });
     const anchors = anchorsByStep(model.debugger?.routeCandidates);
-    return {facts, evals, refs, gaps, anchors, maxRefs: Math.max(1, ...[...refs.values()].map(v => v.length))};
+    const candidates = candidatesByStep(model.debugger?.calls || []);
+    return {facts, evals, refs, gaps, anchors, candidates, maxRefs: Math.max(1, ...[...refs.values()].map(v => v.length))};
   }
+
+  // manager_plan.json once saved; the committed plan_trace result while live.
+  const planFor = d => d.managerPlan || d.calls.map(planOf).filter(Boolean).at(-1) || null;
 
   const callOf = key => key === "parse" ? "parse" : state.model?.debugger?.calls[Number(key)];
 
@@ -64,7 +69,7 @@ export function createView(root, ctx) {
       $("tj-hint").textContent = "Compiled session: no debugger run yet. Open a step to inspect its roles, facts and rule evaluations.";
       return;
     }
-    state.layout = layoutCalls(d.calls, d.parse);
+    state.layout = layoutCalls(d.calls, d.parse, planFor(d));
     graph.innerHTML = d.calls.length || d.parse ? graphHtml(state.layout, state.sel)
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
   }
@@ -74,7 +79,7 @@ export function createView(root, ctx) {
     if (!d) return;
     const call = state.sel == null ? null : callOf(state.sel);
     const top = side.scrollTop;
-    side.innerHTML = call ? callDetail(call, {parse: d.parse, requests: state.requests, factsById: state.model.dsl?.factsById, model: state.model})
+    side.innerHTML = call ? callDetail(call, {parse: d.parse, requests: state.requests, factsById: state.model.dsl?.factsById, model: state.model, managerPlan: planFor(d)})
       : overviewHtml(d);
     side.scrollTop = call && state.sideKey === state.sel ? top : 0;
     state.sideKey = state.sel;
@@ -116,7 +121,7 @@ export function createView(root, ctx) {
         ${roles.action.map(f => block("action", f, "plain")).join("")}
         ${roles.outcome.length ? roles.outcome.map(f => block("outcome", {...f, label: `${f.label} → S${String(t + 1).padStart(2, "0")}`}, "teal-2")).join("") : `<div class="detail-block muted">No following state (last step).</div>`}</div>
       <div class="detail-col">${roles.reasoning.map(f => block("reasoning", f, "info")).join("") || `<div class="detail-block muted">No reasoning fields.</div>`}</div>
-      <div class="detail-col">${anchorBlock(idx.anchors.get(t))}${gapBlock(idx.gaps.get(t))}
+      <div class="detail-col">${(idx.candidates.get(t) || []).map(candidateCard).join("")}${anchorBlock(idx.anchors.get(t))}${gapBlock(idx.gaps.get(t))}
         <div class="detail-block tone-violet"><h4>Facts · ${facts.length}</h4>${Object.entries(bySide).map(([side, list]) => `<div class="fact-group"><span class="eyebrow">${esc(side)}</span><div class="chip-col">${list.map(f => factChip(f, `<span class="slot mono">${esc(f.slot)}</span>`)).join("")}</div></div>`).join("") || `<p class="muted">No facts at this step.</p>`}</div>
         <div class="detail-block tone-ok"><h4>Rule evaluations · ${evals.length}</h4>
           <div class="chip-row">${Object.entries(counts).map(([s, n]) => `<span class="badge ${EVAL_CLASS[s] || ""}">${esc(s)} ${n}</span>`).join("")}</div>
@@ -143,7 +148,7 @@ export function createView(root, ctx) {
         <span class="card-icon">${icon("step")}</span>
         <h3 class="card-title" title="${esc(label)}">${esc(short(label, open ? 120 : 34))}</h3>
         <p class="card-sub">${esc(short(typeof thought === "string" ? thought.split("\n").filter(Boolean).at(-1) : "", open ? 160 : 60))}</p>
-        <div class="card-foot">${(idx.anchors.get(t) || []).map(c => `<span class="badge anchor" title="${esc(anchorTitle(c))}">anchor ${esc(c.candidate_id)}</span>`).join("")}${idx.gaps.has(t) ? '<span class="badge gap" title="The parser could not account for part of the source text at this step">parse gap</span>' : ""}${violated ? `<span class="badge warn">⚠ ${violated} violated</span>` : ""}<span class="badge">${(idx.facts.get(t) || []).length} facts</span></div>
+        <div class="card-foot">${(idx.candidates.get(t) || []).map(c => `<span class="badge cand ${c.is_root_cause === false ? "not-root" : ""}" title="TRACE ${esc(c.caseId || "")}: ${esc(c.status)} ${esc(c.fault_class || "")}${c.is_root_cause === false ? " (not the root cause)" : ""}">${esc(c.module)}</span>`).join("")}${(idx.anchors.get(t) || []).map(c => `<span class="badge anchor" title="${esc(anchorTitle(c))}">anchor ${esc(c.candidate_id)}</span>`).join("")}${idx.gaps.has(t) ? '<span class="badge gap" title="The parser could not account for part of the source text at this step">parse gap</span>' : ""}${violated ? `<span class="badge warn">⚠ ${violated} violated</span>` : ""}<span class="badge">${(idx.facts.get(t) || []).length} facts</span></div>
         ${state.model.debugger ? `<div class="heat" title="${refs} model calls touched this step"><span style="width:${Math.round(100 * refs / idx.maxRefs)}%"></span></div>` : ""}
       </div>
       ${open ? stepDetail(step, roles, idx) : ""}
@@ -159,7 +164,7 @@ export function createView(root, ctx) {
       const t = s.t ?? i + 1;
       const violated = (idx.evals.get(t) || []).some(e => e.state === "violated");
       const heat = (idx.refs.get(t)?.length || 0) / idx.maxRefs;
-      const marks = [violated && "is-warn", idx.gaps.has(t) && "has-gap", idx.anchors.has(t) && "is-anchor"].filter(Boolean).join(" ");
+      const marks = [violated && "is-warn", idx.gaps.has(t) && "has-gap", idx.anchors.has(t) && "is-anchor", idx.candidates.has(t) && "is-candidate"].filter(Boolean).join(" ");
       return `<button class="tick step-tick ${marks}" style="--heat:${heat.toFixed(2)}" data-jump-step="${t}" title="S${t}${idx.anchors.has(t) ? " · anchor" : ""}${idx.gaps.has(t) ? " · parse gap" : ""}"></button>`;
     }).join("");
   }

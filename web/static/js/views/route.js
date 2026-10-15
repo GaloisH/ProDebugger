@@ -25,7 +25,7 @@ export function routeBadge(call) {
   return stalled >= DECISION_ONLY ? `<span class="badge warn" title="${stalled} rounds without new evidence: only route_cases and finish were offered">decision-only</span>` : "";
 }
 
-function anchorCard(c) {
+export function anchorCard(c) {
   return `<div class="detail-block anchor-card">
     <h4><span class="mono">${esc(c.candidate_id)}</span><button class="step-chip" data-goto-step="${c.issue_step}">${S(c.issue_step)}</button></h4>
     <div class="chip-row">${(c.goal_links || []).map(g => `<span class="chip mono">${esc(g)}</span>`).join("")}

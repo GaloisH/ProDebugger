@@ -1,19 +1,39 @@
-// Result tab. A diagnosed run gets the AgentDebugger treatment: one root-cause card
-// with its step chain, evidence cards beside it and the compared TRACE candidates.
-// Any other status explains where and why the run stopped.
+// Result tab. The Graph view (default) traces how the evidence led to the answer; the List
+// view gives a diagnosed run the AgentDebugger treatment: one root-cause card with its step
+// chain, evidence cards beside it and the compared TRACE candidates. Any other status
+// explains where and why the run stopped.
+import {createCanvas} from "../graph/engine.js";
 import {entityChip} from "../graph/inspect.js";
 import {factText, SIDE_CLASS} from "../case/format.js";
 import {actionLabel, stepRoles} from "../case/roles.js";
 import {esc, number, short} from "../util.js";
 import {anchorsByStep} from "./route.js";
+import {buildEvidence, evidenceDetail, layoutEvidence} from "./evidence.js";
 import {answerOf} from "./submit.js";
 import {assessOf, candidateIndex, queryOf} from "./trace.js";
 
 const human = s => String(s || "").replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase());
 const S = t => `S${String(t).padStart(2, "0")}`;
 
+// Where a run without a root cause stopped, and the call to open in the process graph.
+function stopPoint(m, r) {
+  const calls = m.debugger.calls;
+  const last = phase => calls.filter(c => c.phase === phase).at(-1);
+  if (r.status === "no_candidate") return {phase: "TRACE", label: "SUBMIT skipped", title: "TRACE found no candidate.",
+    text: "Every investigation finished without an error at a single step, so SUBMIT was skipped.", call: last("TRACE")};
+  if (r.status === "error" && r.phase === "SUBMIT") return {phase: "SUBMIT", label: "SUBMIT answer rejected", title: "The SUBMIT answer was rejected.",
+    text: "SUBMIT must choose among the existing TRACE candidates; its answer failed validation.", call: last("SUBMIT")};
+  if (r.phase === "ROUTE") return {phase: "ROUTE", label: "No anchor cases", title: "ROUTE ended without anchor cases.",
+    text: "ROUTE did not find a concrete, evidence-backed lead for TRACE to investigate.", call: last("ROUTE")};
+  return {phase: r.phase, label: r.status === "uncertain" ? "No root accepted" : `Stopped · ${human(r.status)}`,
+    title: r.status === "uncertain" ? "No root cause accepted." : `Status: ${human(r.status)}.`, text: "", call: calls.at(-1)};
+}
+
 export function createView(root, ctx) {
-  let model = null;
+  let model = null, mode = "graph", canvas = null, graph = null;
+
+  const modeToggle = () => `<div class="segmented result-mode" role="group" aria-label="Result view">
+    ${["graph", "list"].map(v => `<button class="btn" data-mode="${v}" aria-pressed="${mode === v}">${v === "graph" ? "Graph" : "List"}</button>`).join("")}</div>`;
 
   // Evidence coverage per step, strongest mark wins: root > TRACE candidate > SQL-returned > ROUTE anchor.
   function coverageStrip(m) {
@@ -41,19 +61,6 @@ export function createView(root, ctx) {
       <table class="usage-table"><thead><tr><th>Phase</th><th>Calls</th><th>Input</th><th>Output</th><th>Cache hit</th></tr></thead><tbody>
       ${phases.map(([p, v]) => `<tr><td><span class="phase-dot phase-${esc(p)}"></span>${esc(p)}</td><td>${number(v.model_calls)}</td><td>${number(v.input_tokens)}</td><td>${number(v.output_tokens)}</td><td>${number(v.cache_hit_input_tokens)}</td></tr>`).join("")}
       </tbody></table></details>`;
-  }
-
-  // Where a run without a root cause stopped, and the call to open in the process graph.
-  function stopPoint(m, r) {
-    const calls = m.debugger.calls;
-    const last = phase => calls.filter(c => c.phase === phase).at(-1);
-    if (r.status === "no_candidate") return {title: "TRACE found no candidate.",
-      text: "Every investigation finished without an error at a single step, so SUBMIT was skipped.", call: last("TRACE")};
-    if (r.status === "error" && r.phase === "SUBMIT") return {title: "The SUBMIT answer was rejected.",
-      text: "SUBMIT must choose among the existing TRACE candidates; its answer failed validation.", call: last("SUBMIT")};
-    if (r.phase === "ROUTE") return {title: "ROUTE ended without anchor cases.",
-      text: "ROUTE did not find a concrete, evidence-backed lead for TRACE to investigate.", call: last("ROUTE")};
-    return {title: r.status === "uncertain" ? "No root cause accepted." : `Status: ${human(r.status)}.`, text: "", call: calls.at(-1)};
   }
 
   function investigations(m) {
@@ -153,8 +160,66 @@ export function createView(root, ctx) {
     </section>`;
   }
 
+  // ---------- graph view ----------
+  function graphView(m, r) {
+    return `<section class="result-graph">
+      <div class="result-headline"><div><div class="eyebrow">Failure attribution</div>
+        <h2 class="result-title">${r.root ? "How the evidence led to the answer" : esc(stopPoint(m, r).title)}</h2></div>${modeToggle()}</div>
+      <div class="ev-layout">
+        <div class="ev-main"><div class="graph-stage ev-stage" id="ev-stage"></div>
+          <div class="graph-legend"><span class="lg ev-lg-fact"></span>issue fact <span class="lg ev-lg-anchor"></span>anchor <span class="lg ev-lg-sql"></span>SQL finding
+            <span class="lg ev-lg-answer"></span>answer <span class="lg-line chain"></span>because chain <span class="lg-line ruled"></span>ruled out / shared
+            <span class="muted">· click a node for details, double-click to open it</span></div></div>
+        <aside class="graph-inspector ev-side" id="ev-side" aria-live="polite"></aside>
+      </div>
+    </section>`;
+  }
+
+  const nodeOf = id => graph?.nodes.find(n => n.id === id);
+
+  // Selecting a node lights up everything upstream and downstream of it.
+  function select(id) {
+    const n = nodeOf(id);
+    const side = root.querySelector("#ev-side");
+    if (!n) {
+      canvas.mark("is-selected", []); canvas.mark("is-lineage", [], () => false); canvas.dim(false);
+      const top = nodeOf("answer") || nodeOf("stop");
+      side.innerHTML = top ? evidenceDetail(top, model) : `<p class="muted">Select a node to see its evidence.</p>`;
+      return;
+    }
+    const near = new Set([id]);
+    for (const dir of [["from", "to"], ["to", "from"]]) {
+      const seen = new Set([id]);
+      for (let grew = true; grew;) {
+        grew = false;
+        graph.edges.forEach(e => { if (seen.has(e[dir[1]]) && !seen.has(e[dir[0]])) { seen.add(e[dir[0]]); grew = true; } });
+      }
+      seen.forEach(x => near.add(x));
+    }
+    canvas.mark("is-selected", [id]);
+    canvas.mark("is-lineage", near, (f, t) => near.has(f) && near.has(t));
+    canvas.dim(true);
+    side.innerHTML = evidenceDetail(n, model);
+  }
+
+  function open(target) {
+    if (target?.call) ctx.navigate("trajectory", "call", target.call);
+    else if (target?.step) ctx.navigate("trajectory", "step", target.step);
+  }
+
+  function mountGraph(m, r) {
+    canvas?.destroy();
+    graph = buildEvidence(m, r.root ? null : stopPoint(m, r));
+    canvas = createCanvas(root.querySelector("#ev-stage"), {
+      onClick: id => select(id), onBackground: () => select(null), onDouble: id => open(nodeOf(id)?.goto),
+    });
+    canvas.setScene(layoutEvidence(graph));
+    select(null);
+  }
+
   function render() {
     const d = model?.debugger;
+    canvas?.destroy(); canvas = null;
     if (!d) { root.innerHTML = `<p class="empty">Compiled sessions have no debugger result.</p>`; return; }
     const r = d.result;
     if (!r) {
@@ -163,13 +228,17 @@ export function createView(root, ctx) {
         <button class="btn" data-nav="trajectory">Open trajectory</button></article></section>`;
       return;
     }
-    root.innerHTML = r.root ? diagnosed(model, r) : statusOnly(model, r);
+    if (mode === "graph") { root.innerHTML = graphView(model, r); mountGraph(model, r); return; }
+    root.innerHTML = `<div class="result-modebar">${modeToggle()}</div>` + (r.root ? diagnosed(model, r) : statusOnly(model, r));
   }
 
   root.addEventListener("click", e => {
     const b = e.target.closest("button");
     if (!b) return;
-    if (b.dataset.nav) ctx.navigate(b.dataset.nav);
+    if (b.dataset.mode) { if (b.dataset.mode !== mode) ctx.navigate("result", ...(b.dataset.mode === "list" ? ["list"] : [])); }
+    else if (b.dataset.nav) ctx.navigate(b.dataset.nav);
+    else if (b.dataset.gotoStep) ctx.navigate("trajectory", "step", b.dataset.gotoStep);
+    else if (b.dataset.gotoCall) ctx.navigate("trajectory", "call", Number(b.dataset.gotoCall) + 1);
     else if (b.dataset.call) ctx.navigate("trajectory", "call", b.dataset.call);
     else if (b.dataset.step) ctx.navigate("trajectory", "step", b.dataset.step);
     else if (b.dataset.fid) ctx.navigate("graph", "facts", b.dataset.fid);
@@ -182,6 +251,11 @@ export function createView(root, ctx) {
       model = next;
       if (!had || changed.has("result") || changed.has("all") || changed.has("live")) render();
     },
-    show() { root.querySelectorAll(".evidence-card, .root-chain li").forEach(el => { el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; }); },
+    show(route) {
+      const want = route?.extra?.[0] === "list" ? "list" : "graph";
+      if (want !== mode) { mode = want; render(); }
+      root.querySelectorAll(".evidence-card, .root-chain li").forEach(el => { el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; });
+    },
+    destroy() { canvas?.destroy(); },
   };
 }

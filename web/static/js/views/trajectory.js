@@ -20,9 +20,12 @@ export function createView(root, ctx) {
         <p class="traj-hint" id="tj-hint">Each card is one debugger phase; open it to see its model calls. Select a phase or call to inspect it; select a step to see every call that touched it.</p></div>
     </div>
     <div class="lanes" id="tj-lanes">
-      <div class="proc" id="tj-proc">
+      <div class="proc is-side-closed" id="tj-proc">
         <section class="proc-graph" aria-label="Debugger model calls"><div class="proc-view" id="tj-graph" tabindex="0"></div></section>
-        <aside class="proc-side" id="tj-side" aria-label="Selected call"></aside>
+        <div class="proc-side-col">
+          <button class="side-toggle" id="tj-side-toggle" aria-controls="tj-side"></button>
+          <aside class="proc-side" id="tj-side" aria-label="Selected call" hidden></aside>
+        </div>
       </div>
       <div class="lane-gap" aria-hidden="true"></div>
       <section class="lane lane-steps" aria-label="Agent steps">
@@ -34,6 +37,18 @@ export function createView(root, ctx) {
     </div>`;
   const $ = id => root.querySelector("#" + id);
   const graph = $("tj-graph"), side = $("tj-side"), steps = $("tj-steps"), lanes = $("tj-lanes");
+
+  // The side panel starts collapsed to a strip and only opens from its toggle; selecting a
+  // phase or call keeps it as it is. The graph refits to the width it frees or takes.
+  function setSideOpen(open) {
+    const toggle = $("tj-side-toggle");
+    $("tj-proc").classList.toggle("is-side-closed", !open);
+    side.hidden = !open;
+    toggle.setAttribute("aria-expanded", open);
+    toggle.title = open ? "Hide details" : "Show details";
+    toggle.innerHTML = `<span class="side-toggle-ico" aria-hidden="true">${open ? "›" : "‹"}</span><span class="side-toggle-label">Details</span>`;
+  }
+  setSideOpen(false);
 
   // ---------- derived lookups ----------
   function stepIndex(model) {
@@ -276,6 +291,7 @@ export function createView(root, ctx) {
 
   root.addEventListener("click", async event => {
     const el = event.target;
+    if (el.closest("#tj-side-toggle")) { setSideOpen(side.hidden); return; }
     const fid = el.closest("[data-fid]")?.dataset.fid;
     if (fid != null) { ctx.navigate("graph", "facts", fid); return; }
     const req = el.closest("[data-request]")?.dataset.request;

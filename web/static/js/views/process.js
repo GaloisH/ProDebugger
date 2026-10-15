@@ -1,5 +1,6 @@
 // Debugger process: one column per phase, left to right, on a single canvas. Each phase is a
-// card that expands downwards into its model calls (one node per call), several at once.
+// card that expands downwards into its model calls (one node per call), several at once; past
+// three rows the calls scroll inside the card.
 // Handoff edges join consecutive phases: from every column's last node (or the collapsed card)
 // to every column's first node (or the card). TRACE has one column per manager assignment.
 import {CALL_PHASES} from "../case/calls.js";
@@ -15,6 +16,9 @@ const CW = 216, CH = 124, W = 184, H = 80, GY = 34, LANE_GAP = 12, BAND_GAP = 44
 // Where an open card's nodes start. TRACE columns: assignment label, then the fan-out bus
 // carrying the MANAGER handoff, then the anchor-case label on the edge into each column.
 const NODE_Y = CH + 24, LANE_LABEL_Y = CH + 10, BUS = CH + 40, TRACE_Y = CH + 78;
+// An open card shows at most MAX_ROWS nodes per column plus a peek at the next one; the rest
+// scroll inside the card's body. BODY_PAD keeps a selected node's ring inside the clip.
+const MAX_ROWS = 3, PEEK = 28, BODY_PAD = 6;
 const S = t => `S${String(t).padStart(2, "0")}`;
 const kilo = n => n == null ? "—" : n >= 1000 ? `${(n / 1000).toFixed(n >= 100000 ? 0 : 1)}k` : String(n);
 const secs = s => s == null ? "" : s >= 60 ? `${Math.floor(s / 60)}m${String(Math.round(s % 60)).padStart(2, "0")}s` : `${s < 10 ? s.toFixed(1) : Math.round(s)}s`;
@@ -67,24 +71,30 @@ export function layoutPhases(calls, parse, plan) {
 
 export const expandable = p => !p.parse && p.calls.length > 0;
 
-// Positions every card and node on one canvas. open: the set of expanded phases.
+// Positions every card and node on one canvas. open: the set of expanded phases. Nodes keep
+// canvas coordinates as if unscrolled; an open card's body (p.body) is the window they show in.
 export function layoutProcess(phases, open) {
   const edges = [];
   let x = 0, height = CH;
   for (const p of phases) {
     p.open = open.has(p.phase) && expandable(p);
     p.x = x;
+    p.seq = [];
+    p.body = null;
     if (p.open) {
       const y0 = p.phase === "TRACE" ? TRACE_Y : NODE_Y;
       const span = p.lanes.length * W + (p.lanes.length - 1) * LANE_GAP;
       p.width = Math.max(CW, span + PAD * 2);
       p.lanes.forEach((lane, li) => {
         lane.x = x + (p.width - span) / 2 + li * (W + LANE_GAP);
-        lane.nodes.forEach((node, k) => Object.assign(node, {x: lane.x, y: y0 + k * (H + GY), w: W, h: H}));
+        lane.nodes.forEach((node, k) => Object.assign(node, {x: lane.x, y: y0 + k * (H + GY), w: W, h: H, p}));
         // Sequence within a column; a retry after a rejected tool call is drawn dashed red.
-        lane.nodes.slice(1).forEach((node, k) => edges.push({kind: "seq", from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)}));
+        lane.nodes.slice(1).forEach((node, k) => p.seq.push({kind: "seq", from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)}));
       });
-      p.height = y0 + Math.max(...p.lanes.map(l => l.nodes.length)) * (H + GY) - GY + PAD;
+      const rows = Math.max(...p.lanes.map(l => l.nodes.length));
+      const full = rows * (H + GY) - GY, shown = rows > MAX_ROWS ? MAX_ROWS * (H + GY) + PEEK : full;
+      p.body = {top: y0 - BODY_PAD, h: shown + 2 * BODY_PAD, full: full + 2 * BODY_PAD, scroll: rows > MAX_ROWS};
+      p.height = y0 + shown + PAD;
       p.entries = p.lanes.map(l => l.nodes[0]);
       p.exits = p.lanes.map(l => l.nodes.at(-1));
     } else {
@@ -100,25 +110,40 @@ export function layoutProcess(phases, open) {
   phases.forEach((p, i) => {
     const next = phases[i + 1];
     if (!next) return;
-    const bottom = Math.max(...p.exits.map(a => a.y + a.h)) + 12;
     const route = next.entries.length > 1 ? "fanout" : p.exits.length > 1 ? "fanin" : "curve";
-    next.entries.forEach((b, j) => p.exits.forEach((a, k) => edges.push({kind: "handoff", from: a, to: b, route, bottom, gap: next.x - BAND_GAP / 2,
+    next.entries.forEach((b, j) => p.exits.forEach((a, k) => edges.push({kind: "handoff", from: a, to: b, route, exits: p.exits, gap: next.x - BAND_GAP / 2,
       label: k === 0 && p.phase === "MANAGER" && next.open ? next.lanes[j].assignment?.anchor_case_id : null})));
   });
   return {phases, edges, width: Math.max(0, x - BAND_GAP), height: height + 8};
 }
 
-function edgePath(e) {
+// The y of a point dy below a node's top as drawn: moved by its card's scroll (scroll: phase →
+// scrollTop) and held to the card body's edge while the node is scrolled out of view.
+function yAt(node, dy, scroll) {
+  const b = node.p?.body;
+  if (!b?.scroll) return node.y + dy;
+  return Math.min(Math.max(node.y + dy - (scroll[node.p.phase] || 0), b.top), b.top + b.h);
+}
+
+function edgePath(e, scroll = {}) {
   const a = e.from, b = e.to;
   if (e.kind === "seq") return `M${a.x + a.w / 2},${a.y + a.h} L${b.x + b.w / 2},${b.y - 6}`;
-  if (e.route === "fanout") return `M${a.x + a.w},${a.y + a.h / 2} H${e.gap} V${BUS} H${b.x + b.w / 2} V${b.y - 6}`;
-  if (e.route === "fanin") return `M${a.x + a.w / 2},${a.y + a.h} V${e.bottom} H${e.gap} V${b.y + b.h / 2} H${b.x - 6}`;
-  const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x - 6, y2 = b.y + b.h / 2, dx = Math.max(18, (x2 - x1) / 2);
+  if (e.route === "fanout") return `M${a.x + a.w},${yAt(a, a.h / 2, scroll)} H${e.gap} V${BUS} H${b.x + b.w / 2} V${yAt(b, -6, scroll)}`;
+  if (e.route === "fanin") {
+    const bottom = Math.max(...e.exits.map(x => yAt(x, x.h, scroll))) + 12;
+    return `M${a.x + a.w / 2},${yAt(a, a.h, scroll)} V${bottom} H${e.gap} V${yAt(b, b.h / 2, scroll)} H${b.x - 6}`;
+  }
+  const x1 = a.x + a.w, y1 = yAt(a, a.h / 2, scroll), x2 = b.x - 6, y2 = yAt(b, b.h / 2, scroll), dx = Math.max(18, (x2 - x1) / 2);
   return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
 }
 
+const edgeHtml = (e, scroll) => `<path class="proc-edge ${e.kind} ${e.retry ? "is-retry" : ""}" d="${edgePath(e, scroll)}" marker-end="url(#proc-arrow)"/>`;
+
+// Handoff edges as drawn for the given card scroll offsets; redrawn whenever a card scrolls.
+export const handoffHtml = (layout, scroll) => layout.edges.map(e => edgeHtml(e, scroll)).join("");
+
 function nodeHtml(node, sel) {
-  const pos = `left:${node.x}px;top:${node.y}px;width:${W}px;height:${H}px`;
+  const pos = `left:${node.x - node.p.x}px;top:${node.y - node.p.body.top}px;width:${W}px;height:${H}px`;
   const c = node.call;
   const errors = c.tools.filter(t => t.error).length;
   const cls = ["pnode", `phase-${c.phase}`, sel === String(c.index) && "is-selected", c.status === "pending" && "is-pending",
@@ -177,7 +202,21 @@ function phaseCard(p, {sel, selPhase}) {
   </article>`;
 }
 
-export function processHtml(layout, view) {
+// An open card's calls: a window onto its columns that scrolls when they run past MAX_ROWS,
+// with the sequence edges inside it and a "more below" button on the card's bottom edge.
+function bodyHtml(p, sel) {
+  const b = p.body;
+  return `<div class="ph-body ${b.scroll ? "is-scroll" : ""}" data-body="${p.phase}" style="left:${p.x}px;top:${b.top}px;width:${p.width}px;height:${b.h}px">
+      <div class="ph-body-inner" style="height:${b.full}px">
+        <svg class="proc-edges" width="${p.width}" height="${b.full}" aria-hidden="true"><g transform="translate(${-p.x} ${-b.top})">${p.seq.map(e => edgeHtml(e)).join("")}</g></svg>
+        ${p.lanes.flatMap(l => l.nodes).map(n => nodeHtml(n, sel)).join("")}
+      </div>
+    </div>
+    ${b.scroll ? `<button class="ph-more" data-more="${p.phase}" style="left:${p.x + p.width / 2}px;top:${b.top + b.h}px" hidden></button>` : ""}`;
+}
+
+// scroll: phase → scrollTop of each open card's body, to draw the handoff edges as they are.
+export function processHtml(layout, view, scroll = {}) {
   const {phases, edges, width, height} = layout;
   const open = phases.filter(p => p.open);
   return `<div class="proc-canvas" style="width:${width}px;height:${height}px">
@@ -185,10 +224,10 @@ export function processHtml(layout, view) {
     ${open.filter(p => p.phase === "TRACE").flatMap(p => p.lanes).map(l => `<span class="proc-lane-label" style="left:${l.x + W / 2}px;top:${LANE_LABEL_Y}px;max-width:${W}px" title="${esc(l.assignment?.question || l.key)}"><span class="mono">${esc(short(l.key, 14))}</span></span>`).join("")}
     <svg class="proc-edges" width="${width}" height="${height}" aria-hidden="true">
       <defs><marker id="proc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
-      ${edges.map(e => `<path class="proc-edge ${e.kind} ${e.retry ? "is-retry" : ""}" d="${edgePath(e)}" marker-end="url(#proc-arrow)"/>`).join("")}
+      <g class="proc-handoffs">${handoffHtml(layout, scroll)}</g>
     </svg>
     ${edges.filter(e => e.label).map(e => `<span class="proc-edge-label badge anchor" style="left:${e.to.x + W / 2}px;top:${(BUS + e.to.y) / 2}px" title="ROUTE case assigned to ${esc(e.to.call?.caseId || "")}">${esc(e.label)}</span>`).join("")}
-    ${open.flatMap(p => p.lanes.flatMap(l => l.nodes)).map(n => nodeHtml(n, view.sel)).join("")}
+    ${open.map(p => bodyHtml(p, view.sel)).join("")}
   </div>`;
 }
 

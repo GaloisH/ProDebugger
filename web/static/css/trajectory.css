@@ -145,6 +145,15 @@
 .proc-edge.is-retry { stroke: var(--bad-line); stroke-dasharray: 5 4; }
 .badge.proc-edge-label { position: absolute; z-index: 2; padding: .05rem .35rem; background: color-mix(in srgb, var(--route) 22%, var(--surface-1)); font-size: .66rem; transform: translate(-50%, -50%); pointer-events: none; }
 .pnode { z-index: 2; }
+/* An open card's calls; past three rows they scroll, faded at the edge that has more. */
+.ph-body { position: absolute; z-index: 2; overflow: hidden; }
+.ph-body.is-scroll { overflow-y: auto; scrollbar-width: thin; }
+.ph-body.more-above { mask-image: linear-gradient(to bottom, transparent, #000 1.5rem); }
+.ph-body.more-below { mask-image: linear-gradient(to top, transparent, #000 2.2rem); }
+.ph-body.more-above.more-below { mask-image: linear-gradient(transparent, #000 1.5rem, #000 calc(100% - 2.2rem), transparent); }
+.ph-body-inner { position: relative; }
+.ph-more { position: absolute; z-index: 3; padding: .05rem .55rem; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--muted); font: inherit; font-family: var(--mono); font-size: .66rem; white-space: nowrap; transform: translate(-50%, -50%); cursor: pointer; }
+.ph-more:hover { background: var(--panel-3); color: var(--text); }
 .call-list { display: flex; flex-direction: column; gap: .15rem; }
 .call-group + .call-group { margin-top: .45rem; }
 .call-group .eyebrow { display: block; margin: 0 0 .15rem .4rem; font-size: .66rem; }

@@ -5,7 +5,7 @@ import {getJSON} from "../api.js";
 import {EVAL_CLASS, factChip, factText, icon} from "../case/format.js";
 import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js";
 import {esc, pretty, short} from "../util.js";
-import {callDetail, expandable, layoutPhases, layoutProcess, overviewHtml, phaseDetail, processHtml, requestHtml} from "./process.js";
+import {callDetail, expandable, handoffHtml, layoutPhases, layoutProcess, overviewHtml, phaseDetail, processHtml, requestHtml} from "./process.js";
 import {anchorsByStep, anchorTitle} from "./route.js";
 import {candidateCard, candidatesByStep, planOf} from "./trace.js";
 
@@ -13,7 +13,7 @@ export function createView(root, ctx) {
   const state = {
     model: null, sel: null, selPhase: null, openPhases: new Set(), hover: null, openStep: null, selStep: null, hoverStep: null,
     arrowPin: null, arrowHover: null, arrowMuted: null,
-    requests: new Map(), phases: [],
+    requests: new Map(), phases: [], layout: null, bodyScroll: new Map(),
   };
   root.innerHTML = `
     <div class="traj-head">
@@ -86,10 +86,45 @@ export function createView(root, ctx) {
       return;
     }
     state.phases = layoutPhases(d.calls, d.parse, planFor(d));
-    graph.innerHTML = state.phases.length ? processHtml(layoutProcess(state.phases, state.openPhases), {sel: state.sel, selPhase: state.selPhase})
+    state.layout = state.phases.length ? layoutProcess(state.phases, state.openPhases) : null;
+    // A card reopens scrolled to the top; open ones keep their scroll across re-renders.
+    [...state.bodyScroll.keys()].forEach(name => { if (!state.openPhases.has(name)) state.bodyScroll.delete(name); });
+    graph.innerHTML = state.layout ? processHtml(state.layout, {sel: state.sel, selPhase: state.selPhase}, Object.fromEntries(state.bodyScroll))
       : `<p class="empty lane-empty">No model calls recorded yet.</p>`;
+    graph.querySelectorAll(".ph-body").forEach(body => { body.scrollTop = state.bodyScroll.get(body.dataset.body) || 0; syncBody(body); });
+    drawHandoffs();
     fitGraph();
   }
+
+  // Records a card body's scroll, fades the edge that has more calls and counts those below.
+  function syncBody(body) {
+    const top = body.scrollTop, bottom = top + body.clientHeight;
+    if (body.classList.contains("is-scroll")) state.bodyScroll.set(body.dataset.body, top);
+    const below = [...body.querySelectorAll(".pnode")].filter(n => n.offsetTop + n.offsetHeight > bottom + 1).length;
+    body.classList.toggle("more-above", top > 1);
+    body.classList.toggle("more-below", below > 0);
+    const more = graph.querySelector(`[data-more="${body.dataset.body}"]`);
+    if (more) { more.hidden = !below; more.textContent = `↓ ${below} more`; }
+  }
+
+  const drawHandoffs = () => {
+    const g = graph.querySelector(".proc-handoffs");
+    if (g && state.layout) g.innerHTML = handoffHtml(state.layout, Object.fromEntries(state.bodyScroll));
+  };
+
+  // Scrolls a selected call into view inside its card.
+  function revealNode(key) {
+    const node = key == null ? null : graph.querySelector(`.pnode[data-call="${key}"]`), body = node?.closest(".ph-body.is-scroll");
+    if (!body) return;
+    const top = node.offsetTop - 6, bottom = node.offsetTop + node.offsetHeight + 6;
+    if (top < body.scrollTop) body.scrollTop = top;
+    else if (bottom > body.scrollTop + body.clientHeight) body.scrollTop = bottom - body.clientHeight;
+    else return;
+    syncBody(body); drawHandoffs();
+  }
+
+  // The card a pointer is on, counting the open card's body of calls as part of it.
+  const cardAt = el => el.closest(".ph-card") || cardOf(el.closest(".ph-body")?.dataset.body);
 
   // The whole graph always fits its frame: a canvas wider than the frame or taller than its
   // max-height is scaled down (never up), and the negative margins give back the space it frees.
@@ -270,7 +305,10 @@ export function createView(root, ctx) {
     const r = el.getBoundingClientRect(), s = scroller.getBoundingClientRect();
     const cx = Math.min(Math.max(r.left + r.width / 2, s.left + 8), s.right - 8);
     const off = r.right < s.left || r.left > s.right || r.bottom < s.top || r.top > s.bottom;
-    return {x: cx - base.left, top: r.top - base.top, bottom: Math.min(r.bottom, s.bottom) - base.top, off};
+    // A call scrolled out of its card's body links from the body's edge.
+    const clip = el.closest(".ph-body")?.getBoundingClientRect();
+    const bottom = clip ? Math.min(Math.max(r.bottom, clip.top), clip.bottom) : r.bottom;
+    return {x: cx - base.left, top: r.top - base.top, bottom: Math.min(bottom, s.bottom) - base.top, off};
   }
 
   function drawLinks() {
@@ -333,7 +371,7 @@ export function createView(root, ctx) {
     const call = callOf(key);
     if (call) state.selPhase = call.phase;
     if (call && reveal && expandable(phaseOf(call.phase))) state.openPhases.add(call.phase);
-    renderGraph(); renderSide();
+    renderGraph(); renderSide(); revealNode(key);
     scheduleLinks();
   }
 
@@ -379,9 +417,11 @@ export function createView(root, ctx) {
     if (zoom) { zoom.classList.toggle("is-full"); scheduleLinks(); return; }
     const node = el.closest(".pnode");
     if (node) { select(state.sel === node.dataset.call ? null : node.dataset.call); return; }
+    const more = el.closest("[data-more]")?.dataset.more;
+    if (more) { const body = graph.querySelector(`[data-body="${more}"]`); body?.scrollBy({top: body.clientHeight - 40, behavior: "smooth"}); return; }
     const toggle = el.closest("[data-toggle-phase]")?.dataset.togglePhase;
     if (toggle) { selectPhase(toggle, !state.openPhases.has(toggle)); return; }
-    const card = el.closest(".ph-card");
+    const card = cardAt(el);
     if (card) { selectPhase(card.dataset.phase, true); return; }
     const b = el.closest("button");
     if (b?.dataset.pan) { $(b.dataset.pan).scrollBy({left: Number(b.dataset.dir) * steps.clientWidth * .8, behavior: "smooth"}); return; }
@@ -405,7 +445,7 @@ export function createView(root, ctx) {
     // Keep a previewed popover while the pointer moves onto it.
     const arrow = event.target.closest("[data-arrow]");
     if (!event.target.closest(".arrow-pop")) hoverArrow(arrow ? Number(arrow.dataset.arrow) : null);
-    const node = event.target.closest(".pnode"), card = event.target.closest(".ph-card"), st = arrow ? null : event.target.closest(".st-card");
+    const node = event.target.closest(".pnode"), card = cardAt(event.target), st = arrow ? null : event.target.closest(".st-card");
     const hn = node ? node.dataset.call : card ? "phase:" + card.dataset.phase : null;
     const hs = st && !st.classList.contains("is-open") ? Number(st.dataset.step) : null;
     if (hn !== state.hover || hs !== state.hoverStep) { state.hover = hn; state.hoverStep = hs; scheduleLinks(); }
@@ -447,6 +487,11 @@ export function createView(root, ctx) {
   });
 
   steps.addEventListener("scroll", scheduleLinks, {passive: true});
+  // Scroll does not bubble: catch the card bodies' scrolling on the way down.
+  graph.addEventListener("scroll", event => {
+    if (event.target.classList?.contains("ph-body")) { syncBody(event.target); drawHandoffs(); }
+    scheduleLinks();
+  }, {capture: true, passive: true});
   window.addEventListener("scroll", scheduleLinks, {passive: true});
   const resize = new ResizeObserver(scheduleLinks);
   resize.observe(lanes);

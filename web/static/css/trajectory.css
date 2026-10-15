@@ -20,7 +20,22 @@
 .lane-gap { height: 4.75rem; }
 .lane-empty { width: 100%; margin: 0; }
 
-.lane-steps .lane-track > * + *::before { content: '→'; position: absolute; top: 3.2rem; left: -1.45rem; width: 1.3rem; text-align: center; color: var(--muted); font-size: 1.1rem; pointer-events: none; }
+/* Arrow into a step: hover previews its violated rules, click pins them. */
+.step-arrow { position: absolute; top: 2.85rem; left: -1.5rem; width: 1.4rem; height: 1.4rem; padding: 0; border: 1px solid transparent; border-radius: .35rem; background: none; color: var(--muted); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.step-arrow:hover, .step-arrow:focus-visible { border-color: var(--line-strong); background: var(--panel-3); color: var(--text-hi); }
+.step-arrow.is-warn { color: var(--amber); }
+.step-arrow.is-pinned { border-color: var(--accent-line); background: var(--sel-bg); color: var(--sel-ink); }
+.arrow-pop { position: fixed; z-index: 40; width: min(24rem, calc(100vw - 16px)); max-height: 60vh; overflow: auto; padding: .65rem .75rem; border: 1px solid var(--line-strong); border-radius: .6rem; background: var(--panel); box-shadow: 0 12px 28px var(--shadow-soft); font-size: .8rem; pointer-events: none; }
+.arrow-pop.is-pinned { border-color: var(--accent-line); pointer-events: auto; }
+.arrow-pop p { margin: .35rem 0 0; }
+.pop-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.pop-rules { margin: .5rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+.pop-rules > li { padding-top: .45rem; border-top: 1px solid var(--line); }
+.pop-rule { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .5rem; margin-bottom: .3rem; }
+.pop-rule .mono { color: var(--bad-ink); }
+.arrow-pop .fact-chip { cursor: default; }
+.arrow-pop.is-pinned .fact-chip { cursor: pointer; }
+.pop-foot { color: var(--faint); font-size: .72rem; }
 .lane-steps .lane-track { gap: 1.6rem; }
 
 /* Cards */

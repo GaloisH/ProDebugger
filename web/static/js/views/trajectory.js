@@ -2,7 +2,7 @@
 // original agent steps. Selecting a phase or call opens it in the side panel and links it
 // to the steps it touched.
 import {getJSON} from "../api.js";
-import {EVAL_CLASS, factChip, icon} from "../case/format.js";
+import {EVAL_CLASS, factChip, factText, icon} from "../case/format.js";
 import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js";
 import {esc, pretty, short} from "../util.js";
 import {callDetail, expandable, layoutPhases, layoutProcess, overviewHtml, phaseDetail, processHtml, requestHtml} from "./process.js";
@@ -12,6 +12,7 @@ import {candidateCard, candidatesByStep, planOf} from "./trace.js";
 export function createView(root, ctx) {
   const state = {
     model: null, sel: null, selPhase: null, openPhases: new Set(), hover: null, openStep: null, selStep: null, hoverStep: null,
+    arrowPin: null, arrowHover: null, arrowMuted: null,
     requests: new Map(), phases: [],
   };
   root.innerHTML = `
@@ -34,7 +35,8 @@ export function createView(root, ctx) {
         <div class="lane-scroll" id="tj-steps" tabindex="0"><div class="lane-track" id="tj-step-track"></div></div>
       </section>
       <svg class="lane-links" id="tj-links" aria-hidden="true"></svg>
-    </div>`;
+    </div>
+    <div class="arrow-pop" id="tj-arrow-pop" role="tooltip" hidden></div>`;
   const $ = id => root.querySelector("#" + id);
   const graph = $("tj-graph"), side = $("tj-side"), steps = $("tj-steps"), lanes = $("tj-lanes");
 
@@ -175,6 +177,7 @@ export function createView(root, ctx) {
     const thought = roles.reasoning.at(-1)?.value;
     const cls = ["st-card", open && "is-open", state.selStep === t && "is-selected", violated && "has-violation"].filter(Boolean).join(" ");
     return `<article class="${cls}" data-step="${t}">
+      ${i ? `<button class="step-arrow ${violated ? "is-warn" : ""}" data-arrow="${t}" aria-label="Rules at S${String(t).padStart(2, "0")}" aria-expanded="${state.arrowPin === t}">→</button>` : ""}
       <div class="card-meta">
         <div class="card-top"><span class="mono card-idx">S${String(t).padStart(2, "0")}</span><button class="card-toggle" data-toggle-step="${t}" aria-expanded="${open}" aria-label="${open ? "Collapse" : "Expand"} step">${open ? "−" : "+"}</button></div>
         <span class="card-icon">${icon("step")}</span>
@@ -199,6 +202,67 @@ export function createView(root, ctx) {
       const marks = [violated && "is-warn", idx.gaps.has(t) && "has-gap", idx.anchors.has(t) && "is-anchor", idx.candidates.has(t) && "is-candidate"].filter(Boolean).join(" ");
       return `<button class="tick step-tick ${marks}" style="--heat:${heat.toFixed(2)}" data-jump-step="${t}" title="S${t}${idx.anchors.has(t) ? " · anchor" : ""}${idx.gaps.has(t) ? " · parse gap" : ""}"></button>`;
     }).join("");
+  }
+
+  // ---------- arrow popover ----------
+  // The arrow into S(t) summarises the rules S(t) violated and the facts they cite. Hover
+  // previews it; a click pins it until the same arrow is clicked again.
+  const pop = $("tj-arrow-pop");
+  const MAX_REFS = 3;
+
+  function arrowHtml(t, pinned) {
+    const evals = state.idx.evals.get(t) || [];
+    const counts = {};
+    evals.forEach(e => { counts[e.state] = (counts[e.state] || 0) + 1; });
+    const violated = evals.filter(e => e.state === "violated");
+    const fact = fid => state.model.dsl?.factsById.get(fid);
+    const rows = violated.map(e => {
+      const refs = (e.refs || []).map(fact).filter(Boolean);
+      return `<li><div class="pop-rule"><span class="mono">${esc(e.rule)}</span>${e.details?.reason ? `<span class="muted">${esc(e.details.reason)}</span>` : ""}</div>
+        ${refs.length ? `<div class="chip-col">${refs.slice(0, MAX_REFS).map(f => pinned ? factChip(f) : `<span class="fact-chip side-${esc(f.side)}"><span class="mono fid">f${f.fid}</span><span class="fact-text">${esc(short(factText(f), 70))}</span></span>`).join("")}${refs.length > MAX_REFS ? `<span class="muted">+${refs.length - MAX_REFS} more</span>` : ""}</div>` : `<p class="muted">No cited facts.</p>`}</li>`;
+    }).join("");
+    return `<div class="pop-head"><span class="mono">→ S${String(t).padStart(2, "0")}</span>
+        <span class="chip-row">${Object.entries(counts).map(([s, n]) => `<span class="badge ${EVAL_CLASS[s] || ""}">${esc(s)} ${n}</span>`).join("") || `<span class="muted">no rule evaluations</span>`}</span></div>
+      ${violated.length ? `<ol class="pop-rules">${rows}</ol>` : `<p class="muted">No violated rules at this step.</p>`}
+      <p class="pop-foot">${pinned ? "Pinned · click the arrow again to close" : "Click the arrow to pin"}</p>`;
+  }
+
+  function placePop() {
+    const t = state.arrowHover ?? state.arrowPin;
+    const arrow = t == null ? null : steps.querySelector(`[data-arrow="${t}"]`);
+    root.querySelectorAll(".step-arrow").forEach(el => {
+      const at = Number(el.dataset.arrow);
+      el.classList.toggle("is-pinned", at === state.arrowPin);
+      el.setAttribute("aria-expanded", at === state.arrowPin);
+    });
+    if (!arrow) { pop.hidden = true; pop.dataset.key = ""; return; }
+    const pinned = t === state.arrowPin;
+    const key = `${t}:${pinned}`;
+    if (pop.dataset.key !== key) { pop.innerHTML = arrowHtml(t, pinned); pop.dataset.key = key; }
+    pop.classList.toggle("is-pinned", pinned);
+    pop.hidden = false;
+    const a = arrow.getBoundingClientRect(), s = steps.getBoundingClientRect();
+    // An arrow scrolled out of the lane hides its popover rather than float over the graph.
+    if (a.right < s.left || a.left > s.right) { pop.hidden = true; return; }
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    const left = Math.max(8, Math.min(innerWidth - w - 8, a.left + a.width / 2 - w / 2));
+    const below = a.bottom + 8;
+    pop.style.left = `${left}px`;
+    pop.style.top = `${below + h > innerHeight - 8 ? Math.max(8, a.top - h - 8) : below}px`;
+  }
+
+  function hoverArrow(t) {
+    if (t !== state.arrowMuted) state.arrowMuted = null;
+    if (t === state.arrowMuted) t = null;
+    if (t === state.arrowHover) return;
+    state.arrowHover = t;
+    placePop();
+  }
+
+  function clickArrow(t) {
+    if (state.arrowPin === t) { state.arrowPin = null; state.arrowHover = null; state.arrowMuted = t; }
+    else { state.arrowPin = t; state.arrowHover = null; }
+    placePop();
   }
 
   // ---------- links between graph and steps ----------
@@ -245,7 +309,7 @@ export function createView(root, ctx) {
     }).join("");
   }
   let raf = 0;
-  const scheduleLinks = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(drawLinks); };
+  const scheduleLinks = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { drawLinks(); placePop(); }); };
 
   // ---------- render & events ----------
   function render() {
@@ -292,6 +356,8 @@ export function createView(root, ctx) {
   root.addEventListener("click", async event => {
     const el = event.target;
     if (el.closest("#tj-side-toggle")) { setSideOpen(side.hidden); return; }
+    const arrow = el.closest("[data-arrow]")?.dataset.arrow;
+    if (arrow != null) { clickArrow(Number(arrow)); return; }
     const fid = el.closest("[data-fid]")?.dataset.fid;
     if (fid != null) { ctx.navigate("graph", "facts", fid); return; }
     const req = el.closest("[data-request]")?.dataset.request;
@@ -331,20 +397,24 @@ export function createView(root, ctx) {
   });
 
   root.addEventListener("dblclick", event => {
-    if (event.target.closest(".card-detail")) return;
+    if (event.target.closest(".card-detail, .step-arrow")) return;
     event.target.closest("[data-step]")?.querySelector(".card-toggle")?.click();
   });
 
   root.addEventListener("pointerover", event => {
-    const node = event.target.closest(".pnode"), card = event.target.closest(".ph-card"), st = event.target.closest(".st-card");
+    // Keep a previewed popover while the pointer moves onto it.
+    const arrow = event.target.closest("[data-arrow]");
+    if (!event.target.closest(".arrow-pop")) hoverArrow(arrow ? Number(arrow.dataset.arrow) : null);
+    const node = event.target.closest(".pnode"), card = event.target.closest(".ph-card"), st = arrow ? null : event.target.closest(".st-card");
     const hn = node ? node.dataset.call : card ? "phase:" + card.dataset.phase : null;
     const hs = st && !st.classList.contains("is-open") ? Number(st.dataset.step) : null;
     if (hn !== state.hover || hs !== state.hoverStep) { state.hover = hn; state.hoverStep = hs; scheduleLinks(); }
   });
   lanes.addEventListener("pointerleave", () => { state.hover = state.hoverStep = null; scheduleLinks(); });
+  root.addEventListener("pointerleave", () => hoverArrow(null));
 
   root.addEventListener("keydown", event => {
-    if (event.key === "Escape") { state.openStep = null; state.sel = state.selPhase = null; state.openPhases.clear(); render(); return; }
+    if (event.key === "Escape") { state.arrowPin = state.arrowHover = null; state.openStep = null; state.sel = state.selPhase = null; state.openPhases.clear(); render(); return; }
     const lane = event.target.closest(".proc-view, .lane-scroll");
     const keys = lane === graph ? ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter"] : ["ArrowLeft", "ArrowRight", "Enter"];
     if (!lane || !keys.includes(event.key)) return;

@@ -123,11 +123,22 @@ export function createView(root, ctx) {
     syncBody(body); drawHandoffs();
   }
 
+  // Scrolls the frame sideways until a card is in view, when the graph overflows it.
+  function revealCard(name) {
+    const card = cardOf(name);
+    if (!card || !graph.classList.contains("is-overflow")) return;
+    const g = graph.getBoundingClientRect(), r = card.getBoundingClientRect();
+    if (r.left < g.left + 16) graph.scrollLeft += r.left - g.left - 16;
+    else if (r.right > g.right - 16) graph.scrollLeft += Math.min(r.right - g.right + 16, r.left - g.left - 16);
+  }
+
   // The card a pointer is on, counting the open card's body of calls as part of it.
   const cardAt = el => el.closest(".ph-card") || cardOf(el.closest(".ph-body")?.dataset.body);
 
-  // The whole graph always fits its frame: a canvas wider than the frame or taller than its
-  // max-height is scaled down (never up), and the negative margins give back the space it frees.
+  // The graph fits its frame: a canvas wider than the frame or taller than its max-height is
+  // scaled down (never up, and no further than MIN_SCALE so the text stays readable), and the
+  // negative margins give back the space it frees. Whatever still does not fit scrolls.
+  const MIN_SCALE = .75;
   function fitGraph() {
     const canvas = graph.querySelector(".proc-canvas");
     if (!canvas) return;
@@ -136,7 +147,8 @@ export function createView(root, ctx) {
     const roomW = graph.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const roomH = parseFloat(cs.maxHeight) - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
     if (roomW <= 0) return; // hidden tab: refit once the frame has a width
-    const scale = Math.min(1, roomW / w, roomH / h);
+    const scale = Math.max(MIN_SCALE, Math.min(1, roomW / w, roomH / h));
+    graph.classList.toggle("is-overflow", w * scale > roomW + .5 || h * scale > roomH + .5);
     canvas.style.transform = scale < 1 ? `scale(${scale})` : "";
     canvas.style.marginRight = `${w * (scale - 1)}px`;
     canvas.style.marginBottom = `${h * (scale - 1)}px`;
@@ -372,6 +384,7 @@ export function createView(root, ctx) {
     if (call) state.selPhase = call.phase;
     if (call && reveal && expandable(phaseOf(call.phase))) state.openPhases.add(call.phase);
     renderGraph(); renderSide(); revealNode(key);
+    if (call) revealCard(call.phase);
     scheduleLinks();
   }
 
@@ -380,7 +393,7 @@ export function createView(root, ctx) {
     state.sel = null; state.selPhase = name;
     if (open === true && expandable(phaseOf(name))) state.openPhases.add(name);
     if (open === false) state.openPhases.delete(name);
-    renderGraph(); renderSide();
+    renderGraph(); renderSide(); revealCard(name);
     scheduleLinks();
   }
 

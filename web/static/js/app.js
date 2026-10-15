@@ -6,6 +6,7 @@ import {mountHome} from "./pages/home.js";
 import {mountRuns} from "./pages/runs.js";
 import {mountChat} from "./pages/chat.js";
 import {mountWorkbench} from "./pages/workbench.js";
+import {initTheme, setThemePage} from "./theme.js";
 
 const app = document.getElementById("app");
 const crumbs = document.getElementById("crumbs");
@@ -29,6 +30,7 @@ function render() {
   const route = parseRoute();
   // The home page brings its own light header and full-bleed layout.
   document.body.classList.toggle("page-home", route.page === "home");
+  setThemePage(route.page === "home");
   setCrumbs(route);
   // Switching tabs inside the same case keeps the loaded store alive.
   // The chat page keeps its sidebar and composer while switching conversations.
@@ -41,4 +43,5 @@ function render() {
 }
 
 window.addEventListener("hashchange", render);
+initTheme();
 render();

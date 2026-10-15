@@ -59,6 +59,9 @@
   --cell: #17212b; --bar: #243240; --bar-strong: #3a4a59;
   --edge: #52626f; --edge-dim: #3f4d59; --edge-hi: #b6c3cf;
   --amber: #f0cf86; --route-hot: #e9854f;
+  /* Overlays: insets, hairlines and hovers laid over any surface; shadow colours */
+  --tint: #00000024; --tint-line: #ffffff14; --tint-line-hi: #ffffff55; --tint-hover: #ffffff10; --tint-faint: #ffffff05; --grid-dot: #ffffff0b;
+  --shadow-ink: #000; --shadow-soft: #0006;
   /* Debugger phases (trace is terracotta so it stays apart from the amber accent) */
   --map: #7fa7d9; --route: #b39ad6; --trace: #e08a62; --submit: #8cc49a;
   --manager: #d48fb6; --parse: #8d9aa8;
@@ -68,6 +71,65 @@
   --header-h: 3.75rem;
   scrollbar-color: var(--bar-strong) var(--bg);
 }
+
+/* Light: warm paper surfaces with the same amber, darkened wherever it is text. The home page
+   keeps its own palette and never gets data-theme (see js/theme.js). */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f5f2ec;
+  --bg-deep: #fbfaf7;
+  --bg-lift: #f8f6f1;
+  --inset: #efebe2;
+  --surface-1: #fbfaf7;
+  --surface-2: #f5f2eb;
+  --panel: #fff;
+  --panel-2: #fff;
+  --panel-3: #f6f2e9;
+  --hover: #ede7da;
+  --text: #1b2127;
+  --text-2: #36404a;
+  --text-hi: #0b0e11;
+  --muted: #5d6772;
+  --faint: #78828c;
+  --line: #e6e0d3;
+  --line-strong: #d4cbb8;
+  --line-soft: #ece7dc;
+  --accent: #96660a;
+  --accent-strong: #e0b867;
+  --accent-strong-hover: #d9a94a;
+  --accent-line: #d6b062;
+  --accent-line-2: #c99a3c;
+  --on-accent: #1a1406;
+  --focus: #b07d16;
+  --active-bg: #fbf0d6;
+  --active-soft: #fdf6e6;
+  --active-ink: #74500b;
+  --sel-bg: #f3d9a0;
+  --sel-ink: #12161b;
+  --warn-bg: #fdf3dc; --warn-line: #d6b05a; --warn-ink: #75520a;
+  --bad-bg: #fbeae8;  --bad-line: #d88a84;  --bad-ink: #a2322b;
+  --ok-bg: #e7f4eb;   --ok-line: #82bf96;   --ok-ink: #22663b;
+  --info-bg: #e7f0fb; --info-line: #88afdb; --info-ink: #24548a;
+  --teal-bg: #e4f4f4; --teal-line: #7cb9bb; --teal-ink: #1e6265;
+  --violet-bg: #f0ebfa; --violet-line: #a998d6; --violet-ink: #523f8e;
+  --live: #2f9e6b; --live-line: #6dc49b; --live-bg: #e4f5ec; --live-ink: #1c6a46;
+  --bad-hi: #c2463d; --bad-deep: #fcefed; --bad-hover: #f5dad7; --warn-deep: #fcf4e2;
+  --violet-hi: #6a54b4;
+  --teal2-bg: #e5f4ef; --teal2-line: #7cb8a6; --teal2-ink: #225f4e;
+  --user-line: #d6b062; --user-bg-1: #fbf0d6; --user-bg-2: #fdf8ec;
+  --cell: #efebe2; --bar: #e2dccf; --bar-strong: #c8bfac;
+  --edge: #959ea6; --edge-dim: #b3bac0; --edge-hi: #46505a;
+  --amber: #c8901a; --route-hot: #cf6429;
+  --tint: #3a2f1a0a; --tint-line: #3a2f1a1c; --tint-line-hi: #3a2f1a4d; --tint-hover: #3a2f1a0d; --tint-faint: #3a2f1a05; --grid-dot: #3a2f1a1f;
+  --shadow-ink: #3a2f1a59; --shadow-soft: #3a2f1a2e;
+  --map: #3f73b3; --route: #7b5bb6; --trace: #c25f2c; --submit: #3d8650;
+  --manager: #ad5288; --parse: #687583;
+}
+
+/* Theme switch in the header: follows the system, or forces light or dark. */
+.theme-toggle { display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; border: 1px solid var(--line-strong); border-radius: .5rem; background: var(--surface-2); color: var(--muted); cursor: pointer; }
+.theme-toggle:hover { background: var(--panel-3); color: var(--text); }
+.theme-toggle svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; }
 body {

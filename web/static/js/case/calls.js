@@ -22,6 +22,32 @@ function collectRefs(value, factsById, limit = 4000) {
   return {steps: sort(steps), fids: sort(fids)};
 }
 
+// SQL queries search whole step ranges, so their result rows say what matched, not what the
+// query was about. They link only to steps the SQL names outright (step = n, step IN (...));
+// buildCalls adds the TRACE case's ROUTE windows. The rows stay listed in the call detail.
+const SQL_TOOLS = new Set(["query_logs"]);
+
+function sqlSteps(sql) {
+  const steps = new Set();
+  const code = String(sql || "").replace(/--[^\n]*/g, "").replace(/'(?:[^']|'')*'/g, "''");
+  for (const m of code.matchAll(/\bstep\s*=\s*(\d+)/gi)) steps.add(Number(m[1]));
+  for (const m of code.matchAll(/\bstep\s+IN\s*\(\s*(\d+(?:\s*,\s*\d+)*)\s*\)/gi)) m[1].split(",").forEach(n => steps.add(Number(n)));
+  return [...steps].filter(t => t > 0);
+}
+
+function caseWindowSteps(caseId, raw) {
+  const windows = new Map(((Array.isArray(raw.route_candidates) ? raw.route_candidates.at(-1) : raw.route_candidates)?.windows || [])
+    .map(w => [w.candidate_id, w]));
+  const assignment = (raw.manager_plan?.assignments || []).find(a => a.agent_id === caseId);
+  const ids = assignment?.route_case_ids || (assignment?.anchor_case_id ? [assignment.anchor_case_id] : [caseId]);
+  return ids.flatMap(id => {
+    const w = windows.get(id);
+    if (!w) return [];
+    const lo = Number(w.lo ?? w.issue_step), hi = Number(w.hi ?? w.issue_step);
+    return Number.isFinite(lo) && Number.isFinite(hi) && hi >= lo ? Array.from({length: hi - lo + 1}, (_, i) => lo + i) : [];
+  });
+}
+
 // Graph bands, in pipeline order. PARSE is folded into one group ahead of MAP.
 export const CALL_PHASES = ["PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"];
 
@@ -68,7 +94,9 @@ function callsFrom(rows, {folder = "", journal = new Map(), factsById} = {}) {
     call.seconds = call.start != null && call.end != null ? (call.end - call.start) / 1000 : null;
     call.rejected = call.tools.some(t => t.error);
     call.caseId = call.phase === "TRACE" ? caseOf(call.tools) : null;
-    Object.assign(call, collectRefs(call.tools.map(t => ({args: t.args, data: t.result?.data})), factsById));
+    const refs = collectRefs(call.tools.map(t => SQL_TOOLS.has(t.name) ? {args: t.args} : {args: t.args, data: t.result?.data}), factsById);
+    const named = call.tools.filter(t => SQL_TOOLS.has(t.name)).flatMap(t => sqlSteps(t.args?.sql));
+    Object.assign(call, refs, {steps: [...new Set([...refs.steps, ...named])].sort((a, b) => a - b)});
   });
   return calls;
 }
@@ -103,6 +131,9 @@ export function buildCalls(raw, factsById) {
     if (call.caseId == null) call.caseId = current == null || assessed ? order[order.indexOf(current) + 1] ?? current : current;
     assessed = call.tools.some(t => t.name === "assess" && !t.error);
     current = call.caseId;
+    if (call.tools.some(t => SQL_TOOLS.has(t.name)) && call.caseId != null) {
+      call.steps = [...new Set([...call.steps, ...caseWindowSteps(call.caseId, raw)])].sort((a, b) => a - b);
+    }
   });
   calls.forEach((call, i) => { call.index = i; call.n = i + 1; });
   const parseCalls = [

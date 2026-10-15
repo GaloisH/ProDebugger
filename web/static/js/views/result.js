@@ -213,7 +213,13 @@ export function createView(root, ctx) {
     canvas = createCanvas(root.querySelector("#ev-stage"), {
       onClick: id => select(id), onBackground: () => select(null), onDouble: id => open(nodeOf(id)?.goto),
     });
-    canvas.setScene(layoutEvidence(graph));
+    // The graph is wide and short: size the canvas to the height it needs once fitted to width.
+    const scene = layoutEvidence(graph), stage = root.querySelector("#ev-stage");
+    const xs = [...scene.nodes, ...scene.groups], h = Math.max(...xs.map(n => n.y + n.h)) - Math.min(...xs.map(n => n.y));
+    const w = Math.max(...xs.map(n => n.x + n.w)) - Math.min(...xs.map(n => n.x));
+    const k = Math.min(1.2, (stage.clientWidth - 80) / w);
+    stage.style.height = `${Math.round(Math.max(260, h * k + 110))}px`;
+    canvas.setScene(scene);
     select(null);
   }
 

@@ -62,7 +62,7 @@
 .result-mode { margin-left: auto; }
 .ev-layout { display: grid; grid-template-columns: minmax(0, 1fr) 24rem; gap: 1rem; align-items: start; }
 .ev-main { display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
-.ev-stage { height: calc(100vh - var(--header-h) - 13rem); }
+.ev-stage { height: 22rem; min-height: 0; }
 .ev-side .detail-block, .ev-side .side-section { margin-top: .6rem; }
 .ev-side .text-box { max-height: 14rem; }
 .node.ev-fact .node-box { fill: var(--info-bg); stroke: var(--info-line); }
@@ -92,4 +92,3 @@
 .group.ev-band rect { fill: var(--tint-faint); }
 .ev-layout .ev-side { grid-column: auto; position: sticky; max-height: calc(100vh - var(--header-h) - 4.6rem); }
 @media (max-width: 1100px) { .ev-layout { grid-template-columns: 1fr; } .ev-layout .ev-side { grid-column: 1 / -1; position: static; max-height: none; } }
-.ev-stage .graph-minimap { display: none; }

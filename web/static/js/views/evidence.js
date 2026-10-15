@@ -1,5 +1,5 @@
 // Result graph: how the evidence led to the answer. One lane per MANAGER assignment and
-// six layers top to bottom: ROUTE issue facts → anchor cases → MANAGER questions → TRACE SQL
+// six layers left to right: ROUTE issue facts → anchor cases → MANAGER questions → TRACE SQL
 // findings → TRACE candidates → SUBMIT answer. Edge labels carry structured facts only
 // (requirements, step moves, selected or not); free-text reasoning stays in the side panel.
 import {factText} from "../case/format.js";
@@ -16,8 +16,8 @@ const SLOT = {obs: "observation", mem: "memory", refl: "reflection", plan: "plan
 export const LAYERS = [["Evidence", "ROUTE facts"], ["ROUTE", "Anchors"], ["MANAGER", "Questions"],
   ["TRACE", "SQL findings"], ["TRACE", "Candidates"], ["SUBMIT", "Answer"]];
 
-// "S02–S03, S22, S29": consecutive steps folded into ranges, at most `max` ranges shown.
-export function stepRanges(steps, max = 3) {
+// "S02–S03, S22 +1": consecutive steps folded into ranges, at most `max` ranges shown.
+export function stepRanges(steps, max = 2) {
   const sorted = [...new Set(steps)].sort((a, b) => a - b), ranges = [];
   sorted.forEach(t => {
     const last = ranges.at(-1);
@@ -64,7 +64,7 @@ export function buildEvidence(model, stop) {
     const reqs = (w.goal_links || []).map(g => String(g).replace(/^req:/, ""));
     add({id: `f:${w.candidate_id}`, layer: 0, kind: "fact", lane: nodes.get(`a:${w.candidate_id}`).lane, facts: list,
       label: steps.length === 1 ? `${S(steps[0])} · ${slots.join(", ")}` : `${stepRanges(steps)} · ${plural(list.length, "fact")}`,
-      sub: short(list.map(f => `f${f.fid}`).join(", "), 30), title: list.map(f => `f${f.fid} ${factText(f)}`).join("\n"), goto: {step: w.issue_step}});
+      sub: short(list.map(f => `f${f.fid}`).join(", "), 25), title: list.map(f => `f${f.fid} ${factText(f)}`).join("\n"), goto: {step: w.issue_step}});
     link(`f:${w.candidate_id}`, `a:${w.candidate_id}`, reqs.length ? {label: `violates ${reqs.join(", ")}`} : {});
   });
 
@@ -121,7 +121,7 @@ export function buildEvidence(model, stop) {
   if (rc) {
     const chosen = candidates.get(rc.root_id);
     add({id: "answer", layer: 5, kind: "answer", lane: chosen ? chosen.lane : mean(assignments.map((_, i) => i)),
-      label: `Answer · ${S(rc.step)} ${rc.module || ""}`.trim(), sub: human(rc.fault_class), title: short(rc.proposition || "", 300),
+      label: `${S(rc.step)} ${rc.module || ""}`.trim(), sub: human(rc.fault_class), badge: "answer", title: short(rc.proposition || "", 300),
       root: rc, result: r, plan, goto: {step: rc.step}, submit});
     if (chosen) link(chosen.id, "answer", {cls: "ev-chosen", label: "selected", hot: true});
     const out = [...candidates.values()].filter(n => n !== chosen);
@@ -165,44 +165,61 @@ function markChain(nodes, edges) {
 }
 
 // ---------- layout ----------
-const NW = 200, NH = 50, GX = 26, GY = 74;
+// Left to right: one column per layer, one row per lane. The gaps between columns hold the
+// edge labels, wrapped to fit.
+const NW = 168, NH = 50, GX = 104, GY = 22, LABEL_CHARS = 16;
+
+function wrap(text) {
+  const lines = [];
+  String(text).split(" ").forEach(word => {
+    if (lines.length && (lines.at(-1) + " " + word).length <= LABEL_CHARS) lines[lines.length - 1] += " " + word;
+    else lines.push(word);
+  });
+  return lines;
+}
 
 export function layoutEvidence({nodes, edges}) {
   const used = [...new Set(nodes.map(n => n.layer))].sort((a, b) => a - b);
-  const row = new Map(used.map((l, i) => [l, i]));
-  // Lane widths fit their widest layer (usually the candidates).
+  const col = new Map(used.map((l, i) => [l, i]));
+  // Lane heights fit their tallest column (usually the candidates).
   const laneCount = Math.max(1, Math.ceil(Math.max(0, ...nodes.map(n => n.lane)) + 1));
-  const widths = Array.from({length: laneCount}, (_, i) => Math.max(1, ...nodes.filter(n => n.lane === i && n.slots).map(n => n.slots)) * (NW + GX));
-  const starts = widths.map((_, i) => widths.slice(0, i).reduce((s, w) => s + w, 0));
+  const heights = Array.from({length: laneCount}, (_, i) => Math.max(1, ...nodes.filter(n => n.lane === i && n.slots).map(n => n.slots)) * (NH + GY));
+  const starts = heights.map((_, i) => heights.slice(0, i).reduce((s, h) => s + h, 0));
   const centre = lane => {
     const lo = Math.floor(lane), hi = Math.min(laneCount - 1, Math.ceil(lane)), f = lane - lo;
-    const c = i => starts[Math.min(i, laneCount - 1)] + widths[Math.min(i, laneCount - 1)] / 2;
+    const c = i => starts[Math.min(i, laneCount - 1)] + heights[Math.min(i, laneCount - 1)] / 2;
     return c(lo) * (1 - f) + c(hi) * f;
   };
   used.forEach(layer => {
     const items = nodes.filter(n => n.layer === layer);
-    items.forEach(n => { n.want = centre(n.lane) + (n.slots ? (n.slot - (n.slots - 1) / 2) * (NW + GX) : 0); });
+    items.forEach(n => { n.want = centre(n.lane) + (n.slots ? (n.slot - (n.slots - 1) / 2) * (NH + GY) : 0); });
     items.sort((a, b) => a.want - b.want);
-    items.forEach((n, i) => { n.cx = i ? Math.max(n.want, items[i - 1].cx + NW + GX) : n.want; });
-    const drift = mean(items.map(n => n.cx - n.want));
-    items.forEach(n => Object.assign(n, {x: n.cx - drift - NW / 2, y: row.get(layer) * (NH + GY), w: NW, h: NH}));
+    items.forEach((n, i) => { n.cy = i ? Math.max(n.want, items[i - 1].cy + NH + GY) : n.want; });
+    const drift = mean(items.map(n => n.cy - n.want));
+    items.forEach(n => Object.assign(n, {x: col.get(layer) * (NW + GX), y: n.cy - drift - NH / 2, w: NW, h: NH}));
   });
   const byId = new Map(nodes.map(n => [n.id, n]));
   const labels = [];
   const paths = edges.map(e => {
     const a = byId.get(e.from), b = byId.get(e.to);
-    const ax = a.x + a.w / 2, ay = a.y + a.h, bx = b.x + b.w / 2, by = b.y, my = (ay + by) / 2;
-    if (e.label) labels.push({x: (ax + bx) / 2 + 8, y: my + 4, text: e.label, cls: `edge-label ${e.cls || ""} ${e.chain ? "on-chain" : ""}`});
-    return {...e, path: `M${ax},${ay} C${ax},${my} ${bx},${my} ${bx},${by - 2}`,
+    const ax = a.x + a.w, ay = a.y + a.h / 2, bx = b.x, by = b.y + b.h / 2, mx = (ax + bx) / 2;
+    if (e.label) {
+      // Crossing shared-case edges meet halfway, so their labels sit near the target instead.
+      const t = e.cls === "ev-shared" ? .68 : .5, u = 1 - t;
+      const x = u ** 3 * ax + 3 * u * t * mx + t ** 3 * bx, y = (u ** 3 + 3 * u * u * t) * ay + (3 * u * t * t + t ** 3) * by;
+      const lines = wrap(e.label), top = y - 6 - (lines.length - 1) * 13;
+      lines.forEach((text, i) => labels.push({x, y: top + i * 13, text, anchor: "middle", cls: `edge-label ${e.cls || ""} ${e.chain ? "on-chain" : ""}`}));
+    }
+    return {...e, path: `M${ax},${ay} C${mx},${ay} ${mx},${by} ${bx - 2},${by}`,
       cls: [e.cls, e.chain && "ev-chain"].filter(Boolean).join(" "), hot: e.hot || e.chain};
   });
-  // One faint band per layer, wide enough for its name on the left (also keeps Fit from clipping it).
-  const left = Math.min(...nodes.map(n => n.x)) - 150, right = Math.max(...nodes.map(n => n.x + n.w)) + 20;
+  // One faint band per layer with its name on top (the band also keeps Fit from clipping it).
+  const top = Math.min(...nodes.map(n => n.y)) - 20, bottom = Math.max(...nodes.map(n => n.y + n.h)) + 14;
   const groups = used.map(layer => {
-    const y = row.get(layer) * (NH + GY);
-    labels.push({x: left + 14, y: y + 22, text: LAYERS[layer][0], cls: "band-label"});
-    labels.push({x: left + 14, y: y + 38, text: LAYERS[layer][1], cls: "band-sub"});
-    return {x: left, y: y - 10, w: right - left, h: NH + 20, cls: "band-sep ev-band"};
+    const x = col.get(layer) * (NW + GX);
+    labels.push({x: x + NW / 2, y: top - 22, text: LAYERS[layer][0], anchor: "middle", cls: "band-label"});
+    labels.push({x: x + NW / 2, y: top - 7, text: LAYERS[layer][1], anchor: "middle", cls: "band-sub"});
+    return {x: x - 12, y: top - 44, w: NW + 24, h: bottom - top + 44, cls: "band-sep ev-band"};
   });
   return {
     nodes: nodes.map(n => ({id: n.id, x: n.x, y: n.y, w: n.w, h: n.h, label: n.label, sub: n.sub, badge: n.badge, title: n.title,

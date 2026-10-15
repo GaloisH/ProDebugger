@@ -193,9 +193,19 @@ code, pre, .mono { font-family: var(--mono); }
 @keyframes live-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 53%, transparent); } 70% { box-shadow: 0 0 0 .5rem color-mix(in srgb, var(--live) 0%, transparent); } 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 0%, transparent); } }
 .badge.live { background: var(--live-bg); border-color: var(--live-line); color: var(--live-ink); }
 .empty { color: var(--muted); padding: 2rem; text-align: center; border: 1px dashed var(--line); border-radius: var(--radius); }
+/* Loader: the brand mark draws its slash while the brackets breathe; fades in after 200ms. */
+.loader { display: grid; justify-items: center; align-content: center; gap: .8rem; min-height: 12rem; padding: 2rem; color: var(--muted); font-size: .9rem; opacity: 0; animation: loader-in .3s ease-out .2s forwards; }
+.loader.is-inline { display: flex; align-items: center; justify-content: flex-start; gap: .55rem; min-height: 0; padding: .6rem .2rem; font-size: .85rem; }
+.loader-mark { width: 2.6rem; height: 2.6rem; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.loader.is-inline .loader-mark { width: 1.2rem; height: 1.2rem; stroke-width: 3; }
+.loader-bracket { stroke: var(--accent); animation: loader-breathe 1.6s ease-in-out infinite; }
+.loader-slash { stroke: var(--text); stroke-dasharray: 1; animation: loader-draw 1.6s ease-in-out infinite; }
+@keyframes loader-in { to { opacity: 1; } }
+@keyframes loader-breathe { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+@keyframes loader-draw { 0% { stroke-dashoffset: 1; } 45%, 60% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
 .error-box { color: var(--bad-ink); background: var(--bad-bg); border: 1px solid var(--bad-line); border-radius: .6rem; padding: 1rem; }
 .raw { margin: 0; max-height: 28rem; overflow: auto; padding: .8rem; border: 1px solid var(--line); border-radius: .5rem; background: var(--inset); font-family: var(--mono); font-size: .8rem; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; font-size: .88rem; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; } .loader-mark path { animation: none !important; } }

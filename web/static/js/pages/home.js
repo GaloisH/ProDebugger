@@ -4,7 +4,7 @@ import {CaseStore} from "../case/store.js";
 import {createCaseViews, TABS} from "../case/views.js";
 import {caseHref} from "../routes.js";
 import {domainIcon} from "./runs.js";
-import {esc} from "../util.js";
+import {esc, loader} from "../util.js";
 
 // The showcase case: a fully correct reference run kept under artifacts/.
 export const DEMO_REF = ["runs", "dsl-route-causal-timeline-high-unlimited-alf18-20261007-live", "GPT-4o_018_alfworld_task_018"];
@@ -220,7 +220,7 @@ export function mountHome(root) {
             <span class="demo-caption"></span>
             <a class="demo-open" href="${caseHref(DEMO_REF)}">Open in workbench ${ARROW}</a>
           </div>
-          <div class="demo-body"><p class="demo-status">Loading the case…</p></div>
+          <div class="demo-body"><div class="demo-status">${loader("Loading the case…")}</div></div>
         </div>
       </section>
 

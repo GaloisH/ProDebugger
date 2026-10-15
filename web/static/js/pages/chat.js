@@ -5,7 +5,7 @@ import {buildMessages} from "../chat/messages.js";
 import {createStream} from "../chat/stream.js";
 import {createComposer} from "../chat/composer.js";
 import {chatHref, caseHref} from "../routes.js";
-import {ago, debounce, esc, statusBadge} from "../util.js";
+import {ago, debounce, esc, loader, statusBadge} from "../util.js";
 import {describeTrajectory, domainIcon} from "./runs.js";
 
 const POLL_MS = 3000;
@@ -64,7 +64,7 @@ export function mountChat(root, route) {
 
   function renderList() {
     if (state.error && !state.index) { $("chat-list").innerHTML = `<div class="error-box">${esc(state.error)}</div>`; return; }
-    if (!state.index) { $("chat-list").innerHTML = `<p class="muted chat-list-note">Loading…</p>`; return; }
+    if (!state.index) { $("chat-list").innerHTML = loader("Loading…", true); return; }
     const all = conversations();
     const mine = all.filter(t => t.chat), others = all.filter(t => !t.chat);
     const section = (title, list) => list.length ? `<div class="chat-list-section"><span class="eyebrow">${title}</span>${list.map(item).join("")}</div>` : "";

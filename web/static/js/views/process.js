@@ -4,7 +4,7 @@
 // to every column's first node (or the card). TRACE has one column per manager assignment.
 import {CALL_PHASES} from "../case/calls.js";
 import {factChip} from "../case/format.js";
-import {esc, number, raw, short} from "../util.js";
+import {esc, loader, number, raw, short} from "../util.js";
 import {routeBadge, routeDetail, routeOverview, routeTitle} from "./route.js";
 import {managerDetail, managerOverview, managerTitle, traceBadge, traceDetail, traceOverview, traceSummary, traceTitle} from "./trace.js";
 import {submitDetail, submitOverview, submitTitle} from "./submit.js";
@@ -202,7 +202,7 @@ function requestBlock(file, requests) {
 export function requestHtml(file, requests) {
   const r = requests.get(file);
   if (!r) return "";
-  if (r === "loading") return `<p class="muted">Loading…</p>`;
+  if (r === "loading") return loader("Loading request…", true);
   if (r.error) return `<p class="error-box">${esc(r.error)}</p>`;
   const messages = r.messages || [];
   return `<p class="muted">${messages.length} messages · ${esc(r.requested_model || "")}</p>${messages.map((m, i) =>

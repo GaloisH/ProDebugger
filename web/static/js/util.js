@@ -33,6 +33,13 @@ export function statusBadge(status, accepted) {
   return `<span class="badge ${kind}">${dot}${esc(label)}</span>`;
 }
 
+// Shared loading indicator: the [/] brand mark drawing itself, shown only after a short delay
+// so fast loads never flash it. inline=true gives a one-line variant for lists and side panels.
+export const loader = (label = "Loading…", inline = false) =>
+  `<div class="loader${inline ? " is-inline" : ""}" role="status"><svg class="loader-mark" viewBox="0 0 32 32" aria-hidden="true">
+    <path class="loader-bracket" d="M12 8H7v16h5M20 8h5v16h-5" pathLength="1"/><path class="loader-slash" d="M18 11l-4 10" pathLength="1"/></svg>
+    <span class="loader-label">${esc(label)}</span></div>`;
+
 export function debounce(fn, ms = 150) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };

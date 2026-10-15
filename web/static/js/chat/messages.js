@@ -1,18 +1,19 @@
-// Turns one run's case model into chat messages: the request, one message per
-// phase (one per TRACE window), the live "working" indicator and run notices.
-// Depends only on file formats, like case/model.js.
-import {PHASES} from "../case/model.js";
+// Turns one run's case model into chat messages: the request, one message per phase
+// (MANAGER's plan, one per TRACE assignment), the live "working" indicator and run
+// notices. Built from the model calls, like the process graph.
+import {CALL_PHASES} from "../case/calls.js";
+import {assessOf, planOf, queryOf} from "../views/trace.js";
 
 const sum = (list, f) => list.reduce((s, x) => s + (Number(f(x)) || 0), 0);
 
-function activity(events) {
-  const models = events.filter(e => e.kind === "model");
+function activity(calls) {
   return {
-    events,
-    turns: models.length,
-    tools: events.filter(e => e.kind === "tool").length,
-    tokens: sum(models, e => (e.usage?.input_tokens || 0) + (e.usage?.output_tokens || 0)),
-    errors: events.filter(e => e.status === "error").length,
+    calls,
+    turns: calls.length,
+    tools: sum(calls, c => c.tools.length),
+    tokens: sum(calls, c => (c.usage?.input_tokens || 0) + (c.usage?.output_tokens || 0)),
+    errors: sum(calls, c => c.tools.filter(t => t.error).length),
+    seconds: sum(calls, c => c.seconds),
   };
 }
 
@@ -22,12 +23,13 @@ function goalMap(d) {
   return d.phaseEvents.find(e => e.from === "MAP")?.handoff?.goal_map || null;
 }
 
-// ROUTE anchors: route_candidates.json at the end, the trace_window call while live.
-function anchors(d) {
+const accepted = (calls, name) => calls.flatMap(c => c.tools).filter(t => t.name === name && t.committed && !t.error);
+
+// ROUTE anchors: route_candidates.json at the end, the accepted route_cases call while live.
+function anchors(d, calls) {
   const versions = Array.isArray(d.routeCandidates) ? d.routeCandidates : [];
   if (versions.length) return versions[versions.length - 1].windows || [];
-  const call = d.events.filter(e => e.kind === "tool" && e.title === "trace_window" && e.data.event === "committed").pop();
-  return call?.data.arguments?.candidates || [];
+  return accepted(calls, "route_cases").at(-1)?.args?.candidates || [];
 }
 
 export function buildMessages(model, {live, chat, reference}) {
@@ -35,34 +37,45 @@ export function buildMessages(model, {live, chat, reference}) {
   const messages = [{id: "request", role: "user", task: model.task, taskType: model.taskType,
                      trajectoryId: model.trajectoryId, manifest: d?.manifest, chat}];
   if (!d) return messages;
-  const byPhase = Object.fromEntries(PHASES.map(p => [p, d.events.filter(e => e.phase === p)]));
-  const reached = PHASES.filter(p => byPhase[p].length || d.phaseEvents.some(e => e.to === p));
-  const current = live ? reached[reached.length - 1] : null;
+  const byPhase = Object.fromEntries(CALL_PHASES.map(p => [p, d.calls.filter(c => c.phase === p)]));
+  const reached = CALL_PHASES.filter(p => p !== "PARSE" && (byPhase[p].length || d.phaseEvents.some(e => e.to === p)));
+  const pending = d.calls.filter(c => c.status === "pending").at(-1);
+  const current = live ? pending?.phase || reached.at(-1) : null;
+  const plan = d.managerPlan || byPhase.MANAGER.map(planOf).filter(Boolean).at(-1) || null;
 
   for (const phase of reached) {
-    const base = {role: "assistant", phase, working: phase === current, activity: activity(byPhase[phase]),
-                  seconds: d.usage?.by_phase?.[phase]?.latency_seconds};
+    const calls = byPhase[phase];
+    const base = {role: "assistant", phase, working: phase === current, activity: activity(calls)};
     if (phase === "MAP") messages.push({...base, id: "MAP", goalMap: goalMap(d)});
-    if (phase === "ROUTE") messages.push({...base, id: "ROUTE", anchors: anchors(d), done: reached.includes("TRACE")});
+    if (phase === "ROUTE") messages.push({...base, id: "ROUTE", anchors: anchors(d, calls),
+                                          finish: accepted(calls, "finish").at(-1)?.args || null});
+    if (phase === "MANAGER") messages.push({...base, id: "MANAGER", plan, anchors: anchors(d, byPhase.ROUTE)});
     if (phase === "TRACE") {
-      const assessed = new Map(d.windows.map(w => [w.window_id, w]));
-      messages.push({...base, id: "TRACE", anchors: anchors(d), assessed, coverage: d.traceWindows});
-      d.windows.forEach(w => messages.push({role: "assistant", phase, id: `window-${w.window_id}`, window: w}));
+      // One message per assignment, in plan order; calls of an unplanned case still get one.
+      const ids = [...(plan?.assignments || []).map(a => a.agent_id), ...calls.map(c => c.caseId)].filter((x, i, a) => x && a.indexOf(x) === i);
+      ids.forEach(id => {
+        const mine = calls.filter(c => c.caseId === id);
+        if (!mine.length && !live) return;
+        messages.push({...base, id: `trace-${id}`, working: live && mine.some(c => c.status === "pending"), activity: activity(mine),
+                       assignment: plan?.assignments?.find(a => a.agent_id === id) || {agent_id: id},
+                       query: mine.map(queryOf).filter(Boolean).at(-1) || null,
+                       assessment: mine.map(assessOf).filter(Boolean).at(-1) || null, started: mine.length > 0});
+      });
     }
     if (phase === "SUBMIT") {
-      const answer = d.events.filter(e => e.kind === "answer").pop()?.data;
-      messages.push({...base, id: "SUBMIT", result: d.result || answer?.result || null,
-                     candidates: d.windows.reduce((n, w) => n + (w.candidates || []).length, 0)});
+      messages.push({...base, id: "SUBMIT", result: d.result || null,
+                     candidates: sum(byPhase.TRACE, c => assessOf(c)?.candidates?.length || 0)});
     }
   }
+
+  // TRACE without candidates ends the run before SUBMIT.
+  if (d.result?.status === "no_candidate") messages.push({id: "outcome", role: "system", tone: "warn", outcome: d.result});
 
   // Benchmark labels only after the run has ended; the launcher never passes them to the debugger.
   if (!live && d.result && reference) messages.push({id: "reference", role: "reference", reference, result: d.result});
 
   if (live) {
-    const waiting = d.events.filter(e => e.kind === "inflight").pop();
-    messages.push({id: "working", role: "working", phase: current || "MAP", waiting: Boolean(waiting),
-                   model: waiting?.data.requested_model});
+    messages.push({id: "working", role: "working", phase: current || "MAP", waiting: Boolean(pending), model: pending?.model});
   } else if (chat?.state === "failed" || chat?.state === "stopped") {
     messages.push({id: "notice", role: "system", tone: chat.state === "failed" ? "bad" : "warn", chat});
   } else if (!d.result) {

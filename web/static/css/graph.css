@@ -16,7 +16,7 @@
 .graph-toolbar .field { display: flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .82rem; }
 .input.is-miss { border-color: var(--bad-line); animation: shake .3s; }
 @keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
-.graph-stage { position: relative; height: calc(100vh - var(--header-h) - 12.5rem); min-height: 34rem; border: 1px solid var(--line); border-radius: 1rem; background: radial-gradient(circle at 1px 1px, #ffffff0d 1px, transparent 0) 0 0 / 22px 22px, var(--surface-1); overflow: hidden; }
+.graph-stage { position: relative; height: calc(100vh - var(--header-h) - 12.5rem); min-height: 34rem; border: 1px solid var(--line); border-radius: 1rem; background: radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 0) 0 0 / 22px 22px, var(--surface-1); overflow: hidden; }
 .graph-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .9rem; color: var(--muted); font-size: .78rem; }
 .graph-legend .lg { display: inline-block; width: .8rem; height: .8rem; margin-right: -.5rem; border-radius: .25rem; border: 1px solid var(--line-strong); vertical-align: -1px; }
 .graph-inspector { position: sticky; top: calc(var(--header-h) + 3.6rem); max-height: calc(100vh - var(--header-h) - 4.6rem); overflow: auto; padding: .9rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--panel); }
@@ -44,7 +44,7 @@
 .graph-minimap rect { fill: var(--bar-strong); }
 .graph-minimap rect.side-env { fill: var(--teal-line); } .graph-minimap rect.side-mind { fill: var(--info-line); } .graph-minimap rect.side-task { fill: var(--violet-line); }
 .graph-minimap .mini-view { fill: color-mix(in srgb, var(--accent) 13%, transparent); stroke: var(--accent); stroke-width: 1.2; }
-.graph-tip { position: absolute; z-index: 5; max-width: 300px; padding: .5rem .65rem; border: 1px solid var(--line-strong); border-radius: .5rem; background: color-mix(in srgb, var(--bg-deep) 95%, transparent); box-shadow: 0 8px 22px #0006; font-size: .78rem; pointer-events: none; }
+.graph-tip { position: absolute; z-index: 5; max-width: 300px; padding: .5rem .65rem; border: 1px solid var(--line-strong); border-radius: .5rem; background: color-mix(in srgb, var(--bg-deep) 95%, transparent); box-shadow: 0 8px 22px var(--shadow-soft); font-size: .78rem; pointer-events: none; }
 .graph-tip .mono { overflow-wrap: anywhere; }
 
 .node { cursor: pointer; }
@@ -73,9 +73,9 @@
 .arrow-head { fill: var(--edge); } .arrow-head.hot { fill: var(--amber); }
 .graph-svg.has-focus .node:not(.is-lineage):not(.is-hover) .node-box, .graph-svg.has-focus .node:not(.is-lineage):not(.is-hover) text { opacity: .22; }
 .graph-svg.has-focus .edge:not(.is-lineage):not(.is-hover) { opacity: .07; }
-.group rect { fill: #ffffff05; stroke: #ffffff10; }
+.group rect { fill: var(--tint-faint); stroke: var(--tint-hover); }
 .group text { fill: var(--muted); font-family: var(--mono); font-size: 13px; font-weight: 650; letter-spacing: .06em; }
-.group.band-sep rect { fill: #ffffff14; stroke: none; }
+.group.band-sep rect { fill: var(--tint-line); stroke: none; }
 .graph-label { fill: var(--faint); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; }
 .graph-label.band-label { font-size: 12px; font-weight: 650; fill: var(--muted); }
 .graph-canvas.is-far .node-sub, .graph-canvas.is-far .node-badge { display: none; }

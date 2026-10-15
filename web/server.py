@@ -26,7 +26,9 @@ from launcher import LaunchError, Launcher
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = Path(__file__).resolve().parent / "static"
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*$")
-FILE = re.compile(r"^(?:requests/)?[A-Za-z0-9][A-Za-z0-9_.\-]*\.(?:json|jsonl|md)$")
+# PARSE calls log under their own folders, each with its own requests/.
+PARSE_DIRS = ("parsing", "claim_parsing")
+FILE = re.compile(r"^(?:(?:parsing|claim_parsing)/)?(?:requests/)?[A-Za-z0-9][A-Za-z0-9_.\-]*\.(?:json|jsonl|md)$")
 SKIP_DIRS = {"browser", "requests", "__pycache__"}
 LIVE_SECONDS = 180.0
 # Raw chunks are capped so a large log is streamed over several polls.
@@ -73,6 +75,11 @@ def file_table(folder: Path) -> dict:
     if requests.is_dir():
         table["requests/"] = {"size": sum(1 for _ in requests.glob("*.json")),
                               "mtime": requests.stat().st_mtime}
+    for name in PARSE_DIRS:
+        log = folder / name / "usage.jsonl"
+        if log.is_file():
+            stat = log.stat()
+            table[f"{name}/usage.jsonl"] = {"size": stat.st_size, "mtime": stat.st_mtime}
     return table
 
 
@@ -201,7 +208,7 @@ class Handler(SimpleHTTPRequestHandler):
     def route(self, parts, query):
         # /api/index
         # /api/files/<source>/<group>[/<trajectory>]
-        # /api/file/<source>/<group>[/<trajectory>]/<name>[?offset=N]
+        # /api/file/<source>/<group>[/<trajectory>][/<parse dir>][/requests]/<name>[?offset=N]
         # /api/catalog                benchmark cases (no reference labels)
         # /api/launch                 active/last chat run and default config
         # /api/reference/<trajectory> reference labels, shown after a run ends
@@ -220,8 +227,12 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_error(HTTPStatus.NOT_FOUND)
             return self.send_json({"files": file_table(folder), "now": time.time()})
         if len(parts) >= 4 and parts[0] == "file":
-            filename = "/".join(parts[-2:]) if parts[-2] == "requests" else parts[-1]
-            names = tuple(parts[2:-2] if parts[-2] == "requests" else parts[2:-1])
+            names, tail = list(parts[2:-1]), [parts[-1]]
+            if names and names[-1] == "requests":
+                tail.insert(0, names.pop())
+            if names and names[-1] in PARSE_DIRS:
+                tail.insert(0, names.pop())
+            filename, names = "/".join(tail), tuple(names)
             if not 1 <= len(names) <= 2:
                 return self.send_error(HTTPStatus.NOT_FOUND)
             path = self.sources.file(parts[1], names, filename)

@@ -43,7 +43,6 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
             <div class="menu menu-adv" id="cp-menu-adv" hidden>
               <label>Model <input id="cp-model" class="input mono" type="text" spellcheck="false"></label>
               <label>Reasoning <select id="cp-effort" class="input"><option value="">default</option>${EFFORTS.map(e => `<option>${e}</option>`).join("")}</select></label>
-              <label>Window <input id="cp-window" class="input" type="number" min="1" max="30" step="1"></label>
             </div>
           </div>
           <div class="chip-wrap">
@@ -142,7 +141,6 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
     $("cp-menu-source").innerHTML = sources.map(s => `<button class="menu-item" role="menuitemradio" data-pick="source" data-val="${esc(s.group)}" aria-checked="${s.group === state.source}"><span><strong class="mono">${esc(s.group)}</strong><small>${esc(s.status)} · finished run</small></span></button>`).join("");
     const defaults = state.launch?.defaults || {};
     $("cp-model").placeholder = defaults.model || "model";
-    $("cp-window").placeholder = defaults.window_size ?? 5;
     $("cp-effort").options[0].textContent = `default (${defaults.reasoning_effort || "provider"})`;
     for (const name of ["adv", "tab", "mode", "source"]) {
       root.querySelector(`[data-menu="${name}"]`).setAttribute("aria-expanded", String(state.menu === name));
@@ -189,8 +187,7 @@ export function createComposer(root, {index, currentRef, onLaunched, onEnded}) {
     if (state.tab === "custom") { start({mode: "custom", task: $("cp-task").value}); return; }
     const c = state.selected;
     if (!c) return;
-    const config = {model: $("cp-model").value.trim() || undefined, reasoning_effort: $("cp-effort").value || undefined,
-                    window_size: $("cp-window").value ? Number($("cp-window").value) : undefined};
+    const config = {model: $("cp-model").value.trim() || undefined, reasoning_effort: $("cp-effort").value || undefined};
     start(state.mode === "replay" ? {mode: "replay", trajectory_id: c.trajectory_id, source: [state.source, c.trajectory_id]}
       : {mode: "online", trajectory_id: c.trajectory_id, config});
   }

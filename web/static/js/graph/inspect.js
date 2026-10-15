@@ -2,16 +2,17 @@
 import {entityId} from "../case/model.js";
 import {EVAL_CLASS, factChip, factText, SIDE_CLASS} from "../case/format.js";
 import {esc, pretty, short} from "../util.js";
+import {callTitle} from "../views/process.js";
 
 export const entityChip = id => `<button class="entity-chip" data-entity="${esc(id)}">${esc(id)}</button>`;
 
-// fid -> debugger events citing it, and fid -> dependents, computed once per model.
+// fid -> model calls citing it, and fid -> dependents, computed once per model.
 const cache = new WeakMap();
 export function factIndex(model) {
   if (cache.has(model)) return cache.get(model);
   const dependents = new Map(), cited = new Map(), evals = new Map();
   model.dsl?.facts.forEach(f => (f.basis || []).forEach(b => { if (!dependents.has(b)) dependents.set(b, []); dependents.get(b).push(f.fid); }));
-  model.debugger?.events.forEach(e => (e.fids || []).forEach(fid => { if (!cited.has(fid)) cited.set(fid, []); cited.get(fid).push(e); }));
+  model.debugger?.calls.forEach(c => (c.fids || []).forEach(fid => { if (!cited.has(fid)) cited.set(fid, []); cited.get(fid).push(c); }));
   model.evaluations.forEach((e, i) => (e.refs || []).forEach(fid => { if (!evals.has(fid)) evals.set(fid, []); evals.get(fid).push({...e, index: i}); }));
   const index = {dependents, cited, evals};
   cache.set(model, index);
@@ -23,7 +24,7 @@ export function factInspector(model, fid, {compact = false} = {}) {
   if (!f) return `<p class="empty">Fact ${esc(fid)} is not in this record.</p>`;
   const idx = factIndex(model);
   const deps = idx.dependents.get(f.fid) || [];
-  const events = idx.cited.get(f.fid) || [];
+  const calls = idx.cited.get(f.fid) || [];
   const evals = idx.evals.get(f.fid) || [];
   const chips = list => list.map(id => factChip(model.dsl.factsById.get(id))).join("") || `<p class="muted">None.</p>`;
   return `<div class="insp-head"><span class="eyebrow">Fact f${f.fid}</span>
@@ -39,17 +40,17 @@ export function factInspector(model, fid, {compact = false} = {}) {
     <div class="insp-block"><h4>Basis · ${(f.basis || []).length}</h4><div class="chip-col">${chips(f.basis || [])}</div></div>
     <div class="insp-block"><h4>Dependents · ${deps.length}</h4><div class="chip-col">${chips(deps.slice(0, 30))}</div></div>
     ${evals.length ? `<div class="insp-block"><h4>Rule evaluations · ${evals.length}</h4>${evals.map(e => `<div class="eval-row"><span class="badge ${EVAL_CLASS[e.state] || ""}">${esc(e.state)}</span><button class="link mono" data-rule-eval="${e.index}">${esc(e.rule)}</button><span class="muted">${esc(e.details?.reason || "")}</span></div>`).join("")}</div>` : ""}
-    ${model.debugger ? `<div class="insp-block"><h4>Cited by debugger · ${events.length}</h4>${events.map(e => `<button class="event-link phase-${esc(e.phase)}" data-open-event="${e.index}"><span class="phase-dot"></span><span class="mono">#${String(e.index + 1).padStart(3, "0")}</span> ${esc(e.title)}<small>${esc(e.phase)}</small></button>`).join("") || `<p class="muted">Not cited yet.</p>`}</div>` : ""}
+    ${model.debugger ? `<div class="insp-block"><h4>Cited by debugger · ${calls.length}</h4>${calls.map(c => `<button class="event-link phase-${esc(c.phase)}" data-open-call="${c.n}"><span class="phase-dot"></span><span class="mono">#${c.n}</span> ${esc(callTitle(c))}<small>${esc(c.phase)}</small></button>`).join("") || `<p class="muted">Not cited yet.</p>`}</div>` : ""}
     <details class="insp-block"><summary>Raw fact</summary><pre class="raw">${esc(pretty(f))}</pre></details>`}`;
 }
 
-// Delegated handlers shared by every inspector: open steps/events in the trajectory, facts/entities in graphs.
+// Delegated handlers shared by every inspector: open steps/calls in the trajectory, facts/entities in graphs.
 export function wireInspector(el, api, onFact) {
   el.addEventListener("click", e => {
     const t = e.target.closest("[data-open-step]");
     if (t) { api.ctx.navigate("trajectory", "step", t.dataset.openStep); return; }
-    const ev = e.target.closest("[data-open-event]");
-    if (ev) { api.ctx.navigate("trajectory", "event", ev.dataset.openEvent); return; }
+    const call = e.target.closest("[data-open-call]");
+    if (call) { api.ctx.navigate("trajectory", "call", call.dataset.openCall); return; }
     const fid = e.target.closest("[data-fid]");
     if (fid) { onFact ? onFact(Number(fid.dataset.fid)) : api.goto("facts", fid.dataset.fid); return; }
     const ent = e.target.closest("[data-entity]");

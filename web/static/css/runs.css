@@ -9,6 +9,24 @@
 .segmented { display: flex; flex-wrap: wrap; gap: .3rem; }
 .segmented .btn { padding: .3rem .65rem; font-size: .85rem; }
 .segmented .count { color: var(--faint); font-family: var(--mono); font-size: .75rem; }
+.filter-panel { width: min(100%, 20rem); margin: .4rem 0 .6rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
+.filter-head { display: flex; align-items: center; gap: .8rem; padding: .7rem 1.1rem; }
+.filter-head h2 { margin: 0 auto 0 0; font-size: 1rem; font-weight: 600; }
+.filter-clear { border: 0; background: none; color: var(--accent); font-size: .82rem; cursor: pointer; }
+.filter-body { display: grid; gap: .4rem; padding: 0 1.1rem .9rem; }
+.filter-parent { display: flex; align-items: center; justify-content: space-between; }
+.filter-check { display: flex; align-items: center; gap: .65rem; width: 100%; padding: .4rem 0; border: 0; background: none; color: var(--text); font: inherit; font-size: .92rem; text-align: left; text-transform: capitalize; cursor: pointer; }
+.filter-parent .filter-check { width: auto; }
+.filter-child { padding-left: 1.6rem; color: var(--muted); }
+.filter-child .count, .filter-head .count { margin-left: auto; color: var(--faint); font-family: var(--mono); font-size: .75rem; }
+.filter-head .count { margin-left: .3rem; }
+.cbox { display: grid; place-items: center; flex: none; width: 1.05rem; height: 1.05rem; border: 1px solid var(--line-strong); border-radius: .25rem; background: var(--inset); }
+.cbox.is-on { border-color: var(--accent-strong); background: var(--accent-strong); }
+.cbox svg { width: .8rem; height: .8rem; fill: none; stroke: var(--on-accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.filter-fold { display: grid; place-items: center; width: 1.6rem; height: 1.6rem; border: 0; border-radius: .3rem; background: none; color: var(--text); cursor: pointer; }
+.filter-fold:hover { background: var(--hover); }
+.filter-fold svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.filter-check:focus-visible, .filter-fold:focus-visible, .filter-clear:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .runs-refresh { margin-left: auto; color: var(--faint); font-size: .8rem; font-family: var(--mono); }
 .runs-list { display: grid; gap: 1rem; margin-top: .5rem; }
 

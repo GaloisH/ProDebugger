@@ -1,6 +1,6 @@
 // Case workbench: summary header, phase strip and lazily mounted views.
 import {CaseStore} from "../case/store.js";
-import {PHASES} from "../case/model.js";
+import {CALL_PHASES} from "../case/calls.js";
 import {createCaseViews, TABS} from "../case/views.js";
 import {caseHref} from "../routes.js";
 import {esc, number, statusBadge} from "../util.js";
@@ -41,20 +41,20 @@ export function mountWorkbench(root, route) {
     ].join("");
     const usage = d?.usage || {};
     const tokens = d ? (usage.input_tokens != null ? usage.input_tokens + (usage.output_tokens || 0)
-      : (d.events.reduce((s, e) => s + (e.usage?.input_tokens || 0) + (e.usage?.output_tokens || 0), 0))) : null;
+      : (d.calls.reduce((s, c) => s + (c.usage?.input_tokens || 0) + (c.usage?.output_tokens || 0), 0))) : null;
     const metrics = [
       ["Steps", model.steps.length], ["Facts", model.dsl?.facts.length ?? 0], ["Entities", Object.keys(model.dsl?.entities || {}).length],
-      ...(d ? [["Events", d.events.length], ["Tokens", number(tokens)]] : [["Evaluations", model.evaluations.length]]),
+      ...(d ? [["Model calls", d.calls.length], ["Tokens", number(tokens)]] : [["Evaluations", model.evaluations.length]]),
     ];
     $("wb-metrics").innerHTML = metrics.map(([k, v]) => `<div><dt class="eyebrow">${k}</dt><dd>${v}</dd></div>`).join("");
     const strip = $("phase-strip");
     if (!d) { strip.hidden = true; return; }
-    const reached = new Set(d.events.map(e => e.phase));
-    const last = d.events[d.events.length - 1]?.phase;
-    strip.innerHTML = PHASES.map(p => {
-      const count = d.events.filter(e => e.phase === p).length;
+    const reached = new Set(d.calls.map(c => c.phase));
+    const last = d.calls[d.calls.length - 1]?.phase;
+    strip.innerHTML = CALL_PHASES.filter(p => p !== "PARSE").map(p => {
+      const count = d.calls.filter(c => c.phase === p).length;
       const state = store.live && p === last ? "is-current" : reached.has(p) ? "is-done" : "";
-      return `<li class="phase-pill phase-${p} ${state}"><span class="phase-dot"></span><strong>${p}</strong><span class="phase-count">${count} events</span></li>`;
+      return `<li class="phase-pill phase-${p} ${state}"><span class="phase-dot"></span><strong>${p}</strong><span class="phase-count">${count} call${count === 1 ? "" : "s"}</span></li>`;
     }).join('<li class="phase-arrow" aria-hidden="true">→</li>');
   }
 

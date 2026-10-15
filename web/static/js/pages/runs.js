@@ -24,7 +24,7 @@ export const domainIcon = domain =>
   `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${DOMAIN_ICON[domain] || DOMAIN_ICON.other}</svg>`;
 
 export function mountRuns(root, route) {
-  const state = {source: "all", status: "all", search: "", collapsed: new Set(), index: null, error: null,
+  const state = {sources: new Set(), statuses: new Set(), open: {source: true, status: true}, panelOpen: false, search: "", collapsed: new Set(), index: null, error: null,
                  focus: route.query.get("group")};
   root.innerHTML = `
     <section class="runs-hero">
@@ -37,29 +37,60 @@ export function mountRuns(root, route) {
     </section>
     <section class="runs-toolbar" aria-label="Filters">
       <input id="runs-search" class="input" type="search" placeholder="Filter trajectories…  ( / )" aria-label="Filter trajectories">
-      <div class="segmented" id="runs-source" role="group" aria-label="Source">
-        ${["all", "runs", "sessions"].map(s => `<button class="btn" data-source="${s}" aria-pressed="${s === "all"}">${s === "all" ? "All" : s === "runs" ? "Debugger runs" : "Compiled sessions"}</button>`).join("")}
-      </div>
-      <div class="segmented" id="runs-status" role="group" aria-label="Status"></div>
       <span class="runs-refresh" id="runs-refresh"></span>
     </section>
+    <section class="filter-panel" id="runs-filters" aria-label="Filters"></section>
     <div id="runs-list" class="runs-list" aria-live="polite"></div>`;
   const $ = id => root.querySelector("#" + id);
 
-  const matches = t => (state.status === "all" || t.status === state.status) &&
+  const matches = t => (!state.statuses.size || state.statuses.has(t.status)) &&
     (!state.search || t.id.toLowerCase().includes(state.search));
 
-  function renderStatusFilter(groups) {
-    const counts = {};
-    groups.forEach(g => g.trajectories.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; }));
-    const all = Object.values(counts).reduce((a, b) => a + b, 0);
-    $("runs-status").innerHTML = [["all", all], ...Object.entries(counts).sort((a, b) => b[1] - a[1])]
-      .map(([s, n]) => `<button class="btn" data-status="${esc(s)}" aria-pressed="${s === state.status}">${s === "all" ? "Any status" : esc(s.replace("_", " "))} <span class="count">${n}</span></button>`).join("");
+  const CHECK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7"/></svg>';
+  const DASH = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 8h8"/></svg>';
+  const box = mode => `<span class="cbox ${mode ? "is-on" : ""}">${mode === "all" ? CHECK : mode === "some" ? DASH : ""}</span>`;
+  const fold = (open, attr) => `<button class="filter-fold" ${attr} aria-expanded="${open}" aria-label="${open ? "Collapse" : "Expand"}"><svg viewBox="0 0 16 16" aria-hidden="true">${open ? '<path d="M4 8h8"/>' : '<path d="M4 8h8M8 4v8"/>'}</svg></button>`;
+
+  // Parent rows are tri-state over their children; nothing ticked means no restriction.
+  function filterGroup(kind, title, items, selected) {
+    const picked = items.filter(i => selected.has(i.value)).length;
+    const mode = picked === 0 ? "" : picked === items.length ? "all" : "some";
+    const open = state.open[kind];
+    return `<div class="filter-group">
+      <div class="filter-parent">
+        <button class="filter-check" data-all="${kind}" role="checkbox" aria-checked="${mode === "all" ? "true" : mode === "some" ? "mixed" : "false"}">${box(mode)}<span>${title}</span></button>
+        ${fold(open, `data-fold="${kind}"`)}
+      </div>
+      <div class="filter-children" ${open ? "" : "hidden"}>
+        ${items.map(i => `<button class="filter-check filter-child" data-${kind}="${esc(i.value)}" role="checkbox" aria-checked="${selected.has(i.value)}">${box(selected.has(i.value) ? "all" : "")}<span>${esc(i.label)}</span><span class="count">${i.count}</span></button>`).join("")}
+      </div>
+    </div>`;
+  }
+
+  function renderFilters(index) {
+    const tally = key => index.groups.flatMap(g => g.trajectories.map(t => ({source: g.source, status: t.status})))
+      .reduce((c, t) => { c[t[key]] = (c[t[key]] || 0) + 1; return c; }, {});
+    const bySource = tally("source"), byStatus = tally("status");
+    const sources = [["runs", "Debugger runs"], ["sessions", "Compiled sessions"]]
+      .map(([value, label]) => ({value, label, count: bySource[value] || 0}));
+    const statuses = Object.entries(byStatus).sort((a, b) => b[1] - a[1])
+      .map(([value, n]) => ({value, label: value.replace("_", " "), count: n}));
+    const active = state.sources.size + state.statuses.size;
+    $("runs-filters").innerHTML = `
+      <div class="filter-head">
+        <h2>Filters${active ? ` <span class="count">${active}</span>` : ""}</h2>
+        ${active ? `<button class="filter-clear" data-clear>Clear</button>` : ""}
+        ${fold(state.panelOpen, "data-panel")}
+      </div>
+      <div class="filter-body" ${state.panelOpen ? "" : "hidden"}>
+        ${filterGroup("source", "Source", sources, state.sources)}
+        ${filterGroup("status", "Status", statuses, state.statuses)}
+      </div>`;
   }
 
   function groupCard(g) {
     const shown = g.trajectories.filter(matches);
-    if (!shown.length && (state.search || state.status !== "all")) return "";
+    if (!shown.length && (state.search || state.statuses.size)) return "";
     const key = `${g.source}/${g.id}`;
     const collapsed = state.collapsed.has(key);
     const counts = {};
@@ -99,8 +130,8 @@ export function mountRuns(root, route) {
     const index = state.index;
     if (state.error && !index) { $("runs-list").innerHTML = `<div class="error-box">Cannot reach the workbench server: ${esc(state.error)}</div>`; return; }
     if (!index) { $("runs-list").innerHTML = `<p class="empty">Loading runs…</p>`; return; }
-    const groups = index.groups.filter(g => state.source === "all" || g.source === state.source);
-    renderStatusFilter(groups);
+    const groups = index.groups.filter(g => !state.sources.size || state.sources.has(g.source));
+    renderFilters(index);
     const trajectories = index.groups.flatMap(g => g.trajectories);
     $("runs-totals").innerHTML = [
       ["Runs", index.groups.filter(g => g.source === "runs").length],
@@ -136,10 +167,17 @@ export function mountRuns(root, route) {
   root.addEventListener("click", event => {
     const b = event.target.closest("button");
     if (!b) return;
-    if (b.dataset.source) {
-      state.source = b.dataset.source;
-      root.querySelectorAll("[data-source]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
-    } else if (b.dataset.status) state.status = b.dataset.status;
+    const flip = (set, v) => set.has(v) ? set.delete(v) : set.add(v);
+    const values = kind => [...root.querySelectorAll(`.filter-child[data-${kind}]`)].map(x => x.dataset[kind]);
+    if (b.dataset.source) flip(state.sources, b.dataset.source);
+    else if (b.dataset.status) flip(state.statuses, b.dataset.status);
+    else if (b.dataset.all) {
+      const set = b.dataset.all === "source" ? state.sources : state.statuses;
+      const all = values(b.dataset.all);
+      all.every(v => set.has(v)) ? set.clear() : all.forEach(v => set.add(v));
+    } else if (b.dataset.fold) state.open[b.dataset.fold] = !state.open[b.dataset.fold];
+    else if (b.hasAttribute("data-panel")) state.panelOpen = !state.panelOpen;
+    else if (b.hasAttribute("data-clear")) { state.sources.clear(); state.statuses.clear(); }
     else if (b.dataset.toggle) {
       const k = b.dataset.toggle;
       state.collapsed.has(k) ? state.collapsed.delete(k) : state.collapsed.add(k);

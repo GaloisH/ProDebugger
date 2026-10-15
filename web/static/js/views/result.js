@@ -30,7 +30,7 @@ function stopPoint(m, r) {
 }
 
 export function createView(root, ctx) {
-  let model = null, mode = "graph", canvas = null, graph = null;
+  let model = null, mode = "graph", canvas = null, graph = null, sizer = null;
 
   const modeToggle = () => `<div class="segmented result-mode" role="group" aria-label="Result view">
     ${["graph", "list"].map(v => `<button class="btn" data-mode="${v}" aria-pressed="${mode === v}">${v === "graph" ? "Graph" : "List"}</button>`).join("")}</div>`;
@@ -208,24 +208,33 @@ export function createView(root, ctx) {
   }
 
   function mountGraph(m, r) {
-    canvas?.destroy();
     graph = buildEvidence(m, r.root ? null : stopPoint(m, r));
     canvas = createCanvas(root.querySelector("#ev-stage"), {
       onClick: id => select(id), onBackground: () => select(null), onDouble: id => open(nodeOf(id)?.goto),
     });
-    // The graph is wide and short: size the canvas to the height it needs once fitted to width.
+    // The graph is wide and short: whenever the stage width changes, size its height to what the
+    // graph needs once fitted to that width, then refit.
     const scene = layoutEvidence(graph), stage = root.querySelector("#ev-stage");
     const xs = [...scene.nodes, ...scene.groups], h = Math.max(...xs.map(n => n.y + n.h)) - Math.min(...xs.map(n => n.y));
     const w = Math.max(...xs.map(n => n.x + n.w)) - Math.min(...xs.map(n => n.x));
-    const k = Math.min(1.2, (stage.clientWidth - 80) / w);
-    stage.style.height = `${Math.round(Math.max(260, h * k + 110))}px`;
+    let width = 0;
+    const size = () => {
+      if (!stage.clientWidth || stage.clientWidth === width) return false;
+      width = stage.clientWidth;
+      stage.style.height = `${Math.round(Math.max(260, h * Math.min(1.2, (width - 80) / w) + 110))}px`;
+      return true;
+    };
+    size();
     canvas.setScene(scene);
+    sizer = new ResizeObserver(() => { if (size()) canvas.fit(); });
+    sizer.observe(stage);
     select(null);
   }
 
   function render() {
     const d = model?.debugger;
     canvas?.destroy(); canvas = null;
+    sizer?.disconnect(); sizer = null;
     if (!d) { root.innerHTML = `<p class="empty">Compiled sessions have no debugger result.</p>`; return; }
     const r = d.result;
     if (!r) {
@@ -262,6 +271,6 @@ export function createView(root, ctx) {
       if (want !== mode) { mode = want; render(); }
       root.querySelectorAll(".evidence-card, .root-chain li").forEach(el => { el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; });
     },
-    destroy() { canvas?.destroy(); },
+    destroy() { canvas?.destroy(); sizer?.disconnect(); },
   };
 }

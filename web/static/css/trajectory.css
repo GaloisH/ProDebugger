@@ -155,6 +155,15 @@
 .ph-body-inner { position: relative; }
 .ph-more { position: absolute; z-index: 3; padding: .05rem .55rem; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--muted); font: inherit; font-family: var(--mono); font-size: .66rem; white-space: nowrap; transform: translate(-50%, -50%); cursor: pointer; }
 .ph-more:hover { background: var(--panel-3); color: var(--text); }
+/* Opening or closing a card morphs the graph (the only view transition in the app). A card's
+   snapshots keep their size and are cropped to the morphing box, so it grows rather than
+   stretches; an opened card's calls then fade in row by row. */
+::view-transition-group(*) { animation-duration: .32s; animation-timing-function: cubic-bezier(.2, .7, .2, 1); }
+::view-transition-old(*), ::view-transition-new(*) { height: 100%; object-fit: none; object-position: left top; overflow: clip; }
+@media (prefers-reduced-motion: no-preference) {
+  .ph-body.is-entering .pnode { animation: pnode-in .28s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(90ms + var(--k, 0) * 45ms); }
+}
+@keyframes pnode-in { from { opacity: 0; transform: translateY(-8px); } }
 .call-list { display: flex; flex-direction: column; gap: .15rem; }
 .call-group + .call-group { margin-top: .45rem; }
 .call-group .eyebrow { display: block; margin: 0 0 .15rem .4rem; font-size: .66rem; }

@@ -132,6 +132,31 @@ export function createView(root, ctx) {
     else if (r.right > g.right - 16) graph.scrollLeft += Math.min(r.right - g.right + 16, r.left - g.left - 16);
   }
 
+  // Opening or closing cards morphs the graph (View Transitions): every card in sight moves and
+  // resizes into place, and an opened card's calls fade in row by row. Only cards in sight are
+  // named, since a named element is drawn above the page, unclipped, while the morph runs.
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  function nameCards(on) {
+    const g = graph.getBoundingClientRect();
+    const top = Math.max(g.top, ...[...document.querySelectorAll(".site-header, .wb-tabs")].map(el => el.getBoundingClientRect().bottom));
+    graph.querySelectorAll(".ph-card, .ph-body").forEach(el => {
+      const r = el.getBoundingClientRect();
+      const seen = on && r.right > g.left && r.left < g.right && r.bottom > top && r.top < Math.min(g.bottom, innerHeight);
+      el.style.viewTransitionName = seen ? `${el.dataset.phase ? "ph" : "phb"}-${el.dataset.phase || el.dataset.body}` : "";
+    });
+  }
+  // was: the phases open before the change.
+  function morph(update, was) {
+    const run = () => {
+      update();
+      state.openPhases.forEach(name => { if (!was.has(name)) graph.querySelector(`[data-body="${name}"]`)?.classList.add("is-entering"); });
+      scheduleLinks();
+    };
+    if (!document.startViewTransition || reduceMotion.matches) { run(); return; }
+    nameCards(true);
+    document.startViewTransition(() => { run(); nameCards(true); }).finished.finally(() => nameCards(false));
+  }
+
   // The card a pointer is on, counting the open card's body of calls as part of it.
   const cardAt = el => el.closest(".ph-card") || cardOf(el.closest(".ph-body")?.dataset.body);
 
@@ -380,21 +405,22 @@ export function createView(root, ctx) {
   // reveal: expand the call's phase so its node is visible.
   function select(key, reveal = false) {
     state.sel = key;
-    const call = callOf(key);
+    const call = callOf(key), was = new Set(state.openPhases);
     if (call) state.selPhase = call.phase;
-    if (call && reveal && expandable(phaseOf(call.phase))) state.openPhases.add(call.phase);
-    renderGraph(); renderSide(); revealNode(key);
-    if (call) revealCard(call.phase);
-    scheduleLinks();
+    const opens = call && reveal && expandable(phaseOf(call.phase)) && !state.openPhases.has(call.phase);
+    if (opens) state.openPhases.add(call.phase);
+    const update = () => { renderGraph(); renderSide(); revealNode(key); if (call) revealCard(call.phase); scheduleLinks(); };
+    opens ? morph(update, was) : update();
   }
 
   // open: true/false expands or collapses the phase; null leaves it as it is.
   function selectPhase(name, open = null) {
     state.sel = null; state.selPhase = name;
+    const was = new Set(state.openPhases);
     if (open === true && expandable(phaseOf(name))) state.openPhases.add(name);
     if (open === false) state.openPhases.delete(name);
-    renderGraph(); renderSide(); revealCard(name);
-    scheduleLinks();
+    const update = () => { renderGraph(); renderSide(); revealCard(name); scheduleLinks(); };
+    was.has(name) !== state.openPhases.has(name) ? morph(update, was) : update();
   }
 
   function selectStep(t, scroll = true) {
@@ -467,7 +493,13 @@ export function createView(root, ctx) {
   root.addEventListener("pointerleave", () => hoverArrow(null));
 
   root.addEventListener("keydown", event => {
-    if (event.key === "Escape") { state.arrowPin = state.arrowHover = null; state.openStep = null; state.sel = state.selPhase = null; state.openPhases.clear(); render(); return; }
+    if (event.key === "Escape") {
+      state.arrowPin = state.arrowHover = null; state.openStep = null; state.sel = state.selPhase = null;
+      const was = new Set(state.openPhases);
+      state.openPhases.clear();
+      was.size ? morph(render, was) : render();
+      return;
+    }
     const lane = event.target.closest(".proc-view, .lane-scroll");
     const keys = lane === graph ? ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter"] : ["ArrowLeft", "ArrowRight", "Enter"];
     if (!lane || !keys.includes(event.key)) return;

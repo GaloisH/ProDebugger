@@ -87,7 +87,7 @@ export function layoutProcess(phases, open) {
       p.width = Math.max(CW, span + PAD * 2);
       p.lanes.forEach((lane, li) => {
         lane.x = x + (p.width - span) / 2 + li * (W + LANE_GAP);
-        lane.nodes.forEach((node, k) => Object.assign(node, {x: lane.x, y: y0 + k * (H + GY), w: W, h: H, p}));
+        lane.nodes.forEach((node, k) => Object.assign(node, {x: lane.x, y: y0 + k * (H + GY), w: W, h: H, k, p}));
         // Sequence within a column; a retry after a rejected tool call is drawn dashed red.
         lane.nodes.slice(1).forEach((node, k) => p.seq.push({kind: "seq", from: lane.nodes[k], to: node, retry: Boolean(lane.nodes[k].call.rejected)}));
       });
@@ -143,7 +143,7 @@ const edgeHtml = (e, scroll) => `<path class="proc-edge ${e.kind} ${e.retry ? "i
 export const handoffHtml = (layout, scroll) => layout.edges.map(e => edgeHtml(e, scroll)).join("");
 
 function nodeHtml(node, sel) {
-  const pos = `left:${node.x - node.p.x}px;top:${node.y - node.p.body.top}px;width:${W}px;height:${H}px`;
+  const pos = `left:${node.x - node.p.x}px;top:${node.y - node.p.body.top}px;width:${W}px;height:${H}px;--k:${node.k}`;
   const c = node.call;
   const errors = c.tools.filter(t => t.error).length;
   const cls = ["pnode", `phase-${c.phase}`, sel === String(c.index) && "is-selected", c.status === "pending" && "is-pending",

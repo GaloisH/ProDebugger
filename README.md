@@ -4,14 +4,16 @@ Standalone migration of the DSL debugger experiment (`experiments/dsl` in the or
 OmniDebugger intern repository). The backend audits task/observation parsing and uses evidence-driven SQL retrieval in TRACE. SUBMIT retains its input schema and must select one supplied candidate.
 
 See [README_EVOLUTION.md](README_EVOLUTION.md) for the changes from the initial
-repository to the current backend. Experiment results and trajectory archives are kept
-outside this repository.
+repository to the current backend. This repository includes 105 annotated benchmark
+traces: **66 ALFWorld** and **39 WebShop**. Experiment outputs are kept outside the
+repository.
 
 ```text
 ProDebugger/
   core/                 canonical compiler, domain profiles, semantic scope and operators
     profiles/           alfworld, webshop, base
-    data/train.parquet  benchmark trajectories (private; git-ignored)
+    data/train.parquet  105 annotated traces: ALFWorld 66, WebShop 39
+    data/examples/      one complete JSON trace per domain
   prodebugger/          the DSL debugger (formerly experiments/dsl)
     run_experiment.py   MAP -> ROUTE -> TRACE -> SUBMIT entry point
     run_compile.py      compile one trajectory / the fixed 20-ID sample
@@ -33,6 +35,49 @@ copy .env.example .env   # then put your key in .env
 
 Python 3.12+ (tested with 3.13). `pyarrow` is needed for Parquet input and `run_compile`;
 `openai` and `python-dotenv` only for online runs.
+
+## Benchmark traces
+
+[Download the Parquet data](core/data/train.parquet?raw=true) or browse a complete
+[ALFWorld example](core/data/examples/alfworld.json) and
+[WebShop example](core/data/examples/webshop.json). Each row contains one agent
+trajectory with its original failure annotations.
+
+| Environment | Traces |
+| --- | ---: |
+| ALFWorld | 66 |
+| WebShop | 39 |
+| **Total** | **105** |
+
+These traces are the ALFWorld/WebShop subset of the supplied 139-row `train.parquet`;
+34 GAIA rows are excluded. Rows, IDs, trajectory content and annotation values are
+preserved. The `train` filename follows the source file; this release does not
+introduce a new train/validation/test split. See the [data documentation](core/data/README.md)
+for the schema and [manifest](core/data/manifest.json) for source/output SHA-256 hashes.
+
+Read and inspect the data after installing the requirements:
+
+```python
+import json
+from collections import Counter
+import pyarrow.parquet as pq
+
+table = pq.read_table("core/data/train.parquet")
+print(Counter(table["task_type"].to_pylist()))  # alfworld: 66, webshop: 39
+row = table.to_pylist()[0]
+messages = json.loads(row["full_trajectory"])["messages"]
+print(row["trajectory_id"], messages[0]["content"])
+```
+
+Compile one included trace from each domain without an API key:
+
+```bash
+python -B -m prodebugger.run_compile GPT-4o_027_alfworld_task_027
+python -B -m prodebugger.run_compile GPT-4o_003_chat_b000_t00_e02-1e119842
+```
+
+Reference labels are included for evaluation. The debugger's Parquet input path
+reads only `trajectory_id`, `task_type` and `full_trajectory`.
 
 ## LLM debugger entry point
 

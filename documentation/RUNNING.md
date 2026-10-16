@@ -1,10 +1,10 @@
 # Running the LLM debugger
 
-[Back to the README](../README.md#llm-debugger-entry-point) · [Implementation guide](REVIEWER_GUIDE.md)
+[Back to the README](../README.md#quick-start) · [Implementation guide](REVIEWER_GUIDE.md)
 
 This reference contains detailed runtime behavior, model configuration, budgets,
 replay/resume requirements and output files. For the shortest working example,
-run `python -B inspect_examples.py` after [setup](../README.md#setup).
+run `python -B inspect_examples.py` after the [quick start](../README.md#quick-start).
 
 ## Workflow and evidence contracts
 

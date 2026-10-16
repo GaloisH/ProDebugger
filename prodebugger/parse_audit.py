@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 import re
 import math
-from dataclasses import asdict
 from pathlib import Path
 
 from .record_bridge import digest, plain, read_json, write_json, append_json, PROFILES

@@ -4,22 +4,16 @@ S partitions a step into slots. R binds mentions to entities and emits facts
 carrying their span and the situation they were asserted in. L assigns the basis
 and the purpose, which are the two axes.
 
-Three invariants are checked here rather than requested in a prompt:
-    aligned   one entry per native step
-    grounded  every span occurs verbatim in its step
-    ordered   every basis and every situation points strictly backwards
-The third is enforced by Record.add and so cannot be violated silently.
+Record.add enforces that every basis and every situation points strictly
+backwards, so ordering cannot be violated silently.
 """
 import re
 from dataclasses import dataclass, replace
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from record import (Record, Entity, Goal, IntentionOption, IntentionParameter,
-                    SourceStep)
+from record import Record, IntentionOption, IntentionParameter, SourceStep
+from local_judgement import MODULES as TAGS
 from process_notes import build_process_notes
-
-TAGS = ("memory", "reflection", "plan", "action")
-SLOT_OF = {"memory": "mem", "reflection": "refl", "plan": "plan", "action": "act"}
 
 
 @dataclass
@@ -66,18 +60,18 @@ def segment(env_texts: List[str], agent_texts: List[str],
     return steps
 
 
-def build(tid: str, task: str, steps: List[Step], profile, *, parsed=None) -> Record:
+def build(tid: str, task: str, steps: List[Step], profile, *, parsed: Dict[str, Any]) -> Record:
+    """Compile audited task/observation parses and module text into a Record."""
     K, RL = profile.kinds(), profile.relations()
-    goals = parsed["goals"] if parsed is not None else profile.parse_goal(task)
-    if parsed is not None:
-        # Even a fully consumed observation template does not make the world
-        # closed or the heuristic memory extraction exhaustive. Missing Facts
-        # must not become negative observations in native criterion checks.
-        for name, relation in RL.declared().items():
-            RL._r[name] = replace(relation, props=relation.props - {"observed"})
+    goals = parsed["goals"]
+    # Even a fully consumed observation template does not make the world
+    # closed or the heuristic memory extraction exhaustive. Missing Facts
+    # must not become negative observations in native criterion checks.
+    for name, relation in RL.declared().items():
+        RL._r[name] = replace(relation, props=relation.props - {"observed"})
     R = Record(tid, K, RL, task=task, goals=goals)
     R.domain = getattr(profile, "name", "unknown")
-    R.parse_audits = parsed["audits"] if parsed is not None else []
+    R.parse_audits = parsed["audits"]
     R.domain_briefing = (profile.domain_briefing()
                          if hasattr(profile, "domain_briefing") else
                          {"name": R.domain})
@@ -104,8 +98,7 @@ def build(tid: str, task: str, steps: List[Step], profile, *, parsed=None) -> Re
         )
         # --- R over the environment turn -----------------------------
         obs_ids: List[int] = []
-        observations = (parsed["observations"][str(st.t)] if parsed is not None
-                        else profile.parse_observation(st.env_text, st.admissible))
+        observations = parsed["observations"][str(st.t)]
         for item in observations:
             args = tuple(R.ent(k, i) for k, i in item["args"])
             fid = R.add(item["rel"], args, item["value"], slot="obs", side="env",
@@ -300,17 +293,3 @@ def build(tid: str, task: str, steps: List[Step], profile, *, parsed=None) -> Re
 
     R.process_notes = build_process_notes(R)
     return R
-
-
-def invariants(R: Record, steps: List[Step]) -> Dict[str, bool]:
-    aligned = R.length() == len(steps)
-    by_t = {s.t: s for s in steps}
-    def _flat(x): return " ".join(x.split())
-    # groundedness means the span occurs in the step. Whitespace is normalised on
-    # both sides, because a line break is not a difference in what was said.
-    grounded = all(
-        (not f.span) or f.t not in by_t
-        or (_flat(f.span) in _flat(by_t[f.t].agent_text))
-        or (_flat(f.span) in _flat(by_t[f.t].env_text))
-        for f in R.F)
-    return {"aligned": aligned, "grounded": grounded, "ordered": R.dependence_ok()}

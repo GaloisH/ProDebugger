@@ -7,10 +7,9 @@ presentation, and diagnosis are all mixed together.
 """
 from typing import Any, Dict, Iterable, List
 
+from local_judgement import MODULES
 from record import Record
 
-
-MODULES = ("memory", "reflection", "plan", "action")
 
 REVIEW_QUESTIONS = {
     "memory": (

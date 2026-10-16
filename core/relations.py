@@ -61,10 +61,6 @@ class Relations:
             raise ValueError(f"key positions {key} out of range for arity {arity}")
         if arg_kinds is not None and len(arg_kinds) != arity:
             raise ValueError(f"arg_kinds for {name!r} must have arity {arity}")
-        if FUNCTIONAL in props and len(key) == arity and arity > 0:
-            # a fully keyed functional relation is a flag, which is allowed, but
-            # the common case is a proper key, so make the intent explicit.
-            pass
         if name in self._r:
             raise ValueError(f"relation {name!r} declared twice")
         rel = Relation(name, arity, frozenset(props), tuple(key),

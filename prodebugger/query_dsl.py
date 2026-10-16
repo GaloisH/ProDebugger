@@ -10,6 +10,7 @@ import sqlglot
 from sqlglot import exp
 from sqlglot.dialects.sqlite import SQLite
 from .record_bridge import plain, digest
+from local_judgement import SLOTS
 from .evidence_quality import RAW_MODULE_RELATIONS, evidence_quality, fact_quality
 from .query_syntax import BATCH_ARGUMENTS, lower_named_unions, normalize_function_names
 
@@ -28,7 +29,7 @@ FUNCTIONS = {"FIND_ENTITY", "ABOUT", "TRACE_ENTITY", "TRACE_STATE", "TRACE_ACTIO
 SQL_FUNCTIONS = {"count", "min", "max", "sum", "avg", "total", "lower", "upper", "length", "substr", "substring",
                  "trim", "ltrim", "rtrim", "coalesce", "ifnull", "nullif", "abs", "round", "instr", "like",
                  "glob", "replace", "json_extract", "json_array_length", "typeof", "contains"}
-MODULES = {"mem": "memory", "refl": "reflection", "plan": "plan", "act": "action", "obs": "observation"}
+MODULES = {**{slot: module for module, slot in SLOTS.items()}, "obs": "observation"}
 SOURCE_FIELDS = {"observation", "memory", "reflection", "plan", "action"}
 EXCERPT_CHARS = 360
 TEXT_ARGUMENTS = {"FIND_ENTITY": {0}, "ABOUT": {0}, "TRACE_ENTITY": {0},

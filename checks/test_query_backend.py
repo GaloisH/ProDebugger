@@ -7,8 +7,7 @@ from unittest.mock import patch
 from prodebugger.record_bridge import build_bundle, plain, write_json, compiler, PROFILES
 from prodebugger.parse_audit import audit, _validate_response, prepare
 from prodebugger.query_dsl import execute
-from prodebugger.query_trace import packet, query, commit
-from prodebugger.window_trace import FIELDS, commit as old_commit
+from prodebugger.query_trace import FIELDS, commit, coverage, packet, query
 from prodebugger.debug_tools import DebugTools
 from prodebugger.direct_submit import packet as submit_packet
 from prodebugger.debugger_agent import DebuggerAgent
@@ -256,16 +255,10 @@ class BackendChecks(unittest.TestCase):
         self.assertEqual(set(event["conclusion"]["candidates"][0]), set(FIELDS))
         payload = submit_packet(self.tools)
         self.assertEqual(payload["schema"], "direct-submit-input/v2")
-        from prodebugger.window_trace import coverage
         self.assertEqual(coverage(self.tools)['assessment_unit'], 'single_step_per_route_candidate')
         self.assertEqual(coverage(self.tools)['assessed_steps'], [1])
         self.assertEqual(set(payload["candidates"][0]), {"candidate_id", "window", "step", "module", "assessment",
                                                         "local_context_ref", "related_evidence", "evidence_selection"})
-        self.tools.window_conclusions.clear()
-        self.tools.windows.windows[0]["lo"] = 1
-        legacy = old_commit(self.tools, answer(), "old")
-        self.assertEqual(set(event), set(legacy))
-        self.assertEqual(event["candidates"], legacy["candidates"])
 
     def test_unretrieved_quote_and_multistep_rejected(self):
         query(self.tools, "case1", "SELECT step FROM TRACE_ENTITY('portable:apple_1')")

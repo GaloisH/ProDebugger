@@ -140,10 +140,6 @@ def situating_relation() -> str:
     return "at"
 
 
-def null_verb() -> str:
-    return "click"
-
-
 _SUB = re.compile(r"\b(?:first|before (?:that|this|i)|in order to|so that|then)\b", re.I)
 
 

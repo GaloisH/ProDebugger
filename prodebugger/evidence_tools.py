@@ -5,7 +5,7 @@ import copy
 from collections import defaultdict, deque
 from dataclasses import replace
 
-from .record_bridge import digest, plain
+from .record_bridge import plain
 
 
 class ToolError(ValueError):
@@ -45,8 +45,8 @@ class _VisibleFacts:
 class EvidenceIndex:
     def __init__(self, bundle):
         self.record = bundle.record
-        self.facts = {f.fid: f for f in bundle.projection.F}
-        self.evidence = {e.eid: plain(e) for g in bundle.projection.evidences.values() for e in g.items}
+        self.facts = {f.fid: f for f in bundle.record.F}
+        self.evidence = {e.eid: plain(e) for g in bundle.record.evidences.values() for e in g.items}
         self.evaluations = bundle.evaluations
         self.length = len(bundle.source["steps"])
         self.fingerprint = bundle.fingerprint
@@ -252,40 +252,3 @@ class EvidenceIndex:
                 "goal_links": self.goal_links(starts), "missing_links": missing,
                 "truncated": truncated or bool(missing), "reason": "limits_or_scope" if truncated or missing else None,
                 "limits": {"depth": depth, "max_nodes": max_nodes}}
-
-
-class TraceWindows:
-    def __init__(self, index):
-        self.index, self.version = index, 0
-        self.windows = []
-
-    def configure(self, candidates, W):
-        integer(W, "W", 1)
-        if not isinstance(candidates, list) or not candidates:
-            raise ToolError("invalid_arguments", "candidates must be a nonempty list")
-        windows, ids = [], set()
-        for item in candidates:
-            if not isinstance(item, dict):
-                raise ToolError("invalid_arguments", "each candidate must be an object")
-            cid = item.get("candidate_id")
-            if not isinstance(cid, str) or not cid.strip() or cid in ids:
-                raise ToolError("invalid_arguments", "candidate_id must be unique and nonempty")
-            t = integer(item.get("issue_step"), "issue_step", 1, self.index.length)
-            fids = item.get("issue_fids", [])
-            if not isinstance(fids, list):
-                raise ToolError("invalid_arguments", "issue_fids must be a list")
-            for fid in fids:
-                if self.index.fact(fid).t != t:
-                    raise ToolError("invalid_arguments", "issue_fids must belong to issue_step")
-            goals = item.get("goal_links", [])
-            if (not isinstance(goals, list) or any(not isinstance(g, str) for g in goals)
-                    or set(goals) - self.index.requirements):
-                raise ToolError("invalid_requirement", "invalid candidate goals")
-            ids.add(cid)
-            windows.append({**item, "W": W, "lo": max(1, t - W + 1), "hi": t})
-        if digest(windows) != digest(self.windows):
-            self.windows, self.version = windows, self.version + 1
-        return self.windows
-
-    def members(self, step):
-        return [w["candidate_id"] for w in self.windows if w["lo"] <= step <= w["hi"]]

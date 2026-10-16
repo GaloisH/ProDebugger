@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from checks.test_query_backend import source, case_for, manager_answer, answer
 from prodebugger.record_bridge import build_bundle, plain
-from prodebugger.claim_parser import ClaimParser, cards, fragment, statement, source_cards, validate_unit, decode_batch
+from prodebugger.claim_parser import ClaimParser, cards, fragment, statement, validate_unit, decode_batch
 from prodebugger.debug_tools import DebugTools
 from prodebugger.query_dsl import execute
 from prodebugger.query_trace import query, commit as assess
@@ -59,7 +59,7 @@ class ClaimParserChecks(unittest.TestCase):
         self.assertTrue(markers)
         self.assertFalse(any(f.rel == 'recalled_nothing' for f in bundle.record.F))
         self.assertEqual(fact_quality(bundle.record, markers[0])['source_kind'], 'parser_metadata')
-        self.assertFalse(any(f.rel == 'memory_unparsed' for f in memory_claims(bundle.projection)))
+        self.assertFalse(any(f.rel == 'memory_unparsed' for f in memory_claims(bundle.record)))
         self.assertTrue(any(f.rel == 'recalled_summary' and 'likely' in f.span for f in bundle.record.F))
 
     def test_full_template_and_unresolved_semantic_scope(self):

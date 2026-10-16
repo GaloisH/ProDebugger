@@ -8,7 +8,7 @@ from local_judgement import SLOTS
 from .submit_evidence import directed_context
 
 POLICY = "window-candidates-submit/v5-manager-forced-choice"
-from .window_trace import coverage as window_coverage
+from .query_trace import coverage as window_coverage
 
 
 def disclose_root_roles(candidates):

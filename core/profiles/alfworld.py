@@ -101,20 +101,8 @@ def relations() -> Relations:
     return R
 
 
-def null_verb() -> str:
-    return "look"
-
-
 def situating_relation() -> str:
     return "at"
-
-
-def opens_a_line(verb: str) -> bool:
-    return verb in {"go", "open_action", "look", "use"}
-
-
-def closes_a_line(verb: str) -> bool:
-    return verb in {"take", "put", "clean", "heat", "cool", "slice"}
 
 
 def commits() -> set:

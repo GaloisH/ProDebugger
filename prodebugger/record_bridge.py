@@ -118,20 +118,12 @@ def saved_source(path: Path, tid: str | None = None) -> dict:
 
 def parquet_source(tid: str, data_dir: Path) -> dict:
     try:
-        import pyarrow.parquet as pq
-        from data_io import unpack
+        from data_io import read_one, unpack
     except ImportError as exc:
         raise RuntimeError("Parquet input needs pyarrow; use --compiled-dir for saved steps") from exc
-    rows = []
-    for split in ("train", "validation", "test"):
-        path = Path(data_dir) / f"{split}.parquet"
-        if path.is_file():
-            rows.extend(pq.read_table(path, filters=[("trajectory_id", "=", tid)],
-                                      columns=["trajectory_id", "task_type", "full_trajectory"]).to_pylist())
-    if len(rows) != 1:
-        raise ValueError(f"expected one trajectory, found {len(rows)}")
-    _, task, env, agent, admissible = unpack(rows[0])
-    return {"trajectory_id": tid, "task_type": rows[0]["task_type"], "task": task,
+    row = read_one(tid, str(data_dir), ["trajectory_id", "task_type", "full_trajectory"])
+    _, task, env, agent, admissible = unpack(row)
+    return {"trajectory_id": tid, "task_type": row["task_type"], "task": task,
             "steps": plain(compiler.segment(env, agent, admissible))}
 
 

@@ -10,8 +10,6 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-import pyarrow.parquet as pq
-
 if __package__:
     from .abstract_rules import export_rules
 else:
@@ -26,24 +24,14 @@ def compile_trajectory(trajectory_id: str, data_dir: Path = DATA, *,
     """Compile Facts and seven abstract rules; save the record and evaluations."""
     sys.path.insert(0, str(HERE.parent))
     from prodebugger.record_bridge import parquet_source, build_bundle, valid_id
-    valid_id(trajectory_id)
-    rows = []
-    for split in ("train", "validation", "test"):
-        path = Path(data_dir) / f"{split}.parquet"
-        if path.is_file():
-            rows.extend(pq.read_table(path, filters=[("trajectory_id", "=", trajectory_id)],
-                                      columns=["trajectory_id", "task_type", "full_trajectory"]
-                                      ).to_pylist())
-    if len(rows) != 1:
-        raise ValueError(f"Expected one trajectory for {trajectory_id!r}, found {len(rows)} in {data_dir}")
-    row = rows[0]
+    source = parquet_source(valid_id(trajectory_id), data_dir)
     output = (Path(output_dir) if output_dir is not None else HERE / "sessions") / trajectory_id
     output.mkdir(parents=True, exist_ok=True)
-    bundle = build_bundle(parquet_source(trajectory_id, data_dir), output=output)
+    bundle = build_bundle(source, output=output)
     record, evaluations = bundle.projection, bundle.evaluations
     payload = {
         "trajectory_id": record.tid,
-        "task_type": row["task_type"],
+        "task_type": bundle.source["task_type"],
         "task": record.task,
         "parse_audits": bundle.record.parse_audits,
         "parsing_mode": "offline-strict-audit; online backoff is available through run_experiment",

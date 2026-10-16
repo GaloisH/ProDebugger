@@ -8,9 +8,9 @@ ProDebugger helps researchers inspect failures in recorded LLM-agent trajectorie
 - **Output:** a browsable investigation linking a candidate failure step to supporting trace evidence and uncertainty.
 - **Use it to:** inspect agent failures, review how a diagnosis was reached, and explore the included benchmark traces.
 
-![ProDebugger workbench showing a trajectory and linked debugger events](web/static/img/shots/trajectory.webp)
+![ProDebugger case overview showing requirements, environment state, linked debugger and agent timelines, rule checks, and evidence leading to a diagnosis](assets/prodebugger-case-overview.jpg)
 
-The workbench screenshot shows the trajectory and diagnostic events together. The [workflow diagram](assets/prodebugger-workflow.png) explains the stages and evidence checks.
+This case overview shows how requirements, environment observations, rule checks, and retrieved evidence connect to a selected diagnosis. The [workflow diagram](assets/prodebugger-workflow.png) gives a compact view of the processing stages.
 
 <a id="setup"></a>
 
@@ -31,7 +31,7 @@ To browse the workbench, start the local server in a second terminal:
 python web/server.py
 ```
 
-Open <http://127.0.0.1:8770>. The script writes its example report under `artifacts/reviewer_examples/`; a copy is available as [EXAMPLE_REPORT.json](EXAMPLE_REPORT.json). See the [step-by-step walkthrough](documentation/REVIEWER_GUIDE.md#reproduce-the-two-environment-examples) if you want to inspect the generated records and query results.
+Open <http://127.0.0.1:8770>. The script writes its example report under `artifacts/reviewer_examples/`; a checked-in copy is available as [EXAMPLE_REPORT.json](documentation/EXAMPLE_REPORT.json). See the [step-by-step walkthrough](documentation/REVIEWER_GUIDE.md#reproduce-the-two-environment-examples) to inspect the generated records and query results.
 
 Python 3.12 or later is required (tested with Python 3.13). `pyarrow` supports Parquet input. The other packages are only needed for online model runs; offline examples do not require credentials.
 
@@ -77,6 +77,7 @@ Replace `MODEL_NAME` and `ENDPOINT` with your provider configuration. The defaul
 | --- | --- |
 | [Implementation guide](documentation/REVIEWER_GUIDE.md) | Terminology, evidence boundaries, offline examples, workbench walkthrough, and result interpretation. |
 | [Running the debugger](documentation/RUNNING.md) | Model configuration, experiment options, replay/resume, budgets, and generated files. |
+| [Example report](documentation/EXAMPLE_REPORT.json) | Saved output from the credential-free ALFWorld and WebShop compilation/query examples. |
 | [Query reference](prodebugger/prompts/query_dsl.md) | Supported read-only query operators, syntax, and coverage semantics. |
 | [Benchmark data](core/data/README.md) | Dataset provenance, schema, files, and reading examples. |
 | [Development history](documentation/README_EVOLUTION.md) | Architecture and protocol changes, experiment notes, and limitations. |

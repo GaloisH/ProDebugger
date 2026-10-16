@@ -3,7 +3,7 @@ import {CaseStore} from "../case/store.js";
 import {CALL_PHASES} from "../case/calls.js";
 import {createCaseViews, TABS} from "../case/views.js";
 import {caseHref} from "../routes.js";
-import {esc, number, statusBadge} from "../util.js";
+import {esc, loader, number, statusBadge} from "../util.js";
 
 export function mountWorkbench(root, route) {
   const store = new CaseStore(route.ref);
@@ -13,7 +13,7 @@ export function mountWorkbench(root, route) {
     <section class="wb-head">
       <div class="wb-title">
         <div class="eyebrow" id="wb-kind">${store.kind === "run" ? "Debugger run" : "Compiled session"}</div>
-        <h1 id="wb-task" class="wb-task">Loading…</h1>
+        <h1 id="wb-task" class="wb-task">&nbsp;</h1>
         <div class="wb-badges" id="wb-badges"></div>
       </div>
       <dl class="wb-metrics" id="wb-metrics"></dl>
@@ -24,7 +24,7 @@ export function mountWorkbench(root, route) {
       <span class="wb-tabs-fill"></span>
       <span class="wb-sync" id="wb-sync"></span>
     </nav>
-    <div id="wb-views" class="wb-views"></div>`;
+    <div id="wb-views" class="wb-views">${loader("Loading case…")}</div>`;
   const $ = id => root.querySelector("#" + id);
 
   function renderHeader(model) {
@@ -83,7 +83,7 @@ export function mountWorkbench(root, route) {
     renderHeader(store.model);
     renderSync();
     views.update(store.model, {changed, first});
-    if (first) show(currentRoute);
+    if (first) { $("wb-views").querySelector(":scope > .loader")?.remove(); show(currentRoute); }
   });
   store.start().catch(error => {
     $("wb-views").innerHTML = `<div class="error-box">Could not load this case: ${esc(error.message)}</div>`;

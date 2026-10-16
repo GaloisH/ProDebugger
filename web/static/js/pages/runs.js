@@ -1,7 +1,7 @@
 // Runs list: every debugger run and compiled session, with live status polling.
 import {getIndex} from "../api.js";
 import {caseHref} from "../routes.js";
-import {ago, debounce, esc, statusBadge} from "../util.js";
+import {ago, debounce, esc, loader, statusBadge} from "../util.js";
 
 const POLL_MS = 3000;
 const DOMAINS = ["alfworld", "webshop", "chat"];
@@ -129,7 +129,7 @@ export function mountRuns(root, route) {
   function render() {
     const index = state.index;
     if (state.error && !index) { $("runs-list").innerHTML = `<div class="error-box">Cannot reach the workbench server: ${esc(state.error)}</div>`; return; }
-    if (!index) { $("runs-list").innerHTML = `<p class="empty">Loading runs…</p>`; return; }
+    if (!index) { $("runs-list").innerHTML = loader("Loading runs…"); return; }
     const groups = index.groups.filter(g => !state.sources.size || state.sources.has(g.source));
     renderFilters(index);
     const trajectories = index.groups.flatMap(g => g.trajectories);

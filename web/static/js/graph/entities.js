@@ -22,6 +22,26 @@ function forceLayout(ids, links, kindOf) {
   }));
   const nodes = [...pos.values()];
   const L = links.map(([a, b]) => [pos.get(a), pos.get(b)]).filter(([a, b]) => a && b && a !== b);
+  // The forces treat nodes as points, so pills could overlap: separate overlapping pairs
+  // along their shallower axis, sized like the pills build() draws, while the layout
+  // settles (so links can relax around them) and once more at the end.
+  const box = ids.map(id => {
+    const index = id.split(":").slice(1).join(":") || id;
+    const label = /^\d+$/.test(index) ? `${kindOf(id)} ${index}` : index;
+    return {n: pos.get(id), w: Math.max(70, Math.min(170, Math.min(22, label.length) * 7.4 + 26)) + 40, h: 70};
+  });
+  const separate = () => {
+    let moved = false;
+    for (let i = 0; i < box.length; i++) for (let j = i + 1; j < box.length; j++) {
+      const a = box[i], b = box[j], dx = b.n.x - a.n.x, dy = b.n.y - a.n.y;
+      const ox = (a.w + b.w) / 2 - Math.abs(dx), oy = (a.h + b.h) / 2 - Math.abs(dy);
+      if (ox <= 0 || oy <= 0) continue;
+      moved = true;
+      if (ox < oy) { const s = (dx < 0 ? -1 : 1) * ox / 2; a.n.x -= s; b.n.x += s; }
+      else { const s = (dy < 0 ? -1 : 1) * oy / 2; a.n.y -= s; b.n.y += s; }
+    }
+    return moved;
+  };
   const iterations = ids.length > 150 ? 220 : 320;
   for (let it = 0; it < iterations; it++) {
     const alpha = 1 - it / iterations;
@@ -43,7 +63,9 @@ function forceLayout(ids, links, kindOf) {
       n.x += Math.max(-30, Math.min(30, n.vx)) * alpha; n.y += Math.max(-30, Math.min(30, n.vy)) * alpha;
       n.vx *= .5; n.vy *= .5;
     }
+    if (it > iterations * .6) separate();
   }
+  for (let it = 0; it < 120 && separate(); it++);
   return pos;
 }
 

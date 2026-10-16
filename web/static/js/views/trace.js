@@ -43,7 +43,7 @@ export function traceBadge(call) {
 }
 
 // ---------- MANAGER ----------
-function assignmentCard(a) {
+export function assignmentCard(a) {
   const crit = a.criteria || {};
   return `<div class="detail-block assignment">
     <h4><span class="mono">${esc(a.agent_id)}</span><span class="chip-row"><span class="badge anchor" title="anchor case">${esc(a.anchor_case_id)}</span>${(a.route_case_ids || []).filter(id => id !== a.anchor_case_id).map(id => `<span class="badge">${esc(id)}</span>`).join("")}</span></h4>
@@ -57,7 +57,7 @@ function assignmentCard(a) {
   </div>`;
 }
 
-function ruleRow(r) {
+export function ruleRow(r) {
   return `<div class="rule-row">
     <div class="rule-if">${(r.conditions || []).map(c => `<span class="cond" title="${esc(c.finding || "")}"><span class="mono">${esc(c.agent_id)}</span> = <span class="badge ${c.outcome === "supported" ? "bad" : c.outcome === "refuted" ? "ok" : ""}">${esc(c.outcome)}</span></span>`).join('<span class="muted">and</span>')}</div>
     <div class="rule-then"><span class="muted">→</span> ${esc(r.conclusion || "")}</div>
@@ -105,7 +105,7 @@ function rowText(r) {
   return rest.map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : v}`).join(" · ");
 }
 
-function queryDetail(q, sql) {
+export function queryDetail(q, sql) {
   const issues = [
     q.truncated && "result truncated", q.engine_truncated && "engine truncated", q.partial && "partial",
     ...(q.function_errors || []).map(e => `function error: ${typeof e === "string" ? e : e.function || e.message || JSON.stringify(e)}`),

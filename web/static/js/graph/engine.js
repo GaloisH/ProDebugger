@@ -1,4 +1,4 @@
-// Minimal SVG graph canvas: pan, wheel zoom, fit, focus and a minimap.
+// Minimal SVG graph canvas: pan, wheel zoom, fit and focus.
 // Views hand it a positioned scene; it never computes layout itself.
 import {esc} from "../util.js";
 
@@ -36,13 +36,11 @@ export function createCanvas(container, handlers = {}) {
       <button class="btn" data-zoom="0.8" aria-label="Zoom out">−</button>
       <button class="btn" data-fit aria-label="Fit graph">Fit</button>
     </div>
-    <svg class="graph-minimap" aria-hidden="true"><g class="mini-nodes"></g><rect class="mini-view"/></svg>
     <div class="graph-tip" hidden></div>`;
   const svg = container.querySelector(".graph-svg");
   const viewport = svg.querySelector(".viewport");
   const layers = {groups: svg.querySelector(".layer-groups"), edges: svg.querySelector(".layer-edges"),
                   nodes: svg.querySelector(".layer-nodes"), labels: svg.querySelector(".layer-labels")};
-  const mini = container.querySelector(".graph-minimap");
   const tip = container.querySelector(".graph-tip");
   let view = {x: 0, y: 0, k: 1};
   let scene = {nodes: [], edges: [], groups: [], labels: []};
@@ -53,7 +51,6 @@ export function createCanvas(container, handlers = {}) {
     viewport.setAttribute("transform", `translate(${view.x},${view.y}) scale(${view.k})`);
     container.style.setProperty("--zoom", view.k);
     container.classList.toggle("is-far", view.k < .55);
-    drawMiniView();
   };
 
   function computeBounds() {
@@ -85,26 +82,6 @@ export function createCanvas(container, handlers = {}) {
     layers.nodes.innerHTML = scene.nodes.map(nodeSvg).join("");
     layers.labels.innerHTML = (scene.labels || []).map(l => `<text class="graph-label ${l.cls || ""}" x="${l.x}" y="${l.y}" ${l.anchor ? `text-anchor="${l.anchor}"` : ""}>${esc(l.text)}</text>`).join("");
     computeBounds();
-    drawMini();
-  }
-
-  function drawMini() {
-    const W = 180, H = 110, s = Math.min(W / bounds.w, H / bounds.h);
-    mini.setAttribute("viewBox", `0 0 ${W} ${H}`);
-    mini.dataset.scale = s;
-    mini.querySelector(".mini-nodes").innerHTML = scene.nodes.map(n =>
-      `<rect class="${n.cls || ""}" x="${(n.x - bounds.x) * s}" y="${(n.y - bounds.y) * s}" width="${Math.max(1.5, n.w * s)}" height="${Math.max(1.5, n.h * s)}"/>`).join("");
-    mini.hidden = scene.nodes.length < 12;
-    drawMiniView();
-  }
-
-  function drawMiniView() {
-    const s = Number(mini.dataset.scale || 1), r = svg.getBoundingClientRect();
-    const rect = mini.querySelector(".mini-view");
-    rect.setAttribute("x", (-view.x / view.k - bounds.x) * s);
-    rect.setAttribute("y", (-view.y / view.k - bounds.y) * s);
-    rect.setAttribute("width", r.width / view.k * s);
-    rect.setAttribute("height", r.height / view.k * s);
   }
 
   let fitPending = false;
@@ -204,12 +181,7 @@ export function createCanvas(container, handlers = {}) {
     if (b.dataset.fit != null) fit();
     else zoomAt(Number(b.dataset.zoom), r.width / 2, r.height / 2);
   });
-  mini.addEventListener("pointerdown", e => {
-    const s = Number(mini.dataset.scale || 1), r = mini.getBoundingClientRect();
-    const vb = mini.viewBox.baseVal, sx = vb.width / r.width;
-    centerOn((e.clientX - r.left) * sx / s + bounds.x, (e.clientY - r.top) * sx / s + bounds.y);
-  });
-  const resize = new ResizeObserver(() => { if (fitPending) fit(); else drawMiniView(); });
+  const resize = new ResizeObserver(() => { if (fitPending) fit(); });
   resize.observe(svg);
 
   return {

@@ -20,7 +20,22 @@
 .lane-gap { height: 4.75rem; }
 .lane-empty { width: 100%; margin: 0; }
 
-.lane-steps .lane-track > * + *::before { content: '→'; position: absolute; top: 3.2rem; left: -1.45rem; width: 1.3rem; text-align: center; color: var(--muted); font-size: 1.1rem; pointer-events: none; }
+/* Arrow into a step: hover previews its violated rules, click pins them. */
+.step-arrow { position: absolute; top: 2.85rem; left: -1.5rem; width: 1.4rem; height: 1.4rem; padding: 0; border: 1px solid transparent; border-radius: .35rem; background: none; color: var(--muted); font-size: 1.1rem; line-height: 1; cursor: pointer; }
+.step-arrow:hover, .step-arrow:focus-visible { border-color: var(--line-strong); background: var(--panel-3); color: var(--text-hi); }
+.step-arrow.is-warn { color: var(--amber); }
+.step-arrow.is-pinned { border-color: var(--accent-line); background: var(--sel-bg); color: var(--sel-ink); }
+.arrow-pop { position: fixed; z-index: 40; width: min(24rem, calc(100vw - 16px)); max-height: 60vh; overflow: auto; padding: .65rem .75rem; border: 1px solid var(--line-strong); border-radius: .6rem; background: var(--panel); box-shadow: 0 12px 28px var(--shadow-soft); font-size: .8rem; pointer-events: none; }
+.arrow-pop.is-pinned { border-color: var(--accent-line); pointer-events: auto; }
+.arrow-pop p { margin: .35rem 0 0; }
+.pop-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.pop-rules { margin: .5rem 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+.pop-rules > li { padding-top: .45rem; border-top: 1px solid var(--line); }
+.pop-rule { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .5rem; margin-bottom: .3rem; }
+.pop-rule .mono { color: var(--bad-ink); }
+.arrow-pop .fact-chip { cursor: default; }
+.arrow-pop.is-pinned .fact-chip { cursor: pointer; }
+.pop-foot { color: var(--faint); font-size: .72rem; }
 .lane-steps .lane-track { gap: 1.6rem; }
 
 /* Cards */
@@ -106,6 +121,7 @@
 .proc-graph { min-width: 0; border: 1px solid var(--line); border-radius: 1rem; background: radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 0) 0 0 / 22px 22px, var(--surface-1); }
 .proc-view { overflow: hidden; max-height: calc(100vh - var(--header-h) - 9rem); padding: 1rem; }
 .proc-view:focus-visible { outline-offset: -2px; }
+.proc-view.is-overflow { overflow: auto; scrollbar-width: thin; }
 .proc-canvas { position: relative; transform-origin: 0 0; }
 .ph-card { position: absolute; z-index: 0; border: 1px solid var(--line-strong); border-top: 3px solid var(--c); border-radius: .8rem; background: var(--panel-2); box-shadow: 0 10px 24px #0000001f; cursor: pointer; transition: border-color .15s, background .15s; }
 .ph-card:hover { background: var(--panel-3); }
@@ -130,6 +146,24 @@
 .proc-edge.is-retry { stroke: var(--bad-line); stroke-dasharray: 5 4; }
 .badge.proc-edge-label { position: absolute; z-index: 2; padding: .05rem .35rem; background: color-mix(in srgb, var(--route) 22%, var(--surface-1)); font-size: .66rem; transform: translate(-50%, -50%); pointer-events: none; }
 .pnode { z-index: 2; }
+/* An open card's calls; past three rows they scroll, faded at the edge that has more. */
+.ph-body { position: absolute; z-index: 2; overflow: hidden; }
+.ph-body.is-scroll { overflow-y: auto; scrollbar-width: thin; }
+.ph-body.more-above { mask-image: linear-gradient(to bottom, transparent, #000 1.5rem); }
+.ph-body.more-below { mask-image: linear-gradient(to top, transparent, #000 2.2rem); }
+.ph-body.more-above.more-below { mask-image: linear-gradient(transparent, #000 1.5rem, #000 calc(100% - 2.2rem), transparent); }
+.ph-body-inner { position: relative; }
+.ph-more { position: absolute; z-index: 3; padding: .05rem .55rem; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--panel-2); color: var(--muted); font: inherit; font-family: var(--mono); font-size: .66rem; white-space: nowrap; transform: translate(-50%, -50%); cursor: pointer; }
+.ph-more:hover { background: var(--panel-3); color: var(--text); }
+/* Opening or closing a card morphs the graph (the only view transition in the app). A card's
+   snapshots keep their size and are cropped to the morphing box, so it grows rather than
+   stretches; an opened card's calls then fade in row by row. */
+::view-transition-group(*) { animation-duration: .32s; animation-timing-function: cubic-bezier(.2, .7, .2, 1); }
+::view-transition-old(*), ::view-transition-new(*) { height: 100%; object-fit: none; object-position: left top; overflow: clip; }
+@media (prefers-reduced-motion: no-preference) {
+  .ph-body.is-entering .pnode { animation: pnode-in .28s cubic-bezier(.2, .7, .2, 1) both; animation-delay: calc(90ms + var(--k, 0) * 45ms); }
+}
+@keyframes pnode-in { from { opacity: 0; transform: translateY(-8px); } }
 .call-list { display: flex; flex-direction: column; gap: .15rem; }
 .call-group + .call-group { margin-top: .45rem; }
 .call-group .eyebrow { display: block; margin: 0 0 .15rem .4rem; font-size: .66rem; }

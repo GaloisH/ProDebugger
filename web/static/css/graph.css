@@ -40,10 +40,6 @@
 .graph-svg.is-panning { cursor: grabbing; }
 .graph-controls { position: absolute; right: .7rem; top: .7rem; display: flex; gap: .3rem; }
 .graph-controls .btn { padding: .2rem .55rem; background: color-mix(in srgb, var(--panel-3) 90%, transparent); }
-.graph-minimap { position: absolute; right: .7rem; bottom: .7rem; width: 180px; height: 110px; border: 1px solid var(--line-strong); border-radius: .5rem; background: color-mix(in srgb, var(--bg-deep) 90%, transparent); cursor: crosshair; }
-.graph-minimap rect { fill: var(--bar-strong); }
-.graph-minimap rect.side-env { fill: var(--teal-line); } .graph-minimap rect.side-mind { fill: var(--info-line); } .graph-minimap rect.side-task { fill: var(--violet-line); }
-.graph-minimap .mini-view { fill: color-mix(in srgb, var(--accent) 13%, transparent); stroke: var(--accent); stroke-width: 1.2; }
 .graph-tip { position: absolute; z-index: 5; max-width: 300px; padding: .5rem .65rem; border: 1px solid var(--line-strong); border-radius: .5rem; background: color-mix(in srgb, var(--bg-deep) 95%, transparent); box-shadow: 0 8px 22px var(--shadow-soft); font-size: .78rem; pointer-events: none; }
 .graph-tip .mono { overflow-wrap: anywhere; }
 

@@ -122,12 +122,30 @@ ProDebugger prepares auditable trajectory evidence, then runs
 
 ![ProDebugger workflow: evidence preparation, four diagnostic stages and evidence-linked output](assets/prodebugger-workflow.png)
 
+**How to read the figure.** The workflow moves from the failed trajectory on the
+left to a diagnosis on the right. Evidence preparation audits the input and
+compiles Facts, goals and entities with source provenance and parsing gaps. Seven
+abstract checks identify potential violations or unknowns; these are investigation
+leads, not confirmed failures. The four diagnostic stages then use this evidence.
+Within TRACE, the manager assigns investigators, who retrieve targeted evidence
+through the read-only DSL / SQL interface. Source validation and protocol checks
+constrain the investigation and its final output.
+
 | Stage | Responsibility | Output |
 | --- | --- | --- |
 | **MAP** | Read task requirements and identify unmet or unresolved goals | Goal map |
 | **ROUTE** | Inspect recorded evidence and entity history to identify issues | Source-backed investigation anchors |
 | **TRACE** | A manager allocates investigations; each investigator queries evidence and assesses a step | Candidates with source quotations and uncertainty |
 | **SUBMIT** | Compare supplied candidates and select one without tools | Selected hypothesis, evidence and uncertainty |
+
+**How the stages connect.** MAP establishes the requirements used by later
+stages. ROUTE proposes issue anchors; an anchor identifies a question to
+investigate, not a boundary on accessible history. TRACE's manager assigns
+questions and interpretation criteria before evidence queries. Investigators run
+in separate conversations, sequentially in the current implementation, and assess
+at most one step each. SUBMIT receives their candidates and supplied evidence to
+make the final comparison. The stage outputs are recorded so users can inspect
+how an explanation was reached.
 
 Evidence queries are read-only and use targeted DSL / SQL operators. Each TRACE
 investigator has one query opportunity, including SQL errors. Missing evidence
@@ -156,7 +174,7 @@ key variable is `OPENAI_API_KEY`; use `--api-key-env` for another variable.
 ### Detailed documentation
 
 - [Implementation and terminology](REVIEWER_GUIDE.md): evidence constraints, operator names and demonstration flow.
-- [Running the debugger](RUNNING.md): model settings, budgets, replay/resume and output files.
+- [Running the debugger](RUNNING.md): the complete detailed specification retained from the previous README, including parsing, manager allocation, query constraints, model settings, budgets, replay/resume and output files.
 - [Query reference](prodebugger/prompts/query_dsl.md): supported operators, SQL syntax and coverage semantics.
 - [Data documentation](core/data/README.md) and [offline example results](EXAMPLE_REPORT.json).
 

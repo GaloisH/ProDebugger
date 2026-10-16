@@ -33,7 +33,7 @@ python web/server.py
 
 Open <http://127.0.0.1:8770>. The script writes its example report under `artifacts/reviewer_examples/`; a checked-in copy is available as [EXAMPLE_REPORT.json](documentation/EXAMPLE_REPORT.json). See the [step-by-step walkthrough](documentation/REVIEWER_GUIDE.md#reproduce-the-two-environment-examples) to inspect the generated records and query results.
 
-Python 3.12 or later is required (tested with Python 3.13). `pyarrow` supports Parquet input. The other packages are only needed for online model runs; offline examples do not require credentials.
+Python 3.12 or later is required (tested with Python 3.13). `pyarrow` supports Parquet input, and `sqlglot` powers the read-only query interface used by the offline example. `openai` and `python-dotenv` are only needed for online model runs; offline examples do not require credentials.
 
 ## How an investigation works
 

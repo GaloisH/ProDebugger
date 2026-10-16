@@ -14,6 +14,8 @@ The fastest way to see the project work is to run the offline example below. It 
 
 This case overview shows how requirements, environment observations, rule checks, and retrieved evidence connect to a selected diagnosis. The [workflow diagram](assets/prodebugger-workflow.png) gives a compact view of the processing stages.
 
+To see the browser workbench itself, [open the trajectory interface preview](web/static/img/shots/trajectory.webp). This is a UI illustration from a saved run; the offline example below generates compilation and query evidence, not this diagnosis.
+
 <a id="setup"></a>
 
 ## Quick start
@@ -101,7 +103,7 @@ Run commands from the repository root. Generated sessions and experiment outputs
 
 ## Development checks
 
-The GitHub Actions workflow installs the project dependencies, runs the regression checks, and executes the credential-free examples on Python 3.12. To run the same checks locally:
+The GitHub Actions workflow installs the project dependencies, runs the regression checks, and executes the credential-free examples on Python 3.12. Each successful run also exposes its generated report as a downloadable `offline-example-report` artifact on the Actions run page. To run the same checks locally:
 
 ```bash
 python -m pip install -r requirements.txt pytest

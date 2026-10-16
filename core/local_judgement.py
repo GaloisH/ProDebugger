@@ -1,4 +1,4 @@
-"""Module and fault-class vocabulary shared by TRACE and SUBMIT."""
+"""Agent module, record slot and fault-class vocabulary."""
 
 MODULES = ("memory", "reflection", "plan", "action")
 SLOTS = {"memory": "mem", "reflection": "refl", "plan": "plan", "action": "act"}

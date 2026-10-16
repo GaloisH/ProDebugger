@@ -12,10 +12,8 @@ from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional
 
 from record import Record, IntentionOption, IntentionParameter, SourceStep
+from local_judgement import MODULES as TAGS
 from process_notes import build_process_notes
-
-TAGS = ("memory", "reflection", "plan", "action")
-SLOT_OF = {"memory": "mem", "reflection": "refl", "plan": "plan", "action": "act"}
 
 
 @dataclass

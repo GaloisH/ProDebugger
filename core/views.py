@@ -25,6 +25,7 @@ from intention_validation import validate_intention
 from record import Constraint, Entity, Fact, Goal, Record
 import primitives as P
 from local_context import build_rich_step_context, summarize_rich_context
+from local_judgement import MODULES
 from process_notes import compact_process_note
 
 
@@ -1103,7 +1104,7 @@ def _scan_view(R: Record) -> Dict[str, Any]:
 def _summarize_scan(data: Dict[str, Any]) -> Dict[str, Any]:
     out = copy.deepcopy(data)
     for episode in out.get("episodes", []):
-        for module in ("memory", "reflection", "plan", "action"):
+        for module in MODULES:
             if isinstance(episode.get(module), dict):
                 episode[module]["text"] = episode[module].get("text", "")[:160]
                 episode[module].pop("support", None)
@@ -1841,7 +1842,7 @@ def _filter_rows(data: Dict[str, Any], options: Dict[str, Any]) -> Dict[str, Any
                 ]
         for episode in out.get("episodes", []):
             if out.get("schema") == "trajectory-scan/v1":
-                for module in ("memory", "reflection", "plan", "action"):
+                for module in MODULES:
                     if isinstance(episode.get(module), dict):
                         episode[module]["text"] = episode[module].get("text", "")[:160]
                         episode[module].pop("support", None)

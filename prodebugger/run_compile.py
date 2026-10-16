@@ -6,7 +6,6 @@ from collections import Counter
 import hashlib
 import os
 import json
-import re
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -25,14 +24,9 @@ DATA = HERE.parent / "core" / "data"
 def compile_trajectory(trajectory_id: str, data_dir: Path = DATA, *,
                        output_dir: Path | None = None) -> Path:
     """Compile Facts and seven abstract rules; save the record and evaluations."""
-    if (not trajectory_id or re.search(r'[<>:"/\\|?*\x00-\x1f]', trajectory_id)
-            or trajectory_id.endswith((".", " "))
-            or trajectory_id.split(".")[0].upper() in {
-                "CON", "PRN", "AUX", "NUL",
-                *(f"COM{i}" for i in range(1, 10)),
-                *(f"LPT{i}" for i in range(1, 10)),
-            }):
-        raise ValueError(f"Invalid trajectory directory name: {trajectory_id!r}")
+    sys.path.insert(0, str(HERE.parent))
+    from prodebugger.record_bridge import parquet_source, build_bundle, valid_id
+    valid_id(trajectory_id)
     rows = []
     for split in ("train", "validation", "test"):
         path = Path(data_dir) / f"{split}.parquet"
@@ -43,8 +37,6 @@ def compile_trajectory(trajectory_id: str, data_dir: Path = DATA, *,
     if len(rows) != 1:
         raise ValueError(f"Expected one trajectory for {trajectory_id!r}, found {len(rows)} in {data_dir}")
     row = rows[0]
-    sys.path.insert(0, str(HERE.parent))
-    from prodebugger.record_bridge import parquet_source, build_bundle
     output = (Path(output_dir) if output_dir is not None else HERE / "sessions") / trajectory_id
     output.mkdir(parents=True, exist_ok=True)
     bundle = build_bundle(parquet_source(trajectory_id, data_dir), output=output)

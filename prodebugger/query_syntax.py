@@ -30,8 +30,7 @@ def schema_columns(schema):
 
 
 class Columns:
-    def __init__(self, tree, tables, *, allow_unnamed=False):
-        self.allow_unnamed = allow_unnamed
+    def __init__(self, tree, tables):
         self.tables = {name.lower(): schema_columns(schema) for name, schema in tables.items()}
         self.ctes = {}
         for cte in tree.find_all(exp.CTE):
@@ -96,8 +95,6 @@ class Columns:
         result = []
         for item in self.expressions(node, visiting):
             name = item.alias_or_name
-            if not name and self.allow_unnamed:
-                name = item.sql(dialect="sqlite", comments=False)
             if not name:
                 raise ValueError("UNION BY NAME requires AS names for computed fields")
             result.append(name)

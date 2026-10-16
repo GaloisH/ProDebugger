@@ -4,7 +4,6 @@ from checks.test_query_backend import source, case_for, manager_answer, answer
 from prodebugger.debug_tools import DebugTools
 from prodebugger.record_bridge import build_bundle
 from prodebugger.query_dsl import execute
-from prodebugger.query_simplify import simplify_sql
 from prodebugger.query_trace import query, commit as assess
 from prodebugger.trace_manager import commit as manage, submit_guidance
 from prodebugger.direct_submit import packet as submit_packet
@@ -135,41 +134,12 @@ class CompactQueryChecks(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'one query'):
             query(t, 'case1', "SELECT * FROM SEARCH_TEXT('apple','memory')")
 
-    def test_converter_preserves_positional_sort_multiplicity_and_asymmetric_lists(self):
-        queries = [
-            "SELECT step,NULL AS fid,module,text FROM SEARCH_TEXT('apple','memory') UNION ALL SELECT step,fid,'action',span FROM TRACE_ACTION('look') ORDER BY 2,1 LIMIT 4",
-            "SELECT step,module,text FROM SEARCH_TEXT('apple','memory') UNION ALL SELECT step,module,text FROM SEARCH_TEXT('countertop','memory') UNION ALL SELECT step,module,text FROM SEARCH_TEXT('apple','plan') UNION ALL SELECT step,module,text FROM SEARCH_TEXT('countertop','plan') ORDER BY step",
-            "SELECT step,module,text FROM SEARCH_TEXT('apple','memory') UNION ALL SELECT step,module,text FROM SEARCH_TEXT('apple','memory')",
-            "SELECT step,text,NULL AS fid FROM SEARCH_TEXT('apple','memory') UNION SELECT step,NULL,fid FROM TRACE_ACTION('look') ORDER BY step",
-        ]
-        for sql in queries:
-            with self.subTest(sql=sql):
-                self.same(sql, simplify_sql(sql))
-
-    def test_converter_normalizes_legacy_calls_without_rewriting_evidence_or_cte_names(self):
+    def test_legacy_track_calls_execute_as_trace_calls(self):
         sql = """WITH TRACK_ENTITY AS (SELECT step,fid FROM track_action('look'))
             SELECT step,fid,'TRACK_STATE' AS label FROM TRACK_ENTITY ORDER BY step,fid"""
-        compact = simplify_sql(sql)
-        result = self.same(sql, compact)
-        self.assertIn("TRACE_ACTION(", compact)
-        self.assertIn("WITH TRACK_ENTITY AS", compact)
+        result = self.same(sql, sql.replace("track_action", "TRACE_ACTION"))
+        self.assertTrue(result["rows"])
         self.assertTrue(all(row["label"] == "TRACK_STATE" for row in result["rows"]))
-        mixed = ("SELECT fid,span FROM TRACK_ACTION('look') UNION ALL "
-                 "SELECT fid,span FROM TRACE_ACTION('look')")
-        compact = simplify_sql(mixed)
-        self.assertNotIn("TRACK_ACTION", compact)
-        self.assertIn("TRACE_ACTION(('look', 'look'))", compact)
-        self.assertEqual(self.same(mixed, compact)["returned_rows"], 6)
-
-    def test_converter_removes_cte_padding_only_when_consumers_keep_semantics(self):
-        template = "WITH claims AS (SELECT source_id,step,text FROM SEARCH_TEXT('apple','memory')), actions AS (SELECT CAST(NULL AS TEXT) AS source_id,step,span AS text FROM TRACE_ACTION('look')) SELECT * FROM claims UNION ALL SELECT * FROM actions{} ORDER BY step"
-        compact = simplify_sql(template.format(''))
-        self.assertNotIn('NULL', compact)
-        self.same(template.format(''), compact)
-        # Removing a field used by the CTE consumer would invalidate this filter.
-        guarded = template.format(' WHERE source_id IS NULL')
-        self.assertIn('NULL AS', simplify_sql(guarded).replace('CAST(NULL AS TEXT)', 'NULL'))
-        self.same(guarded, simplify_sql(guarded))
 
 
 if __name__ == '__main__':

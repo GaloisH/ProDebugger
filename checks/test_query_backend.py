@@ -7,8 +7,7 @@ from unittest.mock import patch
 from prodebugger.record_bridge import build_bundle, plain, write_json, compiler, PROFILES
 from prodebugger.parse_audit import audit, _validate_response, prepare
 from prodebugger.query_dsl import execute
-from prodebugger.query_trace import packet, query, commit
-from prodebugger.window_trace import FIELDS, commit as old_commit
+from prodebugger.query_trace import FIELDS, commit, coverage, packet, query
 from prodebugger.debug_tools import DebugTools
 from prodebugger.direct_submit import packet as submit_packet
 from prodebugger.debugger_agent import DebuggerAgent
@@ -156,8 +155,8 @@ class BackendChecks(unittest.TestCase):
         self.assertEqual(result["goals"][-1]["constraints"][0]["operator"], "lt")
 
     def test_composable_queries_and_functions(self):
-        queries = ["WITH x AS (SELECT * FROM TRACK_ENTITY('portable:apple_1')) SELECT step,COUNT(*) AS n FROM x WHERE side='mind' OR side='env' GROUP BY step HAVING COUNT(*)>0",
-                   "SELECT * FROM TRACK_STATE('agent:self','holding')",
+        queries = ["WITH x AS (SELECT * FROM TRACE_ENTITY('portable:apple_1')) SELECT step,COUNT(*) AS n FROM x WHERE side='mind' OR side='env' GROUP BY step HAVING COUNT(*)>0",
+                   "SELECT * FROM TRACE_STATE('agent:self','holding')",
                    "SELECT * FROM TRACE_FACT(0,'backward',3)", "SELECT * FROM SEARCH_TEXT('decision 1','plan')",
                    "SELECT * FROM STATE_AT('agent:self','holding',2)", "SELECT * FROM ABOUT('portable:apple_1')",
                    "SELECT * FROM VERSIONS(0)", "SELECT * FROM GOAL_STATUS('req:apple_in_diningtable',2)",
@@ -168,13 +167,46 @@ class BackendChecks(unittest.TestCase):
                 self.assertNotIn("error", result)
                 self.assertGreater(result["returned_rows"], 0)
 
+    def test_trace_names_preserve_archived_calls_bounds_and_argument_repair(self):
+        calls = [
+            ("ENTITY", "'portable:apple_1',1,2"),
+            ("STATE", "'agent:self','holding',1,2"),
+            ("ACTION", "'look',1,2"),
+            ("ACTION", "('look','look'),1,2"),
+            ("ACTION", '"look",1,2'),
+        ]
+        for suffix, args in calls:
+            with self.subTest(suffix=suffix, args=args):
+                name = f"TRACE_{suffix}"
+                current_sql = f"SELECT * FROM {name.lower()}({args}) ORDER BY step,fid"
+                archived_sql = f"SELECT * FROM track_{suffix.lower()}({args}) ORDER BY step,fid"
+                current = execute(self.tools, current_sql)
+                archived = execute(self.tools, archived_sql)
+                self.assertNotIn("error", current)
+                self.assertNotIn("error", archived)
+                self.assertTrue(current["rows"])
+                self.assertTrue(all(1 <= row["step"] <= 2 for row in current["rows"]))
+                for key in ("rows", "columns", "returned_fids", "returned_steps",
+                            "claim_fragments", "function_scopes", "repairs"):
+                    self.assertEqual(current[key], archived[key], key)
+                self.assertEqual({scope["function"] for scope in current["function_scopes"]}, {name})
+                self.assertEqual(archived["query"], archived_sql)
+
+    def test_legacy_function_failure_reports_canonical_name_and_keeps_other_evidence(self):
+        result = execute(self.tools, "SELECT step,fid FROM track_state('agent:self','unknown_relation') "
+                         "UNION ALL BY NAME SELECT step,fid FROM TRACE_ACTION('look')")
+        self.assertNotIn("error", result)
+        self.assertTrue(result["partial"])
+        self.assertEqual(result["returned_steps"], [1, 2, 3])
+        self.assertEqual(result["function_errors"][0]["function"], "TRACE_STATE")
+
     def test_read_only_without_result_row_budget(self):
         for sql in ["DELETE FROM facts", "SELECT * FROM facts; SELECT * FROM steps", "SELECT * FROM sqlite_master",
-                    "SELECT load_extension('/tmp/x')", "SELECT * FROM TRACK_ENTITY('product:invented')",
+                    "SELECT load_extension('/tmp/x')", "SELECT * FROM TRACE_ENTITY('product:invented')",
                     "WITH RECURSIVE x AS (SELECT 1 UNION ALL SELECT 1 FROM x) SELECT * FROM x",
                     "SELECT unknown_column FROM steps", "SELECT * FROM nope.facts", "SELECT * FROM steps,steps"]:
             self.assertIn("error", execute(self.tools, sql), sql)
-        result = execute(self.tools, "SELECT a.step FROM TRACK_ENTITY('portable:apple_1') a CROSS JOIN TRACK_ENTITY('portable:apple_1') b CROSS JOIN TRACK_ENTITY('portable:apple_1') c")
+        result = execute(self.tools, "SELECT a.step FROM TRACE_ENTITY('portable:apple_1') a CROSS JOIN TRACE_ENTITY('portable:apple_1') b CROSS JOIN TRACE_ENTITY('portable:apple_1') c")
         self.assertGreater(result["returned_rows"], 120)
         self.assertFalse(result["truncated"])
         self.assertIsNone(result["limits"]["rows"])
@@ -182,7 +214,7 @@ class BackendChecks(unittest.TestCase):
     def test_json_attribute_filters_and_joins_preserve_sqlite_scalar_semantics(self):
         result = execute(self.tools, """
             WITH held AS (
-                SELECT step,args,span FROM TRACK_STATE('agent:self','holding')
+                SELECT step,args,span FROM TRACE_STATE('agent:self','holding')
                 WHERE json_extract(args,'$[1]')='portable:apple_1'
             ), apples AS (SELECT entity_id FROM FIND_ENTITY('apple'))
             SELECT h.step,h.span,json_extract(h.args,'$[1]') AS entity,
@@ -203,7 +235,7 @@ class BackendChecks(unittest.TestCase):
         self.assertEqual(row["number_value"], 3)
         self.assertEqual(json.loads(row["pair"]), ["agent:self", "portable:apple_1"])
         # A true type assignment must not satisfy a cleanliness predicate.
-        clean = execute(self.tools, "SELECT * FROM TRACK_STATE('portable:apple_1','has') WHERE json_extract(args,'$[1]')='attribute:clean'")
+        clean = execute(self.tools, "SELECT * FROM TRACE_STATE('portable:apple_1','has') WHERE json_extract(args,'$[1]')='attribute:clean'")
         self.assertNotIn("error", clean)
         self.assertEqual(clean["rows"], [])
 
@@ -223,19 +255,13 @@ class BackendChecks(unittest.TestCase):
         self.assertEqual(set(event["conclusion"]["candidates"][0]), set(FIELDS))
         payload = submit_packet(self.tools)
         self.assertEqual(payload["schema"], "direct-submit-input/v2")
-        from prodebugger.window_trace import coverage
         self.assertEqual(coverage(self.tools)['assessment_unit'], 'single_step_per_route_candidate')
         self.assertEqual(coverage(self.tools)['assessed_steps'], [1])
         self.assertEqual(set(payload["candidates"][0]), {"candidate_id", "window", "step", "module", "assessment",
                                                         "local_context_ref", "related_evidence", "evidence_selection"})
-        self.tools.window_conclusions.clear()
-        self.tools.windows.windows[0]["lo"] = 1
-        legacy = old_commit(self.tools, answer(), "old")
-        self.assertEqual(set(event), set(legacy))
-        self.assertEqual(event["candidates"], legacy["candidates"])
 
     def test_unretrieved_quote_and_multistep_rejected(self):
-        query(self.tools, "case1", "SELECT step FROM TRACK_ENTITY('portable:apple_1')")
+        query(self.tools, "case1", "SELECT step FROM TRACE_ENTITY('portable:apple_1')")
         with self.assertRaises(ValueError):
             commit(self.tools, answer(), "assess")
         proposal = answer()
@@ -266,8 +292,8 @@ class BackendChecks(unittest.TestCase):
             SELECT step,module,text,source_kind FROM SEARCH_TEXT('first decision','memory')
             UNION ALL SELECT step,module,text,source_kind FROM SEARCH_TEXT('initial pickup','reflection',1,3)
             UNION ALL SELECT step,module,text,source_kind FROM SEARCH_TEXT('decision 4.','plan')
-            UNION ALL SELECT step,'action',span,source_kind FROM TRACK_ACTION('look',1,4)
-            UNION ALL SELECT step,'state',span,source_kind FROM TRACK_STATE('agent:self','holding')
+            UNION ALL SELECT step,'action',span,source_kind FROM TRACE_ACTION('look',1,4)
+            UNION ALL SELECT step,'state',span,source_kind FROM TRACE_STATE('agent:self','holding')
             UNION ALL SELECT step,module,text,source_kind FROM SOURCE({early_fid},'first decision')
             UNION ALL SELECT step,'state_at',span,source_kind FROM STATE_AT('agent:self','holding',4)
             ORDER BY step,module""")
@@ -326,10 +352,10 @@ class BackendChecks(unittest.TestCase):
         forbidden = ["SELECT * FROM steps", "SELECT action FROM steps WHERE step=1",
                      "SELECT * FROM modules WHERE module='memory'", "SELECT * FROM facts",
                      "SELECT * FROM RAW_STEP(1)", "WITH x AS (SELECT * FROM steps) SELECT * FROM x",
-                     "SELECT s.* FROM TRACK_ENTITY('portable:apple_1') e JOIN steps s ON e.step=s.step",
-                     "SELECT * FROM TRACK_ENTITY('agent:self')", "SELECT * FROM SEARCH_TEXT('%','plan')",
+                     "SELECT s.* FROM TRACE_ENTITY('portable:apple_1') e JOIN steps s ON e.step=s.step",
+                     "SELECT * FROM TRACE_ENTITY('agent:self')", "SELECT * FROM SEARCH_TEXT('%','plan')",
                      "SELECT * FROM SEARCH_TEXT('the','plan')", "SELECT * FROM SEARCH_TEXT('apple','all')",
-                     "SELECT step AS fid FROM TRACK_ENTITY('portable:apple_1')"]
+                     "SELECT step AS fid FROM TRACE_ENTITY('portable:apple_1')"]
         for sql in forbidden:
             self.assertIn('error', execute(self.tools, sql), sql)
 
@@ -385,7 +411,7 @@ class BackendChecks(unittest.TestCase):
     def test_parse_gaps_and_heuristic_provenance_are_always_visible(self):
         data = source(); data['steps'][0]['env_text'] = 'It might be elsewhere.'
         tools = DebugTools(build_bundle(data))
-        result = execute(tools, "SELECT * FROM TRACK_ACTION('look')")
+        result = execute(tools, "SELECT * FROM TRACE_ACTION('look')")
         self.assertTrue(result['evidence_quality']['parse_gaps'])
         self.assertEqual(result['evidence_quality']['absence_means'], 'unknown_not_false')
         self.assertTrue(all(r['parse_status'] == 'selective_heuristic_not_audited' for r in result['rows']))

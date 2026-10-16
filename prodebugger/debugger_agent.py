@@ -8,8 +8,7 @@ from .debug_tools import DebugTools, PHASE_TOOLS, SCHEMAS
 from .evidence_tools import BudgetExceeded, ToolError
 from .llm_client import PHASES, json_lines
 from .record_bridge import append_json, digest, plain, read_json, write_json
-from .window_trace import SCHEMA as WINDOW_SCHEMA
-from .query_trace import MODE, packet as trace_packet, coverage as window_coverage
+from .query_trace import MODE, SCHEMA as WINDOW_SCHEMA, packet as trace_packet, coverage as window_coverage
 from .query_dsl import documentation
 from .route_context import compact as compact_route_context, progress as route_progress
 from .evidence_quality import evidence_quality
@@ -24,7 +23,7 @@ PROMPTS = {p: Path(__file__).parent / "prompts" / f"{p.lower()}.md" for p in PHA
 class DebuggerAgent:
     def __init__(self, bundle, client, output, config, *, resume=False):
         self.bundle, self.client, self.output, self.config = bundle, client, Path(output), config
-        self.tools = DebugTools(bundle, self.output, config["max_tool_calls"], config["window_size"],
+        self.tools = DebugTools(bundle, self.output, config["max_tool_calls"],
                                 trace_top_p=config.get("trace_top_p", 5), trace_top_k=config.get("trace_top_k", 2))
         from .claim_parser import ClaimParser
         from .llm_client import LLMClient

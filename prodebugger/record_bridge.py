@@ -1,4 +1,4 @@
-"""Canonical core record and a read-only, identity-preserving DSL projection."""
+"""Canonical core record bundle: compilation, rule evidence and source fingerprints."""
 from __future__ import annotations
 
 import hashlib
@@ -18,7 +18,6 @@ if str(CORE) not in sys.path:
 import compile_run as compiler
 from profiles import alfworld, webshop
 
-from . import dsl as D
 from .abstract_rules import detect_abstract_rules, export_rules
 
 PROFILES = {"webshop": webshop, "alfworld": alfworld}
@@ -118,55 +117,18 @@ def saved_source(path: Path, tid: str | None = None) -> dict:
 
 def parquet_source(tid: str, data_dir: Path) -> dict:
     try:
-        import pyarrow.parquet as pq
-        from data_io import unpack
+        from data_io import read_one, unpack
     except ImportError as exc:
         raise RuntimeError("Parquet input needs pyarrow; use --compiled-dir for saved steps") from exc
-    rows = []
-    for split in ("train", "validation", "test"):
-        path = Path(data_dir) / f"{split}.parquet"
-        if path.is_file():
-            rows.extend(pq.read_table(path, filters=[("trajectory_id", "=", tid)],
-                                      columns=["trajectory_id", "task_type", "full_trajectory"]).to_pylist())
-    if len(rows) != 1:
-        raise ValueError(f"expected one trajectory, found {len(rows)}")
-    _, task, env, agent, admissible = unpack(rows[0])
-    return {"trajectory_id": tid, "task_type": rows[0]["task_type"], "task": task,
+    row = read_one(tid, str(data_dir), ["trajectory_id", "task_type", "full_trajectory"])
+    _, task, env, agent, admissible = unpack(row)
+    return {"trajectory_id": tid, "task_type": row["task_type"], "task": task,
             "steps": plain(compiler.segment(env, agent, admissible))}
-
-
-def project(record) -> D.Record:
-    kinds, relations = D.Kinds(), D.Relations()
-    for name, parent in record.kinds.declared().items():
-        kinds.declare(name, parent)
-    for relation in record.relations.declared().values():
-        relations.declare(**asdict(relation))
-    goals = []
-    for goal in record.goals:
-        fields = asdict(goal)
-        fields["target"] = D.Entity(**fields["target"]) if fields["target"] else None
-        fields["constraints"] = tuple(D.Constraint(**{**c, "property": D.Entity(**c["property"])})
-                                      for c in fields["constraints"])
-        goals.append(D.Goal(**fields))
-    result = D.Record(record.tid, kinds, relations, record.task, goals)
-    result.claim_scopes = plain(getattr(record, 'claim_scopes', {}))
-    for entity in record.E.values():
-        result.ent(entity.kind, entity.index)
-    for fact in record.F:
-        args = tuple(result.ent(e.kind, e.index) for e in fact.args)
-        purpose = result.ent(fact.purpose.kind, fact.purpose.index) if fact.purpose else None
-        fid = result.add(fact.rel, args, fact.value, fact.slot, fact.side, fact.t,
-                         situation=fact.situation, basis=fact.basis, purpose=purpose,
-                         span=fact.span, value_type=fact.value_type)
-        if fid != fact.fid or asdict(result.fact(fid)) != asdict(fact):
-            raise ValueError("canonical/DSL Fact identity mismatch")
-    return result
 
 
 @dataclass
 class Bundle:
     record: Any
-    projection: D.Record
     evaluations: list[dict]
     source: dict
     fingerprint: str
@@ -177,7 +139,7 @@ class Bundle:
         return plain({"trajectory_id": record.tid, "task_type": self.source["task_type"],
                       "task": record.task, "ir_version": record.ir_version,
                       "kinds": record.kinds.declared(), "relations": record.relations.declared(),
-                      "entities": record.E, "goals": record.goals, "facts": self.projection.F,
+                      "entities": record.E, "goals": record.goals, "facts": record.F,
                       "parse_audits": getattr(record, "parse_audits", []),
                       "source_steps": record.source_steps, "intentions": record.intentions,
                       "claim_scopes": getattr(record, 'claim_scopes', {}),
@@ -214,27 +176,26 @@ def build_bundle(source: dict, *, audited=None, output=None, config=None, online
     record = compiler.build(source["trajectory_id"], source["task"], steps, profile, parsed=parsed)
     from .claim_parser import source_cards
     record.agent_statements = source_cards(source)
-    projection = project(record)
-    evaluations = detect_abstract_rules(projection)
+    evaluations = detect_abstract_rules(record)
     incomplete = [a for a in parsed["audits"] if a["status"] == "unresolved"]
     for evaluation in evaluations:
         relevant = [a["source_id"] for a in incomplete if a["step"] <= (evaluation.get("t") or 0)]
         if relevant and evaluation["state"] == "violated":
             evaluation["state"] = "unknown"
             evaluation["details"] = {**evaluation["details"], "reason": "parse_incomplete", "parse_gaps": relevant}
-    for group in projection.evidences.values():
+    for group in record.evidences.values():
         group.items[:] = [e for e in group.items if not any(a["step"] <= e.t for a in incomplete)]
     versions = source_versions()
     from .direct_submit import POLICY
-    return Bundle(record, projection, evaluations, source,
+    return Bundle(record, evaluations, source,
                   digest({"source": source, "versions": versions, "audited_parse": audited,
                           "trace_protocol": "evidence-query-step/v2-elements", "policy": POLICY,
-                          "canonical_facts": projection.F, "goals": projection.goals}), versions)
+                          "canonical_facts": record.F, "goals": record.goals}), versions)
 
 
 def export_bundle(bundle: Bundle, output: Path) -> None:
     write_json(output / "input.json", bundle.source)
     write_json(output / "canonical_record.json", bundle.snapshot())
-    write_json(output / "evidences.json", bundle.projection.evidences)
+    write_json(output / "evidences.json", bundle.record.evidences)
     write_json(output / "evaluations.json", bundle.evaluations)
     write_json(output / "rules.json", export_rules())

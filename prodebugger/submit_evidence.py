@@ -2,11 +2,11 @@
 import re
 
 from .record_bridge import digest
+from local_judgement import MODULES
 
 MAX_EVENTS = 12
 MODULE_CHARS = 280
 OBSERVATION_CHARS = 600
-MODULES = ("memory", "reflection", "plan", "action")
 STOP = {"a", "an", "the", "some", "to", "in", "on", "at", "with", "from", "of",
         "and", "or", "is", "it", "this", "that", "i", "be", "as", "for", "my",
         "go", "put", "move", "look", "take", "open", "close", "examine", "inventory",

@@ -5,13 +5,11 @@ from pathlib import Path
 
 from .record_bridge import append_json, digest, plain, write_json
 from .evidence_tools import BudgetExceeded, EvidenceIndex, ToolError, integer
-from .window_trace import SCHEMA as WINDOW_SCHEMA, coverage
-from .query_trace import TraceCases, MODE as TRACE_MODE, commit as commit_window, query as query_logs
+from .query_trace import SCHEMA as WINDOW_SCHEMA, TraceCases, commit as commit_window, coverage, query as query_logs
 from .direct_submit import POLICY, commit as commit_direct, packet as submit_packet
 
 import operators as OPS
 from record import Entity
-from session import Session
 
 GLOBAL = {"mode": "global"}
 SCOPE = {"type": "object", "properties": {"mode": {"enum": ["local", "global"]},
@@ -104,19 +102,18 @@ def validate_json(value, contract, path="arguments"):
 
 
 class DebugTools:
-    def __init__(self, bundle, output: Path | None = None, max_tool_calls=240, W=5,
+    def __init__(self, bundle, output: Path | None = None, max_tool_calls=240,
                  *, trace_top_p=5, trace_top_k=2):
         self.bundle, self.output = bundle, output
         self.index = EvidenceIndex(bundle)
-        self.session = Session(bundle.record)
+        self.frontier = []
         self.windows = TraceCases(self.index)
-        self.trace_protocol = TRACE_MODE
         self.trace_queries = {}
         self.route_cases = []
         self.manager_plan = None
         from .claim_parser import ClaimParser
         self.claim_parser = ClaimParser(bundle.source)
-        self.max_tool_calls, self.default_W = max_tool_calls, W
+        self.max_tool_calls = max_tool_calls
         self.trace_top_p = integer(trace_top_p, "trace_top_p", 1)
         self.trace_top_k = integer(trace_top_k, "trace_top_k", 1)
         self.call_count = 0
@@ -153,7 +150,6 @@ class DebugTools:
         if source == "local_audits":
             # Full raw module text is already in transition.module_text. Core's
             # per-module input/output/feedback prose repeats this shared material.
-            out.pop("query_answer", None)
             for audit in out.get("audits", []):
                 audit.pop("step_summary", None)
                 for module in audit.get("modules", {}).values():
@@ -162,8 +158,6 @@ class DebugTools:
                         fact.pop("support", None)  # basis refs remain; inspect via trace_fact.
             out["projection"] = ("llm-local-audit/v1; raw module text and owned Facts complete"
                                  if "detail:full" in spec else "summary audit; read detail:full for complete source")
-        else:
-            out.pop("query_answer", None)  # A second prose rendering of the same structured view.
         truncated = []
         def bounded(value, path):
             if isinstance(value, list):
@@ -223,7 +217,13 @@ class DebugTools:
                 self.index.fact(fid)
             if op == "contrast" and len(fids) < 2:
                 raise ToolError("invalid_arguments", "contrast needs at least two Facts")
-            return self.session.call(op, *fids) if op == "contrast" else getattr(self.session, op)(*fids)
+            if op == "contrast":
+                return OPS.contrast(self.bundle.record, *fids)
+            if op == "hold":
+                self.frontier += [fid for fid in dict.fromkeys(fids) if fid not in self.frontier]
+            else:
+                self.frontier = [fid for fid in self.frontier if fid not in fids]
+            return list(self.frontier)
         scope = self.index.scope(scope)
         record = self.index.scoped_record(scope)
         if op == "state":

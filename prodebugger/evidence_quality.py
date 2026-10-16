@@ -1,7 +1,6 @@
 """Extraction limits: missing knowledge never establishes an agent fault."""
 from .record_bridge import plain
-
-RAW_MODULE_RELATIONS = {"recalled_summary", "recalled_nothing", "memory_unparsed", "assessed", "planned"}
+from .abstract_rules import MODULE_RELATIONS as RAW_MODULE_RELATIONS
 
 
 def fact_quality(record, fact):

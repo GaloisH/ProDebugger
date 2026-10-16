@@ -1,6 +1,6 @@
 // MANAGER and TRACE calls: the investigation plan (plan_trace), one element SQL query per
 // assignment (query_logs) and its single-step assessment (assess). Field names follow
-// trace_manager / query_trace / window_trace.
+// trace_manager / query_trace.
 import {esc, short} from "../util.js";
 
 const S = t => `S${String(t).padStart(2, "0")}`;

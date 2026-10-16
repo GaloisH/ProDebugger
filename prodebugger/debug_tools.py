@@ -150,7 +150,6 @@ class DebugTools:
         if source == "local_audits":
             # Full raw module text is already in transition.module_text. Core's
             # per-module input/output/feedback prose repeats this shared material.
-            out.pop("query_answer", None)
             for audit in out.get("audits", []):
                 audit.pop("step_summary", None)
                 for module in audit.get("modules", {}).values():
@@ -159,8 +158,6 @@ class DebugTools:
                         fact.pop("support", None)  # basis refs remain; inspect via trace_fact.
             out["projection"] = ("llm-local-audit/v1; raw module text and owned Facts complete"
                                  if "detail:full" in spec else "summary audit; read detail:full for complete source")
-        else:
-            out.pop("query_answer", None)  # A second prose rendering of the same structured view.
         truncated = []
         def bounded(value, path):
             if isinstance(value, list):

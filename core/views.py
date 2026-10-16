@@ -26,7 +26,6 @@ from record import Constraint, Entity, Fact, Goal, Record
 import primitives as P
 from local_context import build_rich_step_context, summarize_rich_context
 from process_notes import compact_process_note
-from query_answer import build_query_answer
 
 
 SCHEMA = "entity-evidence/v4"
@@ -2019,5 +2018,4 @@ def program_view(R: Record, spec: str) -> Dict[str, Any]:
     if "section" in options:
         data = _project(data, options["section"])
     data["query"] = spec
-    answer = build_query_answer(R, spec, data)
-    return {"query_answer": answer, **data}
+    return data

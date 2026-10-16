@@ -1,4 +1,27 @@
-# ProDebugger
+<div align="center">
+  <a href="https://galoish.github.io/ProDebugger/#/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="assets/prodebugger-title-dark.png">
+      <img src="assets/prodebugger-title.png" alt="ProDebugger" width="480">
+    </picture>
+  </a>
+</div>
+
+<div align="center">
+  <em>A Programmable Platform for Evidence-Grounded Debugging of LLM Agent Trajectories</em>
+</div>
+
+<br />
+
+<p align="center">
+  <strong>Platform Link:</strong> <a href="https://galoish.github.io/ProDebugger/#/">https://galoish.github.io/ProDebugger/#/</a>
+</p>
+
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/295ca6ce-10fe-4091-9593-02f29d99205c" width="800" controls></video>
+</div>
+
+<br />
 
 ProDebugger helps researchers inspect failures in recorded LLM-agent trajectories. It compiles a trajectory into typed, source-linked evidence, then guides an investigation through **MAP → ROUTE → TRACE → SUBMIT**. The result is an evidence-backed failure hypothesis with visible uncertainty—not proof of causation.
 
@@ -43,18 +66,43 @@ Python 3.12 or later is required (tested with Python 3.13). `pyarrow` supports P
 
 ## How an investigation works
 
-![ProDebugger workflow: evidence preparation, diagnostic stages, and evidence-linked output](assets/prodebugger-workflow.png)
+<a href="assets/prodebugger-workflow.png">
+  <img align="right" width="50.4%" src="assets/prodebugger-workflow.png" alt="ProDebugger workflow: raw trajectories are parsed into facts and structured records, rule checks produce investigation leads, and MAP, ROUTE, TRACE, and SUBMIT use targeted evidence queries to form a diagnosis.">
+</a>
 
-The compiler audits the input and prepares typed facts, goals, entities, source provenance, and parsing gaps. Seven abstract checks can flag leads for investigation; a flag is not a confirmed failure. The diagnostic stages then:
+<p align="justify">
+The compiler audits each trajectory and prepares typed facts, task goals, entity records, and source links, keeping parsing gaps explicit. Seven conservative checks flag investigation leads. Debugging agents use read-only DSL queries to trace entities, inspect state changes, and compare evidence across distant steps. The workbench preserves queries and source passages for inspection. Missing evidence remains unknown. A warning is not a confirmed failure, and the selected hypothesis does not establish a unique or actual cause. The <a href="documentation/REVIEWER_GUIDE.md">implementation guide</a> explains the evidence constraints and how to interpret results.
+</p>
 
-| Stage | What it does |
-| --- | --- |
-| **MAP** | Identifies unmet or unresolved task goals. |
-| **ROUTE** | Finds source-backed issue anchors in the recorded evidence. |
-| **TRACE** | Investigates candidates with targeted, read-only evidence queries. |
-| **SUBMIT** | Compares the supplied candidates and selects one when available. |
+<br clear="all" />
+<br />
 
-Missing evidence remains unknown. A selected hypothesis does not establish that it is the unique or actual cause. The [implementation guide](documentation/REVIEWER_GUIDE.md) explains the evidence constraints and how to interpret results.
+<table align="center">
+  <thead>
+    <tr>
+      <th align="center">Stage</th>
+      <th align="center">What it does</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center"><strong>MAP</strong></td>
+      <td align="center">Identifies unmet or unresolved task goals.</td>
+    </tr>
+    <tr>
+      <td align="center"><strong>ROUTE</strong></td>
+      <td align="center">Finds source-backed issue anchors in the recorded evidence.</td>
+    </tr>
+    <tr>
+      <td align="center"><strong>TRACE</strong></td>
+      <td align="center">Investigates candidates with targeted, read-only evidence queries.</td>
+    </tr>
+    <tr>
+      <td align="center"><strong>SUBMIT</strong></td>
+      <td align="center">Compares the supplied candidates and selects one when available.</td>
+    </tr>
+  </tbody>
+</table>
 
 ## Benchmark traces
 

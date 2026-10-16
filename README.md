@@ -102,7 +102,6 @@ Replace `MODEL_NAME` and `ENDPOINT` with your provider configuration. The defaul
 | [Example report](documentation/EXAMPLE_REPORT.json) | Saved output from the credential-free ALFWorld and WebShop compilation/query examples. |
 | [Query reference](prodebugger/prompts/query_dsl.md) | Supported read-only query operators, syntax, and coverage semantics. |
 | [Benchmark data](core/data/README.md) | Dataset provenance, schema, files, and reading examples. |
-| [Development history](documentation/README_EVOLUTION.md) | Architecture and protocol changes, experiment notes, and limitations. |
 | [Contributing](CONTRIBUTING.md) | Development setup and the checks expected before proposing a change. |
 
 ## Repository layout

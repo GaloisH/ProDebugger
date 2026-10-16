@@ -8,6 +8,8 @@ ProDebugger helps researchers inspect failures in recorded LLM-agent trajectorie
 - **Output:** a browsable investigation linking a candidate failure step to supporting trace evidence and uncertainty.
 - **Use it to:** inspect agent failures, review how a diagnosis was reached, and explore the included benchmark traces.
 
+The fastest way to see the project work is to run the offline example below. It compiles one ALFWorld and one WebShop trace, executes a read-only evidence query for each, and saves a browsable report; no model endpoint or API key is involved.
+
 ![ProDebugger case overview showing requirements, environment state, linked debugger and agent timelines, rule checks, and evidence leading to a diagnosis](assets/prodebugger-case-overview.jpg)
 
 This case overview shows how requirements, environment observations, rule checks, and retrieved evidence connect to a selected diagnosis. The [workflow diagram](assets/prodebugger-workflow.png) gives a compact view of the processing stages.
@@ -32,6 +34,8 @@ python web/server.py
 ```
 
 Open <http://127.0.0.1:8770>. The script writes its example report under `artifacts/reviewer_examples/`; a checked-in copy is available as [EXAMPLE_REPORT.json](documentation/EXAMPLE_REPORT.json). See the [step-by-step walkthrough](documentation/REVIEWER_GUIDE.md#reproduce-the-two-environment-examples) to inspect the generated records and query results.
+
+**Expected result:** the report contains one ALFWorld and one WebShop example, each with the query, returned evidence rows, source provenance, and coverage limitations. It demonstrates that the offline compilation/query path runs; it is not an online diagnosis or an accuracy result.
 
 Python 3.12 or later is required (tested with Python 3.13). `pyarrow` supports Parquet input, and `sqlglot` powers the read-only query interface used by the offline example. `openai` and `python-dotenv` are only needed for online model runs; offline examples do not require credentials.
 
@@ -81,6 +85,7 @@ Replace `MODEL_NAME` and `ENDPOINT` with your provider configuration. The defaul
 | [Query reference](prodebugger/prompts/query_dsl.md) | Supported read-only query operators, syntax, and coverage semantics. |
 | [Benchmark data](core/data/README.md) | Dataset provenance, schema, files, and reading examples. |
 | [Development history](documentation/README_EVOLUTION.md) | Architecture and protocol changes, experiment notes, and limitations. |
+| [Contributing](CONTRIBUTING.md) | Development setup and the checks expected before proposing a change. |
 
 ## Repository layout
 
@@ -93,3 +98,13 @@ documentation/ implementation, runtime, data, and development-history guides
 ```
 
 Run commands from the repository root. Generated sessions and experiment outputs are written locally and are git-ignored.
+
+## Development checks
+
+The GitHub Actions workflow installs the project dependencies, runs the regression checks, and executes the credential-free examples on Python 3.12. To run the same checks locally:
+
+```bash
+python -m pip install -r requirements.txt pytest
+python -m pytest checks -q
+python -B inspect_examples.py
+```

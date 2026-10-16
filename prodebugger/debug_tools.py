@@ -10,7 +10,6 @@ from .direct_submit import POLICY, commit as commit_direct, packet as submit_pac
 
 import operators as OPS
 from record import Entity
-from session import Session
 
 GLOBAL = {"mode": "global"}
 SCOPE = {"type": "object", "properties": {"mode": {"enum": ["local", "global"]},
@@ -107,7 +106,7 @@ class DebugTools:
                  *, trace_top_p=5, trace_top_k=2):
         self.bundle, self.output = bundle, output
         self.index = EvidenceIndex(bundle)
-        self.session = Session(bundle.record)
+        self.frontier = []
         self.windows = TraceCases(self.index)
         self.trace_queries = {}
         self.route_cases = []
@@ -221,7 +220,13 @@ class DebugTools:
                 self.index.fact(fid)
             if op == "contrast" and len(fids) < 2:
                 raise ToolError("invalid_arguments", "contrast needs at least two Facts")
-            return self.session.call(op, *fids) if op == "contrast" else getattr(self.session, op)(*fids)
+            if op == "contrast":
+                return OPS.contrast(self.bundle.record, *fids)
+            if op == "hold":
+                self.frontier += [fid for fid in dict.fromkeys(fids) if fid not in self.frontier]
+            else:
+                self.frontier = [fid for fid in self.frontier if fid not in fids]
+            return list(self.frontier)
         scope = self.index.scope(scope)
         record = self.index.scoped_record(scope)
         if op == "state":

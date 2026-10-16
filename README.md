@@ -35,7 +35,7 @@ To browse the workbench, start the local server in a second terminal:
 python web/server.py
 ```
 
-Open <http://127.0.0.1:8770>. The script writes its example report under `artifacts/reviewer_examples/`; a checked-in copy is available as [EXAMPLE_REPORT.json](documentation/EXAMPLE_REPORT.json). See the [step-by-step walkthrough](documentation/REVIEWER_GUIDE.md#reproduce-the-two-environment-examples) to inspect the generated records and query results.
+After starting the server on your computer, open <http://127.0.0.1:8770> in a browser on that same computer. This is a local address, not a hosted website; it works only while `python web/server.py` is running. The script writes its example report under `artifacts/reviewer_examples/`; a checked-in copy is available as [EXAMPLE_REPORT.json](documentation/EXAMPLE_REPORT.json). See the [step-by-step walkthrough](documentation/REVIEWER_GUIDE.md#reproduce-the-two-environment-examples) to inspect the generated records and query results.
 
 **Expected result:** the report contains one ALFWorld and one WebShop example, each with the query, returned evidence rows, source provenance, and coverage limitations. It demonstrates that the offline compilation/query path runs; it is not an online diagnosis or an accuracy result.
 

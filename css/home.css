@@ -111,6 +111,8 @@ body.page-home .app { padding: 0; }
 .video-tabs button[aria-selected="true"] { background: var(--h-ink); color: #fff; }
 .video-frame { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid var(--h-line); border-radius: 1rem; background: var(--h-ink); box-shadow: var(--h-shadow); }
 .video-frame > iframe, .video-frame > video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.video-frame:has(> video) { aspect-ratio: auto; }  /* a shipped file keeps its own shape */
+.video-frame > video { position: static; display: block; height: auto; max-height: calc(100svh - 13rem); margin-inline: auto; }
 .video-soon img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; filter: blur(2px); }
 .video-soon span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: .6rem; color: #fff; font-size: 1.15rem; font-weight: 600; }
 .video-soon .h-icon { width: 1.6rem; height: 1.6rem; }

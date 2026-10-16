@@ -6,6 +6,6 @@ export const PROJECT = {
   video: {
     youtube: "",                                 // video id or any youtube.com / youtu.be URL
     bilibili: "",                                // BV id or a bilibili.com/video/BV… URL
-    mp4: "",                                     // a file shipped with the site, e.g. ./video/demo.mp4
+    mp4: "./video/demo.mp4",                     // a file in the site's video/ folder (kept across exports)
   },
 };

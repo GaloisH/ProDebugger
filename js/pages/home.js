@@ -307,6 +307,11 @@ export function mountHome(root) {
   const onClick = event => {
     const target = event.target.closest("[data-scroll]");
     if (target) root.querySelector("#" + target.dataset.scroll)?.scrollIntoView({behavior: "smooth", block: "start"});
+    // The hero's Video link plays the video it scrolls to (the click allows playback with sound).
+    if (target?.dataset.scroll === "video" && target.classList.contains("paper-link")) {
+      root.querySelector(".video-frame").scrollIntoView({behavior: "smooth", block: "center"});
+      root.querySelector(".video-frame video")?.play().catch(() => {});
+    }
     if (event.target.closest("[data-open-diagram]")) dialog.showModal();
     const source = event.target.closest("[data-video]");
     if (source) {

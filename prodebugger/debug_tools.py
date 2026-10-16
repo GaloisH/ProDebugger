@@ -5,8 +5,7 @@ from pathlib import Path
 
 from .record_bridge import append_json, digest, plain, write_json
 from .evidence_tools import BudgetExceeded, EvidenceIndex, ToolError, integer
-from .window_trace import SCHEMA as WINDOW_SCHEMA, coverage
-from .query_trace import TraceCases, MODE as TRACE_MODE, commit as commit_window, query as query_logs
+from .query_trace import SCHEMA as WINDOW_SCHEMA, TraceCases, commit as commit_window, coverage, query as query_logs
 from .direct_submit import POLICY, commit as commit_direct, packet as submit_packet
 
 import operators as OPS
@@ -104,19 +103,18 @@ def validate_json(value, contract, path="arguments"):
 
 
 class DebugTools:
-    def __init__(self, bundle, output: Path | None = None, max_tool_calls=240, W=5,
+    def __init__(self, bundle, output: Path | None = None, max_tool_calls=240,
                  *, trace_top_p=5, trace_top_k=2):
         self.bundle, self.output = bundle, output
         self.index = EvidenceIndex(bundle)
         self.session = Session(bundle.record)
         self.windows = TraceCases(self.index)
-        self.trace_protocol = TRACE_MODE
         self.trace_queries = {}
         self.route_cases = []
         self.manager_plan = None
         from .claim_parser import ClaimParser
         self.claim_parser = ClaimParser(bundle.source)
-        self.max_tool_calls, self.default_W = max_tool_calls, W
+        self.max_tool_calls = max_tool_calls
         self.trace_top_p = integer(trace_top_p, "trace_top_p", 1)
         self.trace_top_k = integer(trace_top_k, "trace_top_k", 1)
         self.call_count = 0

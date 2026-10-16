@@ -6,8 +6,30 @@ from .evidence_tools import ToolError, integer
 from .query_dsl import execute as execute_query
 from .evidence_quality import annotated_fact, evidence_quality
 from .claim_parser import MENTAL, fragment, source_text, cards, payload as claim_payload
+from .benchmark_scope import ALLOWED, validate_cause
+from local_judgement import SLOTS
 
 MODE = "evidence-query-step/v2-elements"
+OUTPUT_SCHEMA = "independent-window-candidates/v3-root-role"
+FIELDS = ("status", "is_root_cause", "step", "module", "fault_class", "output_quote",
+          "proposition", "reasoning", "immediate_effect", "uncertainty", "requirement_links")
+SCHEMA = {"type": "function", "function": {"name": "assess",
+    "description": "Assess one original step with same-step module alternatives. Distinguish whether a fault exists (status) from whether it originates the investigated evidence (is_root_cause: true/false/null). A confident non-root fault still returns its step. Empty list requires uncertainty.",
+    "parameters": {"type": "object", "additionalProperties": False,
+        "required": ["window_id", "candidates", "uncertainty"], "properties": {
+        "window_id": {"type": "string"}, "uncertainty": {"type": "string"},
+        "candidates": {"type": "array", "items": {
+        "type": "object", "additionalProperties": False, "required": list(FIELDS),
+        "properties": {
+            **{k: {"type": "string"} for k in FIELDS if k not in
+               {"status", "is_root_cause", "step", "module", "fault_class", "requirement_links"}},
+            "status": {"enum": ["error", "uncertain"]},
+            "is_root_cause": {"type": ["boolean", "null"], "description": "true: supported origin candidate for this ROUTE evidence chain; false: this fault is not its root; null: causal role unresolved. Explain using reasoning and uncertainty."},
+            "step": {"type": "integer", "minimum": 1},
+            "module": {"enum": list(ALLOWED)},
+            "fault_class": {"type": ["string", "null"]},
+            "requirement_links": {"type": "array", "items": {"type": "string"}}}}}}}}}
+
 
 
 class TraceCases:
@@ -109,6 +131,52 @@ def query(tools, candidate_id, sql):
     return result
 
 
+def validate_quote(tools, step, module, quote):
+    text = tools.bundle.source["steps"][step - 1]["parts"].get(module)
+    if not isinstance(quote, str) or not quote.strip() or quote not in (text or ""):
+        raise ToolError("invalid_window_root", f"Quote at step {step} module {module} is not an exact source substring: {quote!r}")
+
+
+def normalize_candidate(tools, answer, window):
+    if not isinstance(answer, dict) or set(answer) != set(FIELDS):
+        raise ToolError("invalid_window_root", "candidate requires exactly the root fields")
+    for key in ("proposition", "reasoning", "immediate_effect", "uncertainty", "output_quote"):
+        if not isinstance(answer[key], str):
+            raise ToolError("invalid_window_root", f"{key} must be a string")
+    if not answer["reasoning"].strip() or not answer["proposition"].strip():
+        raise ToolError("invalid_window_root", "reasoning and proposition are required")
+    if answer["is_root_cause"] is not None and type(answer["is_root_cause"]) is not bool:
+        raise ToolError("invalid_window_root", "is_root_cause must be true, false or null")
+    if answer["is_root_cause"] is None and not answer["uncertainty"].strip():
+        raise ToolError("invalid_window_root", "unresolved causal role requires uncertainty")
+    links = answer["requirement_links"]
+    if not isinstance(links, list) or any(not isinstance(k, str) or k not in tools.index.requirements for k in links):
+        raise ToolError("invalid_window_root", "invalid requirement_links")
+    t, module = answer["step"], answer["module"]
+    if type(t) is not int or not window["lo"] <= t <= window["hi"] or module not in ALLOWED:
+        raise ToolError("invalid_window_root", "candidate must identify an in-window step/module")
+    if answer["fault_class"] is not None and answer["fault_class"] not in ALLOWED[module]:
+        raise ToolError("invalid_window_root", "fault_class is outside benchmark scope")
+    if answer["status"] == "error":
+        if answer["fault_class"] not in ALLOWED[module]:
+            raise ToolError("invalid_window_root", "fault_class is outside benchmark scope")
+        if not answer["proposition"].strip() or not answer["immediate_effect"].strip():
+            raise ToolError("invalid_window_root", "error requires proposition and immediate_effect")
+        validate_cause(module, answer)
+    elif answer["status"] == "uncertain":
+        if not answer["uncertainty"].strip():
+            raise ToolError("invalid_window_root", "uncertain candidate requires explicit uncertainty")
+    else:
+        raise ToolError("invalid_window_root", "status must be error or uncertain")
+    validate_quote(tools, t, module, answer["output_quote"])
+    owned = [f for f in tools.index.facts.values() if f.t == t and f.side == "mind" and f.slot == SLOTS[module]]
+    if not owned:
+        raise ToolError("invalid_window_root", "candidate has no existing module Fact")
+    matching = [f for f in owned if f.span and (f.span in answer["output_quote"] or answer["output_quote"] in f.span)]
+    fid = (max(matching, key=lambda f: len(f.span)) if matching else owned[0]).fid
+    return {**answer, "primary_fid": fid, "evidence_for": [fid], "evidence_against": []}
+
+
 def _strings(value):
     if isinstance(value, str):
         yield value
@@ -121,7 +189,6 @@ def _strings(value):
 
 
 def commit(tools, answer, call_id):
-    from .window_trace import normalize_candidate, MODE as OUTPUT_SCHEMA
     if not isinstance(answer, dict) or set(answer) != {"window_id", "candidates", "uncertainty"}:
         raise ToolError("invalid_trace_result", "preserve assess fields: window_id,candidates,uncertainty")
     cid = answer["window_id"]

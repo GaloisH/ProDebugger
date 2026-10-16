@@ -66,18 +66,18 @@ def segment(env_texts: List[str], agent_texts: List[str],
     return steps
 
 
-def build(tid: str, task: str, steps: List[Step], profile, *, parsed=None) -> Record:
+def build(tid: str, task: str, steps: List[Step], profile, *, parsed: Dict[str, Any]) -> Record:
+    """Compile audited task/observation parses and module text into a Record."""
     K, RL = profile.kinds(), profile.relations()
-    goals = parsed["goals"] if parsed is not None else profile.parse_goal(task)
-    if parsed is not None:
-        # Even a fully consumed observation template does not make the world
-        # closed or the heuristic memory extraction exhaustive. Missing Facts
-        # must not become negative observations in native criterion checks.
-        for name, relation in RL.declared().items():
-            RL._r[name] = replace(relation, props=relation.props - {"observed"})
+    goals = parsed["goals"]
+    # Even a fully consumed observation template does not make the world
+    # closed or the heuristic memory extraction exhaustive. Missing Facts
+    # must not become negative observations in native criterion checks.
+    for name, relation in RL.declared().items():
+        RL._r[name] = replace(relation, props=relation.props - {"observed"})
     R = Record(tid, K, RL, task=task, goals=goals)
     R.domain = getattr(profile, "name", "unknown")
-    R.parse_audits = parsed["audits"] if parsed is not None else []
+    R.parse_audits = parsed["audits"]
     R.domain_briefing = (profile.domain_briefing()
                          if hasattr(profile, "domain_briefing") else
                          {"name": R.domain})
@@ -104,8 +104,7 @@ def build(tid: str, task: str, steps: List[Step], profile, *, parsed=None) -> Re
         )
         # --- R over the environment turn -----------------------------
         obs_ids: List[int] = []
-        observations = (parsed["observations"][str(st.t)] if parsed is not None
-                        else profile.parse_observation(st.env_text, st.admissible))
+        observations = parsed["observations"][str(st.t)]
         for item in observations:
             args = tuple(R.ent(k, i) for k, i in item["args"])
             fid = R.add(item["rel"], args, item["value"], slot="obs", side="env",

@@ -1,12 +1,12 @@
 // Home page: a light, business-style overview with its own header. In-page links scroll
 // instead of changing the hash, which belongs to the router.
-import {CaseStore} from "../case/store.js?v=b33d828e89";
-import {createCaseViews, TABS} from "../case/views.js?v=b33d828e89";
-import {caseHref} from "../routes.js?v=b33d828e89";
-import {domainIcon} from "./runs.js?v=b33d828e89";
-import {esc, loader} from "../util.js?v=b33d828e89";
-import {STATIC} from "../api.js?v=b33d828e89";
-import {PROJECT} from "../site.js?v=b33d828e89";
+import {CaseStore} from "../case/store.js?v=50f8681a13";
+import {createCaseViews, TABS} from "../case/views.js?v=50f8681a13";
+import {caseHref} from "../routes.js?v=50f8681a13";
+import {domainIcon} from "./runs.js?v=50f8681a13";
+import {esc, loader} from "../util.js?v=50f8681a13";
+import {STATIC} from "../api.js?v=50f8681a13";
+import {PROJECT} from "../site.js?v=50f8681a13";
 
 // The showcase case: a fully correct reference run kept under artifacts/.
 export const DEMO_REF = ["runs", "dsl-route-causal-timeline-high-unlimited-alf18-20261007-live", "GPT-4o_018_alfworld_task_018"];
@@ -111,16 +111,30 @@ function heroShots() {
     </div>`;
 }
 
-// Cross-fades the hero screenshots. The active tab's progress bar times each slide, so
-// hovering (which pauses the bar) also pauses the rotation; no autoplay for reduced motion.
+// Pages through the hero screenshots: the current one slides out as the next slides in,
+// leftward when moving forward (auto-advance wraps forward too) and rightward when a tab
+// further back is picked. The active tab's progress bar times each slide, so hovering
+// (which pauses the bar) also pauses the rotation; no autoplay for reduced motion.
 function rotateShots(box) {
   const auto = !matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let index = 0;
-  function go(i) {
-    index = (i + SHOTS.length) % SHOTS.length;
-    const [id, label, caption] = SHOTS[index];
-    box.querySelectorAll("[data-shot]").forEach(a => {
-      const on = a.dataset.shot === id;
+  const shots = [...box.querySelectorAll("[data-shot]")];
+  let index = -1;
+  function go(i, dir = 1) {
+    const next = (i + SHOTS.length) % SHOTS.length;
+    if (next === index) return;
+    const [id, label, caption] = SHOTS[next];
+    const from = shots[index], to = shots[next];
+    if (from) {
+      // Park the incoming page on the side it enters from, then let both slide.
+      to.style.transition = "none";
+      to.style.transform = `translateX(${dir * 100}%)`;
+      void to.offsetWidth;
+      to.style.transition = to.style.transform = "";
+      from.style.transform = `translateX(${-dir * 100}%)`;
+    }
+    index = next;
+    shots.forEach(a => {
+      const on = a === to;
       a.classList.toggle("is-on", on);
       a.tabIndex = on ? 0 : -1;
       a.setAttribute("aria-hidden", String(!on));
@@ -139,7 +153,8 @@ function rotateShots(box) {
   box.addEventListener("animationend", event => { if (event.target.classList.contains("shot-progress")) go(index + 1); });
   box.querySelector(".shot-tabs").addEventListener("click", event => {
     const b = event.target.closest("[data-shot-tab]");
-    if (b) go(SHOTS.findIndex(s => s[0] === b.dataset.shotTab));
+    const i = b ? SHOTS.findIndex(s => s[0] === b.dataset.shotTab) : -1;
+    if (i >= 0) go(i, i < index ? -1 : 1);
   });
   go(0);
 }

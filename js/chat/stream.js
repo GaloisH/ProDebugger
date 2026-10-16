@@ -1,10 +1,10 @@
 // Renders chat messages incrementally: a message is redrawn only when its HTML
 // changes, open <details> survive redraws, and the view follows new messages
 // while the reader stays at the bottom.
-import {icon} from "../case/format.js?v=b33d828e89";
-import {caseHref} from "../routes.js?v=b33d828e89";
-import {esc, number, raw, short} from "../util.js?v=b33d828e89";
-import {callTitle} from "../views/process.js?v=b33d828e89";
+import {icon} from "../case/format.js?v=50f8681a13";
+import {caseHref} from "../routes.js?v=50f8681a13";
+import {esc, number, raw, short} from "../util.js?v=50f8681a13";
+import {callTitle} from "../views/process.js?v=50f8681a13";
 
 const PHASE_ROLE = {MAP: "Requirement map", ROUTE: "Anchor cases", MANAGER: "Investigation plan", TRACE: "Investigation", SUBMIT: "Root-cause decision"};
 const S = t => `S${String(t).padStart(2, "0")}`;

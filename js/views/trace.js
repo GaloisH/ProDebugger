@@ -1,7 +1,7 @@
 // MANAGER and TRACE calls: the investigation plan (plan_trace), one element SQL query per
 // assignment (query_logs) and its single-step assessment (assess). Field names follow
 // trace_manager / query_trace / window_trace.
-import {esc, short} from "../util.js?v=b33d828e89";
+import {esc, short} from "../util.js?v=50f8681a13";
 
 const S = t => `S${String(t).padStart(2, "0")}`;
 const stepOfSource = id => Number(String(id || "").split(":")[1]) || null; // "source:7:plan" -> 7

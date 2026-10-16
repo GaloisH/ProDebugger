@@ -10,32 +10,29 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-if __package__:
-    from .abstract_rules import export_rules
-else:
-    from abstract_rules import export_rules
-
 HERE = Path(__file__).resolve().parent
 DATA = HERE.parent / "core" / "data"
+sys.path.insert(0, str(HERE.parent))  # also run as `python prodebugger/run_compile.py`
+
+from prodebugger.abstract_rules import RULES, export_rules
+from prodebugger.record_bridge import build_bundle, parquet_source, source_versions, valid_id
 
 
 def compile_trajectory(trajectory_id: str, data_dir: Path = DATA, *,
                        output_dir: Path | None = None) -> Path:
     """Compile Facts and seven abstract rules; save the record and evaluations."""
-    sys.path.insert(0, str(HERE.parent))
-    from prodebugger.record_bridge import parquet_source, build_bundle, valid_id
     source = parquet_source(valid_id(trajectory_id), data_dir)
     output = (Path(output_dir) if output_dir is not None else HERE / "sessions") / trajectory_id
     output.mkdir(parents=True, exist_ok=True)
     bundle = build_bundle(source, output=output)
-    record, evaluations = bundle.projection, bundle.evaluations
+    record, evaluations = bundle.record, bundle.evaluations
     payload = {
         "trajectory_id": record.tid,
         "task_type": bundle.source["task_type"],
         "task": record.task,
         "parse_audits": bundle.record.parse_audits,
         "parsing_mode": "offline-strict-audit; online backoff is available through run_experiment",
-        "kinds": [asdict(kind) for kind in record.kinds.declared().values()],
+        "kinds": [{"name": name, "parent": parent} for name, parent in record.kinds.declared().items()],
         "relations": [asdict(relation) for relation in record.relations.declared().values()],
         "entities": [asdict(entity) for entity in record.E.values()],
         "goals": [asdict(goal) for goal in record.goals],
@@ -55,16 +52,10 @@ def compile_trajectory(trajectory_id: str, data_dir: Path = DATA, *,
 
 def compile_sample(sample_file: Path, data_dir: Path, output_dir: Path) -> dict:
     """Compile the fixed twenty IDs through the same single-trajectory entry point."""
-    if __package__:
-        from .abstract_rules import RULES, export_rules
-    else:
-        from abstract_rules import RULES, export_rules
     sample = json.loads(Path(sample_file).read_text(encoding="utf-8"))
     ids = sample["trajectory_ids"]
     if len(ids) != 20 or len(set(ids)) != 20 or sample["per_domain"] != 10:
         raise ValueError("expected the fixed 20 unique IDs, 10 per domain")
-    sys.path.insert(0, str(HERE.parent))
-    from prodebugger.record_bridge import source_versions
     data = [p for p in Path(data_dir).glob("*.parquet") if p.stem in ("train", "validation", "test")]
     manifest = {"trajectory_ids": ids, "per_domain": 10, "seed": sample.get("seed"),
                 "python_hash_seed": os.environ.get("PYTHONHASHSEED"),

@@ -59,7 +59,7 @@ class ClaimParserChecks(unittest.TestCase):
         self.assertTrue(markers)
         self.assertFalse(any(f.rel == 'recalled_nothing' for f in bundle.record.F))
         self.assertEqual(fact_quality(bundle.record, markers[0])['source_kind'], 'parser_metadata')
-        self.assertFalse(any(f.rel == 'memory_unparsed' for f in memory_claims(bundle.projection)))
+        self.assertFalse(any(f.rel == 'memory_unparsed' for f in memory_claims(bundle.record)))
         self.assertTrue(any(f.rel == 'recalled_summary' and 'likely' in f.span for f in bundle.record.F))
 
     def test_full_template_and_unresolved_semantic_scope(self):

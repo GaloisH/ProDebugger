@@ -99,7 +99,7 @@ def dry_run(bundle, output, cfg):
                        trace_top_p=cfg["trace_top_p"], trace_top_k=cfg["trace_top_k"])
     goals = tools.execute("view", {"spec": "requirements", "scope": GLOBAL}, "dry:map")
     evidence = tools.execute("view_evidence", {"scope": GLOBAL, "limit": 1}, "dry:evidence")
-    facts = bundle.projection.F
+    facts = bundle.record.F
     if evidence.get("data", {}).get("items"):
         tools.execute("trace_evidence", {"eid": evidence["data"]["items"][0]["eid"], "scope": GLOBAL}, "dry:graph")
     elif facts:
@@ -114,7 +114,7 @@ def dry_run(bundle, output, cfg):
     errors = [e["result"]["error"] for e in tools.events if "error" in e["result"]]
     result = tools.stop_result("error" if errors else "dry_run", "tool probe failed" if errors else "offline compilation and tool probe completed")
     result.update(run_id=output.parent.name, trajectory_id=bundle.record.tid,
-                  canonical_fingerprint=bundle.fingerprint, compilation_mode="canonical-core-dsl-projection/v1",
+                  canonical_fingerprint=bundle.fingerprint, compilation_mode="canonical-core/v2",
                   facts=len(facts), candidates=len(tools.index.evidence), errors=errors,
                   mapped_goals=len(goals.get("data", {}).get("requirements", [])),
                   usage={"model_calls": 0, "replay_calls": 0, "tool_calls": tools.call_count})
@@ -150,8 +150,8 @@ def execute_trajectory(tid, args, run_dir, mode, cfg, resume, manifest):
             raise ValueError("source_mismatch: input/compiler/rules/prompt changed; use a new run")
         if not resume or previous is None:
             metadata = {"fingerprint": bundle.fingerprint, "source_versions": bundle.versions,
-                "input_digest": digest(bundle.source), "facts": len(bundle.projection.F),
-                "candidates": sum(len(g.items) for g in bundle.projection.evidences.values())}
+                "input_digest": digest(bundle.source), "facts": len(bundle.record.F),
+                "candidates": sum(len(g.items) for g in bundle.record.evidences.values())}
             export_bundle(bundle, output)
 
         if mode == "dry_run":
@@ -163,7 +163,7 @@ def execute_trajectory(tid, args, run_dir, mode, cfg, resume, manifest):
             client = ReplayClient(replay, output, cfg["max_turns"]) if replay else LLMClient(cfg, output)
             agent = DebuggerAgent(bundle, client, output, cfg, resume=resume and (output / "checkpoint.json").exists())
             result = agent.run()
-            result.update(facts=len(bundle.projection.F), candidates=len(agent.tools.index.evidence),
+            result.update(facts=len(bundle.record.F), candidates=len(agent.tools.index.evidence),
                           compilation_mode=manifest["compilation_mode"])
             write_json(output / "result.json", result)
 
@@ -216,7 +216,7 @@ def run(args):
         run_dir.mkdir(parents=True, exist_ok=False)
         manifest = {"schema": "debugger-run/v1", "run_id": run_id, "created_at": datetime.now(timezone.utc).isoformat(),
                     "trajectory_ids": ids, "mode": mode, "config": cfg, "submission_policy": POLICY,
-                    "compilation_mode": "canonical-core-dsl-projection/v1", "python_hash_seed": os.getenv("PYTHONHASHSEED"),
+                    "compilation_mode": "canonical-core/v2", "python_hash_seed": os.getenv("PYTHONHASHSEED"),
                     "python_version": sys.version, "sources": {},
                     "input_source": str(args.compiled_dir.resolve()) if args.compiled_dir else str(args.data_dir.resolve()),
                     "replay_source": str(args.replay.resolve()) if args.replay else None}

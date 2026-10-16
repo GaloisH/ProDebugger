@@ -45,8 +45,8 @@ class _VisibleFacts:
 class EvidenceIndex:
     def __init__(self, bundle):
         self.record = bundle.record
-        self.facts = {f.fid: f for f in bundle.projection.F}
-        self.evidence = {e.eid: plain(e) for g in bundle.projection.evidences.values() for e in g.items}
+        self.facts = {f.fid: f for f in bundle.record.F}
+        self.evidence = {e.eid: plain(e) for g in bundle.record.evidences.values() for e in g.items}
         self.evaluations = bundle.evaluations
         self.length = len(bundle.source["steps"])
         self.fingerprint = bundle.fingerprint

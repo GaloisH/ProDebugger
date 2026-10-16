@@ -4,10 +4,8 @@ from __future__ import annotations
 from dataclasses import asdict
 import json
 
-if __package__:
-    from .dsl import Fact, Rule, UNBOUND
-else:
-    from dsl import Fact, Rule, UNBOUND
+from record import Fact, UNBOUND
+from .dsl import Rule, add_evidence
 
 
 MODULE_RELATIONS = {"recalled_summary", "recalled_nothing", "memory_unparsed", "planned", "assessed"}
@@ -325,7 +323,7 @@ def detect_abstract_rules(record, rules=RULES):
             evaluations.append({"rule": rule.id, "state": state, **finding})
             key = rule.id, t, finding["refs"]
             if state == "violated" and key not in seen:
-                record.add_evidence("abstract.rule", rule=rule.id, **finding)
+                add_evidence(record, "abstract.rule", rule=rule.id, **finding)
                 seen.add(key)
     return evaluations
 

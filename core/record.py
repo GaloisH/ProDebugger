@@ -236,6 +236,8 @@ class Record:
         # Sidecar metadata preserves the Fact and TRACE/SUBMIT wire contracts.
         # Fact.t is the utterance time; event_step is the time being recalled.
         self.claim_scopes: Dict[int, Dict[str, Any]] = {}
+        # Derived abstract-rule findings (prodebugger.dsl.Evidences by kind).
+        self.evidences: Dict[str, Any] = {}
         self._chain: Dict[Tuple[str, Tuple[Entity, ...]], List[int]] = collections.defaultdict(list)
         self._by_entity: Dict[str, List[int]] = collections.defaultdict(list)
         self._by_step: Dict[int, List[int]] = collections.defaultdict(list)

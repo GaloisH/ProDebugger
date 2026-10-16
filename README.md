@@ -83,11 +83,14 @@ schema, adding `is_root_cause` (true/false/null) to distinguish causal role from
 fault confidence. A confident fault can return its step with `status=error` and
 `is_root_cause=false`. Same-step module alternatives remain possible. No fixed window or automatic
 prior-history dump is supplied. CTEs, joins, conditions, set operations and record-specific
-functions (`TRACK_ENTITY`, `TRACK_STATE`, `TRACK_ACTION`, `TRACE_FACT`, `STATE_AT`,
+functions (`TRACE_ENTITY`, `TRACE_STATE`, `TRACE_ACTION`, `TRACE_FACT`, `STATE_AT`,
 `SOURCE`, `SEARCH_TEXT`, `GOAL_STATUS`, `COVERAGE`)
 are documented in [Record SQL](prodebugger/prompts/query_dsl.md). Queries are read-only,
 audited; invalid SQL also consumes the one opportunity. Quotes must exist
 in returned raw source, allocated exact excerpts or the initial anchor. The mode is `evidence-query-step/v2-elements`.
+The canonical names are `TRACE_ENTITY`, `TRACE_STATE`, and `TRACE_ACTION`.
+Archived `TRACK_*` calls remain compatible aliases; execution and query conversion
+normalize their function names without changing quoted evidence or historical logs.
 Record SQL retains support for token-bounded letter/digit codes such as `4T` and normalizes
 double-quoted literals only in known string argument slots. Invalid known-function
 arguments may suppress dependent top-level `UNION ALL` arms while preserving

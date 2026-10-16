@@ -145,7 +145,7 @@ class RecoveryChecks(unittest.TestCase):
         data['steps'] = plain(compiler.segment(['Nothing happens.'] * 160,
             ['<plan>Inspect countertop 1.</plan><action>look</action>'] * 160, [['look']] * 160))
         tools = DebugTools(build_bundle(data))
-        result = execute(tools, "SELECT step,fid FROM TRACK_ACTION('look')")
+        result = execute(tools, "SELECT step,fid FROM TRACE_ACTION('look')")
         self.assertEqual(result['returned_rows'], 160)
         self.assertFalse(result['truncated'])
         fids = [r['fid'] for r in result['rows']]

@@ -6,7 +6,23 @@ literal, function, provenance alias and SQLite operation after translation.
 from functools import reduce
 from sqlglot import exp
 
-BATCH_ARGUMENTS = {"SEARCH_TEXT": {0, 1}, "FIND_CLAIMS": {0, 1}, "TRACK_ACTION": {0}}
+BATCH_ARGUMENTS = {"SEARCH_TEXT": {0, 1}, "FIND_CLAIMS": {0, 1}, "TRACE_ACTION": {0}}
+LEGACY_FUNCTION_NAMES = {
+    "TRACK_ENTITY": "TRACE_ENTITY",
+    "TRACK_STATE": "TRACE_STATE",
+    "TRACK_ACTION": "TRACE_ACTION",
+}
+
+
+def normalize_function_names(tree):
+    """Canonicalize archived table calls without changing source text or CTE names."""
+    for table in tree.find_all(exp.Table):
+        function = table.this
+        if isinstance(function, exp.Anonymous):
+            name = LEGACY_FUNCTION_NAMES.get(function.name.upper())
+            if name:
+                function.set("this", name)
+    return tree
 
 
 def schema_columns(schema):

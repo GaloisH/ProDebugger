@@ -18,7 +18,7 @@ WITH claims AS (
 ), actions AS (
  -- Preserve action provenance and arguments without inventing source offsets.
  SELECT step,'action' AS module,span AS text,fid,args,source_kind
- FROM TRACK_ACTION(('take','put'))
+ FROM TRACE_ACTION(('take','put'))
 )
 -- Align by field name; source-only and Fact-only fields are optional.
 SELECT * FROM claims
@@ -27,7 +27,7 @@ ORDER BY step,module;
 ```
 
 - SEARCH_TEXT and FIND_CLAIMS accept a string or a parenthesized list of quoted
-  strings in either of their first two arguments. TRACK_ACTION accepts a string
+  strings in either of their first two arguments. TRACE_ACTION accepts a string
   or such a list of relation names. Bounds remain two scalar integer literals.
   Lists form the ordered Cartesian product, first argument outermost, equivalent
   to UNION ALL of scalar calls. Repeated/overlapping searches retain duplicate
@@ -70,7 +70,7 @@ BASIC QUERY CHECKLIST
   recovery. Legacy window lo/hi identifies the anchor, not SQL visibility.
 - Use query_context.relation_names. In ALFWorld: examine/look -> look,
   move/put -> put, go -> go, open action -> open_action; open is the state relation.
-  TRACK_ACTION('examine') is invalid. WebShop actions include search and click.
+  TRACE_ACTION('examine') is invalid. WebShop actions include search and click.
 - Arguments to table functions are LITERALS (or the documented string lists), not columns/subqueries. CTEs can join
   already materialized results, but SOURCE(found.fid,'phrase') is unsupported.
   Use known anchor IDs or SEARCH_TEXT to retrieve a missing source directly.
@@ -84,7 +84,7 @@ BASIC QUERY CHECKLIST
   text, invent function/relation names, or use expressions as function arguments.
 - Generic SEARCH_TEXT('search','plan',...) and SEARCH_TEXT('search','reflection',...)
   are forbidden. Use the actual disputed phrase, such as 'fit type', or use
-  TRACK_ACTION('search',1,anchor) for search actions. Specific two-character codes
+  TRACE_ACTION('search',1,anchor) for search actions. Specific two-character codes
   containing one letter and one digit (4T, 2T) are allowed and match whole tokens.
   SEARCH_TEXT('Search','observation',t,t) is allowed ONLY for a WebShop observation
   whose complete original text is the single home-page label Search. It cannot
@@ -108,13 +108,13 @@ BASIC QUERY CHECKLIST
 Element table functions (literal arguments only; bounds are original steps):
 - FIND_ENTITY('ladle'): existing IDs matching a specific noun/ID substring.
   Columns: entity_id,kind,entity_index. Use IDs already in the anchor when possible.
-- TRACK_ENTITY('portable:ladle_1'[,from_step,to_step]): related compact Facts.
+- TRACE_ENTITY('portable:ladle_1'[,from_step,to_step]): related compact Facts.
   ABOUT is an alias. agent/self and intention entities are too broad and rejected.
-- TRACK_STATE('portable:ladle_1','has'[,from_step,to_step]): recorded env/task
+- TRACE_STATE('portable:ladle_1','has'[,from_step,to_step]): recorded env/task
   assignments of ONE entity and ONE relation; inspect source_kind for derived checks.
 - STATE_AT('portable:ladle_1','has',7): latest assignments for that entity/relation.
   Missing state is UNKNOWN; this is recorded knowledge, not complete world state.
-- TRACK_ACTION('search'[,from_step,to_step]): only original action facts of that
+- TRACE_ACTION('search'[,from_step,to_step]): only original action facts of that
   operation, e.g. compare search strings across time without retrieving logs.
 - TRACE_FACT(123,'backward'|'forward'|'goal',depth): provenance neighborhood;
   depth 0..8, default 2, no node-count cap. These edges are not causal proof.
@@ -139,7 +139,7 @@ Element table functions (literal arguments only; bounds are original steps):
   Add entity filters and independent action/observation evidence where relevant.
   It finds clauses that have no typed memory Fact; no match still means unknown.
 
-Compact Fact columns (TRACK_ENTITY/STATE/ACTION, STATE_AT, TRACE_FACT, VERSIONS):
+Compact Fact columns (TRACE_ENTITY/STATE/ACTION, STATE_AT, TRACE_FACT, VERSIONS):
 fid,step,rel,args,slot,side,value,value_type,span,purpose,source_kind,parse_status,value_clipped,assertion_time,claim_scope,claim_polarity.
 args is a JSON array of entity IDs. Raw memory/reflection/plan wrapper Facts have
 NULL value/span to prevent paragraph dumping. Other text values/spans cap at 240
@@ -229,7 +229,7 @@ WITH claims AS (
   -- Keep open_action attempts for drawer:2; an attempted action does not prove success.
   SELECT
   step, 'action' AS module, span AS text, source_kind
-  FROM TRACK_ACTION('open_action', 1, 12)
+  FROM TRACE_ACTION('open_action', 1, 12)
   WHERE
     JSON_EXTRACT(args, '$[0]') = 'drawer:2'
 )
@@ -286,7 +286,7 @@ WITH claims AS (
   -- Bind the same cup and clean attribute; unrelated true properties do not establish clean state.
   SELECT
   step, 'state' AS module, span AS text, source_kind
-  FROM TRACK_STATE('portable:cup_1', 'has', 1, 19)
+  FROM TRACE_STATE('portable:cup_1', 'has', 1, 19)
   WHERE
     JSON_EXTRACT(args, '$[1]') = 'attribute:clean'
 )
@@ -322,7 +322,7 @@ WITH clicks AS (
   -- Track click elements for product navigation, color selection and purchase.
   SELECT
   step, 'action' AS module, CAST(value AS TEXT) AS text, source_kind
-  FROM TRACK_ACTION('click', 1, 5)
+  FROM TRACE_ACTION('click', 1, 5)
 ), claims AS (
   -- Retrieve the disputed action claim verbatim; memory does not prove an action occurred.
   SELECT
@@ -367,7 +367,7 @@ WITH searches AS (
   -- Track original search arguments from step 1; the late anchor does not hide earlier actions.
   SELECT
   step, 'action' AS module, CAST(value AS TEXT) AS text, source_kind
-  FROM TRACK_ACTION('search', 1, 22)
+  FROM TRACE_ACTION('search', 1, 22)
 ), claims AS (
   -- Find the exact initial-search claim; the memory itself does not verify historical actions.
   SELECT

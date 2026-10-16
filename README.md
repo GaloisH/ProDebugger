@@ -64,9 +64,23 @@ The 105 rows are the ALFWorld/WebShop subset of a supplied 139-row file; 34 GAIA
 
 The offline quick start demonstrates that the two included domain examples can be compiled and queried. It is not an online diagnosis or an accuracy result. See the [implementation guide](documentation/REVIEWER_GUIDE.md#interpreting-results-and-extending-to-other-traces) for evaluation limits.
 
+## Project status
+
+| Capability | Status |
+| --- | --- |
+| Offline compilation and read-only evidence queries | Available for the included ALFWorld and WebShop examples; requires no model key. |
+| MAP → ROUTE → TRACE → SUBMIT diagnosis | Available for recorded supported traces through a configured tool-call-capable model endpoint. |
+| Browser workbench | Available for browsing traces and saved runs locally. |
+| Aggregate benchmark scoring | Exact step/module agreement scorer included; no baseline results or held-out accuracy claim is bundled. |
+| Live agent capture, environment execution, and automatic repair | Not implemented; ProDebugger analyzes recorded trajectories. |
+| Arbitrary environment/task formats | Not supported by the current data adapter and domain profiles. |
+| Code/data reuse terms | This repository has no declared code license; dataset redistribution terms are unresolved. See [source and licensing notes](core/data/README.md#source-and-licensing). |
+
+See the [online end-to-end demo](documentation/ONLINE_DEMO.md) and [evaluation protocol](documentation/EVALUATION.md) for runnable commands and metric definitions.
+
 ## Run an online diagnosis
 
-Online runs require an OpenAI-compatible Chat Completions endpoint that supports tool calls and an API key. Copy `.env.example` to `.env`, set the provider key, then run:
+Online runs require an OpenAI-compatible Chat Completions endpoint that supports tool calls and an API key. Follow the [online end-to-end demo](documentation/ONLINE_DEMO.md) for a complete setup and inspection walkthrough. The short form is:
 
 ```bash
 python -B -m prodebugger.run_experiment GPT-4o_027_alfworld_task_027 \
@@ -83,6 +97,8 @@ Replace `MODEL_NAME` and `ENDPOINT` with your provider configuration. The defaul
 | --- | --- |
 | [Implementation guide](documentation/REVIEWER_GUIDE.md) | Terminology, evidence boundaries, offline examples, workbench walkthrough, and result interpretation. |
 | [Running the debugger](documentation/RUNNING.md) | Model configuration, experiment options, replay/resume, budgets, and generated files. |
+| [Online end-to-end demo](documentation/ONLINE_DEMO.md) | Configure a provider, run one trace through all stages, and inspect its artifacts. |
+| [Evaluation and reproducibility](documentation/EVALUATION.md) | Exact-match metrics, fixed sample IDs, evaluation commands, and reporting limitations. |
 | [Example report](documentation/EXAMPLE_REPORT.json) | Saved output from the credential-free ALFWorld and WebShop compilation/query examples. |
 | [Query reference](prodebugger/prompts/query_dsl.md) | Supported read-only query operators, syntax, and coverage semantics. |
 | [Benchmark data](core/data/README.md) | Dataset provenance, schema, files, and reading examples. |

@@ -6,7 +6,7 @@ import {caseHref} from "../routes.js";
 import {esc, number, raw, short} from "../util.js";
 import {callTitle} from "../views/process.js";
 
-const PHASE_ROLE = {MAP: "Requirement map", ROUTE: "Anchor cases", MANAGER: "Investigation plan", TRACE: "Investigation", SUBMIT: "Root-cause decision"};
+const PHASE_ROLE = {MAP: "Requirement map", ROUTE: "Anchor cases", MANAGER: "Investigation plan", TRACE: "Investigation", SUBMIT: "Candidate selection"};
 const S = t => `S${String(t).padStart(2, "0")}`;
 const stepChip = t => `<span class="step-chip">${S(t)}</span>`;
 const human = s => String(s || "").replace(/_/g, " ");
@@ -52,7 +52,7 @@ function requestMessage(m) {
     .filter(Boolean).map(c => `<span class="chip">${esc(c)}</span>`).join("");
   return `<div class="msg-body">
     <div class="msg-meta"><strong>${chat ? "You" : "Request"}</strong><span>${how}</span>${chat?.launched_at ? `<span>${esc(new Date(chat.launched_at).toLocaleString("en-CA", {hour12: false}))}</span>` : ""}</div>
-    <p class="msg-lead">Find the root cause in <code>${esc(m.trajectoryId || "this trajectory")}</code>.</p>
+    <p class="msg-lead">Investigate the failure in <code>${esc(m.trajectoryId || "this trajectory")}</code>.</p>
     ${m.task ? `<blockquote class="msg-task">${esc(m.task)}</blockquote>` : ""}
     <div class="chip-row">${chips}</div>
   </div>`;
@@ -125,7 +125,7 @@ function submitContent(m, ref) {
       ${r.uncertainty ? `<details class="msg-activity" data-key="submit-unc"><summary>What is missing</summary><div class="msg-text">${esc(r.uncertainty)}</div></details>` : ""}${links}`;
   }
   return `<div class="verdict">
-      <span class="eyebrow">Root cause</span>
+      <span class="eyebrow">Selected hypothesis</span>
       <div class="verdict-line">${stepChip(root.step)}<strong>${esc(root.module)}</strong><span class="mono">${esc(human(root.fault_class))}</span>${r.accepted ? '<span class="badge ok">accepted</span>' : `<span class="badge warn">${esc(r.status)}</span>`}</div>
       ${root.output_quote ? `<blockquote>${esc(root.output_quote)}</blockquote>` : ""}
     </div>

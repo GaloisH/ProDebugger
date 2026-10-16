@@ -9,9 +9,13 @@ __pycache__/
 .pytest_cache/
 *.tmp
 
-# Private trajectories, compiled sessions and experiment outputs
-core/data/
+# Local trajectories, compiled sessions and experiment outputs
+core/data/*
 *.parquet
+!core/data/train.parquet
+!core/data/README.md
+!core/data/manifest.json
+!core/data/examples/
 /data.zip
 /Requirement/
 artifacts/

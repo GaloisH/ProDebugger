@@ -1,0 +1,71 @@
+{
+  "source_file": "train.parquet",
+  "source_sha256": "f950545bf30c2f3e55a86c765bece8f73f3bc3277c502e006247e390b3219ea2",
+  "source_rows": 139,
+  "selection": {
+    "task_type": [
+      "alfworld",
+      "webshop"
+    ]
+  },
+  "rows": 105,
+  "task_counts": {
+    "alfworld": 66,
+    "webshop": 39
+  },
+  "excluded_task_counts": {
+    "gaia": 34
+  },
+  "data_file": "train.parquet",
+  "data_sha256": "3cc57e7bb8880ca756a3e93f617dd5d0581a769a3009f743caa2016f4f98070a",
+  "columns": [
+    {
+      "name": "trajectory_id",
+      "type": "string"
+    },
+    {
+      "name": "task_type",
+      "type": "string"
+    },
+    {
+      "name": "llm_model",
+      "type": "string"
+    },
+    {
+      "name": "critical_failure_step",
+      "type": "int64"
+    },
+    {
+      "name": "critical_failure_module",
+      "type": "string"
+    },
+    {
+      "name": "failure_types",
+      "type": "list<element: string>"
+    },
+    {
+      "name": "failure_reasonings",
+      "type": "list<element: string>"
+    },
+    {
+      "name": "failure_modules",
+      "type": "list<element: string>"
+    },
+    {
+      "name": "num_steps",
+      "type": "int64"
+    },
+    {
+      "name": "trajectory_length",
+      "type": "int64"
+    },
+    {
+      "name": "full_trajectory",
+      "type": "string"
+    },
+    {
+      "name": "step_annotations",
+      "type": "string"
+    }
+  ]
+}

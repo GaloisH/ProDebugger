@@ -11,7 +11,7 @@ from sqlglot import exp
 from sqlglot.dialects.sqlite import SQLite
 from .record_bridge import plain, digest
 from .evidence_quality import RAW_MODULE_RELATIONS, evidence_quality, fact_quality
-from .query_syntax import BATCH_ARGUMENTS, lower_named_unions
+from .query_syntax import BATCH_ARGUMENTS, lower_named_unions, normalize_function_names
 
 VERSION = "record-sql/v6-sparse-evidence"
 FACT_SCHEMA = "fid INTEGER, step INTEGER, rel TEXT, args TEXT, slot TEXT, side TEXT, value, value_type TEXT, span TEXT, purpose TEXT, source_kind TEXT, parse_status TEXT, value_clipped INTEGER, assertion_time INTEGER, claim_scope TEXT, claim_polarity TEXT"
@@ -23,7 +23,7 @@ SCHEMAS = {
     "parse_audits": "source_id TEXT, step INTEGER, kind TEXT, status TEXT, template TEXT, reasons TEXT, unresolved TEXT",
     "relations": "rel TEXT, arity INTEGER, functional_key TEXT",
 }
-FUNCTIONS = {"FIND_ENTITY", "ABOUT", "TRACK_ENTITY", "TRACK_STATE", "TRACK_ACTION", "TRACE_FACT",
+FUNCTIONS = {"FIND_ENTITY", "ABOUT", "TRACE_ENTITY", "TRACE_STATE", "TRACE_ACTION", "TRACE_FACT",
              "VERSIONS", "STATE_AT", "SOURCE", "SEARCH_TEXT", "FIND_CLAIMS", "GOAL_STATUS", "COVERAGE"}
 SQL_FUNCTIONS = {"count", "min", "max", "sum", "avg", "total", "lower", "upper", "length", "substr", "substring",
                  "trim", "ltrim", "rtrim", "coalesce", "ifnull", "nullif", "abs", "round", "instr", "like",
@@ -31,8 +31,8 @@ SQL_FUNCTIONS = {"count", "min", "max", "sum", "avg", "total", "lower", "upper",
 MODULES = {"mem": "memory", "refl": "reflection", "plan": "plan", "act": "action", "obs": "observation"}
 SOURCE_FIELDS = {"observation", "memory", "reflection", "plan", "action"}
 EXCERPT_CHARS = 360
-TEXT_ARGUMENTS = {"FIND_ENTITY": {0}, "ABOUT": {0}, "TRACK_ENTITY": {0},
-    "TRACK_STATE": {0, 1}, "STATE_AT": {0, 1}, "TRACK_ACTION": {0},
+TEXT_ARGUMENTS = {"FIND_ENTITY": {0}, "ABOUT": {0}, "TRACE_ENTITY": {0},
+    "TRACE_STATE": {0, 1}, "STATE_AT": {0, 1}, "TRACE_ACTION": {0},
     "TRACE_FACT": {1}, "SOURCE": {1}, "SEARCH_TEXT": {0, 1}, "FIND_CLAIMS": {0, 1}, "GOAL_STATUS": {0}}
 FUNCTION_SCHEMAS = {**{name: FACT_SCHEMA for name in FUNCTIONS},
     "SEARCH_TEXT": SOURCE_SCHEMA, "SOURCE": SOURCE_SCHEMA, "FIND_CLAIMS": SOURCE_SCHEMA,
@@ -129,7 +129,7 @@ class QueryEngine:
     def _literal(self, node, name, position, function_index):
         if isinstance(node, exp.Tuple):
             if position not in BATCH_ARGUMENTS.get(name, set()) or not node.expressions:
-                raise ValueError("literal lists are supported only for SEARCH_TEXT/FIND_CLAIMS terms/modules and TRACK_ACTION relations")
+                raise ValueError("literal lists are supported only for SEARCH_TEXT/FIND_CLAIMS terms/modules and TRACE_ACTION relations")
             if any(not isinstance(item, exp.Literal) or not item.is_string for item in node.expressions):
                 raise ValueError("batch items must be single-quoted literal strings; no expressions, columns or nested lists")
             return [item.this for item in node.expressions]
@@ -172,7 +172,7 @@ class QueryEngine:
                 or len(re.sub(r"\W", "", value)) < 3 or re.search(r"[%_*]", value)
                 or value.lower() in {"the", "and", "you", "step", "plan", "memory", "reflection", "action", "task", "search"}):
             raise ValueError("use a specific literal claim/entity (3..120 characters, or a two-character letter+digit code such as 4T); "
-                "no wildcards or generic labels. For actions use TRACK_ACTION('search'); for plans use the disputed phrase, not 'search'.")
+                "no wildcards or generic labels. For actions use TRACE_ACTION('search'); for plans use the disputed phrase, not 'search'.")
         return value
 
     def _source(self, step, field, text, needle, fid=None):
@@ -238,16 +238,16 @@ class QueryEngine:
             return schema, collected
         r, idx = self.record, self.tools.index
         fids, schema, rows, limits, truncated = set(), FACT_SCHEMA, None, {}, False
-        if name in {"ABOUT", "TRACK_ENTITY"}:
+        if name in {"ABOUT", "TRACE_ENTITY"}:
             if len(args) not in (1, 3):
-                raise ValueError("TRACK_ENTITY(entity_id[,from_step,to_step])")
+                raise ValueError("TRACE_ENTITY(entity_id[,from_step,to_step])")
             entity = self._entity(args[0]); lo, hi = self._bounds(args[1:])
             if entity.kind in {"agent", "int"}:
-                raise ValueError("agent/int entities are too broad; use TRACK_STATE(entity,relation) or SOURCE(fid,needle)")
+                raise ValueError("agent/int entities are too broad; use TRACE_STATE(entity,relation) or SOURCE(fid,needle)")
             fids = {f.fid for f in r.F if lo <= f.t <= hi and (entity in f.args or f.purpose == entity)}
-        elif name in {"TRACK_STATE", "STATE_AT"}:
-            if (name == "STATE_AT" and len(args) != 3) or (name == "TRACK_STATE" and len(args) not in (2, 4)):
-                raise ValueError("TRACK_STATE(entity,relation[,from,to]) or STATE_AT(entity,relation,step)")
+        elif name in {"TRACE_STATE", "STATE_AT"}:
+            if (name == "STATE_AT" and len(args) != 3) or (name == "TRACE_STATE" and len(args) not in (2, 4)):
+                raise ValueError("TRACE_STATE(entity,relation[,from,to]) or STATE_AT(entity,relation,step)")
             entity, relation = self._entity(args[0]), self._relation(args[1])
             lo, hi = self._bounds([0, args[2]] if name == "STATE_AT" else args[2:])
             pool = [f for f in r.F if lo <= f.t <= hi and f.rel == relation and entity in f.args and f.side in {"env", "task"}]
@@ -257,9 +257,9 @@ class QueryEngine:
                     latest[(f.rel, tuple(f.args[i] for i in r.relations[f.rel].key)) if r.relations[f.rel].is_functional() else f.key()] = f
                 pool = list(latest.values())
             fids = {f.fid for f in pool}
-        elif name == "TRACK_ACTION":
+        elif name == "TRACE_ACTION":
             if len(args) not in (1, 3):
-                raise ValueError("TRACK_ACTION(relation[,from_step,to_step])")
+                raise ValueError("TRACE_ACTION(relation[,from_step,to_step])")
             relation = self._relation(args[0]); lo, hi = self._bounds(args[1:])
             fids = {f.fid for f in r.F if f.slot == "act" and f.rel == relation and lo <= f.t <= hi}
         elif name == "TRACE_FACT":
@@ -399,7 +399,7 @@ class QueryEngine:
         trees = sqlglot.parse(sql, read=RecordSQLite)
         if len(trees) != 1 or not isinstance(trees[0], (exp.Select, exp.Union, exp.Intersect, exp.Except)):
             raise ValueError("exactly one SELECT query (optionally WITH/set operations) is permitted")
-        tree = trees[0]
+        tree = normalize_function_names(trees[0])
         sparse = any(n.args.get("by_name") for n in tree.find_all(exp.Union)) or any(
             isinstance(arg, exp.Tuple) for t in tree.find_all(exp.Table)
             if isinstance(t.this, exp.Anonymous) for arg in t.this.expressions)
@@ -433,7 +433,7 @@ class QueryEngine:
                 target = f"fn_{number}"; self._table(target, schema, rows); tables.add(target)
                 table.set("this", exp.to_identifier(target))
             elif table.name.lower() not in tables | ctes:
-                raise ValueError("full-log access forbidden: steps/modules/facts are not SQL tables. Use TRACK_ENTITY, TRACK_STATE, TRACK_ACTION, SOURCE or SEARCH_TEXT")
+                raise ValueError("full-log access forbidden: steps/modules/facts are not SQL tables. Use TRACE_ENTITY, TRACE_STATE, TRACE_ACTION, SOURCE or SEARCH_TEXT")
         if not function_count:
             raise ValueError("query must investigate an element using at least one element function")
         if any(n.args.get("by_name") for n in tree.find_all(exp.SetOperation)):

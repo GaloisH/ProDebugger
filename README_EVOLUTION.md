@@ -59,8 +59,8 @@ SQL 支持 `SELECT`、`WHERE`、CTE、JOIN、UNION、排序和显式 LIMIT。函
 
 | 用途 | 函数 |
 |---|---|
-| 找到或追踪具体实体 | `FIND_ENTITY`、`ABOUT`、`TRACK_ENTITY` |
-| 追踪状态、动作 | `TRACK_STATE`、`STATE_AT`、`TRACK_ACTION` |
+| 找到或追踪具体实体 | `FIND_ENTITY`、`ABOUT`、`TRACE_ENTITY` |
+| 追踪状态、动作 | `TRACE_STATE`、`STATE_AT`、`TRACE_ACTION` |
 | 追踪事实依赖与版本 | `TRACE_FACT`、`VERSIONS` |
 | 核对特定来源、词句 | `SOURCE`、`SEARCH_TEXT` |
 | 按语句主题发现 mental 证据 | `FIND_CLAIMS` |

@@ -2,6 +2,8 @@
 
 [Back to the README](../README.md#quick-start) · [Implementation guide](REVIEWER_GUIDE.md)
 
+For a single full online run from a fresh clone, start with the [online end-to-end demo](ONLINE_DEMO.md). For scoring saved runs, see [Evaluation and reproducibility](EVALUATION.md).
+
 This reference contains detailed runtime behavior, model configuration, budgets,
 replay/resume requirements and output files. For the shortest working example,
 run `python -B inspect_examples.py` after the [quick start](../README.md#quick-start).

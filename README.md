@@ -8,10 +8,10 @@ The backend runs MAP → ROUTE → TRACE → SUBMIT. A selected diagnosis remain
 hypothesis whose evidence and uncertainty should be inspected.
 
 For a short implementation guide, terminology and reproducible examples, start
-with [REVIEWER_GUIDE.md](REVIEWER_GUIDE.md). This standalone package originated
+with the [implementation guide](documentation/REVIEWER_GUIDE.md). This standalone package originated
 from `experiments/dsl` in the OmniDebugger intern repository.
 
-See [README_EVOLUTION.md](README_EVOLUTION.md) for the changes from the initial
+See the [development history](documentation/README_EVOLUTION.md) for the changes from the initial
 repository to the current backend. This repository includes 105 annotated benchmark
 traces: **66 ALFWorld** and **39 WebShop**. Experiment outputs are kept outside the
 repository.
@@ -70,7 +70,7 @@ The script makes no model calls. It saves compiled records, annotated `query.sql
 Open http://127.0.0.1:8770 to use the workbench; start with the Chat catalog to
 inspect the supplied trajectory IDs. Offline compilation does not create a
 diagnosed run. See [the saved example report](EXAMPLE_REPORT.json) and
-[the walkthrough](REVIEWER_GUIDE.md#reproduce-the-two-environment-examples).
+[the walkthrough](documentation/REVIEWER_GUIDE.md#reproduce-the-two-environment-examples).
 
 ## Benchmark traces
 
@@ -173,8 +173,8 @@ key variable is `OPENAI_API_KEY`; use `--api-key-env` for another variable.
 
 ### Detailed documentation
 
-- [Implementation and terminology](REVIEWER_GUIDE.md): evidence constraints, operator names and demonstration flow.
-- [Running the debugger](RUNNING.md): the complete detailed specification retained from the previous README, including parsing, manager allocation, query constraints, model settings, budgets, replay/resume and output files.
+- [Implementation and terminology](documentation/REVIEWER_GUIDE.md): evidence constraints, operator names and demonstration flow.
+- [Running the debugger](documentation/RUNNING.md): the complete detailed specification retained from the previous README, including parsing, manager allocation, query constraints, model settings, budgets, replay/resume and output files.
 - [Query reference](prodebugger/prompts/query_dsl.md): supported operators, SQL syntax and coverage semantics.
 - [Data documentation](core/data/README.md) and [offline example results](EXAMPLE_REPORT.json).
 

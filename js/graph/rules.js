@@ -1,9 +1,9 @@
 // Rule → evaluation/evidence → fact, as three columns. Evaluations are filtered by
 // state (violated by default); facts are ordered by the barycentre of the
 // evaluations citing them to keep crossings down.
-import {EVAL_CLASS, factText} from "../case/format.js?v=50f8681a13";
-import {esc, short} from "../util.js?v=50f8681a13";
-import {factInspector, wireInspector} from "./inspect.js?v=50f8681a13";
+import {EVAL_CLASS, factText} from "../case/format.js?v=d7ea551f31";
+import {esc, short} from "../util.js?v=d7ea551f31";
+import {factInspector, wireInspector} from "./inspect.js?v=d7ea551f31";
 
 const X = [0, 400, 800], RW = 300, RH = 64, EW = 300, EH = 40, FW = 270, FH = 34, GAP = 10;
 const STATES = ["violated", "unknown", "satisfied", "not_applicable"];

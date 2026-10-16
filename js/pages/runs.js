@@ -1,7 +1,7 @@
 // Runs list: every debugger run and compiled session, with live status polling.
-import {getIndex} from "../api.js?v=50f8681a13";
-import {caseHref} from "../routes.js?v=50f8681a13";
-import {ago, debounce, esc, loader, statusBadge} from "../util.js?v=50f8681a13";
+import {getIndex} from "../api.js?v=d7ea551f31";
+import {caseHref} from "../routes.js?v=d7ea551f31";
+import {ago, debounce, esc, loader, statusBadge} from "../util.js?v=d7ea551f31";
 
 const POLL_MS = 3000;
 const DOMAINS = ["alfworld", "webshop", "chat"];

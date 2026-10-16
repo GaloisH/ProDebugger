@@ -1,10 +1,10 @@
 // Entity–relation graph: binary relation facts as edges between entities, shown as
 // the state "as of step t". Layout is computed once over every step so the time
 // slider only changes what is visible, never where things are.
-import {entityId} from "../case/model.js?v=50f8681a13";
-import {factChip, factText} from "../case/format.js?v=50f8681a13";
-import {esc, short} from "../util.js?v=50f8681a13";
-import {entityChip, wireInspector} from "./inspect.js?v=50f8681a13";
+import {entityId} from "../case/model.js?v=d7ea551f31";
+import {factChip, factText} from "../case/format.js?v=d7ea551f31";
+import {esc, short} from "../util.js?v=d7ea551f31";
+import {entityChip, wireInspector} from "./inspect.js?v=d7ea551f31";
 
 export const kindColor = kind => {
   let h = 0;

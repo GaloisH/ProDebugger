@@ -1,11 +1,11 @@
 // Schema graph: the kind hierarchy as a tidy tree and relation signatures beside it.
 // Selecting a relation lights its argument kinds; selecting a kind lights every
 // relation that accepts it, directly or through an ancestor.
-import {entityId} from "../case/model.js?v=50f8681a13";
-import {factChip} from "../case/format.js?v=50f8681a13";
-import {esc} from "../util.js?v=50f8681a13";
-import {entityChip, wireInspector} from "./inspect.js?v=50f8681a13";
-import {kindColor} from "./entities.js?v=50f8681a13";
+import {entityId} from "../case/model.js?v=d7ea551f31";
+import {factChip} from "../case/format.js?v=d7ea551f31";
+import {esc} from "../util.js?v=d7ea551f31";
+import {entityChip, wireInspector} from "./inspect.js?v=d7ea551f31";
+import {kindColor} from "./entities.js?v=d7ea551f31";
 
 const KW = 170, KH = 40, DX = 220, DY = 50, RW = 270, RH = 46;
 const PROP_HELP = {functional: "value determined by key positions", mutable: "may be re-established later", symmetric: "argument order does not matter",

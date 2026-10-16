@@ -1,9 +1,9 @@
 // Composer: pick a benchmark trajectory and start a live run or a paced replay,
 // or describe a custom task. Talks to web/launcher.py; one run at a time. The static
 // project site only replays its recorded example runs.
-import {STATIC, getCatalog, getLaunch, launchRun, stopRun} from "../api.js?v=50f8681a13";
-import {chatHref} from "../routes.js?v=50f8681a13";
-import {esc, short} from "../util.js?v=50f8681a13";
+import {STATIC, getCatalog, getLaunch, launchRun, stopRun} from "../api.js?v=d7ea551f31";
+import {chatHref} from "../routes.js?v=d7ea551f31";
+import {esc, short} from "../util.js?v=d7ea551f31";
 
 const EFFORTS = ["none", "low", "high", "max"];
 const MAX_OPTIONS = 80;

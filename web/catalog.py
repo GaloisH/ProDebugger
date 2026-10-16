@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SUPPORTED = {"alfworld", "webshop"}  # prodebugger.benchmark_parser profiles
+SUPPORTED = {"alfworld", "webshop"}  # core/profiles domains
 COLUMNS = ["trajectory_id", "task_type", "llm_model", "num_steps", "full_trajectory",
            "critical_failure_step", "critical_failure_module", "failure_types"]
 

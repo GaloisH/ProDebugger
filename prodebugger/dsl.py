@@ -2,7 +2,7 @@
 
 Entities, kinds, relations, facts, constraints, goals, records, and derived
 evidence live here with their registries and validation vocabulary. Benchmark
-parsing belongs in benchmark_parser.py; detection lives in abstract_rules.py.
+parsing goes through record_bridge.build_bundle; detection lives in abstract_rules.py.
 """
 from __future__ import annotations
 

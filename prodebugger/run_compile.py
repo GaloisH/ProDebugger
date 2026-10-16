@@ -14,11 +14,9 @@ from pathlib import Path
 import pyarrow.parquet as pq
 
 if __package__:
-    from .benchmark_parser import parse_benchmark_instance, parse_steps
-    from .abstract_rules import detect_abstract_rules, export_rules
+    from .abstract_rules import export_rules
 else:
-    from benchmark_parser import parse_benchmark_instance, parse_steps
-    from abstract_rules import detect_abstract_rules, export_rules
+    from abstract_rules import export_rules
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE.parent / "core" / "data"
@@ -85,15 +83,13 @@ def compile_sample(sample_file: Path, data_dir: Path, output_dir: Path) -> dict:
     ids = sample["trajectory_ids"]
     if len(ids) != 20 or len(set(ids)) != 20 or sample["per_domain"] != 10:
         raise ValueError("expected the fixed 20 unique IDs, 10 per domain")
-    sources = [HERE / name for name in ("dsl.py", "benchmark_parser.py",
-                                         "abstract_rules.py", "run_compile.py")]
-    sources += [p for p in Path(data_dir).glob("*.parquet") if p.stem in ("train", "validation", "test")]
-    sources += [HERE.parent / "core" / name for name in (
-        "profiles/webshop.py", "profiles/alfworld.py", "data_io.py", "compile_run.py")]
+    sys.path.insert(0, str(HERE.parent))
+    from prodebugger.record_bridge import source_versions
+    data = [p for p in Path(data_dir).glob("*.parquet") if p.stem in ("train", "validation", "test")]
     manifest = {"trajectory_ids": ids, "per_domain": 10, "seed": sample.get("seed"),
                 "python_hash_seed": os.environ.get("PYTHONHASHSEED"),
-                "source_sha256": {str(p.resolve()): hashlib.sha256(p.read_bytes()).hexdigest()
-                                  for p in sources}}
+                "source_sha256": {**source_versions(),
+                                  **{str(p.resolve()): hashlib.sha256(p.read_bytes()).hexdigest() for p in data}}}
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     def save(name, value):

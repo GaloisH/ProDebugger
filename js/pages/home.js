@@ -1,12 +1,12 @@
 // Home page: a light, business-style overview with its own header. In-page links scroll
 // instead of changing the hash, which belongs to the router.
-import {CaseStore} from "../case/store.js";
-import {createCaseViews, TABS} from "../case/views.js";
-import {caseHref} from "../routes.js";
-import {domainIcon} from "./runs.js";
-import {esc, loader} from "../util.js";
-import {STATIC} from "../api.js";
-import {PROJECT} from "../site.js";
+import {CaseStore} from "../case/store.js?v=b33d828e89";
+import {createCaseViews, TABS} from "../case/views.js?v=b33d828e89";
+import {caseHref} from "../routes.js?v=b33d828e89";
+import {domainIcon} from "./runs.js?v=b33d828e89";
+import {esc, loader} from "../util.js?v=b33d828e89";
+import {STATIC} from "../api.js?v=b33d828e89";
+import {PROJECT} from "../site.js?v=b33d828e89";
 
 // The showcase case: a fully correct reference run kept under artifacts/.
 export const DEMO_REF = ["runs", "dsl-route-causal-timeline-high-unlimited-alf18-20261007-live", "GPT-4o_018_alfworld_task_018"];

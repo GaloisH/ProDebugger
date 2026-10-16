@@ -2,15 +2,15 @@
 // view gives a diagnosed run the AgentDebugger treatment: one root-cause card with its step
 // chain, evidence cards beside it and the compared TRACE candidates. Any other status
 // explains where and why the run stopped.
-import {createCanvas} from "../graph/engine.js";
-import {entityChip} from "../graph/inspect.js";
-import {factText, SIDE_CLASS} from "../case/format.js";
-import {actionLabel, stepRoles} from "../case/roles.js";
-import {esc, number, short} from "../util.js";
-import {anchorsByStep} from "./route.js";
-import {buildEvidence, evidenceDetail, layoutEvidence} from "./evidence.js";
-import {answerOf} from "./submit.js";
-import {assessOf, candidateIndex, queryOf} from "./trace.js";
+import {createCanvas} from "../graph/engine.js?v=b33d828e89";
+import {entityChip} from "../graph/inspect.js?v=b33d828e89";
+import {factText, SIDE_CLASS} from "../case/format.js?v=b33d828e89";
+import {actionLabel, stepRoles} from "../case/roles.js?v=b33d828e89";
+import {esc, number, short} from "../util.js?v=b33d828e89";
+import {anchorsByStep} from "./route.js?v=b33d828e89";
+import {buildEvidence, evidenceDetail, layoutEvidence} from "./evidence.js?v=b33d828e89";
+import {answerOf} from "./submit.js?v=b33d828e89";
+import {assessOf, candidateIndex, queryOf} from "./trace.js?v=b33d828e89";
 
 const human = s => String(s || "").replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase());
 const S = t => `S${String(t).padStart(2, "0")}`;

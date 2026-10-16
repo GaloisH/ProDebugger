@@ -2,11 +2,11 @@
 // six layers left to right: ROUTE issue facts → anchor cases → MANAGER questions → TRACE SQL
 // findings → TRACE candidates → SUBMIT answer. Edge labels carry structured facts only
 // (requirements, step moves, selected or not); free-text reasoning stays in the side panel.
-import {factText} from "../case/format.js";
-import {esc, short} from "../util.js";
-import {anchorCard} from "./route.js";
-import {answerOf} from "./submit.js";
-import {assessOf, assignmentCard, candidateCard, planOf, queryDetail, queryOf, ruleRow} from "./trace.js";
+import {factText} from "../case/format.js?v=b33d828e89";
+import {esc, short} from "../util.js?v=b33d828e89";
+import {anchorCard} from "./route.js?v=b33d828e89";
+import {answerOf} from "./submit.js?v=b33d828e89";
+import {assessOf, assignmentCard, candidateCard, planOf, queryDetail, queryOf, ruleRow} from "./trace.js?v=b33d828e89";
 
 const S = t => `S${String(t).padStart(2, "0")}`;
 const human = s => String(s || "").replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase());

@@ -1,12 +1,12 @@
 // Chat page: every debugger run reads as a conversation; new runs start from the composer.
-import {getIndex, getJSON, getReference} from "../api.js";
-import {CaseStore} from "../case/store.js";
-import {buildMessages} from "../chat/messages.js";
-import {createStream} from "../chat/stream.js";
-import {createComposer} from "../chat/composer.js";
-import {chatHref, caseHref} from "../routes.js";
-import {ago, debounce, esc, loader, statusBadge} from "../util.js";
-import {describeTrajectory, domainIcon} from "./runs.js";
+import {getIndex, getJSON, getReference} from "../api.js?v=b33d828e89";
+import {CaseStore} from "../case/store.js?v=b33d828e89";
+import {buildMessages} from "../chat/messages.js?v=b33d828e89";
+import {createStream} from "../chat/stream.js?v=b33d828e89";
+import {createComposer} from "../chat/composer.js?v=b33d828e89";
+import {chatHref, caseHref} from "../routes.js?v=b33d828e89";
+import {ago, debounce, esc, loader, statusBadge} from "../util.js?v=b33d828e89";
+import {describeTrajectory, domainIcon} from "./runs.js?v=b33d828e89";
 
 const POLL_MS = 3000;
 

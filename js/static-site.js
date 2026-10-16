@@ -7,6 +7,7 @@
 // file appeared or grew (web/simulate_live.py order), and the clock decides how much of
 // it a launched run shows. JSONL sizes and offsets count rows, not bytes.
 export const enabled = Boolean(globalThis.PD_STATIC);
+const VERSION = globalThis.PD_STATIC?.version || ""; // keeps data cached from an older export out
 
 const DATA = "./data/";
 const STORE_KEY = "pd-static-runs";
@@ -16,7 +17,7 @@ const enc = parts => parts.map(encodeURIComponent).join("/");
 const cache = new Map();
 function cached(url, read) {
   if (!cache.has(url)) {
-    cache.set(url, fetch(url).then(response => {
+    cache.set(url, fetch(`${url}?v=${VERSION}`).then(response => {
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
       return read(response);
     }).catch(error => { cache.delete(url); throw error; }));

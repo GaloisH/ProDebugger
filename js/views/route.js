@@ -1,6 +1,6 @@
 // ROUTE calls: retrieval rounds, the decision-only gate, anchor declarations (route_cases)
 // and early finishes. Field names follow debugger_agent / route_context / query_trace.
-import {esc, short} from "../util.js";
+import {esc, short} from "../util.js?v=b33d828e89";
 
 const S = t => `S${String(t).padStart(2, "0")}`;
 export const DECISION_ONLY = 3; // route_context: rounds without new evidence before only route_cases/finish remain

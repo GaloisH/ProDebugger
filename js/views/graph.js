@@ -1,17 +1,17 @@
 // DSL Graph tab: a switcher of graph subviews, each with its own canvas, toolbar and inspector.
-import {createCanvas} from "../graph/engine.js";
-import {esc} from "../util.js";
+import {createCanvas} from "../graph/engine.js?v=b33d828e89";
+import {esc} from "../util.js?v=b33d828e89";
 
 const SUBVIEWS = [
-  {id: "facts", label: "Fact dependencies", hint: "Facts by step and side; edges follow basis.", load: () => import("../graph/facts.js"),
+  {id: "facts", label: "Fact dependencies", hint: "Facts by step and side; edges follow basis.", load: () => import("../graph/facts.js?v=b33d828e89"),
    count: m => m.dsl?.facts.length},
-  {id: "entities", label: "Entities & relations", hint: "World state at a chosen step.", load: () => import("../graph/entities.js"),
+  {id: "entities", label: "Entities & relations", hint: "World state at a chosen step.", load: () => import("../graph/entities.js?v=b33d828e89"),
    count: m => Object.keys(m.dsl?.entities || {}).length},
-  {id: "schema", label: "Schema", hint: "Kind hierarchy and relation signatures.", load: () => import("../graph/schema.js"),
+  {id: "schema", label: "Schema", hint: "Kind hierarchy and relation signatures.", load: () => import("../graph/schema.js?v=b33d828e89"),
    count: m => Object.keys(m.dsl?.kinds || {}).length},
-  {id: "goals", label: "Goals & requirements", hint: "Task → requirement → constraint → evidence.", load: () => import("../graph/goals.js"),
+  {id: "goals", label: "Goals & requirements", hint: "Task → requirement → constraint → evidence.", load: () => import("../graph/goals.js?v=b33d828e89"),
    count: m => m.dsl?.goals.length},
-  {id: "rules", label: "Rules → evidence → facts", hint: "Abstract rule evaluations and the facts they cite.", load: () => import("../graph/rules.js"),
+  {id: "rules", label: "Rules → evidence → facts", hint: "Abstract rule evaluations and the facts they cite.", load: () => import("../graph/rules.js?v=b33d828e89"),
    count: m => m.evaluations.length},
 ];
 

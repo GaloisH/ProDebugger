@@ -1,9 +1,9 @@
 // Goal graph: task → requirements → constraints, and the facts that serve or test
 // each requirement. Runs add the MAP goal_map status (met/unmet, gaps, steps).
-import {entityId} from "../case/model.js";
-import {factChip, factText} from "../case/format.js";
-import {esc, short} from "../util.js";
-import {entityChip, wireInspector} from "./inspect.js";
+import {entityId} from "../case/model.js?v=b33d828e89";
+import {factChip, factText} from "../case/format.js?v=b33d828e89";
+import {esc, short} from "../util.js?v=b33d828e89";
+import {entityChip, wireInspector} from "./inspect.js?v=b33d828e89";
 
 const COLS = [0, 360, 700, 1060], TW = 300, RW = 290, CW = 300, FW = 250, RH = 50, CH = 44, FH = 34, GAP = 12, BLOCK_GAP = 40, MAX_FACTS = 8;
 const human = s => String(s).replace(/^qualifier_\d+_/, "").replace(/_/g, " ");

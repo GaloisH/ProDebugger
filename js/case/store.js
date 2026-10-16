@@ -1,8 +1,8 @@
 // Loads one case and keeps it current: rewritten JSON files are refetched when their
 // mtime changes, JSONL logs are followed from their last byte offset.
-import {getJSON, JsonlFollower, listFiles} from "../api.js";
-import {Emitter} from "../util.js";
-import {buildCase} from "./model.js";
+import {getJSON, JsonlFollower, listFiles} from "../api.js?v=b33d828e89";
+import {Emitter} from "../util.js?v=b33d828e89";
+import {buildCase} from "./model.js?v=b33d828e89";
 
 const LIVE_SECONDS = 180;
 const RUN_JSON = {canonical_record: "canonical_record.json", input: "input.json", rules: "rules.json",

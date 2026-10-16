@@ -1,9 +1,9 @@
 // Case workbench: summary header, phase strip and lazily mounted views.
-import {CaseStore} from "../case/store.js";
-import {CALL_PHASES} from "../case/calls.js";
-import {createCaseViews, TABS} from "../case/views.js";
-import {caseHref} from "../routes.js";
-import {esc, loader, number, statusBadge} from "../util.js";
+import {CaseStore} from "../case/store.js?v=b33d828e89";
+import {CALL_PHASES} from "../case/calls.js?v=b33d828e89";
+import {createCaseViews, TABS} from "../case/views.js?v=b33d828e89";
+import {caseHref} from "../routes.js?v=b33d828e89";
+import {esc, loader, number, statusBadge} from "../util.js?v=b33d828e89";
 
 export function mountWorkbench(root, route) {
   const store = new CaseStore(route.ref);

@@ -1,0 +1,77 @@
+{
+  "schema": "entity-evidence/v4",
+  "task_contract": {
+    "verbatim": "put some keychain on sidetable.",
+    "structured_requirement_count": 1,
+    "tracked_requirement_count": 1,
+    "unmodeled_requirement_count": 0,
+    "coverage": "not_proven_exhaustive",
+    "limitation": "The verbatim task is authoritative. Structured requirements include dynamic labelled properties and preserve free-text qualifiers, but a preserved phrase may not be semantically decomposed."
+  },
+  "requirements": [
+    {
+      "entity": {
+        "id": "req:keychain_in_sidetable",
+        "kind": "requirement"
+      },
+      "definition": {
+        "count": 1,
+        "relation": "in",
+        "target": "place:sidetable",
+        "constraints": [
+          {
+            "property": "attribute:object_type",
+            "attribute": "object_type",
+            "operator": "eq",
+            "expected": "keychain",
+            "value_type": "string",
+            "unit": null,
+            "mode": "observation",
+            "source_span": "keychain",
+            "confidence": 1.0
+          },
+          {
+            "property": "attribute:destination_type",
+            "attribute": "destination_type",
+            "operator": "eq",
+            "expected": "sidetable",
+            "value_type": "string",
+            "unit": null,
+            "mode": "selection",
+            "source_span": "sidetable",
+            "confidence": 1.0
+          }
+        ],
+        "status_mode": "tracked"
+      },
+      "status": {
+        "state": "unmet",
+        "recorded_met": 0,
+        "required_count": 1,
+        "reason": "qualifying evidence exists but no satisfying decision is recorded",
+        "qualifying_steps": [
+          1
+        ],
+        "fully_qualifying_steps": [],
+        "decision_steps": [],
+        "limitations": []
+      },
+      "gaps": [
+        {
+          "kind": "qualifying_evidence_exists_but_no_satisfying_decision_is_recorded",
+          "qualifying_steps": [
+            1
+          ],
+          "decision_steps": []
+        }
+      ],
+      "evidence_counts": {
+        "events": 1,
+        "changes": 0,
+        "intentions": 1
+      }
+    }
+  ],
+  "query": "requirements",
+  "requested_query": "requirements"
+}

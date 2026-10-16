@@ -1,0 +1,115 @@
+[
+  {
+    "id": "assertion.consistency/v1",
+    "variables": {
+      "fact": "Fact"
+    },
+    "scope": "prefix",
+    "trigger": "memory_claims",
+    "applicability": "fact_in_scope",
+    "property": "consistent_assertion",
+    "evidence_requirements": [
+      "typed_fact",
+      "observation_history"
+    ],
+    "exceptions": [
+      "historical_time_ambiguity"
+    ],
+    "witness_builder": "fact_witness"
+  },
+  {
+    "id": "assertion.grounding/v1",
+    "variables": {
+      "fact": "Fact"
+    },
+    "scope": "prefix",
+    "trigger": "memory_claims",
+    "applicability": "fact_in_scope",
+    "property": "grounded_assertion",
+    "evidence_requirements": [
+      "typed_fact",
+      "observation_history"
+    ],
+    "exceptions": [],
+    "witness_builder": "fact_witness"
+  },
+  {
+    "id": "information.update/v1",
+    "variables": {
+      "fact": "Fact"
+    },
+    "scope": "prefix",
+    "trigger": "memory_claims",
+    "applicability": "fact_in_scope",
+    "property": "updated_information",
+    "evidence_requirements": [
+      "typed_fact",
+      "observation_history"
+    ],
+    "exceptions": [],
+    "witness_builder": "fact_witness"
+  },
+  {
+    "id": "decision.applicability/v1",
+    "variables": {
+      "fact": "Fact"
+    },
+    "scope": "step",
+    "trigger": "actions",
+    "applicability": "fact_in_scope",
+    "property": "admitted_decision",
+    "evidence_requirements": [
+      "action_contract"
+    ],
+    "exceptions": [],
+    "witness_builder": "fact_witness"
+  },
+  {
+    "id": "execution.result/v1",
+    "variables": {
+      "fact": "Fact"
+    },
+    "scope": "response",
+    "trigger": "actions",
+    "applicability": "fact_in_scope",
+    "property": "consistent_result",
+    "evidence_requirements": [
+      "linked_feedback"
+    ],
+    "exceptions": [],
+    "witness_builder": "fact_witness"
+  },
+  {
+    "id": "completion.consistency/v1",
+    "variables": {
+      "fact": "Fact"
+    },
+    "scope": "prefix",
+    "trigger": "completion_claims",
+    "applicability": "fact_in_scope",
+    "property": "consistent_completion",
+    "evidence_requirements": [
+      "typed_fact",
+      "task_goals"
+    ],
+    "exceptions": [],
+    "witness_builder": "fact_witness"
+  },
+  {
+    "id": "progress.efficiency/v1",
+    "variables": {
+      "fact": "Fact"
+    },
+    "scope": "response",
+    "trigger": "actions",
+    "applicability": "fact_in_scope",
+    "property": "observable_progress",
+    "evidence_requirements": [
+      "linked_feedback"
+    ],
+    "exceptions": [
+      "retry_exception_unavailable"
+    ],
+    "witness_builder": "fact_witness"
+  }
+]

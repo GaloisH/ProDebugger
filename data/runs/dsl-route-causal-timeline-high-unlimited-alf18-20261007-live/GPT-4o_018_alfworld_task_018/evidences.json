@@ -1,0 +1,653 @@
+{
+  "abstract.rule": {
+    "kind": "abstract.rule",
+    "items": [
+      {
+        "eid": 0,
+        "kind": "abstract.rule",
+        "t": 2,
+        "refs": [
+          34,
+          35
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 2,
+          "visible_step": 2,
+          "bindings": {
+            "fact": 34
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 1,
+        "kind": "abstract.rule",
+        "t": 3,
+        "refs": [
+          41,
+          42
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 3,
+          "visible_step": 3,
+          "bindings": {
+            "fact": 41
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 2,
+        "kind": "abstract.rule",
+        "t": 4,
+        "refs": [
+          48,
+          49
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 4,
+          "visible_step": 4,
+          "bindings": {
+            "fact": 48
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 3,
+        "kind": "abstract.rule",
+        "t": 5,
+        "refs": [
+          55,
+          56
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 5,
+          "visible_step": 5,
+          "bindings": {
+            "fact": 55
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 4,
+        "kind": "abstract.rule",
+        "t": 7,
+        "refs": [
+          69,
+          70
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 7,
+          "visible_step": 7,
+          "bindings": {
+            "fact": 69
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 5,
+        "kind": "abstract.rule",
+        "t": 9,
+        "refs": [
+          83,
+          84
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 9,
+          "visible_step": 9,
+          "bindings": {
+            "fact": 83
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 6,
+        "kind": "abstract.rule",
+        "t": 10,
+        "refs": [
+          90,
+          91
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 10,
+          "visible_step": 10,
+          "bindings": {
+            "fact": 90
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 7,
+        "kind": "abstract.rule",
+        "t": 11,
+        "refs": [
+          97,
+          98
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 11,
+          "visible_step": 11,
+          "bindings": {
+            "fact": 97
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 8,
+        "kind": "abstract.rule",
+        "t": 12,
+        "refs": [
+          104,
+          105
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 12,
+          "visible_step": 12,
+          "bindings": {
+            "fact": 104
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 9,
+        "kind": "abstract.rule",
+        "t": 13,
+        "refs": [
+          111,
+          112
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 13,
+          "visible_step": 13,
+          "bindings": {
+            "fact": 111
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 10,
+        "kind": "abstract.rule",
+        "t": 15,
+        "refs": [
+          125,
+          126
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 15,
+          "visible_step": 15,
+          "bindings": {
+            "fact": 125
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 11,
+        "kind": "abstract.rule",
+        "t": 17,
+        "refs": [
+          139,
+          140
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 17,
+          "visible_step": 17,
+          "bindings": {
+            "fact": 139
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 12,
+        "kind": "abstract.rule",
+        "t": 18,
+        "refs": [
+          146,
+          147
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 18,
+          "visible_step": 18,
+          "bindings": {
+            "fact": 146
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 13,
+        "kind": "abstract.rule",
+        "t": 20,
+        "refs": [
+          159,
+          160
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 20,
+          "visible_step": 20,
+          "bindings": {
+            "fact": 159
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 14,
+        "kind": "abstract.rule",
+        "t": 21,
+        "refs": [
+          166,
+          167
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 21,
+          "visible_step": 21,
+          "bindings": {
+            "fact": 166
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 15,
+        "kind": "abstract.rule",
+        "t": 23,
+        "refs": [
+          181,
+          182
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 23,
+          "visible_step": 23,
+          "bindings": {
+            "fact": 181
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 16,
+        "kind": "abstract.rule",
+        "t": 29,
+        "refs": [
+          233,
+          234
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 29,
+          "visible_step": 29,
+          "bindings": {
+            "fact": 233
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 17,
+        "kind": "abstract.rule",
+        "t": 3,
+        "refs": [
+          34,
+          36
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 2,
+          "visible_step": 3,
+          "bindings": {
+            "fact": 34
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 18,
+        "kind": "abstract.rule",
+        "t": 4,
+        "refs": [
+          41,
+          43
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 3,
+          "visible_step": 4,
+          "bindings": {
+            "fact": 41
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 19,
+        "kind": "abstract.rule",
+        "t": 5,
+        "refs": [
+          48,
+          50
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 4,
+          "visible_step": 5,
+          "bindings": {
+            "fact": 48
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 20,
+        "kind": "abstract.rule",
+        "t": 6,
+        "refs": [
+          55,
+          57
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 5,
+          "visible_step": 6,
+          "bindings": {
+            "fact": 55
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 21,
+        "kind": "abstract.rule",
+        "t": 8,
+        "refs": [
+          69,
+          71
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 7,
+          "visible_step": 8,
+          "bindings": {
+            "fact": 69
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 22,
+        "kind": "abstract.rule",
+        "t": 10,
+        "refs": [
+          83,
+          85
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 9,
+          "visible_step": 10,
+          "bindings": {
+            "fact": 83
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 23,
+        "kind": "abstract.rule",
+        "t": 11,
+        "refs": [
+          90,
+          92
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 10,
+          "visible_step": 11,
+          "bindings": {
+            "fact": 90
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 24,
+        "kind": "abstract.rule",
+        "t": 12,
+        "refs": [
+          97,
+          99
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 11,
+          "visible_step": 12,
+          "bindings": {
+            "fact": 97
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 25,
+        "kind": "abstract.rule",
+        "t": 13,
+        "refs": [
+          104,
+          106
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 12,
+          "visible_step": 13,
+          "bindings": {
+            "fact": 104
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 26,
+        "kind": "abstract.rule",
+        "t": 14,
+        "refs": [
+          111,
+          113
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 13,
+          "visible_step": 14,
+          "bindings": {
+            "fact": 111
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 27,
+        "kind": "abstract.rule",
+        "t": 16,
+        "refs": [
+          125,
+          127
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 15,
+          "visible_step": 16,
+          "bindings": {
+            "fact": 125
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 28,
+        "kind": "abstract.rule",
+        "t": 18,
+        "refs": [
+          139,
+          141
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 17,
+          "visible_step": 18,
+          "bindings": {
+            "fact": 139
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 29,
+        "kind": "abstract.rule",
+        "t": 19,
+        "refs": [
+          146,
+          148
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 18,
+          "visible_step": 19,
+          "bindings": {
+            "fact": 146
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 30,
+        "kind": "abstract.rule",
+        "t": 21,
+        "refs": [
+          159,
+          161
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 20,
+          "visible_step": 21,
+          "bindings": {
+            "fact": 159
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 31,
+        "kind": "abstract.rule",
+        "t": 22,
+        "refs": [
+          166,
+          168
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 21,
+          "visible_step": 22,
+          "bindings": {
+            "fact": 166
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 32,
+        "kind": "abstract.rule",
+        "t": 24,
+        "refs": [
+          181,
+          183
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 23,
+          "visible_step": 24,
+          "bindings": {
+            "fact": 181
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 33,
+        "kind": "abstract.rule",
+        "t": 30,
+        "refs": [
+          233,
+          235
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 29,
+          "visible_step": 30,
+          "bindings": {
+            "fact": 233
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      }
+    ]
+  }
+}

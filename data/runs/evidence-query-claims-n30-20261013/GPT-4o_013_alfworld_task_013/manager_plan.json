@@ -1,0 +1,100 @@
+{
+  "schema": "trace-investigation-plan/v1",
+  "assignments": [
+    {
+      "agent_id": "identity_origin",
+      "anchor_case_id": "c1",
+      "route_case_ids": [
+        "c1"
+      ],
+      "question": "Does the spraybottle=soapbottle premise first enter in an earlier memory/reflection/plan, or is step 14 the unsupported promotion of a tentative possibility into a plan/action? The rival is legitimate exploration of a possible candidate followed by an independent later search or planning inefficiency, not an identity mistake. Find the earliest supported source you can, test it against the original object/action feedback, and check for evidence of correction or continued reliance; do not treat no retrieved correction as proof none occurred.",
+      "search_targets": [
+        "Trace the disputed object identity and task constraint backward across memory, reflection, and plan from step 1 through 14: search 'spraybottle', 'soapbottle', 'potential', and hypothesis/state/decision_basis/result_assessment claim variants; do not presume step 13 is the origin or require the same wording.",
+        "Compare the located mental claim with independent observation/action evidence distinguishing the task's required spraybottle from the observed soapbottle, including what the agent actually took and the feedback received.",
+        "Check mental text through step 30 for correction, renewed commitment, or reliance on the soapbottle as the task item; compare with the actual subsequent take/put/search behavior and feedback. Missing mental text or feedback is unknown.",
+        "Assess whether the causal error, if supported, is the earlier introduction of an unsupported identity claim or step 14's shift from 'could potentially' to a plan that says taking/placing the soapbottle completes the task; do not equate failure to satisfy the compiled check with agent fault."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:14:memory",
+          "quote": "Step 13 is relevant: I opened cabinet 3 and found a soapbottle 1, which could potentially be the spraybottle I need to place on the countertop."
+        },
+        {
+          "source_id": "source:14:reflection",
+          "quote": "Yes, I have identified a potential spraybottle (soapbottle 1) that could be placed on the countertop."
+        },
+        {
+          "source_id": "source:14:plan",
+          "quote": "This action will allow me to carry the soapbottle 1, which can then be placed on the countertop to complete the task."
+        },
+        {
+          "source_id": "source:14:observation",
+          "quote": "You open the cabinet 3. The cabinet 3 is open. In it, you see a candle 1, and a soapbottle 1."
+        },
+        {
+          "source_id": "source:15:observation",
+          "quote": "You pick up the soapbottle 1 from the cabinet 3."
+        },
+        {
+          "source_id": "source:18:observation",
+          "quote": "You move the soapbottle 1 to the countertop 1."
+        }
+      ],
+      "criteria": {
+        "supported": "Original mental evidence identifies an unsupported soapbottle-as-spraybottle premise before or at step 14 (distinguishing tentative hypothesis from its promotion to an operative plan), and the step-14 plan/action actually relies on it. Report the evidenced source/step and whether an earlier origin or step-14 commitment is better supported; note any original correction or continued dependence found. The observations identify the item as soapbottle, not as the required spraybottle.",
+        "refuted": "Original evidence establishes that the item was in fact a spraybottle, or that the relevant mental text remained only a tentative possibility and the plan/action did not rely on that identity, or a timely effective correction broke the alleged dependence. If evidence instead supports a separate planning/search mechanism, assess it on that evidence rather than preserving the identity accusation.",
+        "unknown": "No literal match, missing mental source, ambiguous item semantics, unavailable correction evidence, or one-step result unable to locate origin/dependence leaves the relevant link unknown; do not infer the object was or was not a spraybottle from missing extraction, nor infer no correction from absence."
+      }
+    }
+  ],
+  "decision_rules": [
+    {
+      "rule_id": "unsupported_identity_and_reliance",
+      "conditions": [
+        {
+          "agent_id": "identity_origin",
+          "outcome": "supported",
+          "finding": "Original mental source establishes an unsupported spraybottle/soapbottle identity premise, and original plan/action evidence shows step 14 committed to and acted on that premise; the actual feedback identifies the taken item as soapbottle."
+        }
+      ],
+      "conclusion": "Treat the evidenced source of the unsupported identity commitment as a causally relevant candidate for the failed necessary subgoal, comparing an earlier source with step 14's promotion according to where the first unsupported commitment is actually established.",
+      "caveat": "A tentative hypothesis alone is not a fault; establish its promotion and material reliance, and check any evidenced correction. If the worker instead finds a different mechanism or cannot establish the specified finding, this rule does not fit: compare that candidate on its own original evidence. Later navigation or unmet task status alone proves neither causation nor a unique root."
+    },
+    {
+      "rule_id": "identity_premise_defeated",
+      "conditions": [
+        {
+          "agent_id": "identity_origin",
+          "outcome": "refuted",
+          "finding": "Original evidence supports the item's required spraybottle identity, shows no operative reliance on that premise, or demonstrates an effective correction before the alleged consequential action."
+        }
+      ],
+      "conclusion": "Reject the ROUTE identity-substitution explanation to the extent refuted; evaluate any independently evidenced planning, search, or action mechanism instead.",
+      "caveat": "Refuting this accusation does not establish task success or another fault. Distinguish affirmative supporting evidence from missing extraction or unavailable feedback, which must remain unknown."
+    },
+    {
+      "rule_id": "identity_link_unknown",
+      "conditions": [
+        {
+          "agent_id": "identity_origin",
+          "outcome": "unknown",
+          "finding": "Origin, independent identity support, operative reliance, or correction remains unavailable or materially ambiguous in the one-step result."
+        }
+      ],
+      "conclusion": "Make no definite causal attribution to the identity-substitution candidate; retain it and any evidenced rival as unresolved.",
+      "caveat": "Unknown is not refuted. The supplied step-14 language and action may motivate investigation but do not establish global earliest origin, absence of recovery, or a unique root."
+    }
+  ],
+  "uncertainty": "All action/observation events through step 30 are supplied, but memory/reflection/plan texts are supplied only at anchor step 14. The source query must discover mental evidence beyond that anchor; a one-step result cannot establish complete history or globally unique causation. Observations support the soapbottle identity at steps 14-19, while no final feedback is supplied; compiled unmet status and absent extracted state are not independent proof of responsibility.",
+  "plan_digest": "15a041f271436a9f12fd093b57273b8d7030617e0b4a6c480ce1c99eb893b1b5",
+  "source_coverage": {
+    "step_range": [
+      1,
+      30
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  }
+}

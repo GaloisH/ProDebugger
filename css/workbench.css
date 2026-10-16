@@ -1,0 +1,32 @@
+/* Workbench header, phase strip and tabs */
+.wb-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 2rem; padding: .5rem 0 1rem; }
+.wb-title { min-width: 0; }
+.wb-task { margin: .3rem 0 .6rem; font-size: clamp(1.4rem, 2.4vw, 2.1rem); font-weight: 600; letter-spacing: -.01em; line-height: 1.25; }
+.wb-task::before { content: '“'; color: var(--accent); }
+.wb-task::after { content: '”'; color: var(--accent); }
+.wb-badges { display: flex; flex-wrap: wrap; gap: .35rem; }
+.wb-metrics { display: flex; gap: .5rem; margin: 0; }
+.wb-metrics > div { min-width: 5.2rem; padding: .55rem .8rem; border: 1px solid var(--line); border-radius: .7rem; background: var(--panel); }
+.wb-metrics dd { margin: 0; font-size: 1.35rem; font-weight: 600; }
+
+.phase-strip { display: flex; align-items: center; gap: .5rem; margin: 0 0 1rem; padding: 0; list-style: none; flex-wrap: wrap; }
+.phase-pill { --c: var(--muted); display: flex; align-items: center; gap: .5rem; padding: .4rem .8rem; border: 1px solid var(--line); border-radius: 2rem; background: var(--panel); color: var(--faint); font-size: .85rem; }
+.phase-pill strong { font-family: var(--mono); letter-spacing: .06em; font-size: .8rem; }
+.phase-count { font-size: .75rem; }
+.phase-dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--line-strong); }
+.phase-MAP { --c: var(--map); } .phase-ROUTE { --c: var(--route); } .phase-TRACE { --c: var(--trace); } .phase-SUBMIT { --c: var(--submit); }
+.phase-MANAGER { --c: var(--manager); } .phase-PARSE { --c: var(--parse); }
+.phase-pill.is-done { color: var(--text); border-color: color-mix(in srgb, var(--c) 55%, var(--line)); }
+.phase-pill.is-done .phase-dot { background: var(--c); }
+.phase-pill.is-current { color: var(--text); border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }
+.phase-pill.is-current .phase-dot { background: var(--c); animation: live-pulse 1.4s infinite; }
+.phase-arrow { color: var(--faint); }
+
+.wb-tabs { position: sticky; top: var(--header-h); z-index: 30; display: flex; align-items: center; gap: .25rem; margin: 0 calc(-1 * clamp(1rem, 2.6vw, 3rem)); padding: .5rem clamp(1rem, 2.6vw, 3rem); background: linear-gradient(115deg, color-mix(in srgb, var(--bg) 95%, transparent), color-mix(in srgb, var(--bg) 95%, transparent)); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+.wb-tab { padding: .45rem .95rem; border-radius: .5rem; color: var(--muted); text-decoration: none; font-weight: 550; }
+.wb-tab:hover { background: var(--panel-3); color: var(--text); }
+.wb-tab.is-active { background: var(--active-bg); color: var(--active-ink); box-shadow: inset 0 -2px 0 var(--accent); }
+.wb-tabs-fill { flex: 1; }
+.wb-sync { font-size: .8rem; color: var(--faint); font-family: var(--mono); }
+.wb-views { padding-top: 1rem; }
+@media (max-width: 960px) { .wb-head { flex-direction: column; align-items: stretch; } .wb-metrics { flex-wrap: wrap; } }

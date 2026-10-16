@@ -1,0 +1,100 @@
+{
+  "schema": "trace-investigation-plan/v1",
+  "assignments": [
+    {
+      "agent_id": "product_fit_and_reliance",
+      "anchor_case_id": "c1",
+      "route_case_ids": [
+        "c1"
+      ],
+      "question": "Does an unsupported assessment that no product satisfies the request explain leaving the opened Daily Ritual sweater and the later return to broad search, or was step 6 reasonable exploration because white/xx-large selection or a complete matching item was not actually established? Test a rival as well: an earlier mistaken or stale summary about this product may have driven the step-6 plan, rather than the wording of the step-6 reflection itself. Identify the source of any material premise, whether the step-6 decision actually relied on it, and whether later evidence corrected or perpetuated it; do not assume Find me requires purchase.",
+      "search_targets": [
+        "Backward-search memory, reflection and plan from step 1 through step 6 for the stable entity B07DKGJR74 / Daily Ritual sweater and claims about fit, sleeve, color, size, price, matching all criteria, missing/incomplete product information, or whether search results contain a match. Use claim-variant discovery (including result_assessment, state, availability, decision_basis and hypothesis clauses) as well as literal entity/attribute terms; do not require the phrase 'lack a product' or 'all criteria' to find an origin.",
+        "At any discovered earlier claim step, compare targeted peer-module excerpts on the same product and relevant independent actions/observations; distinguish search-result listing, available options, attempted clicks, and evidence of selected options. The complete visible timeline records the original product listing, white and xx-large clicks, and description inspection; check what those do and do not establish.",
+        "Assess the supplied step-6 reflection/plan against the immediate original description and the item listing/price. Determine whether the belief that no candidate met the requested criteria was established fact, a qualified concern, or an unsupported conclusion, and whether it was a decision premise for click[back to search].",
+        "Within the one-step result, prioritize any evidence that changes the causal comparison: an originating mistaken belief, independent confirmation/correction, or a later memory/reflection/plan showing actual dependence, abandonment, or recovery in the repeated searches. Search beyond step 6 when useful, but do not treat repeated navigation alone as evidence of error or infer a unique root from missing mental text."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:6:reflection",
+          "quote": "The outcome indicates that while some progress was made (e.g., finding a product like [B07DKGJR74] that matches some criteria), the search may need to be adjusted or expanded to ensure all criteria are met."
+        },
+        {
+          "source_id": "source:6:plan",
+          "quote": "This plan is helpful because it directly addresses the gap in the current search results, which lack a product that matches all the desired attributes."
+        },
+        {
+          "source_id": "source:6:observation",
+          "quote": "'An Amazon brand - Made from a thicker 100% cotton knit, this long-sleeve v-neck sweater features a comfortable, relaxed fit"
+        },
+        {
+          "source_id": "source:2:observation",
+          "quote": "'B07DKGJR74' [SEP] 'Amazon Brand - Daily Ritual Women's 100% Cotton Oversized Fit V-Neck Pullover Sweater' [SEP] '$20.66 to $29.2'"
+        },
+        {
+          "source_id": "source:3:action",
+          "quote": "click[white]"
+        },
+        {
+          "source_id": "source:4:action",
+          "quote": "click[xx-large]"
+        }
+      ],
+      "criteria": {
+        "supported": "Original evidence identifies a materially unsupported product-match assessment or earlier mistaken summary, and establishes that step 6 or subsequent search decisions actually relied on it without an effective correction. Separate the support for the claim from actual product state: the observed description supports relaxed fit/long sleeve and the listing price is a range below $40, while the option clicks and unresolved page parsing do not alone settle whether white and xx-large were registered. Name the source and demonstrated dependency; this supports that candidate as a causal contributor, not a unique global root.",
+        "refuted": "Original evidence supports the relevant match assessment, shows it remained a qualified uncertainty rather than an established premise driving the decision, or establishes effective correction/breaks the alleged reliance; alternatively, evidence supports reasonable verification/exploration given unresolved selected-option state. Reject the proposed step-6 causal premise and assess any different evidence-backed mechanism rather than forcing it into this accusation.",
+        "unknown": "The one-step retrieval does not establish origin, selected-option state, or downstream reliance/correction, or the original text remains ambiguous. Treat absent or unparsed selection/price decision facts as unknown, not proof of a mismatch; do not infer error from further searching or infer verification from availability. State which causal link remains unresolved."
+      }
+    }
+  ],
+  "decision_rules": [
+    {
+      "rule_id": "unsupported_match_assessment_and_reliance",
+      "conditions": [
+        {
+          "agent_id": "product_fit_and_reliance",
+          "outcome": "supported",
+          "finding": "Original source evidence establishes an unsupported assessment or earlier mistaken product summary and actual reliance on that premise in the step-6 back-to-search decision or subsequent search decisions without effective correction."
+        }
+      ],
+      "conclusion": "Treat the evidenced source decision as a plausible causal contributor to unnecessary continued search, and compare it with any independently evidenced later propagation or alternative mechanism; do not label the earliest mention root solely because it is earlier.",
+      "caveat": "This inference fails if the product-match premise is supported, merely tentative and appropriately checked, or not actually relied on. White/xx-large option availability or clicks alone do not verify selection; unresolved state is unknown, not mismatch. If the finding instead supports a different mechanism, assess that candidate on its own evidence rather than excluding it for being outside the initial search targets. No result establishes a globally unique root."
+    },
+    {
+      "rule_id": "assessment_premise_refuted",
+      "conditions": [
+        {
+          "agent_id": "product_fit_and_reliance",
+          "outcome": "refuted",
+          "finding": "Original evidence supports the contested match assessment or breaks the claimed step-6/downstream reliance, including effective correction or justified uncertainty about selection."
+        }
+      ],
+      "conclusion": "Reject the proposed unsupported-assessment explanation for c1 and compare any other source-supported causal candidate independently.",
+      "caveat": "A lack of retrieved proof is unknown, not refutation; do not turn unresolved color/size selection into a verified match or a verified mismatch."
+    },
+    {
+      "rule_id": "causal_link_unresolved",
+      "conditions": [
+        {
+          "agent_id": "product_fit_and_reliance",
+          "outcome": "unknown",
+          "finding": "The retrieved original evidence leaves origin, product selection state, or actual downstream reliance/correction unresolved."
+        }
+      ],
+      "conclusion": "Make no definite causal attribution to c1 from the available evidence; retain the unresolved links and assess any independently supported alternative without treating missing text as proof.",
+      "caveat": "The timeline and extraction gaps are not exhaustive world-state evidence. Further search, absent completion, or absent typed decisions cannot by themselves establish a fault."
+    }
+  ],
+  "uncertainty": "All action/observation timeline entries through step 30 are supplied, but memory/reflection/plan text is supplied only at the step-6 anchor. The worker returns at most one original step, so backward origin, product-option state and later mental dependence/recovery may not all be resolved. Observation parsing at steps 3–6 is unresolved; option availability and click actions do not independently verify selected state. The request says 'Find me' and does not establish a purchase obligation. No global root can be established from partial evidence.",
+  "plan_digest": "2bb28285b458006511334cebfbae346788308a0a7453060927091cfefd976e81",
+  "source_coverage": {
+    "step_range": [
+      1,
+      30
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  }
+}

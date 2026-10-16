@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0c1015">
+    <title>ProDebugger · Evidence-Grounded Root-Cause Debugging of LLM Agent Trajectories</title>
+    <meta name="description" content="ProDebugger traces every LLM agent failure back to its root cause, with evidence you can verify.">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23131b23'/%3E%3Cpath d='M12 8H7v16h5M20 8h5v16h-5' fill='none' stroke='%23e0b867' stroke-width='2.5'/%3E%3Cpath d='M18 11l-4 10' stroke='%23e6eaee' stroke-width='2.5'/%3E%3C/svg%3E">
+    <script>window.PD_STATIC = true;</script>
+    <script>
+      // Set the theme before the first paint (js/theme.js owns it afterwards); home keeps its own palette.
+      (() => {
+        const c = localStorage.getItem("pd-theme");
+        const t = c === "light" || c === "dark" ? c : matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        if (!/^#?\/?$/.test(location.hash)) document.documentElement.dataset.theme = t;
+      })();
+    </script>
+    <link rel="stylesheet" href="./css/theme.css">
+    <link rel="stylesheet" href="./css/runs.css">
+    <link rel="stylesheet" href="./css/workbench.css">
+    <link rel="stylesheet" href="./css/trajectory.css">
+    <link rel="stylesheet" href="./css/graph.css">
+    <link rel="stylesheet" href="./css/result.css">
+    <link rel="stylesheet" href="./css/chat.css">
+    <link rel="stylesheet" href="./css/home.css">
+    <script type="module" src="./js/app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#/" aria-label="ProDebugger home">
+        <span class="brand-mark" aria-hidden="true">[/]</span>
+        <span class="brand-name"><strong>PRO</strong>DEBUGGER</span>
+      </a>
+      <nav class="site-nav" id="site-nav" aria-label="Pages">
+        <a href="#/" data-page="home">Home</a>
+        <a href="#/runs" data-page="runs">Runs</a>
+        <a href="#/chat" data-page="chat">Chat</a>
+      </nav>
+      <nav class="crumbs" id="crumbs" aria-label="Location"></nav>
+      <div class="header-status" id="header-status"></div>
+      <button class="theme-toggle" id="theme-toggle" type="button"></button>
+    </header>
+    <main id="app" class="app" tabindex="-1"></main>
+  </body>
+</html>

@@ -1,0 +1,90 @@
+{
+  "windows": [
+    {
+      "issue_step": 14,
+      "issue_fids": [
+        130,
+        131,
+        132,
+        133,
+        134
+      ],
+      "goal_links": [
+        "req:spraybottle_in_countertop"
+      ],
+      "hypothesis": "Affected necessary subgoal: obtain the required spraybottle before placing it on the countertop. At step 14 the memory says the cabinet-3 soapbottle 'could potentially be the spraybottle'; the same-step reflection then calls it a 'potential spraybottle', the plan says taking this soapbottle will allow placement 'to complete the task', and the action takes that explicitly identified soapbottle (Facts 130-134; original action feedback: picked up the soapbottle). This is a concrete unsupported object-identity substitution, not merely a failure to satisfy the compiled check. Later evidence strongly supports the item was wrong: step 17 moves soapbottle 1, the task decision is false; step 18 confirms a soapbottle is on the countertop; later memory/reflection explicitly says it was the wrong item. Counterevidence/alternative: the exact source for the initial 'could potentially' inference may originate earlier in step 13 or may be an imprecise phrase; cabinet exploration and later searching are legitimate preparation, and the eventual noncompletion could also reflect continued search inefficiency rather than step 14 alone. TRACE should inspect the source of that premise and whether the explicit type distinction was available before this decision. This anchor tests the first evidenced wrong-object selection; it does not assert global earliest or unique causation.",
+      "candidate_id": "identity_origin",
+      "lo": 14,
+      "hi": 14,
+      "missing_steps": []
+    }
+  ],
+  "window_version": 2,
+  "selected_steps": [
+    1,
+    2,
+    3,
+    6,
+    7,
+    8,
+    11,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30
+  ],
+  "assessed_steps": [
+    14
+  ],
+  "missing_steps": [],
+  "unassessed_steps": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30
+  ],
+  "trace_complete": true,
+  "completed_windows": [
+    "identity_origin"
+  ],
+  "missing_windows": [],
+  "assessment_unit": "single_step_per_route_candidate"
+}

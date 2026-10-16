@@ -1,7 +1,15 @@
 # ProDebugger
 
-Standalone migration of the DSL debugger experiment (`experiments/dsl` in the original
-OmniDebugger intern repository). The backend audits task/observation parsing and uses evidence-driven SQL retrieval in TRACE. SUBMIT retains its input schema and must select one supplied candidate.
+ProDebugger is a platform for inspecting LLM agent trajectories and comparing
+evidence-backed failure hypotheses. It compiles recorded observations and agent
+outputs into a structured record, retrieves targeted evidence through a constrained
+DSL query interface, and displays the investigation in an interactive workbench.
+The backend runs MAP → ROUTE → TRACE → SUBMIT. A selected diagnosis remains a
+hypothesis whose evidence and uncertainty should be inspected.
+
+For a short implementation guide, terminology and reproducible examples, start
+with [REVIEWER_GUIDE.md](REVIEWER_GUIDE.md). This standalone package originated
+from `experiments/dsl` in the OmniDebugger intern repository.
 
 See [README_EVOLUTION.md](README_EVOLUTION.md) for the changes from the initial
 repository to the current backend. This repository includes 105 annotated benchmark
@@ -18,7 +26,7 @@ ProDebugger/
     run_experiment.py   MAP -> ROUTE -> TRACE -> SUBMIT entry point
     run_compile.py      compile one trajectory / the fixed 20-ID sample
     prompts/            map.md, route.md, manager.md, trace.md, submit.md
-    sessions/abstract_rules_n20/   20 compiled trajectories used as saved inputs
+    sessions/           compiled trajectories (generated locally; git-ignored)
   web/                  workbench: stdlib server + static frontend (no build), chat launcher
   artifacts/dsl_debugger/          run outputs (created on first run; git-ignored)
 ```
@@ -27,14 +35,42 @@ All commands below are run from the `ProDebugger` directory.
 
 ## Setup
 
+macOS / Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+cp .env.example .env   # needed only for online model configuration
+```
+
+Windows PowerShell:
+
 ```powershell
 python -m venv .venv
 .venv/Scripts/python.exe -m pip install -r requirements.txt
-copy .env.example .env   # then put your key in .env
+Copy-Item .env.example .env   # needed only for online model configuration
 ```
 
 Python 3.12+ (tested with 3.13). `pyarrow` is needed for Parquet input and `run_compile`;
 `openai` and `python-dotenv` only for online runs.
+
+## Offline quick start
+
+After activating the environment, compile one ALFWorld trace and one WebShop trace,
+then execute a small read-only evidence query for each:
+
+```bash
+python -B inspect_examples.py
+python web/server.py
+```
+
+The script makes no model calls. It saves compiled records, annotated `query.sql`,
+`query_result.json` and a combined `report.json` under `artifacts/reviewer_examples/`.
+Open http://127.0.0.1:8770 to use the workbench; start with the Chat catalog to
+inspect the supplied trajectory IDs. Offline compilation does not create a
+diagnosed run. See [the saved example report](EXAMPLE_REPORT.json) and
+[the walkthrough](REVIEWER_GUIDE.md#reproduce-the-two-environment-examples).
 
 ## Benchmark traces
 
@@ -356,7 +392,7 @@ Each case has three tabs:
   lineage highlight, debugger attention and ROUTE path overlays), entities and relations
   (state as of a chosen step), schema (kinds and relation signatures), goals and
   requirements, and rules → evaluations → facts.
-- **Result**: a diagnosed run shows the root cause with its step chain and evidence;
+- **Result**: a diagnosed run shows the selected failure hypothesis with its step chain and evidence;
   any other status shows the status, reasoning, uncertainty and window coverage.
 
 **Chat** (`#/chat`) reads every run as a conversation: the request, then one message per
@@ -411,9 +447,10 @@ python -B -m prodebugger.run_compile --sample-file prodebugger/sessions/abstract
 
 Batch outputs: sample.json (IDs and source/data hashes), rules.json, results.json,
 report.md and one compilation directory per ID. PYTHONHASHSEED=42 fixes profile set
-iteration. `prodebugger/sessions/abstract_rules_n20/` is the original committed
-output of this command; its `sample.json` keeps the original source hashes and
-absolute source paths as historical provenance only (they are never read as paths).
+iteration. The historical `prodebugger/sessions/abstract_rules_n20/sample.json` and compiled
+sessions are not included in a fresh clone. The fixed twenty-ID command requires
+that local manifest. Use `python -B inspect_examples.py` for examples supplied
+with this repository.
 
 ## Derived evidence
 

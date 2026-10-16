@@ -6,6 +6,7 @@ Start with the repository [README](../README.md) for the project overview and qu
 | --- | --- |
 | [Implementation guide](REVIEWER_GUIDE.md) | Terminology, evidence and result boundaries, offline examples, and workbench walkthrough. |
 | [Running the debugger](RUNNING.md) | Online configuration, experiment options, replay/resume, budgets, and output files. |
+| [Example report](EXAMPLE_REPORT.json) | Saved output from the credential-free ALFWorld and WebShop compilation/query examples. |
 | [Query reference](../prodebugger/prompts/query_dsl.md) | Supported read-only query functions, syntax, and coverage semantics. |
 | [Benchmark data](../core/data/README.md) | Dataset composition, provenance, schema, and reading examples. |
 | [Development history](README_EVOLUTION.md) | Changes to the architecture and diagnostic protocol, experiment records, and known limitations. |

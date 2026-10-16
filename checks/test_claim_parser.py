@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from checks.test_query_backend import source, case_for, manager_answer, answer
 from prodebugger.record_bridge import build_bundle, plain
-from prodebugger.claim_parser import ClaimParser, cards, fragment, statement, source_cards, validate_unit, decode_batch
+from prodebugger.claim_parser import ClaimParser, cards, fragment, statement, validate_unit, decode_batch
 from prodebugger.debug_tools import DebugTools
 from prodebugger.query_dsl import execute
 from prodebugger.query_trace import query, commit as assess

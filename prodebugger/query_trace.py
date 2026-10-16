@@ -1,7 +1,5 @@
 """One evidence-driven query per TRACE task, preserving the SUBMIT contract."""
-import json
-
-from .record_bridge import digest, plain
+from .record_bridge import digest
 from .evidence_tools import ToolError, integer
 from .query_dsl import execute as execute_query
 from .evidence_quality import annotated_fact, evidence_quality

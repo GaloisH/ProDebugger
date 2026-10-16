@@ -689,7 +689,7 @@ def entity_view(R: Record, kind: str, index: str) -> Dict[str, Any]:
     return _generic_view(R, e)
 
 
-def _all_changes(R: Record, include_initial: bool = False) -> Dict[str, Any]:
+def _all_changes(R: Record) -> Dict[str, Any]:
     """Every explicit assignment transition under a relation's declared key.
 
     This is algebraic rather than domain-specific: version positions are the
@@ -712,9 +712,9 @@ def _all_changes(R: Record, include_initial: bool = False) -> Dict[str, Any]:
                 assigned = ([str(f.args[i]) for i in positions]
                             if positions else _json_value(f.value))
                 changed = initialized and assigned != previous
-                if changed or (include_initial and not initialized):
+                if changed:
                     rows.append({
-                        "event": "change" if changed else "initial_assignment",
+                        "event": "change",
                         "step": f.t,
                         "fid": f.fid,
                         "relation": rel_name,
@@ -765,19 +765,6 @@ def _requirements_view(R: Record) -> Dict[str, Any]:
     }
 
 
-def _intentions_view(R: Record) -> Dict[str, Any]:
-    rows = []
-    for e in sorted((x for x in R.E.values() if x.kind == "int"), key=lambda x: x.index):
-        try:
-            step = int(e.index.lstrip("i"))
-        except ValueError:
-            continue
-        row = _intention_row(R, step)
-        if row is not None:
-            rows.append(row)
-    return {"schema": SCHEMA, "intentions": rows}
-
-
 def _episodes_view(R: Record) -> Dict[str, Any]:
     """One temporal bracket per action step.
 
@@ -785,7 +772,7 @@ def _episodes_view(R: Record) -> Dict[str, Any]:
     discontinuities so the reasoner can request a small candidate window; they
     never declare which discontinuity is the root cause.
     """
-    changes = _all_changes(R, include_initial=False)["changes"]
+    changes = _all_changes(R)["changes"]
     by_change_step: Dict[int, List[Dict[str, Any]]] = {}
     for change in changes:
         by_change_step.setdefault(change["step"], []).append(change)
@@ -1972,9 +1959,8 @@ def program_view(R: Record, spec: str) -> Dict[str, Any]:
 
         <source> [| <stage>:<value>]...
 
-        source := entity:<kind>:<index> | requirements | changes | assignments |
-                  intentions | episodes | scan | local_audits | candidates |
-                  candidate_families | process_notes | packet
+        source := entity:<kind>:<index> | requirements | changes | episodes |
+                  scan | local_audits | packet
         stage  := section | state | steps | event | support | slot |
                   qualification | entity | relation | side | purpose |
                   constraint | mention | commitment | binding | alignment |
@@ -1991,29 +1977,17 @@ def program_view(R: Record, spec: str) -> Dict[str, Any]:
         data = _requirements_view(R)
     elif source == "changes":
         data = _all_changes(R)
-    elif source == "assignments":
-        data = _all_changes(R, include_initial=True)
-    elif source == "intentions":
-        data = _intentions_view(R)
     elif source == "episodes":
         data = _episodes_view(R)
     elif source == "scan":
         data = _scan_view(R)
     elif source == "local_audits":
         data = _local_audits_view(R)
-    elif source == "candidates":
-        data = _candidate_view(R)
-    elif source == "candidate_families":
-        data = _candidate_families_view(R)
-    elif source == "process_notes":
-        data = {"schema": "process-notes/v1",
-                "notes": [R.process_notes[step] for step in sorted(R.process_notes)]}
     elif source == "packet":
         data = _packet_view(R)
     else:
         raise KeyError("view source must be entity:<kind>:<index>, requirements, "
-                       "changes, assignments, intentions, episodes, scan, local_audits, candidates, "
-                       "candidate_families, process_notes, or packet")
+                       "changes, episodes, scan, local_audits, or packet")
     data = _filter_rows(data, options)
     if "section" in options:
         data = _project(data, options["section"])

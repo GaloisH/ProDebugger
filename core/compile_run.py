@@ -4,18 +4,14 @@ S partitions a step into slots. R binds mentions to entities and emits facts
 carrying their span and the situation they were asserted in. L assigns the basis
 and the purpose, which are the two axes.
 
-Three invariants are checked here rather than requested in a prompt:
-    aligned   one entry per native step
-    grounded  every span occurs verbatim in its step
-    ordered   every basis and every situation points strictly backwards
-The third is enforced by Record.add and so cannot be violated silently.
+Record.add enforces that every basis and every situation points strictly
+backwards, so ordering cannot be violated silently.
 """
 import re
 from dataclasses import dataclass, replace
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from record import (Record, Entity, Goal, IntentionOption, IntentionParameter,
-                    SourceStep)
+from record import Record, IntentionOption, IntentionParameter, SourceStep
 from process_notes import build_process_notes
 
 TAGS = ("memory", "reflection", "plan", "action")
@@ -299,17 +295,3 @@ def build(tid: str, task: str, steps: List[Step], profile, *, parsed: Dict[str, 
 
     R.process_notes = build_process_notes(R)
     return R
-
-
-def invariants(R: Record, steps: List[Step]) -> Dict[str, bool]:
-    aligned = R.length() == len(steps)
-    by_t = {s.t: s for s in steps}
-    def _flat(x): return " ".join(x.split())
-    # groundedness means the span occurs in the step. Whitespace is normalised on
-    # both sides, because a line break is not a difference in what was said.
-    grounded = all(
-        (not f.span) or f.t not in by_t
-        or (_flat(f.span) in _flat(by_t[f.t].agent_text))
-        or (_flat(f.span) in _flat(by_t[f.t].env_text))
-        for f in R.F)
-    return {"aligned": aligned, "grounded": grounded, "ordered": R.dependence_ok()}

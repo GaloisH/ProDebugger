@@ -9,7 +9,7 @@ what purpose. The two orders the record needs are induced by the last two:
 
 Nothing in this file is benchmark specific.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Iterable
 import collections
 

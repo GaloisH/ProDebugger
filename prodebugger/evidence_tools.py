@@ -5,7 +5,7 @@ import copy
 from collections import defaultdict, deque
 from dataclasses import replace
 
-from .record_bridge import digest, plain
+from .record_bridge import plain
 
 
 class ToolError(ValueError):

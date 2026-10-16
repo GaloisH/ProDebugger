@@ -13,7 +13,7 @@ returns UNK together with the operands a narrow call would need, and the caller
 decides whether to spend a call. No threshold appears in this file.
 """
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from record import Record, Fact, Entity, UNBOUND
 

@@ -1,7 +1,6 @@
 """Seven abstract rules over existing Facts; no text or intention parsing."""
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import asdict
 import json
 
@@ -329,11 +328,6 @@ def detect_abstract_rules(record, rules=RULES):
                 record.add_evidence("abstract.rule", rule=rule.id, **finding)
                 seen.add(key)
     return evaluations
-
-
-def summarize(evaluations):
-    return {rule.id: dict(Counter(e["state"] for e in evaluations if e["rule"] == rule.id))
-            for rule in RULES}
 
 
 def export_rules():

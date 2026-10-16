@@ -7,7 +7,7 @@ any of that into facts is the profile's job, not this file's.
 import json
 import os
 import re
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pyarrow.parquet as pq
 

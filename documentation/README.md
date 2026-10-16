@@ -12,6 +12,5 @@ Start with the repository [README](../README.md) for the project overview and qu
 | [Example report](EXAMPLE_REPORT.json) | Saved output from the credential-free ALFWorld and WebShop compilation/query examples. |
 | [Query reference](../prodebugger/prompts/query_dsl.md) | Supported read-only query functions, syntax, and coverage semantics. |
 | [Benchmark data](../core/data/README.md) | Dataset composition, provenance, schema, and reading examples. |
-| [Development history](README_EVOLUTION.md) | Changes to the architecture and diagnostic protocol, experiment records, and known limitations. |
 
 For implementation details, start at the [repository layout](../README.md#repository-layout) and follow the links from the relevant guide to source files and checks.

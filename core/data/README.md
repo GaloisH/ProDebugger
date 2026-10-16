@@ -1,5 +1,23 @@
 # Annotated benchmark traces
 
+## Source and licensing
+
+This subset originates from [AgentErrorBench](https://github.com/ulab-uiuc/AgentDebug), introduced in [Where LLM Agents Fail and How They Can Learn From Failures](https://arxiv.org/abs/2509.25370). The upstream project provides a repository-level MIT `LICENSE` and links the dataset; the released [Hugging Face dataset card](https://huggingface.co/datasets/davide221/agenterrorbench) describes the splits and fields but does not declare a separate dataset license in its card metadata. A code license does not by itself establish the rights to redistribute benchmark annotations, third-party environment text, or trajectory contents. This repository has not independently verified data redistribution permission; confirm the applicable dataset and underlying content terms with the upstream maintainers before reusing or redistributing these rows.
+
+Suggested citation for the benchmark paper:
+
+```bibtex
+@misc{zhu2025where,
+  title         = {Where LLM Agents Fail and How They Can Learn From Failures},
+  author        = {Zhu, Kunlun and Liu, Zijia and Li, Bingxuan and Tian, Muxin and Yang, Yingxuan and Zhang, Jiaxun and Han, Pengrui and Xie, Qipeng and Cui, Fuyang and Zhang, Weijia and Ma, Xiaoteng and Yu, Xiaodong and Ramesh, Gowtham and Wu, Jialian and Liu, Zicheng and Lu, Pan and Zou, James and You, Jiaxuan},
+  year          = {2025},
+  eprint        = {2509.25370},
+  archivePrefix = {arXiv}
+}
+```
+
+The subset is retained in this branch to support the current experiment. This note records the permission status as unresolved; it is not a grant of rights or legal advice.
+
 `train.parquet` contains **105 trajectories: 66 ALFWorld and 39 WebShop**.
 It is selected from the supplied 139-row `train.parquet` using
 `task_type in {"alfworld", "webshop"}`. The remaining 34 GAIA trajectories are

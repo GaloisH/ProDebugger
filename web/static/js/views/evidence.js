@@ -63,8 +63,9 @@ export function buildEvidence(model, stop) {
     const slots = [...new Set(list.map(f => f.slot || "fact"))];
     const reqs = (w.goal_links || []).map(g => String(g).replace(/^req:/, ""));
     add({id: `f:${w.candidate_id}`, layer: 0, kind: "fact", lane: nodes.get(`a:${w.candidate_id}`).lane, facts: list,
-      label: steps.length === 1 ? `${S(steps[0])} · ${slots.join(", ")}` : `${stepRanges(steps)} · ${plural(list.length, "fact")}`,
-      sub: short(list.map(f => `f${f.fid}`).join(", "), 25), title: list.map(f => `f${f.fid} ${factText(f)}`).join("\n"), goto: {step: w.issue_step}});
+      // A node is too narrow for both the slots and the fact ids, so it lists the slots.
+      label: `${steps.length === 1 ? S(steps[0]) : stepRanges(steps)} · ${plural(list.length, "fact")}`,
+      sub: short(slots.join(", "), 25), title: list.map(f => `f${f.fid} ${factText(f)}`).join("\n"), goto: {step: w.issue_step}});
     link(`f:${w.candidate_id}`, `a:${w.candidate_id}`, reqs.length ? {label: `violates ${reqs.join(", ")}`} : {});
   });
 
@@ -167,13 +168,18 @@ function markChain(nodes, edges) {
 // ---------- layout ----------
 // Left to right: one column per layer, one row per lane. The gaps between columns hold the
 // edge labels, wrapped to fit.
-const NW = 168, NH = 50, GX = 104, GY = 22, LABEL_CHARS = 16;
+const NW = 168, NH = 50, GX = 124, GY = 22, LABEL_CHARS = 14;
 
 function wrap(text) {
   const lines = [];
   String(text).split(" ").forEach(word => {
-    if (lines.length && (lines.at(-1) + " " + word).length <= LABEL_CHARS) lines[lines.length - 1] += " " + word;
-    else lines.push(word);
+    // An identifier longer than a line (spraybottle_in_countertop) breaks after its underscores.
+    const parts = word.length > LABEL_CHARS ? word.split(/(?<=_)/) : [word];
+    parts.forEach((part, i) => {
+      const glue = i ? "" : " ";
+      if (lines.length && (lines.at(-1) + glue + part).length <= LABEL_CHARS) lines[lines.length - 1] += glue + part;
+      else lines.push(part);
+    });
   });
   return lines;
 }

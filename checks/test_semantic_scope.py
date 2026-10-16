@@ -170,7 +170,7 @@ class SemanticScopeChecks(unittest.TestCase):
 
     def test_element_queries_expose_event_time(self):
         b = bundle('Step 1: You arrive at cabinet 1.')
-        result = execute(DebugTools(b), "SELECT step,assertion_time,claim_scope FROM TRACK_ENTITY('cabinet:1') WHERE slot='mem'")
+        result = execute(DebugTools(b), "SELECT step,assertion_time,claim_scope FROM TRACE_ENTITY('cabinet:1') WHERE slot='mem'")
         self.assertNotIn('error', result)
         self.assertEqual(result['rows'], [{'step': 2, 'assertion_time': 1, 'claim_scope': 'historical'}])
 

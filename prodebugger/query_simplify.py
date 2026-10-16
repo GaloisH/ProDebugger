@@ -10,7 +10,7 @@ import re
 import sqlglot
 from sqlglot import exp
 
-from .query_syntax import BATCH_ARGUMENTS, Columns
+from .query_syntax import BATCH_ARGUMENTS, Columns, normalize_function_names
 
 MODIFIERS = {"order", "limit", "offset", "with", "with_"}
 
@@ -174,7 +174,7 @@ def simplify_sql(sql):
     trees = sqlglot.parse(sql, read=RecordSQLite)
     if len(trees) != 1 or not isinstance(trees[0], (exp.Select, exp.SetOperation)):
         raise ValueError("simplification requires one SELECT query")
-    tree = trees[0]
+    tree = normalize_function_names(trees[0])
     schemas = {**SCHEMAS, **FUNCTION_SCHEMAS}
 
     def columns():

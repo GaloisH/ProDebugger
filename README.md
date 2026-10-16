@@ -101,9 +101,9 @@ documentation/ implementation, runtime, data, and development-history guides
 
 Run commands from the repository root. Generated sessions and experiment outputs are written locally and are git-ignored.
 
-## Development checks
+## Local checks
 
-The GitHub Actions workflow installs the project dependencies, runs the regression checks, and executes the credential-free examples on Python 3.12. Each successful run also exposes its generated report as a downloadable `offline-example-report` artifact on the Actions run page. To run the same checks locally:
+To run the regression checks and credential-free examples locally:
 
 ```bash
 python -m pip install -r requirements.txt pytest

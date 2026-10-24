@@ -1,13 +1,13 @@
-// World layout of the cluster tower. The core sits at the origin with the ROUTE accesses on
-// a ring around it; each later tier is a smaller ring higher up, so the search visibly
-// narrows from the whole record to one conclusion.
+// World layout of the cluster tower. The record core sits one floor below the ROUTE ring, so
+// every query visibly pulls its facts up from it; each later tier is a smaller ring higher up,
+// so the search narrows from the whole record to one conclusion. Each tier belongs to a phase.
 export const TIERS = [
-  {tier: 0, y: 0, ring: 0, label: "DSL record", sub: "Entity · Fact · Goal"},
-  {tier: 1, y: 0, ring: 13, label: "ROUTE access", sub: "one cloud per query"},
-  {tier: 2, y: 6.5, ring: 4.5, label: "Suspect windows", sub: "route_cases"},
-  {tier: 3, y: 11.5, ring: 3.2, label: "TRACE lanes", sub: "SQL evidence"},
-  {tier: 4, y: 15.5, ring: 2.2, label: "Candidates", sub: "assess"},
-  {tier: 5, y: 19, ring: 0, label: "Conclusion", sub: "SUBMIT root"},
+  {tier: 0, y: -4.5, ring: 0, phase: "PARSE", label: "DSL record", sub: "Entity · Fact · Goal"},
+  {tier: 1, y: 0, ring: 13, phase: "ROUTE", label: "ROUTE access", sub: "one cloud per query"},
+  {tier: 2, y: 6.5, ring: 4.5, phase: "ROUTE", label: "Suspect windows", sub: "route_cases"},
+  {tier: 3, y: 11.5, ring: 3.2, phase: "TRACE", label: "TRACE lanes", sub: "assigned questions, SQL"},
+  {tier: 4, y: 15.5, ring: 2.2, phase: "TRACE", label: "Candidates", sub: "assess"},
+  {tier: 5, y: 19, ring: 0, phase: "SUBMIT", label: "Conclusion", sub: "SUBMIT root"},
 ];
 
 // Cloud radius grows with the cube root of its size, like a ball of packed points.
@@ -26,7 +26,7 @@ export function layoutClusters({clusters}) {
       radius.set(c.id, c.kind === "core" ? 0.34 * Math.cbrt(c.fids.length) + 0.3 : cloudRadius(c.fids.length));
     });
   }
-  return {pos, radius, angle, top: TIERS[TIERS.length - 1].y};
+  return {pos, radius, angle, top: TIERS[TIERS.length - 1].y, bottom: TIERS[0].y};
 }
 
 // Unit-ball sample i: the R3 low-discrepancy sequence (three independent golden-like strides)

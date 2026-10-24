@@ -15,7 +15,7 @@ export function buildClusters(scene) {
   scene.events.forEach((ev, i) => {
     if (ev.phase === "MAP" || (ev.phase === "ROUTE" && ev.name !== "route_cases")) {
       ev.cluster = `q${ev.ordinal}`;
-      add({id: ev.cluster, tier: 1, kind: "query", event: i, fids: ev.fids, error: ev.error, phase: ev.phase,
+      add({id: ev.cluster, tier: 1, kind: "query", event: i, fids: ev.fids, error: ev.error, phase: ev.phase, intent: ev.intent,
            label: ev.error ? `${ev.name} · rejected` : ev.name === "inspect" ? ev.intent : ev.spec || ev.name, detail: `${ev.fids.length} facts`});
     } else if (ev.name === "route_cases") {
       ev.cluster = ev.windows[0];
@@ -105,6 +105,21 @@ export function buildClusters(scene) {
 
   for (const c of clusters) c.groups = groupByEntity(c.fids, scene);
   return {clusters, byId};
+}
+
+// Everything upstream and downstream of a cloud along its links: for the root, the candidate,
+// lane, window, the queries that found its clues and the record; for a query, what it fed.
+export function chainOf({clusters, byId}, id) {
+  const down = new Map(clusters.map(c => [c.id, []]));
+  for (const c of clusters) for (const l of c.links) down.get(l.from)?.push(c.id);
+  const chain = new Set([id]);
+  const walk = (start, next) => {
+    const stack = [start];
+    while (stack.length) for (const n of next(stack.pop())) if (!chain.has(n)) { chain.add(n); stack.push(n); }
+  };
+  walk(id, x => byId.get(x)?.links.map(l => l.from) || []);
+  walk(id, x => down.get(x) || []);
+  return chain;
 }
 
 const countBy = (list, key) => {

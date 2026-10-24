@@ -24,8 +24,8 @@ export function createStage(canvas, scene, model, layout) {
   const cam = {target: [0, 7, 0], yaw: 0.5, pitch: 0.32, dist: 48, fov: 0.8};
   let goal = {...cam, target: [...cam.target]};
   let tourGoal = goal, manual = false;
-  let frame = {visible: new Set(["core"]), filled: new Set(["core"]), focus: new Set(), appear: new Map()};
-  const view = {cluster: null, group: null, basis: null, fact: null};
+  let frame = {visible: new Set(["core"]), filled: new Set(["core"]), focus: new Set(), appear: new Map(), chain: null, labelAll: false, filter: null};
+  const view = {cluster: null, group: null, basis: null, fact: null, selected: null};
   let hover = null;
   let targets = [];
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
@@ -122,6 +122,62 @@ export function createStage(canvas, scene, model, layout) {
     }
     ctx.stroke();
   }
+  // A tier's floor: a faint disc with a hairline rim in the phase colour.
+  function plate(center, R, color, alpha) {
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= 96; i++) {
+      const a = i / 96 * Math.PI * 2, p = project([center[0] + R * Math.cos(a), center[1], center[2] + R * Math.sin(a)]);
+      if (!p) continue;
+      started ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y);
+      started = true;
+    }
+    ctx.closePath();
+    ctx.globalAlpha = 0.05 * alpha;
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.globalAlpha = 0.4 * alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Phase ruler: a fixed HUD scale on the left whose ticks sit at each tier's projected height,
+  // one segment per phase, the current tier lit.
+  function ruler(shown, current) {
+    const x = 18, top = 96, bottom = H - 150;
+    const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
+      .map(t => ({t, y: project([0, t.y, 0])?.y})).filter(r => r.y != null)
+      .map(r => ({...r, y: Math.max(top, Math.min(bottom, r.y))}));
+    if (!tiers.length) return;
+    // Clamped ticks keep at least a label's height between them, pushing upward.
+    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 28);
+    stroke(colors.line, 1, 1);
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+    tiers.forEach((r, k) => {
+      const color = colors.phase[r.t.phase];
+      const next = tiers[k + 1];
+      const on = current === r.t.tier;
+      if (next) {
+        stroke(color, on ? 1 : 0.55, on ? 3 : 2);
+        ctx.beginPath(); ctx.moveTo(x, r.y); ctx.lineTo(x, next.y + 3); ctx.stroke();
+      }
+      stroke(color, 1, 1);
+      ctx.beginPath(); ctx.moveTo(x - 5, r.y); ctx.lineTo(x + 6, r.y); ctx.stroke();
+      const n = shown.filter(c => c.tier === r.t.tier).length;
+      ctx.textAlign = "left";
+      ctx.globalAlpha = on ? 1 : 0.75;
+      ctx.fillStyle = color;
+      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, x + 10, r.y - 2);
+      ctx.fillStyle = colors["label-dim"];
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 10);
+    });
+    ctx.globalAlpha = 1;
+  }
+
   function brackets(x, y, r, color, alpha = 1) {
     const L = Math.max(5, Math.min(10, r * 0.4));
     stroke(color, alpha, 1);
@@ -211,31 +267,20 @@ export function createStage(canvas, scene, model, layout) {
     const open = view.cluster ? byId.get(view.cluster) : null;
     const fade = open ? 0.12 : 1;
 
-    // Frame: the central axis, a dashed ring per populated tier and its label.
-    const shown = clusters.filter(c => frame.visible.has(c.id));
+    // Frame: the central axis, then one plate per populated tier in its phase colour, so each
+    // phase stands on its own floor. Legend filters can hide phases.
+    const hiddenPhase = frame.filter?.phases;
+    const shown = clusters.filter(c => frame.visible.has(c.id) && !hiddenPhase?.has(c.phaseKey));
     const tierUsed = new Set(shown.map(c => c.tier));
     stroke(colors.line, 0.9 * fade, 1);
-    line3([0, 0, 0], [0, layout.top, 0]);
-    const side = norm([B.r[0], 0, B.r[2]]);
+    line3([0, layout.bottom, 0], [0, layout.top, 0]);
     for (const t of TIERS) {
       if (!tierUsed.has(t.tier)) continue;
       const members = shown.filter(c => c.tier === t.tier);
       const ringR = members.length > 1 || t.tier === 1 ? t.ring : 0;
+      const reach = Math.max(...members.map(c => layout.radius.get(c.id)));
+      plate([0, t.y, 0], ringR ? ringR + reach + 1 : Math.max(2, reach + 1.2), colors.phase[t.phase], fade);
       if (ringR) { stroke(colors.line, 0.9 * fade, 1, [2, 5]); ring3([0, t.y, 0], ringR); }
-      const reach = ringR || (t.tier === 0 ? layout.radius.get("core") : 0.8);
-      const p = project(add([0, t.y, 0], scale(side, -reach - 1.4)));
-      if (!p) continue;
-      ctx.setLineDash([]);
-      ctx.globalAlpha = fade;
-      ctx.textAlign = "right";
-      ctx.fillStyle = colors["label-dim"];
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(`T${t.tier} · ${t.sub}`, p.x - 10, p.y + 16);
-      ctx.fillStyle = colors.label;
-      ctx.font = "500 11px 'IBM Plex Mono', monospace";
-      ctx.fillText(t.label.toUpperCase(), p.x - 10, p.y + 3);
-      stroke(colors["line-hi"], fade, 1);
-      ctx.beginPath(); ctx.moveTo(p.x - 5, p.y); ctx.lineTo(p.x + 3, p.y); ctx.stroke();
     }
 
     // Links between clouds, in the phase colour of the cloud they lead to. The edges of the
@@ -244,11 +289,14 @@ export function createStage(canvas, scene, model, layout) {
     const hoverId = hover?.kind === "cluster" ? hover.cluster.id : null;
     for (const c of shown) for (const l of c.links) {
       if (!frame.visible.has(l.from)) continue;
-      const hot = frame.focus.has(c.id) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
+      if (hiddenPhase?.has(byId.get(l.from)?.phaseKey)) continue;
+      const inChain = frame.chain && frame.chain.has(c.id) && frame.chain.has(l.from);
+      const hot = inChain || (!frame.chain && frame.focus.has(c.id)) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
       const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
       const spoke = l.from === "core";
       const color = phaseColor(c);
-      stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade, 1, spoke ? [1, 4] : null);
+      const quiet = frame.chain && !inChain ? 0.25 : 1;
+      stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet, 1, spoke ? [1, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
       const edgeHot = hover?.kind === "edge" && hover.link === l;
       if ((hot || hovered || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
@@ -263,7 +311,8 @@ export function createStage(canvas, scene, model, layout) {
       const R = layout.radius.get(c.id);
       const focus = frame.focus.has(c.id);
       const isOpen = open?.id === c.id;
-      const alpha = (open && !isOpen ? 0.07 : focus || isOpen ? 1 : c.kind === "core" ? 0.5 : 0.6) * appear;
+      const outside = frame.chain && !frame.chain.has(c.id);
+      const alpha = (open && !isOpen ? 0.07 : outside ? 0.13 : focus || isOpen || frame.chain ? 1 : c.kind === "core" ? 0.5 : 0.6) * appear;
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
         const gmap = groupOf.get(c.id);
@@ -276,6 +325,7 @@ export function createStage(canvas, scene, model, layout) {
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
           const role = roleOf(p.fid);
+          if (frame.filter?.role && role !== frame.filter.role && !isOpen) continue;
           const size = Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
           ctx.globalAlpha = isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha;
           if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * appear);
@@ -347,18 +397,26 @@ export function createStage(canvas, scene, model, layout) {
         tag(pc.x, pc.y, r, clusterTitle(c), c.detail, phaseColor(c));
         continue;
       }
-      if (focus || hot) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
-      if (c.kind !== "query" || focus || hot) {
+      const selected = view.selected === c.id;
+      const outside = frame.chain && !frame.chain.has(c.id);
+      if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
+      if (outside && !hot) continue;
+      const named = c.kind !== "query" || focus || hot || selected || (frame.chain && frame.chain.has(c.id));
+      if (named) {
         tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || c.kind === "root" ? phaseColor(c) : colors.label, fade * Math.min(1, alpha / 0.6));
       } else {
+        // Unnamed queries keep a one-line caption under the cloud: the call tag, and in the
+        // overview what it asked.
         ctx.globalAlpha = 0.9 * fade * alpha;
-        ctx.fillStyle = colors["label-dim"];
+        ctx.fillStyle = frame.labelAll ? colors.label : colors["label-dim"];
         ctx.font = "10px 'IBM Plex Mono', monospace";
         ctx.textAlign = "center";
-        ctx.fillText(callTag(c), pc.x, pc.y + sr + 12);
+        ctx.fillText(frame.labelAll ? clusterTitle(c) : callTag(c), pc.x, pc.y + sr + 12);
       }
     }
     for (const e of edgeLabels) edgeLabel(e);
+    const current = (view.selected && byId.get(view.selected)?.tier) ?? (frame.focus.size ? byId.get([...frame.focus][0])?.tier : null);
+    ruler(shown, current);
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(draw);
   }
@@ -399,22 +457,30 @@ export function createStage(canvas, scene, model, layout) {
       const r = canvas.getBoundingClientRect();
       const t = pick(e.clientX - r.left, e.clientY - r.top);
       if (!t) back();
-      else if (t.kind === "cluster" || t.kind === "edge") open(t.cluster.id);
+      else if (t.kind === "cluster" || t.kind === "edge") view.selected === t.cluster.id ? open(t.cluster.id) : select(t.cluster.id);
       else if (t.kind === "group") open(t.cluster.id, view.group === t.gi ? null : t.gi);
       else if (t.kind === "fact") { view.fact = t.fid; emit("select", {kind: "fact", cluster: t.cluster, gi: view.group, fid: t.fid}); }
     }
     drag = null;
   };
+  // First click selects a cloud (the page lights its causal chain); a second click opens it.
+  function select(id) {
+    view.selected = id;
+    if (view.cluster && view.cluster !== id) setView(null);
+    emit("select", id ? {kind: "cluster", cluster: byId.get(id), opened: false} : null);
+  }
   function open(id, group = null) {
+    view.selected = id;
     view.fact = null;
     setView(id, group);
     const c = byId.get(id);
-    emit("select", group == null ? {kind: "cluster", cluster: c} : {kind: "group", cluster: c, gi: group});
+    emit("select", group == null ? {kind: "cluster", cluster: c, opened: true} : {kind: "group", cluster: c, gi: group});
   }
   function back() {
     if (view.fact != null) { view.fact = null; emit("select", {kind: "group", cluster: byId.get(view.cluster), gi: view.group}); }
     else if (view.group != null) open(view.cluster);
-    else if (view.cluster) { setView(null); emit("select", null); }
+    else if (view.cluster) { setView(null); emit("select", {kind: "cluster", cluster: byId.get(view.selected), opened: false}); }
+    else if (view.selected) { view.selected = null; emit("select", null); }
   }
   const onWheel = e => { e.preventDefault(); takeOver(); cam.dist = Math.max(5, Math.min(110, cam.dist * Math.exp(e.deltaY * 0.001))); };
   const onLeave = () => { hover = null; emit("hover", null); };
@@ -433,8 +499,11 @@ export function createStage(canvas, scene, model, layout) {
   return {
     start(fn) { onFrame = fn; raf = requestAnimationFrame(draw); },
     // Fold everything and hand the camera back to the tour.
-    follow() { view.fact = null; setView(null); emit("select", null); },
+    follow() { view.fact = null; view.selected = null; setView(null); emit("select", null); },
+    // Hand the camera back to whoever drives it (tour or overview presets) without folding.
+    release() { manual = false; emit("manual", false); },
     open,
+    select,
     back,
     selectFact(fid) { view.fact = fid; },
     get view() { return view; },
@@ -446,7 +515,7 @@ export function createStage(canvas, scene, model, layout) {
 }
 
 export const callTag = c => `${c.phase === "MAP" ? "M" : "Q"}${String(c.event).padStart(2, "0")}`;
-export const clusterTitle = c => c.kind === "query" ? `${callTag(c)} ${shortSpec(c.label)}` : c.label;
+export const clusterTitle = c => c.kind === "query" ? `${callTag(c)} ${shortSpec(c.error ? c.label : c.intent || c.label)}` : c.label;
 const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 34 ? t.slice(0, 33) + "…" : t; };
 const angleDelta = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];

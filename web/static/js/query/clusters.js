@@ -2,6 +2,7 @@
 // debugger access (a ROUTE view, a suspect window, a TRACE lane's SQL result), plus the
 // candidate and root markers. A cloud expands into entity groups, a group into its facts.
 import {short} from "../util.js";
+import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js";
 
 const MAX_GROUPS = 12;
 
@@ -15,7 +16,7 @@ export function buildClusters(scene) {
     if (ev.phase === "MAP" || (ev.phase === "ROUTE" && ev.name !== "route_cases")) {
       ev.cluster = `q${ev.ordinal}`;
       add({id: ev.cluster, tier: 1, kind: "query", event: i, fids: ev.fids, error: ev.error, phase: ev.phase,
-           label: ev.error ? `${ev.name} · rejected` : ev.spec || ev.name, detail: `${ev.fids.length} facts`});
+           label: ev.error ? `${ev.name} · rejected` : ev.name === "inspect" ? ev.intent : ev.spec || ev.name, detail: `${ev.fids.length} facts`});
     } else if (ev.name === "route_cases") {
       ev.cluster = ev.windows[0];
       for (const id of ev.windows) {
@@ -51,28 +52,96 @@ export function buildClusters(scene) {
 
   // Links: the core feeds every query; queries that saw a window's issue facts feed it;
   // a window feeds its lanes, a lane its candidates, the chosen candidate the root.
-  // Each link carries a short "what happened" label for the edge.
+  // Each link says what happened along it: a title (what was asked), a detail line (what came
+  // back) and a card of rows for the hover.
   const byId = new Map(clusters.map(c => [c.id, c]));
-  const link = (a, b, label, weight = 1) => { if (byId.has(a) && byId.has(b)) byId.get(b).links.push({from: a, label, weight}); };
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const link = (a, b, desc, weight = 1) => { if (byId.has(a) && byId.has(b)) byId.get(b).links.push({from: a, weight, ...desc}); };
+  const seen = new Set();
   for (const c of clusters) {
-    if (c.kind === "query") link("core", c.id, c.error ? "rejected" : `pulls ${plural(c.fids.length, "fact")}`);
+    if (c.kind === "query") {
+      const ev = scene.events[c.event];
+      const fresh = c.fids.filter(fid => !seen.has(fid)).length;
+      c.fids.forEach(fid => seen.add(fid));
+      link("core", c.id, queryEdge(ev, c, fresh, scene));
+    }
     if (c.kind === "window") {
       const own = new Set(c.fids);
       for (const q of clusters.filter(x => x.kind === "query")) {
-        const n = q.fids.filter(fid => own.has(fid)).length;
-        if (n) link(q.id, c.id, `${n}/${own.size} clues → S${c.ref.step}`, n / own.size);
+        const shared = q.fids.filter(fid => own.has(fid));
+        if (!shared.length) continue;
+        const slots = [...new Set(shared.map(fid => scene.factById.get(fid).slot))].map(s => SLOT_LABEL[s]);
+        link(q.id, c.id, {title: `${shared.length}/${own.size} clues → S${c.ref.step}`, detail: slots.join(" · "),
+                          card: [["clues", shared.map(fid => `f${fid}`).join(" ")], ["window", `${c.ref.caseId} at step ${c.ref.step}`]]}, shared.length / own.size);
       }
     }
-    if (c.kind === "lane") link(`w:${c.ref.anchor}`, c.id, "assigned to TRACE");
-    if (c.kind === "candidate") link(c.ref.lane, c.id, `SQL ${plural(byId.get(c.ref.lane)?.ref.rows.length || 0, "row")} → ${c.ref.status}`);
-    if (c.kind === "root") link(c.ref.candidate || clusters.find(x => x.kind === "lane")?.id, c.id, "chosen as root cause");
+    if (c.kind === "lane") {
+      const l = c.ref;
+      link(`w:${l.anchor}`, c.id, {title: `assign ${l.agent}`, detail: `“${short(l.question, 44)}”`,
+        card: [["question", l.question], ["targets", `${l.targets.length} search targets`]]});
+    }
+    if (c.kind === "candidate") {
+      const lane = byId.get(c.ref.lane)?.ref;
+      const mods = countBy(lane?.rows || [], r => r.module).slice(0, 3).map(([m, n]) => `${m} ${n}`).join(" · ");
+      link(c.ref.lane, c.id, {
+        title: lane?.purpose ? short(lane.purpose.replace(/^test whether /i, "tests: "), 46) : "one SQL query",
+        detail: `${lane?.rows.length || 0} rows${mods ? ` · ${mods}` : ""} → ${c.ref.status}`,
+        card: [["purpose", lane?.purpose || "—"], ["rows", `${lane?.rows.length || 0} on ${lane?.steps.length || 0} steps`],
+               ["by module", countBy(lane?.rows || [], r => r.module).map(([m, n]) => `${m} ${n}`).join(" · ")],
+               ["verdict", `S${c.ref.step} ${c.ref.module} · ${c.ref.status}${c.ref.faultClass ? ` · ${c.ref.faultClass}` : ""}`]],
+      });
+    }
+    if (c.kind === "root") {
+      const r = c.ref, rule = r.rule;
+      link(r.candidate || clusters.find(x => x.kind === "lane")?.id, c.id, {
+        title: "chosen as root cause",
+        detail: rule?.id ? `rule ${rule.id}` : `${r.faultClass || "root"}`,
+        card: [["rule", rule?.id ? `${rule.id} (of ${rule.count})` : "—"], ["conclusion", rule?.conclusion || "—"],
+               ["fault", r.faultClass || "—"], ["claim", r.proposition]],
+      });
+    }
   }
   const PHASE = {core: "PARSE", window: "ROUTE", lane: "TRACE", candidate: "TRACE", root: "SUBMIT"};
   for (const c of clusters) c.phaseKey = c.kind === "query" ? c.phase : PHASE[c.kind];
 
   for (const c of clusters) c.groups = groupByEntity(c.fids, scene);
   return {clusters, byId};
+}
+
+const countBy = (list, key) => {
+  const m = new Map();
+  for (const x of list) m.set(key(x), (m.get(key(x)) || 0) + 1);
+  return [...m].sort((a, b) => b[1] - a[1]);
+};
+
+// A ROUTE edge: what the view asked, then what it turned up (trouble signals first, else the
+// goal's state, else a count).
+function queryEdge(ev, c, fresh, scene) {
+  const facts = c.fids.map(fid => scene.factById.get(fid));
+  const ts = facts.map(f => f.t);
+  const signals = (ev.signals || []).map(([s, n]) => `${SIGNAL_LABEL[s]} ×${n}`);
+  let detail;
+  if (ev.name === "inspect") detail = ev.verdicts.length ? ev.verdicts.map(([v, n]) => `${v} ${n}`).join(" · ")
+    : ts.length ? `S${Math.min(...ts)}–S${Math.max(...ts)}` : `${ev.calls.length} calls`;
+  else if (ev.error) detail = `rejected · ${ev.error.code || "error"}`;
+  else if (signals.length) detail = signals.slice(0, 2).join(" · ");
+  else if (ev.goal) detail = `goal ${ev.goal.state}${ev.goal.decided.length ? ` · decided at S${ev.goal.decided.join(", S")}` : ""}`;
+  else if (ev.changes != null) detail = `${ev.changes} state changes`;
+  else detail = `${c.fids.length} facts`;
+  const card = [
+    ["asked", `${ev.name}(${JSON.stringify(ev.spec ?? ev.call?.arguments?.spec ?? "")})`],
+    ["steps", ts.length ? `S${Math.min(...ts)}–S${Math.max(...ts)}` : "—"],
+    ["returned", `${c.fids.length} facts · ${fresh} new`],
+    ["modules", countBy(facts, f => f.slot).map(([s, n]) => `${s} ${n}`).join(" · ") || "—"],
+  ];
+  if (signals.length) card.push(["signals", signals.join(" · ")]);
+  if (ev.goal) card.push(["goal", detail]);
+  if (ev.error) card.push(["error", ev.error.message]);
+  if (ev.name === "inspect") {
+    card[0] = ["asked", ev.spec];
+    if (ev.verdicts.length) card.push(["verdicts", ev.verdicts.map(([v, n]) => `${v} ${n}`).join(" · ")]);
+    if (ev.errors) card.push(["rejected", `${ev.errors} calls`]);
+  }
+  return {title: ev.intent || ev.name, detail, card};
 }
 
 // The entity a fact is mostly about: its first non-agent argument, else its first one.

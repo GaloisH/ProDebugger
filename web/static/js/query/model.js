@@ -20,15 +20,16 @@ async function readJsonl(ref, name) {
 }
 
 export async function loadQueryScene(ref) {
-  const [record, evidences, routeCandidates, result, toolCalls, traceQueries] = await Promise.all([
+  const [record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries] = await Promise.all([
     getJSON(ref, "canonical_record.json"),
     getJSON(ref, "evidences.json", {}),
     getJSON(ref, "route_candidates.json", []),
     getJSON(ref, "result.json", null),
+    getJSON(ref, "manager_plan.json", null),
     readJsonl(ref, "tool_calls.jsonl"),
     readJsonl(ref, "trace_queries.jsonl"),
   ]);
-  return buildQueryScene({record, evidences, routeCandidates, result, toolCalls, traceQueries});
+  return buildQueryScene({record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries});
 }
 
 // Collects fact ids (and evidence ids) anywhere inside a tool result.
@@ -44,7 +45,54 @@ function collectIds(value, out = {fids: new Set(), eids: new Set()}) {
   return out;
 }
 
-export function buildQueryScene({record, evidences, routeCandidates, result, toolCalls, traceQueries}) {
+// Routing signals that point at trouble (the benign ones, like a state change, are left out).
+export const SIGNAL_LABEL = {
+  no_new_task_evidence: "no progress", schema_repetition: "same pattern", near_duplicate_action: "near-repeat",
+  repeated_action: "repeated action", unbound_intention: "vague plan", invalid_action: "invalid action",
+  no_effect: "no effect", failed_precondition: "failed precondition", missing_effect: "missing effect",
+  terminal_cutoff: "cut off", claims_task_complete: "claims done", contradicted_completion: "false completion",
+  constraint_substitution: "constraint swapped", wrong_task_decision: "wrong decision", alignment_violation: "plan/action mismatch",
+};
+
+function countSignals(value, out = new Map()) {
+  if (Array.isArray(value)) value.forEach(v => countSignals(v, out));
+  else if (value && typeof value === "object") {
+    for (const [k, v] of Object.entries(value)) {
+      if ((k === "signals" || k === "routing_signals") && Array.isArray(v)) {
+        for (const s of v) if (SIGNAL_LABEL[s]) out.set(s, (out.get(s) || 0) + 1);
+      } else countSignals(v, out);
+    }
+  }
+  return out;
+}
+
+// What a view asks, in plain words, with its step range.
+const VIEW_INTENT = {
+  requirements: "read the task contract", episodes: "review episodes", scan: "scan every step", local_audits: "audit each step",
+  changes: "list state changes", steps: "read steps", state: "read world state", module: "read module text",
+  packet: "read the evidence packet", statement_discovery: "find statements", rules: "list rules",
+};
+export function viewIntent(name, spec) {
+  if (name === "view_evidence") return "look up rule evidence";
+  const [base, ...mods] = String(spec || "").split("|").map(s => s.trim());
+  const range = mods.map(m => m.match(/^steps:(\d+):(\d+)$/)).find(Boolean);
+  const section = mods.find(m => m.startsWith("section:"))?.slice(8).split(",")[0].replace(/_/g, " ");
+  let text;
+  if (base.startsWith("entity:req:")) text = section ? `check the goal's ${section}` : "check the goal";
+  else if (base.startsWith("entity:")) text = `follow ${base.slice(7)}`;
+  else text = VIEW_INTENT[base.split(":")[0]] || `view ${base}`;
+  if (range) text = text.replace(/ every step| each step|$/, m => m ? ` steps ${range[1]}–${range[2]}` : ` S${range[1]}–${range[2]}`);
+  return text;
+}
+
+// The goal's recorded state, wherever the view put it.
+function goalState(data) {
+  const s = data?.status || data?.requirements?.[0]?.status;
+  const state = s?.state || data?.requirements?.[0]?.terminal_state;
+  return state ? {state, decided: s?.decision_steps || []} : null;
+}
+
+export function buildQueryScene({record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries}) {
   const facts = (record.facts || []).map(f => ({
     id: `f${f.fid}`, type: "fact", fid: f.fid, t: f.t, slot: f.slot, side: f.side, rel: f.rel,
     args: (f.args || []).map(entityKey), value: f.value, basis: f.basis || [], span: f.span || "",
@@ -115,6 +163,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, too
     const args = call.arguments || {};
     const ev = {phase: call.phase, name: call.name, ordinal: call.ordinal, call, error, fids: [], eids: [], goals: [], windows: [], lanes: [], candidates: []};
     if (error) {
+      ev.intent = viewIntent(call.name, args.spec);
       ev.title = `${call.name} rejected`;
       ev.caption = `${call.phase} asked ${call.name}${args.spec ? `(${args.spec})` : ""}; the tool refused: ${short(error.message, 120)}`;
       events.push(ev);
@@ -131,10 +180,15 @@ export function buildQueryScene({record, evidences, routeCandidates, result, too
         for (const g of goals) ev.fids.push(...g.facts);
       }
       ev.fids = [...new Set(ev.fids)];
+      ev.intent = viewIntent(call.name, spec);
+      ev.signals = [...countSignals(data)].sort((a, b) => b[1] - a[1]);
+      ev.goal = goalState(data);
+      ev.changes = Array.isArray(data?.changes) ? (data.truncation?.sections?.find(s => s.path === "changes")?.total ?? data.changes.length) : null;
       ev.title = `${call.name}("${short(spec, 48)}")`;
+      const signs = ev.signals.slice(0, 3).map(([k, n]) => `${SIGNAL_LABEL[k]} ×${n}`).join(", ");
       ev.caption = call.phase === "MAP"
-        ? `MAP reads the task contract: ${goals.map(g => g.key).join(", ") || "no structured goal"}, then hands the goal map to ROUTE.`
-        : `ROUTE queries the record with ${call.name}("${short(spec, 40)}") and gets back ${ev.fids.length} fact${ev.fids.length === 1 ? "" : "s"}${ev.eids.length ? ` and ${ev.eids.length} rule findings` : ""}.`;
+        ? `MAP reads the task contract: ${goals.map(g => g.key).join(", ") || "no structured goal"}${ev.goal ? ` (${ev.goal.state})` : ""}, then hands the goal map to ROUTE.`
+        : `ROUTE asks the record to ${ev.intent} and gets back ${ev.fids.length} fact${ev.fids.length === 1 ? "" : "s"}${signs ? `; trouble signs: ${signs}` : ev.goal ? `; the goal is ${ev.goal.state}` : ""}.`;
     } else if (call.name === "route_cases") {
       const cases = args.candidates || [];
       ev.windows = cases.map(c => `w:${c.candidate_id}`).filter(id => windows.some(w => w.id === id));
@@ -145,7 +199,8 @@ export function buildQueryScene({record, evidences, routeCandidates, result, too
       ev.phase = "MANAGER";
       for (const a of args.assignments || []) {
         const lane = {id: `l:${a.agent_id}`, type: "lane", agent: a.agent_id, anchor: a.anchor_case_id,
-                      cases: a.route_case_ids || [], question: a.question || "", rows: [], steps: [], fids: [], candidates: []};
+                      cases: a.route_case_ids || [], question: a.question || "", targets: a.search_targets || [],
+                      rows: [], steps: [], fids: [], candidates: [], purpose: ""};
         lanes.set(a.agent_id, lane);
         ev.lanes.push(lane.id);
         const w = windowByCase.get(a.anchor_case_id);
@@ -161,7 +216,10 @@ export function buildQueryScene({record, evidences, routeCandidates, result, too
       ev.fids = [...fids];
       ev.sql = data?.query || args.sql || "";
       ev.lanes = lane ? [lane.id] : [];
-      if (lane) { lane.rows = rows; lane.steps = data?.returned_steps || []; lane.fids = ev.fids; }
+      if (lane) {
+        lane.rows = rows; lane.steps = data?.returned_steps || []; lane.fids = ev.fids;
+        lane.purpose = (ev.sql.match(/Purpose:\s*(.+)/) || [])[1]?.trim() || "";
+      }
       ev.title = `query_logs(${lane?.agent || "?"})`;
       ev.caption = `TRACE writes one SQL query over the logs: ${rows.length} rows on ${(data?.returned_steps || []).length} steps come back as evidence for lane ${lane?.agent || "?"}.`;
     } else if (call.name === "assess") {
@@ -179,12 +237,26 @@ export function buildQueryScene({record, evidences, routeCandidates, result, too
       const cs = ev.candidates.map(id => candidates.find(c => c.id === id));
       ev.title = `assess(${lane?.agent || "?"})`;
       ev.caption = `TRACE judges lane ${lane?.agent || "?"} and proposes ${cs.length ? cs.map(c => `S${c.step} ${c.module} (${c.status}${c.faultClass ? `, ${c.faultClass}` : ""})`).join("; ") : "no candidate"}.`;
+    } else if (FACT_TOOLS.has(call.name)) {
+      // One fact at a time: check(fid) judges it, span(fid) reads its source, and so on.
+      ev.fids = [...new Set([args.fid, ...ids.fids])].filter(fid => factById.has(fid));
+      ev.verdict = call.name === "check" ? data?.value : null;
     } else {
       ev.fids = [...ids.fids].filter(fid => factById.has(fid));
       ev.title = call.name;
       ev.caption = `${call.phase} calls ${call.name}.`;
     }
     events.push(ev);
+  }
+
+  // Consecutive single-fact calls become one "inspect" event, so a run of forty check/span calls
+  // reads as one access instead of forty.
+  for (let i = 0; i < events.length; i++) {
+    if (!FACT_TOOLS.has(events[i].name)) continue;
+    let j = i;
+    while (j + 1 < events.length && FACT_TOOLS.has(events[j + 1].name) && events[j + 1].phase === events[i].phase) j++;
+    const run = events.slice(i, j + 1);
+    events.splice(i, run.length, inspectEvent(run));
   }
 
   // Candidates written by assess without tool_calls (older logs) still come from trace_queries.
@@ -200,7 +272,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, too
     const cand = candidates.find(c => c.step === r.step && (c.module === r.module || c.fid === fid));
     root = {id: "root", type: "root", step: r.step, module: r.module, fid, faultClass: r.fault_class,
             proposition: r.proposition || "", quote: r.output_quote || "", candidate: cand?.id || null,
-            accepted: !!result.accepted, status: result.status};
+            accepted: !!result.accepted, status: result.status, rule: decidingRule(result, managerPlan)};
   }
   events.push({
     phase: "SUBMIT", name: "submit", title: root ? `root = S${root.step} ${root.module}` : "no root",
@@ -222,6 +294,35 @@ export function buildQueryScene({record, evidences, routeCandidates, result, too
            relations: record.relations || {}, kinds},
     facts, factById, entities, goals, evidence, windows, lanes: [...lanes.values()], candidates, root, events,
   };
+}
+
+const FACT_TOOLS = new Set(["check", "span", "neighbours", "state", "trace_fact"]);
+const tally = list => { const m = new Map(); list.forEach(x => x != null && m.set(x, (m.get(x) || 0) + 1)); return [...m].sort((a, b) => b[1] - a[1]); };
+const VERDICT_ORDER = ["viol", "unk", "sat"];
+
+function inspectEvent(run) {
+  const fids = [...new Set(run.flatMap(e => e.fids))];
+  const tools = tally(run.map(e => e.name));
+  const verdicts = tally(run.map(e => e.verdict)).sort((a, b) => VERDICT_ORDER.indexOf(a[0]) - VERDICT_ORDER.indexOf(b[0]));
+  const errors = run.filter(e => e.error).length;
+  const only = tools.length === 1 ? tools[0][0] : null;
+  const intent = only === "check" ? `check ${fids.length} facts` : only === "span" ? `read the source of ${fids.length} facts` : `inspect ${fids.length} facts`;
+  const toolText = tools.map(([t, n]) => `${t} ×${n}`).join(", ");
+  return {
+    phase: run[0].phase, name: "inspect", ordinal: run[0].ordinal, call: run[0].call, calls: run, fids, eids: [], goals: [],
+    windows: [], lanes: [], candidates: [], tools, verdicts, errors, intent, spec: toolText,
+    title: `${intent} (${toolText})`,
+    caption: `${run[0].phase} looks at facts one by one: ${toolText}${verdicts.length ? `; verdicts ${verdicts.map(([v, n]) => `${v} ${n}`).join(", ")}` : ""}.`,
+  };
+}
+
+// The manager's decision rule SUBMIT leaned on: the first rule its reasoning names.
+function decidingRule(result, plan) {
+  const rules = plan?.decision_rules || [];
+  const text = [result.root?.reasoning, ...(result.candidate_comparisons || []).map(c => c.reasoning)].join(" ");
+  const named = rules.map(r => [r, text.indexOf(r.rule_id)]).filter(([, i]) => i >= 0).sort((a, b) => a[1] - b[1]);
+  const r = named[0]?.[0];
+  return r ? {id: r.rule_id, conclusion: r.conclusion || "", count: rules.length} : rules.length ? {id: null, count: rules.length} : null;
 }
 
 export const factRepr = f => `[${f.fid}] t${f.t} ${f.slot}/${f.side} ${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? JSON.stringify(f.value) : JSON.stringify(f.value), 90)}`;

@@ -4,7 +4,7 @@
 import {esc, short, loader} from "../util.js";
 import {caseHref, queryHref} from "../routes.js";
 import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js";
-import {buildClusters, factLabel} from "../query/clusters.js";
+import {buildClusters, chainOf, factLabel} from "../query/clusters.js";
 import {layoutClusters, TIERS} from "../query/layout.js";
 import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
@@ -18,6 +18,12 @@ const CASES = [
 ];
 export const DEFAULT_CASE = CASES[0].ref;
 const PHASES = ["PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"];
+// Overview camera presets: the whole tower from the front, from above, from the side.
+const OVERVIEW_CAM = {
+  front: {target: [0, 6.5, 0], yaw: 0.55, pitch: 0.42, dist: 64},
+  top: {target: [0, 6, 0], yaw: 0.55, pitch: 1.42, dist: 58},
+  side: {target: [0, 7, 0], yaw: 0.55 + Math.PI / 2, pitch: 0.1, dist: 62},
+};
 const PHASE_NOTE = {
   PARSE: "compile the log into the DSL", MAP: "read the task contract", ROUTE: "query the record, open suspect windows",
   MANAGER: "assign one question per window", TRACE: "test each window with SQL", SUBMIT: "name the root cause",
@@ -36,21 +42,39 @@ export function mountQuery(app, route) {
     root.innerHTML = template(scene, model, ref);
     stage = createStage(root.querySelector(".qg-canvas"), scene, model, layout);
     const frameAt = createTour(scene, model, layout);
-    const state = {i: 0, p: 0, playing: true, speed: 1};
+    const last = scene.events.length - 1;
+    // Tour plays the calls in order; Overview shows every cloud at once for free exploration.
+    const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null,
+                   filter: {phases: new Set(), role: null}};
     const ui = bindUi(root, scene, model, stage);
     ui.setEvent(state.i);
 
     stage.start(dt => {
-      if (state.playing) {
+      const overview = state.mode === "overview";
+      if (!overview && state.playing) {
         state.p += dt * state.speed / eventDuration(scene.events[state.i]);
         if (state.p >= 1) {
-          if (state.i < scene.events.length - 1) { state.i++; state.p = 0; ui.setEvent(state.i); }
+          if (state.i < last) { state.i++; state.p = 0; ui.setEvent(state.i); }
           else { state.p = 1; setPlaying(false); }
         }
       }
-      ui.setProgress(state.i, state.p);
-      return frameAt(state.i, state.p);
+      if (!overview) ui.setProgress(state.i, state.p);
+      const out = overview ? frameAt(last, 1) : frameAt(state.i, state.p);
+      Object.assign(out.frame, {chain: state.chain, filter: state.filter, labelAll: overview});
+      if (overview) { out.frame.focus = new Set(); out.camera = OVERVIEW_CAM[state.view]; }
+      return out;
     });
+
+    const setMode = mode => {
+      state.mode = mode;
+      history.replaceState(null, "", location.hash.split("?")[0] + (mode === "overview" ? "?mode=overview" : ""));
+      stage.follow();
+      stage.release();
+      state.chain = null;
+      ui.setMode(mode, state.view);
+      if (mode === "overview") setPlaying(false);
+      else { go(0); setPlaying(true); }
+    };
 
     const setPlaying = on => { state.playing = on; ui.setPlaying(on); };
     const go = (i, p = 0) => { state.i = Math.max(0, Math.min(scene.events.length - 1, i)); state.p = p; ui.setEvent(state.i); };
@@ -61,12 +85,25 @@ export function mountQuery(app, route) {
     };
     ui.on("play", toggle);
     ui.on("step", d => go(state.i + d));
-    ui.on("seek", i => go(i, 0.5));
-    ui.on("phase", ph => { const i = scene.events.findIndex(e => e.phase === ph); if (i >= 0) go(i); });
+    // In Overview the timeline and the phase bar pick a cloud instead of moving the playhead.
+    const pick = i => stage.select(scene.events[i].cluster || "core");
+    ui.on("seek", i => state.mode === "overview" ? pick(i) : go(i, 0.5));
+    ui.on("phase", ph => {
+      const i = scene.events.findIndex(e => e.phase === ph);
+      if (i >= 0) state.mode === "overview" ? pick(i) : go(i);
+    });
+    ui.on("mode", setMode);
+    ui.on("view", v => { state.view = v; stage.release(); ui.setMode(state.mode, v); });
+    ui.on("filterPhase", ph => { state.filter.phases.has(ph) ? state.filter.phases.delete(ph) : state.filter.phases.add(ph); ui.setFilter(state.filter); });
+    ui.on("filterRole", r => { state.filter.role = state.filter.role === r ? null : r; ui.setFilter(state.filter); });
     ui.on("speed", s => { state.speed = s; });
-    ui.on("follow", () => stage.follow());
+    ui.on("follow", () => { stage.follow(); stage.release(); });
     ui.on("jump", i => { stage.follow(); go(i, 0.5); setPlaying(false); });
-    stage.on("select", sel => { if (sel) setPlaying(false); ui.inspect(sel); });
+    stage.on("select", sel => {
+      if (sel) setPlaying(false);
+      state.chain = sel?.cluster && sel.cluster.id !== "core" ? chainOf(model, sel.cluster.id) : null;
+      ui.inspect(sel);
+    });
     stage.on("manual", () => ui.syncFollow());
     stage.on("view", () => ui.syncFollow());
     stage.on("hover", h => ui.hover(h));
@@ -78,6 +115,7 @@ export function mountQuery(app, route) {
       else if (e.key === "Escape") stage.back();
     };
     document.addEventListener("keydown", keyHandler);
+    if (route.query?.get("mode") === "overview") setMode("overview");
   }).catch(error => {
     if (destroyed) return;
     root.innerHTML = `<div class="qg-error"><h2>Could not build the query graph</h2><p>${esc(error.message)}</p>
@@ -106,6 +144,10 @@ function template(scene, model, ref) {
         <p><select class="qg-case" aria-label="Case">${CASES.map(c => `<option value="${esc(queryHref(c.ref))}"${c.ref[1] === ref[2] ? " selected" : ""}>${esc(c.label)}</option>`).join("")}${CASES.some(c => c.ref[1] === ref[2]) ? "" : `<option selected>${esc(scene.meta.tid)}</option>`}</select>
           <a href="${caseHref(ref)}" title="Open in the workbench">${esc(scene.meta.tid)}</a></p>
       </div>
+      <div class="qg-modes">
+        <div class="qg-seg" role="group" aria-label="Mode"><button data-mode="tour" aria-pressed="true">Tour</button><button data-mode="overview" aria-pressed="false">Overview</button></div>
+        <div class="qg-seg qg-views" role="group" aria-label="Camera" hidden><button data-view="front">Front</button><button data-view="top">Top</button><button data-view="side">Side</button></div>
+      </div>
       <ol class="qg-phases">${PHASES.filter(ph => scene.events.some(e => e.phase === ph)).map((ph, k) => `<li><button data-phase="${ph}" title="${esc(PHASE_NOTE[ph])}"><span>${String(k + 1).padStart(2, "0")}</span><b>${ph}</b></button></li>`).join("")}</ol>
     </header>
     <aside class="qg-legend" aria-label="Legend">
@@ -118,17 +160,17 @@ function template(scene, model, ref) {
       <h2>A fact becomes evidence</h2>
       <ul class="qg-key">
         <li><i class="k-pt"></i>fact the debugger read</li>
-        <li><i class="k-pt" data-role="issue"></i>clue in a suspect window</li>
-        <li><i class="k-pt" data-role="candidate"></i>step TRACE blames</li>
-        <li><i class="k-pt" data-role="root"></i>root cause</li>
+        <li data-filter-role="issue" title="Show only these facts"><i class="k-pt" data-role="issue"></i>clue in a suspect window</li>
+        <li data-filter-role="candidate" title="Show only these facts"><i class="k-pt" data-role="candidate"></i>step TRACE blames</li>
+        <li data-filter-role="root" title="Show only these facts"><i class="k-pt" data-role="root"></i>root cause</li>
       </ul>
       <h2>Clouds by phase</h2>
       <ul class="qg-key">
-        ${["MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"].filter(ph => ph !== "MANAGER" || n("lane")).map(ph => `<li data-phase="${ph}"><i class="k-cloud"></i>${ph.toLowerCase()} · ${PHASE_NOTE[ph]}</li>`).join("")}
+        ${["PARSE", "MAP", "ROUTE", "TRACE", "SUBMIT"].filter(ph => model.clusters.some(c => c.phaseKey === ph)).map(ph => `<li data-phase="${ph}" data-filter-phase="${ph}" title="Hide or show this phase"><i class="k-cloud"></i>${ph.toLowerCase()} · ${PHASE_NOTE[ph]}</li>`).join("")}
         <li><i class="k-dot"></i>pulled from the record</li>
         <li><i class="k-line"></i>leads to</li>
       </ul>
-      <p class="qg-hint">Click a cloud to open it by entity, an entity to read its facts. Esc folds back.</p>
+      <p class="qg-hint">Click a cloud to light its causal chain, click it again to open it by entity, then an entity to read its facts. Esc steps back. Legend rows filter.</p>
     </aside>
     <aside class="qg-inspect" hidden></aside>
     <div class="qg-tip" hidden></div>
@@ -163,6 +205,14 @@ function bindUi(root, scene, model, stage) {
       handlers.speed?.(s);
     } else if (act === "prev" || act === "next") handlers.step?.(act === "prev" ? -1 : 1);
     else if (act) handlers[act]?.();
+    const mode = e.target.closest("[data-mode]");
+    if (mode) handlers.mode?.(mode.dataset.mode);
+    const cam = e.target.closest("[data-view]");
+    if (cam) handlers.view?.(cam.dataset.view);
+    const fp = e.target.closest("[data-filter-phase]");
+    if (fp) handlers.filterPhase?.(fp.dataset.filterPhase);
+    const fr = e.target.closest("[data-filter-role]");
+    if (fr) handlers.filterRole?.(fr.dataset.filterRole);
     const tick = e.target.closest(".qg-tick");
     if (tick) handlers.seek?.(Number(tick.dataset.i));
     const ph = e.target.closest(".qg-phases [data-phase]");
@@ -215,7 +265,8 @@ function bindUi(root, scene, model, stage) {
     const phase = ev?.phase || "PARSE";
     inspect.innerHTML = `${crumbs(c)}
       <p class="qg-kind"><span class="qg-chip" data-phase="${esc(phase)}">${esc(phase)}</span>${esc(c.kind)}${opened ? ` · <button class="qg-link" data-fold>fold</button>` : ""}</p>
-      <h3>${esc(c.label)}</h3><p class="qg-muted">${esc(c.detail)}</p>${body}${groups}${sharedHtml}`;
+      <h3>${esc(c.label)}</h3><p class="qg-muted">${esc(c.detail)}</p>
+      ${!opened && c.groups.length ? `<button class="qg-open" data-open="${esc(c.id)}">Open by entity ›</button>` : ""}${body}${groups}${sharedHtml}`;
   }
 
   function showGroup(c, gi) {
@@ -269,7 +320,36 @@ function bindUi(root, scene, model, stage) {
       if (t) $(".qg-head-mark").style.left = `${t.offsetLeft + t.offsetWidth * p}px`;
     },
     setPlaying(on) { $(".qg-play").textContent = on ? "❚❚" : "▶"; },
-    syncFollow() { $(".qg-follow").hidden = !(stage.view.cluster || stage.manual); },
+    syncFollow() {
+      const b = $(".qg-follow");
+      b.hidden = !(stage.view.cluster || stage.manual || (root.classList.contains("is-overview") && stage.view.selected));
+      b.textContent = root.classList.contains("is-overview") ? "Reset view" : "Follow tour";
+    },
+    setMode(mode, view) {
+      root.classList.toggle("is-overview", mode === "overview");
+      root.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+      $(".qg-views").hidden = mode !== "overview";
+      root.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
+      if (mode === "overview") {
+        ticks.forEach(t => { t.classList.add("done"); t.classList.remove("now"); });
+        root.querySelectorAll(".qg-phases button").forEach(b => { b.classList.add("done"); b.classList.remove("now"); });
+        const chip = $(".qg-caption .qg-chip");
+        chip.textContent = "OVERVIEW";
+        chip.dataset.phase = "SUBMIT";
+        $(".qg-cap-title").textContent = `${scene.events.length} calls · ${model.clusters.length} clouds`;
+        $(".qg-cap-text").textContent = "Every access at once. Click a cloud to light the chain it belongs to, click it again to open it; the timeline and phase bar pick clouds too.";
+        $(".qg-count").textContent = `${scene.events.length} calls`;
+        showCluster(model.byId.get("root") || model.byId.get("core"));
+      } else this.setEvent(current);
+      this.syncFollow();
+    },
+    setFilter(filter) {
+      root.querySelectorAll("[data-filter-phase]").forEach(li => li.classList.toggle("off", filter.phases.has(li.dataset.filterPhase)));
+      root.querySelectorAll("[data-filter-role]").forEach(li => {
+        li.classList.toggle("only", filter.role === li.dataset.filterRole);
+        li.classList.toggle("off", !!filter.role && filter.role !== li.dataset.filterRole);
+      });
+    },
     hover(h) {
       if (!h) { tip.hidden = true; return; }
       let html = "";
@@ -286,7 +366,7 @@ function bindUi(root, scene, model, stage) {
     inspect(sel) {
       this.syncFollow();
       if (!sel) { showEvent(current); return; }
-      if (sel.kind === "cluster") showCluster(sel.cluster, scene.events[sel.cluster.event], true);
+      if (sel.kind === "cluster") showCluster(sel.cluster, scene.events[sel.cluster.event], sel.opened);
       else if (sel.kind === "group") showGroup(sel.cluster, sel.gi);
       else if (sel.kind === "fact") showFact(sel.fid, stage.view);
     },

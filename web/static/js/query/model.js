@@ -278,7 +278,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     phase: "SUBMIT", name: "submit", title: root ? `root = S${root.step} ${root.module}` : "no root",
     caption: root
       ? `SUBMIT compares the candidates and names the root cause: step ${root.step} ${root.module}${root.fid != null ? ` (fact ${root.fid})` : ""}, ${root.faultClass || "unclassified"}. ${short(root.proposition, 150)}`
-      : `SUBMIT stops without a root (${result?.stop_reason || result?.status || "no result"}).`,
+      : `SUBMIT stops without a root: ${short(result?.stop_reason || result?.status || "no result", 220)}`,
     fids: root?.fid != null ? [root.fid] : [], eids: [], goals: [], windows: [], lanes: [], candidates: root?.candidate ? [root.candidate] : [],
     root: !!root,
   });

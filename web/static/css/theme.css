@@ -65,11 +65,9 @@
   /* Debugger phases (trace is terracotta so it stays apart from the amber accent) */
   --map: #7fa7d9; --route: #b39ad6; --trace: #e08a62; --submit: #8cc49a;
   --manager: #d48fb6; --parse: #8d9aa8;
-  /* Query graph (dark only): void, plates, and one glow colour per DSL type */
-  --qg-void: #04060a; --qg-plate: #0e1620; --qg-plate-line: #22303d; --qg-grid: #ffffff0d;
-  --qg-label: #c9d3dc; --qg-label-dim: #6f7f8e; --qg-beam: #b39ad6;
-  --qg-env: #5fa0e6; --qg-mind: #a58cf0; --qg-task: #f0cf86; --qg-entity: #4fc6c0; --qg-goal: #f0cf86;
-  --qg-evidence: #e9854f; --qg-window: #e0b867; --qg-lane: #e08a62; --qg-candidate: #f2a46a; --qg-root: #ff6f61;
+  /* Query graph (dark only): monochrome points and hairlines, one amber focus */
+  --qg-void: #06080b; --qg-ink: #aab4be; --qg-ink-hi: #eef2f6; --qg-ink-dim: #56616c; --qg-line: #222c36; --qg-line-hi: #46535f;
+  --qg-focus: #e0b867; --qg-label: #b9c3cc; --qg-label-dim: #66737f; --qg-panel: #0a0e13;
   --sans: 'IBM Plex Sans', 'Segoe UI', 'Microsoft YaHei UI', Arial, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace;
   --radius: .9rem;

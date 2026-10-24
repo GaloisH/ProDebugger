@@ -11,7 +11,7 @@ export const TIERS = [
 ];
 
 // Cloud radius grows with the cube root of its size, like a ball of packed points.
-export const cloudRadius = n => n <= 1 ? 0.25 : 0.32 * Math.cbrt(n) + 0.25;
+export const cloudRadius = n => n <= 1 ? 0.22 : 0.26 * Math.cbrt(n) + 0.18;
 
 export function layoutClusters({clusters}) {
   const pos = new Map(), radius = new Map(), angle = new Map();
@@ -23,7 +23,7 @@ export function layoutClusters({clusters}) {
       angle.set(c.id, a);
       const r = members.length === 1 && t.tier > 1 ? 0 : t.ring;
       pos.set(c.id, [r * Math.cos(a), t.y, r * Math.sin(a)]);
-      radius.set(c.id, c.kind === "core" ? 0.42 * Math.cbrt(c.fids.length) + 0.4 : cloudRadius(c.fids.length));
+      radius.set(c.id, c.kind === "core" ? 0.34 * Math.cbrt(c.fids.length) + 0.3 : cloudRadius(c.fids.length));
     });
   }
   return {pos, radius, angle, top: TIERS[TIERS.length - 1].y};

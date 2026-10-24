@@ -51,21 +51,25 @@ export function buildClusters(scene) {
 
   // Links: the core feeds every query; queries that saw a window's issue facts feed it;
   // a window feeds its lanes, a lane its candidates, the chosen candidate the root.
+  // Each link carries a short "what happened" label for the edge.
   const byId = new Map(clusters.map(c => [c.id, c]));
-  const link = (a, b, weight = 1) => { if (byId.has(a) && byId.has(b)) byId.get(b).links.push({from: a, weight}); };
+  const link = (a, b, label, weight = 1) => { if (byId.has(a) && byId.has(b)) byId.get(b).links.push({from: a, label, weight}); };
+  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
   for (const c of clusters) {
-    if (c.kind === "query") link("core", c.id);
+    if (c.kind === "query") link("core", c.id, c.error ? "rejected" : `pulls ${plural(c.fids.length, "fact")}`);
     if (c.kind === "window") {
       const own = new Set(c.fids);
       for (const q of clusters.filter(x => x.kind === "query")) {
         const n = q.fids.filter(fid => own.has(fid)).length;
-        if (n) link(q.id, c.id, n / own.size);
+        if (n) link(q.id, c.id, `${n}/${own.size} clues → S${c.ref.step}`, n / own.size);
       }
     }
-    if (c.kind === "lane") link(`w:${c.ref.anchor}`, c.id);
-    if (c.kind === "candidate") link(c.ref.lane, c.id);
-    if (c.kind === "root") link(c.ref.candidate || clusters.find(x => x.kind === "lane")?.id, c.id);
+    if (c.kind === "lane") link(`w:${c.ref.anchor}`, c.id, "assigned to TRACE");
+    if (c.kind === "candidate") link(c.ref.lane, c.id, `SQL ${plural(byId.get(c.ref.lane)?.ref.rows.length || 0, "row")} → ${c.ref.status}`);
+    if (c.kind === "root") link(c.ref.candidate || clusters.find(x => x.kind === "lane")?.id, c.id, "chosen as root cause");
   }
+  const PHASE = {core: "PARSE", window: "ROUTE", lane: "TRACE", candidate: "TRACE", root: "SUBMIT"};
+  for (const c of clusters) c.phaseKey = c.kind === "query" ? c.phase : PHASE[c.kind];
 
   for (const c of clusters) c.groups = groupByEntity(c.fids, scene);
   return {clusters, byId};
@@ -92,6 +96,19 @@ function groupByEntity(fids, scene) {
     list = [...list.slice(0, MAX_GROUPS - 1), {key: `+${rest.length} more entities`, other: true, fids: rest.flatMap(g => g.fids)}];
   }
   return list;
+}
+
+// Evidence roles a fact can earn, each tied to the cloud that gives it; the stage shows a role
+// only once that cloud is on screen. Later roles win: issue < candidate < root.
+export const ROLE_ORDER = ["issue", "candidate", "root"];
+export function factRoles(clusters) {
+  const roles = new Map();
+  const give = (fid, role, id) => { if (!roles.has(fid)) roles.set(fid, []); roles.get(fid).push({role, id}); };
+  for (const c of clusters) {
+    const role = c.kind === "window" ? "issue" : c.kind === "candidate" ? "candidate" : c.kind === "root" ? "root" : null;
+    if (role) c.fids.forEach(fid => give(fid, role, c.id));
+  }
+  return roles;
 }
 
 export const factLabel = f => `${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 46)}  @S${f.t}`;

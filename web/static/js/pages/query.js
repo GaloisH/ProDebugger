@@ -107,14 +107,18 @@ function template(scene, model, ref) {
         <dt>relations</dt><dd>${rels}</dd><dt>goals</dt><dd>${scene.goals.length}</dd><dt>steps</dt><dd>${scene.meta.steps}</dd>
       </dl>
       <p class="qg-formula">Fact ≔ rel(args) = value @t</p>
-      <h2>Reading the tower</h2>
+      <h2>A fact becomes evidence</h2>
       <ul class="qg-key">
-        <li><i class="k-pt"></i>one fact</li>
-        <li><i class="k-cloud"></i>one access · ${n("query")} queries</li>
-        <li><i class="k-dot"></i>drawn from the record</li>
-        <li><i class="k-line"></i>shares facts with</li>
-        <li><i class="k-dia"></i>candidate · ${n("candidate")}</li>
-        <li><i class="k-dia on"></i>root</li>
+        <li><i class="k-pt"></i>fact the debugger read</li>
+        <li><i class="k-pt" data-role="issue"></i>clue in a suspect window</li>
+        <li><i class="k-pt" data-role="candidate"></i>step TRACE blames</li>
+        <li><i class="k-pt" data-role="root"></i>root cause</li>
+      </ul>
+      <h2>Clouds by phase</h2>
+      <ul class="qg-key">
+        ${["MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"].filter(ph => ph !== "MANAGER" || n("lane")).map(ph => `<li data-phase="${ph}"><i class="k-cloud"></i>${ph.toLowerCase()} · ${PHASE_NOTE[ph]}</li>`).join("")}
+        <li><i class="k-dot"></i>pulled from the record</li>
+        <li><i class="k-line"></i>leads to</li>
       </ul>
       <p class="qg-hint">Click a cloud to open it by entity, an entity to read its facts. Esc folds back.</p>
     </aside>

@@ -2,12 +2,17 @@
 // Flat square points, 1px lines and HUD brackets; the only motion is camera easing and points
 // moving to their place when a cloud appears, expands or folds.
 import {ballPoint, cloudRadius, TIERS} from "./layout.js";
-import {factLabel} from "./clusters.js";
+import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js";
 
-const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim"];
+const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim", "issue", "cand"];
+const PHASE_TOKENS = {PARSE: "parse", MAP: "map", ROUTE: "route", MANAGER: "manager", TRACE: "trace", SUBMIT: "submit"};
 const readColors = () => {
   const css = getComputedStyle(document.documentElement);
-  return Object.fromEntries(TOKENS.map(t => [t, css.getPropertyValue(`--qg-${t}`).trim() || "#888"]));
+  const read = name => css.getPropertyValue(name).trim() || "#888";
+  return {
+    ...Object.fromEntries(TOKENS.map(t => [t, read(`--qg-${t}`)])),
+    phase: Object.fromEntries(Object.entries(PHASE_TOKENS).map(([k, t]) => [k, read(`--${t}`)])),
+  };
 };
 const MAX_FACTS = 26;     // facts listed when a group opens; the inspector has the rest
 const FACT_GAP = 0.5;     // world units between fact rows
@@ -29,6 +34,15 @@ export function createStage(canvas, scene, model, layout) {
 
   // Point instances per cloud; a cloud's points start at the core and travel out to it.
   const inst = new Map(clusters.map(c => [c.id, c.fids.map((fid, k) => ({fid, k, cur: null}))]));
+  // A fact's evidence role, counted only from clouds already on screen.
+  const roles = factRoles(clusters);
+  const roleColor = {issue: colors.issue, candidate: colors.cand, root: colors.focus};
+  function roleOf(fid) {
+    let best = -1;
+    for (const r of roles.get(fid) || []) if (frame.visible.has(r.id)) best = Math.max(best, ROLE_ORDER.indexOf(r.role));
+    return best < 0 ? null : ROLE_ORDER[best];
+  }
+  const phaseColor = c => colors.phase[c.phaseKey] || colors.label;
   const groupOf = new Map(clusters.map(c => [c.id, new Map(c.groups.flatMap((g, gi) => g.fids.map(fid => [fid, gi])))]));
 
   function resize() {
@@ -134,6 +148,25 @@ export function createStage(canvas, scene, model, layout) {
       ctx.fillText(detail, x1 + 10, y1 + 17);
     }
   }
+  // A short label at the middle of an edge, on a void plate so it reads over points.
+  function edgeLabel({a, b, text, color}) {
+    const pa = project(a), pb = project(b);
+    if (!pa || !pb) return;
+    // 40% of the way from the source: edges converging on one cloud keep their labels apart.
+    const x = pa.x + (pb.x - pa.x) * 0.4, y = pa.y + (pb.y - pa.y) * 0.4;
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    const w = ctx.measureText(text).width + 10;
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = colors.void;
+    ctx.fillRect(x - w / 2, y - 8, w, 16);
+    stroke(color, 0.7, 1);
+    ctx.strokeRect(x - w / 2 + 0.5, y - 7.5, w - 1, 15);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.fillText(text, x, y + 3.5);
+  }
   function diamond(x, y, r, fill) {
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
     fill ? ctx.fill() : ctx.stroke();
@@ -191,13 +224,19 @@ export function createStage(canvas, scene, model, layout) {
       ctx.beginPath(); ctx.moveTo(p.x - 5, p.y); ctx.lineTo(p.x + 3, p.y); ctx.stroke();
     }
 
-    // Links between clouds.
+    // Links between clouds, in the phase colour of the cloud they lead to. The edges of the
+    // focused, open or hovered cloud carry their short label.
+    const edgeLabels = [];
+    const hoverId = hover?.kind === "cluster" ? hover.cluster.id : null;
     for (const c of shown) for (const l of c.links) {
       if (!frame.visible.has(l.from)) continue;
       const hot = frame.focus.has(c.id) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
+      const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
       const spoke = l.from === "core";
-      stroke(hot ? colors.focus : colors["line-hi"], hot ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade, 1, spoke ? [1, 4] : null);
+      const color = phaseColor(c);
+      stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade, 1, spoke ? [1, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
+      if ((hot || hovered) && l.label) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), text: l.label, color});
     }
 
     // Points.
@@ -221,14 +260,16 @@ export function createStage(canvas, scene, model, layout) {
           const s = project(p.cur);
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
-          const size = Math.max(1.3, Math.min(inGroup ? 4 : 2.6, s.s * 0.085));
+          const role = roleOf(p.fid);
+          const size = Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
           ctx.globalAlpha = isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha;
-          ctx.fillStyle = inGroup ? colors.focus : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
+          if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * appear);
+          ctx.fillStyle = role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
           ctx.fillRect(s.x - size / 2, s.y - size / 2, size, size);
           if (inGroup && c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS) {
             targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
             ctx.globalAlpha = 1;
-            ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid ? colors.focus : colors.label;
+            ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid ? colors["ink-hi"] : colors.label;
             ctx.font = "11px 'IBM Plex Mono', monospace";
             ctx.textAlign = "left";
             ctx.fillText(factLabel(scene.factById.get(p.fid)), s.x + 9, s.y + 4);
@@ -245,7 +286,7 @@ export function createStage(canvas, scene, model, layout) {
       if (c.kind === "candidate" || c.kind === "root") {
         ctx.globalAlpha = alpha;
         ctx.fillStyle = colors.focus;
-        ctx.strokeStyle = c.kind === "root" || focus ? colors.focus : colors.ink;
+        ctx.strokeStyle = c.kind === "root" ? colors.focus : colors.cand;
         ctx.lineWidth = 1.2;
         diamond(pc.x, pc.y, c.kind === "root" ? 9 : 7, c.kind === "root");
       }
@@ -264,11 +305,11 @@ export function createStage(canvas, scene, model, layout) {
         if (!p) return;
         const r = Math.max(6, cloudRadius(g.fids.length) * 0.7 * p.s + 3);
         const on = view.group === gi, hot = hover?.kind === "group" && hover.gi === gi;
-        brackets(p.x, p.y, r, on || hot ? colors.focus : colors["line-hi"], 1);
+        brackets(p.x, p.y, r, on || hot ? phaseColor(open) : colors["line-hi"], 1);
         if (!on) {
           ctx.globalAlpha = view.group != null ? 0.5 : 1;
           ctx.textAlign = "left";
-          ctx.fillStyle = hot ? colors.focus : colors.label;
+          ctx.fillStyle = hot ? phaseColor(open) : colors.label;
           ctx.font = "11px 'IBM Plex Mono', monospace";
           ctx.fillText(g.key, p.x + r + 5, p.y - 1);
           ctx.fillStyle = colors["label-dim"];
@@ -287,13 +328,13 @@ export function createStage(canvas, scene, model, layout) {
       const hot = hover?.kind === "cluster" && hover.cluster === c;
       if (isOpen) {
         const r = layout.radius.get(c.id) * pc.s + 6;
-        brackets(pc.x, pc.y, r, colors.focus);
-        tag(pc.x, pc.y, r, clusterTitle(c), c.detail, colors.focus);
+        brackets(pc.x, pc.y, r, phaseColor(c));
+        tag(pc.x, pc.y, r, clusterTitle(c), c.detail, phaseColor(c));
         continue;
       }
-      if (focus || hot) brackets(pc.x, pc.y, sr + 4, focus ? colors.focus : colors.label, fade);
+      if (focus || hot) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
       if (c.kind !== "query" || focus || hot) {
-        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || c.kind === "root" ? colors.focus : colors.label, fade * Math.min(1, alpha / 0.6));
+        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || c.kind === "root" ? phaseColor(c) : colors.label, fade * Math.min(1, alpha / 0.6));
       } else {
         ctx.globalAlpha = 0.9 * fade * alpha;
         ctx.fillStyle = colors["label-dim"];
@@ -302,6 +343,7 @@ export function createStage(canvas, scene, model, layout) {
         ctx.fillText(callTag(c), pc.x, pc.y + sr + 12);
       }
     }
+    for (const e of edgeLabels) edgeLabel(e);
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(draw);
   }

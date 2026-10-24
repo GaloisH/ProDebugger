@@ -31,7 +31,11 @@ body.page-query .app { padding: 0; }
 .qg-phases b { font-weight: 500; }
 .qg-phases button:hover { color: var(--qg-label); }
 .qg-phases button.done { color: var(--qg-label); }
-.qg-phases button.now { color: var(--qg-focus); border-bottom-color: var(--qg-focus); }
+.qg-phases button.done { color: color-mix(in srgb, var(--ph) 60%, var(--qg-label-dim)); }
+.qg-phases button.now { color: var(--ph); border-bottom-color: var(--ph); }
+
+[data-phase="PARSE"] { --ph: var(--parse); } [data-phase="MAP"] { --ph: var(--map); } [data-phase="ROUTE"] { --ph: var(--route); }
+[data-phase="MANAGER"] { --ph: var(--manager); } [data-phase="TRACE"] { --ph: var(--trace); } [data-phase="SUBMIT"] { --ph: var(--submit); }
 
 /* Legend */
 .qg-legend { left: 1.2rem; top: 6.6rem; width: 13rem; padding: .75rem .85rem; font-size: .74rem; }
@@ -44,8 +48,12 @@ body.page-query .app { padding: 0; }
 .qg-key { margin: 0; padding: 0; list-style: none; display: grid; gap: .35rem; }
 .qg-key li { display: flex; align-items: center; gap: .6rem; }
 .qg-key i { flex: none; width: 1.1rem; height: .7rem; position: relative; }
-.qg-key .k-pt::after { content: ""; position: absolute; left: .4rem; top: .25rem; width: 3px; height: 3px; background: var(--qg-ink); }
-.qg-key .k-cloud { border: 1px solid var(--qg-line-hi); border-width: 1px 0; background: radial-gradient(circle, var(--qg-ink) 1px, transparent 1.4px) 0 0 / 4px 4px; }
+.qg-key .k-pt::after { content: ""; position: absolute; left: .35rem; top: .2rem; width: 4px; height: 4px; background: var(--qg-ink); }
+.qg-key .k-pt[data-role="issue"]::after { background: var(--qg-issue); }
+.qg-key .k-pt[data-role="candidate"]::after { background: var(--qg-cand); }
+.qg-key .k-pt[data-role="root"]::after { background: var(--qg-focus); }
+.qg-key .k-cloud { border: 1px solid var(--ph, var(--qg-line-hi)); background: radial-gradient(circle, var(--qg-ink) .8px, transparent 1.2px) 0 0 / 4px 4px; }
+.qg-key li[data-phase] { color: var(--qg-label); font-size: .7rem; }
 .qg-key .k-dot { background: linear-gradient(90deg, var(--qg-line-hi) 1px, transparent 1px) 0 50% / 4px 1px repeat-x; }
 .qg-key .k-line { background: linear-gradient(var(--qg-line-hi), var(--qg-line-hi)) 0 50% / 100% 1px no-repeat; }
 .qg-key .k-dia::after { content: ""; position: absolute; left: .3rem; top: .1rem; width: .45rem; height: .45rem; border: 1px solid var(--qg-ink); transform: rotate(45deg); }
@@ -95,7 +103,8 @@ body.page-query .app { padding: 0; }
 /* Caption and timeline */
 .qg-foot { left: 1.2rem; right: 1.2rem; bottom: 1rem; display: grid; gap: .5rem; justify-items: center; }
 .qg-caption { display: flex; align-items: flex-start; gap: .75rem; max-width: 52rem; width: 100%; padding: .6rem .85rem; }
-.qg-caption .qg-chip { margin-top: .1rem; border-color: var(--qg-focus); color: var(--qg-focus); }
+.qg-caption .qg-chip, .qg-inspect .qg-chip { border-color: var(--ph); color: var(--ph); }
+.qg-caption .qg-chip { margin-top: .1rem; }
 .qg-caption strong { display: block; font-family: var(--mono); font-size: .74rem; font-weight: 500; color: var(--text-hi); word-break: break-word; }
 .qg-caption p { margin: .2rem 0 0; font-size: .86rem; line-height: 1.45; }
 .qg-bar { display: flex; align-items: center; gap: .4rem; width: 100%; padding: .35rem .5rem; }
@@ -106,9 +115,9 @@ body.page-query .app { padding: 0; }
 .qg-speed { font-family: var(--mono); font-size: .68rem; }
 .qg-count { flex: none; min-width: 3.6rem; text-align: right; font-family: var(--mono); font-size: .68rem; color: var(--qg-label-dim); }
 .qg-track { position: relative; flex: 1; display: flex; gap: 2px; height: 1.4rem; align-items: center; }
-.qg-tick { flex-basis: 0; height: 6px; padding: 0; border: 0; background: var(--qg-line); cursor: pointer; }
-.qg-tick.done { background: var(--qg-line-hi); }
-.qg-tick.now { background: var(--qg-focus); }
+.qg-tick { flex-basis: 0; height: 6px; padding: 0; border: 0; background: color-mix(in srgb, var(--ph) 22%, var(--qg-line)); cursor: pointer; }
+.qg-tick.done { background: color-mix(in srgb, var(--ph) 55%, var(--qg-line)); }
+.qg-tick.now { background: var(--ph); }
 .qg-tick[data-error] { background: none; border: 1px solid var(--qg-line-hi); }
 .qg-tick:hover { background: var(--qg-label-dim); }
 .qg-head-mark { position: absolute; top: 2px; bottom: 2px; width: 1px; background: var(--text-hi); pointer-events: none; }

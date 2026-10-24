@@ -17,9 +17,10 @@ body.page-query .app { padding: 0; }
 .qg-head > * { pointer-events: auto; }
 .qg-title { max-width: 26rem; }
 .qg-kicker { font-family: var(--mono); font-size: .66rem; letter-spacing: .18em; text-transform: uppercase; color: var(--qg-focus); }
-.qg-title h1 { margin: .25rem 0 .2rem; font-size: 1.05rem; font-weight: 500; color: var(--text-hi); }
+.qg-title h1 { margin: .25rem 0 .3rem; font-size: 1.05rem; font-weight: 500; color: var(--text-hi); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .qg-title p { margin: 0; font-family: var(--mono); font-size: .7rem; }
 .qg-title a { color: var(--qg-label-dim); }
+.qg-case { margin-right: .6rem; padding: .15rem .35rem; border: 1px solid var(--qg-line-hi); border-radius: 2px; background: var(--qg-panel); color: var(--qg-label); font-family: var(--mono); font-size: .7rem; }
 .qg-title a:hover { color: var(--qg-label); }
 .qg-phases { display: flex; margin: 0 0 0 auto; padding: 0; list-style: none; border: 1px solid var(--qg-line); background: color-mix(in srgb, var(--qg-panel) 88%, transparent); }
 .qg-phases li + li { border-left: 1px solid var(--qg-line); }
@@ -95,10 +96,13 @@ body.page-query .app { padding: 0; }
 .qg-chip { flex: none; padding: .05rem .4rem; border: 1px solid var(--qg-line-hi); font-family: var(--mono); font-size: .62rem; letter-spacing: .1em; color: var(--qg-label); }
 
 /* Hover tip */
-.qg-tip { max-width: 20rem; padding: .4rem .55rem; pointer-events: none; display: grid; gap: .15rem; font-size: .72rem; }
+.qg-tip { max-width: 24rem; background: var(--qg-panel); z-index: 3; padding: .4rem .55rem; pointer-events: none; display: grid; gap: .15rem; font-size: .72rem; }
 .qg-tip b { color: var(--text-hi); font-family: var(--mono); font-size: .72rem; font-weight: 500; word-break: break-word; }
 .qg-tip span { color: var(--qg-label-dim); font-family: var(--mono); font-size: .66rem; }
 .qg-tip em { color: var(--qg-label); font-style: normal; }
+.qg-card { display: grid; grid-template-columns: 4.6rem 1fr; gap: .2rem .55rem; margin: .35rem 0 0; padding-top: .35rem; border-top: 1px solid var(--qg-line); }
+.qg-card dt { color: var(--qg-label-dim); font-family: var(--mono); font-size: .64rem; }
+.qg-card dd { margin: 0; color: var(--qg-label); font-size: .72rem; line-height: 1.4; }
 
 /* Caption and timeline */
 .qg-foot { left: 1.2rem; right: 1.2rem; bottom: 1rem; display: grid; gap: .5rem; justify-items: center; }

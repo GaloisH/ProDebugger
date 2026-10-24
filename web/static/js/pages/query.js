@@ -9,7 +9,14 @@ import {layoutClusters, TIERS} from "../query/layout.js";
 import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
 
-export const DEFAULT_CASE = ["evidence-query-claims-n30-20261013", "GPT-4o_013_alfworld_task_013"];
+const GROUP = "evidence-query-claims-n30-20261013";
+// Cases the page is tuned on: one window/lane, two windows/lanes, and a large WebShop record.
+const CASES = [
+  {ref: [GROUP, "GPT-4o_013_alfworld_task_013"], label: "ALFWorld 013 · 1 lane"},
+  {ref: [GROUP, "GPT-4o_024_alfworld_task_024"], label: "ALFWorld 024 · 2 lanes"},
+  {ref: [GROUP, "GPT-4o_003_chat_b000_t00_e02-1e119842"], label: "WebShop 003 · 3 candidates"},
+];
+export const DEFAULT_CASE = CASES[0].ref;
 const PHASES = ["PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"];
 const PHASE_NOTE = {
   PARSE: "compile the log into the DSL", MAP: "read the task contract", ROUTE: "query the record, open suspect windows",
@@ -96,7 +103,8 @@ function template(scene, model, ref) {
       <div class="qg-title">
         <span class="qg-kicker">Query Graph</span>
         <h1>${esc(scene.meta.task || scene.meta.tid)}</h1>
-        <p><a href="${caseHref(ref)}">${esc(scene.meta.tid)}</a></p>
+        <p><select class="qg-case" aria-label="Case">${CASES.map(c => `<option value="${esc(queryHref(c.ref))}"${c.ref[1] === ref[2] ? " selected" : ""}>${esc(c.label)}</option>`).join("")}${CASES.some(c => c.ref[1] === ref[2]) ? "" : `<option selected>${esc(scene.meta.tid)}</option>`}</select>
+          <a href="${caseHref(ref)}" title="Open in the workbench">${esc(scene.meta.tid)}</a></p>
       </div>
       <ol class="qg-phases">${PHASES.filter(ph => scene.events.some(e => e.phase === ph)).map((ph, k) => `<li><button data-phase="${ph}" title="${esc(PHASE_NOTE[ph])}"><span>${String(k + 1).padStart(2, "0")}</span><b>${ph}</b></button></li>`).join("")}</ol>
     </header>
@@ -145,6 +153,7 @@ function bindUi(root, scene, model, stage) {
   const inspect = $(".qg-inspect"), tip = $(".qg-tip");
   let current = 0;
 
+  $(".qg-case")?.addEventListener("change", e => { if (e.target.value.startsWith("#/")) location.hash = e.target.value; });
   root.addEventListener("click", e => {
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "speed") {
@@ -193,6 +202,7 @@ function bindUi(root, scene, model, stage) {
     inspect.hidden = false;
     let body = "";
     if (c.error) body = `<p class="qg-bad">${esc(c.error.code || "error")}: ${esc(c.error.message)}</p>`;
+    else if (c.kind === "query" && ev.calls) body = `<pre class="qg-code">${esc(ev.calls.slice(0, 24).map(e => `${e.name}(f${e.call.arguments?.fid ?? "?"})${e.verdict ? ` → ${e.verdict}` : ""}${e.error ? " ✕" : ""}`).join("\n"))}${ev.calls.length > 24 ? `\n… ${ev.calls.length - 24} more` : ""}</pre>`;
     else if (c.kind === "query") body = `<pre class="qg-code">${esc(ev.name)}(${esc(JSON.stringify(ev.spec))})</pre>`;
     else if (c.kind === "window") body = `<p>${esc(short(c.ref.hypothesis, 320))}</p>`;
     else if (c.kind === "lane") body = `<p>${esc(short(c.ref.question, 300))}</p>${c.fill !== c.event ? `<details><summary>SQL</summary><pre class="qg-code qg-sql">${esc(scene.events[c.fill].sql || "")}</pre></details>` : ""}`;
@@ -265,6 +275,8 @@ function bindUi(root, scene, model, stage) {
       let html = "";
       if (h.kind === "cluster") html = `<b>${esc(clusterTitle(h.cluster))}</b><span>${esc(h.cluster.detail)} · click to open</span>`;
       else if (h.kind === "group") { const g = h.cluster.groups[h.gi]; html = `<b>${esc(g.key)}</b><span>${g.fids.length} facts · click to list</span>`; }
+      else if (h.kind === "edge") html = `<b>${esc(h.link.title)}</b>${h.link.detail ? `<span>${esc(h.link.detail)}</span>` : ""}
+        <dl class="qg-card">${h.link.card.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(short(v, 260))}</dd>`).join("")}</dl>`;
       else if (h.kind === "fact") { const f = scene.factById.get(h.fid); html = `<b>fact ${f.fid} · S${f.t} ${SLOT_LABEL[f.slot]}</b><em>${esc(short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 160))}</em>`; }
       tip.hidden = false;
       tip.innerHTML = html;

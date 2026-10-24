@@ -148,24 +148,38 @@ export function createStage(canvas, scene, model, layout) {
       ctx.fillText(detail, x1 + 10, y1 + 17);
     }
   }
-  // A short label at the middle of an edge, on a void plate so it reads over points.
-  function edgeLabel({a, b, text, color}) {
+  // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
+  // over points. It sits 40% of the way from the source, so edges converging on one cloud keep
+  // their labels apart, and it is a hover target for the full card.
+  function edgeLabel({a, b, link, cluster, color, hot}) {
     const pa = project(a), pb = project(b);
     if (!pa || !pb) return;
-    // 40% of the way from the source: edges converging on one cloud keep their labels apart.
     const x = pa.x + (pb.x - pa.x) * 0.4, y = pa.y + (pb.y - pa.y) * 0.4;
+    ctx.font = "500 10px 'IBM Plex Mono', monospace";
+    const w1 = ctx.measureText(link.title).width;
     ctx.font = "10px 'IBM Plex Mono', monospace";
-    const w = ctx.measureText(text).width + 10;
+    const w2 = link.detail ? ctx.measureText(link.detail).width : 0;
+    const w = Math.max(w1, w2) + 14, h = link.detail ? 30 : 17;
+    const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
     ctx.setLineDash([]);
-    ctx.globalAlpha = 0.92;
+    ctx.globalAlpha = 0.94;
     ctx.fillStyle = colors.void;
-    ctx.fillRect(x - w / 2, y - 8, w, 16);
-    stroke(color, 0.7, 1);
-    ctx.strokeRect(x - w / 2 + 0.5, y - 7.5, w - 1, 15);
-    ctx.globalAlpha = 1;
+    ctx.fillRect(x0, y0, w, h);
+    stroke(color, hot ? 1 : 0.65, 1);
+    ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
     ctx.fillStyle = color;
-    ctx.textAlign = "center";
-    ctx.fillText(text, x, y + 3.5);
+    ctx.fillRect(x0, y0, 2, h);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "left";
+    ctx.fillStyle = color;
+    ctx.font = "500 10px 'IBM Plex Mono', monospace";
+    ctx.fillText(link.title, x0 + 8, y0 + 12);
+    if (link.detail) {
+      ctx.fillStyle = colors.label;
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillText(link.detail, x0 + 8, y0 + 25);
+    }
+    targets.push({kind: "edge", link, cluster, x, y, rect: [x0, y0, w, h]});
   }
   function diamond(x, y, r, fill) {
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
@@ -236,7 +250,8 @@ export function createStage(canvas, scene, model, layout) {
       const color = phaseColor(c);
       stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade, 1, spoke ? [1, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
-      if ((hot || hovered) && l.label) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), text: l.label, color});
+      const edgeHot = hover?.kind === "edge" && hover.link === l;
+      if ((hot || hovered || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
     }
 
     // Points.
@@ -352,9 +367,10 @@ export function createStage(canvas, scene, model, layout) {
     let best = null, bd = Infinity;
     for (const t of targets) {
       const d = Math.hypot(t.x - x, t.y - y);
-      // A fact's label sits to the right of its point and is clickable too.
-      const hit = t.kind === "fact" ? d < t.r || (x > t.x && x < t.x + 380 && Math.abs(y - t.y) < 7) : d < t.r;
-      const score = t.kind === "fact" ? Math.abs(y - t.y) - 1000 : t.kind === "group" ? d - 500 : d;
+      // A fact's label sits to the right of its point and is clickable too; edge labels are boxes.
+      const hit = t.kind === "edge" ? x >= t.rect[0] && x <= t.rect[0] + t.rect[2] && y >= t.rect[1] && y <= t.rect[1] + t.rect[3]
+        : t.kind === "fact" ? d < t.r || (x > t.x && x < t.x + 380 && Math.abs(y - t.y) < 7) : d < t.r;
+      const score = t.kind === "edge" ? -2000 : t.kind === "fact" ? Math.abs(y - t.y) - 1000 : t.kind === "group" ? d - 500 : d;
       if (hit && score < bd) { best = t; bd = score; }
     }
     return best;
@@ -383,7 +399,7 @@ export function createStage(canvas, scene, model, layout) {
       const r = canvas.getBoundingClientRect();
       const t = pick(e.clientX - r.left, e.clientY - r.top);
       if (!t) back();
-      else if (t.kind === "cluster") open(t.cluster.id);
+      else if (t.kind === "cluster" || t.kind === "edge") open(t.cluster.id);
       else if (t.kind === "group") open(t.cluster.id, view.group === t.gi ? null : t.gi);
       else if (t.kind === "fact") { view.fact = t.fid; emit("select", {kind: "fact", cluster: t.cluster, gi: view.group, fid: t.fid}); }
     }

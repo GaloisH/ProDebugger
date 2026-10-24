@@ -10,9 +10,10 @@ const ICON = {
 };
 const prefersLight = matchMedia("(prefers-color-scheme: light)");
 let onHome = false;
+let forced = null; // a page that only has one palette (the query graph is dark only)
 
 const choice = () => ORDER.includes(localStorage.getItem(KEY)) ? localStorage.getItem(KEY) : "system";
-const resolved = () => { const c = choice(); return c === "system" ? (prefersLight.matches ? "light" : "dark") : c; };
+const resolved = () => { if (forced) return forced; const c = choice(); return c === "system" ? (prefersLight.matches ? "light" : "dark") : c; };
 
 function apply() {
   const root = document.documentElement;
@@ -27,7 +28,7 @@ function apply() {
   button.setAttribute("aria-label", button.title);
 }
 
-export function setThemePage(home) { onHome = home; apply(); }
+export function setThemePage(home, force = null) { onHome = home; forced = force; apply(); }
 
 export function initTheme() {
   document.getElementById("theme-toggle")?.addEventListener("click", () => {

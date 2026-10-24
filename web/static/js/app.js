@@ -6,6 +6,7 @@ import {mountHome} from "./pages/home.js";
 import {mountRuns} from "./pages/runs.js";
 import {mountChat} from "./pages/chat.js";
 import {mountWorkbench} from "./pages/workbench.js";
+import {mountQuery} from "./pages/query.js";
 import {initTheme, setThemePage} from "./theme.js";
 
 const app = document.getElementById("app");
@@ -15,6 +16,10 @@ let current = null;
 
 function setCrumbs(route) {
   nav.querySelectorAll("a").forEach(a => a.setAttribute("aria-current", String(a.dataset.page === (route.page === "case" ? "runs" : route.page))));
+  if (route.page === "query") {
+    crumbs.innerHTML = route.ref ? `<span class="sep">/</span><span class="current" title="${esc(route.ref[1])}">${esc(route.ref[1])}</span>` : "";
+    return;
+  }
   if (route.page === "chat") {
     crumbs.innerHTML = route.ref ? `<span class="sep">/</span><span class="current" title="${esc(route.ref[2])}">${esc(route.ref[2])}</span>` : "";
     return;
@@ -30,7 +35,8 @@ function render() {
   const route = parseRoute();
   // The home page brings its own light header and full-bleed layout.
   document.body.classList.toggle("page-home", route.page === "home");
-  setThemePage(route.page === "home");
+  document.body.classList.toggle("page-query", route.page === "query");
+  setThemePage(route.page === "home", route.page === "query" ? "dark" : null);
   setCrumbs(route);
   // Switching tabs inside the same case keeps the loaded store alive.
   // The chat page keeps its sidebar and composer while switching conversations.
@@ -38,7 +44,7 @@ function render() {
   if (current && current.key === key && current.update) { current.update(route); return; }
   current?.unmount?.();
   app.innerHTML = "";
-  const mount = {case: mountWorkbench, chat: mountChat, runs: mountRuns, home: mountHome}[route.page];
+  const mount = {case: mountWorkbench, query: mountQuery, chat: mountChat, runs: mountRuns, home: mountHome}[route.page];
   current = {key, ...mount(app, route)};
 }
 

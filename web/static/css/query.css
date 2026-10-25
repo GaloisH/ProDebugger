@@ -66,8 +66,8 @@ body.page-query .app { padding: 0; }
 .qg-hint { margin: .8rem 0 0; color: var(--qg-label-dim); font-size: .7rem; line-height: 1.45; }
 
 /* Inspector */
-.qg-inspect { right: 1.2rem; top: 6.6rem; width: 23rem; padding: .8rem .95rem; font-size: .79rem; line-height: 1.45; }
-.qg-inspect-body { max-height: calc(100vh - var(--header-h) - 6.6rem - 11rem); overflow: auto; }
+.qg-inspect { right: 1.2rem; top: 9.4rem; width: 23rem; padding: .8rem .95rem; font-size: .79rem; line-height: 1.45; }
+.qg-inspect-body { max-height: calc(100vh - var(--header-h) - 9.4rem - 11rem); overflow: auto; }
 
 /* Side panels fold to a tab; open, the tab hangs on the panel's inner edge as its handle. */
 .qg-pane-tab {
@@ -171,7 +171,7 @@ body.page-query .app { padding: 0; }
 .qg.is-overview .qg-tick { height: 10px; }
 
 /* Room on the left for the phase ruler the canvas draws */
-.qg-legend { left: 6.4rem; }
+.qg-legend { left: 6.4rem; top: 9.4rem; }
 .qg-legend li[data-filter-phase], .qg-legend li[data-filter-role] { cursor: pointer; }
 .qg-legend li[data-filter-phase]:hover, .qg-legend li[data-filter-role]:hover { color: var(--text-hi); }
 .qg-legend li.off { opacity: .35; text-decoration: line-through var(--qg-line-hi); }

@@ -1,7 +1,7 @@
 // Zero-dependency 3D stage for the cluster tower: a perspective orbit camera over a 2D canvas.
 // Flat square points, 1px lines and HUD brackets; the only motion is camera easing and points
 // moving to their place when a cloud appears, expands or folds.
-import {ballPoint, cloudRadius, TIERS} from "./layout.js";
+import {ballPoint, cloudRadius, PITCH, TIERS} from "./layout.js";
 import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js";
 
 const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim", "issue", "cand"];
@@ -28,6 +28,7 @@ export function createStage(canvas, scene, model, layout) {
   const view = {cluster: null, group: null, basis: null, fact: null, selected: null};
   let hover = null;
   let targets = [];
+  let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
   const listeners = {hover: [], select: [], manual: [], view: []};
   const emit = (k, v) => listeners[k].forEach(fn => fn(v));
@@ -69,6 +70,10 @@ export function createStage(canvas, scene, model, layout) {
     dpr = Math.min(2, window.devicePixelRatio || 1);
     const r = canvas.getBoundingClientRect();
     W = r.width; H = r.height;
+    // A landscape canvas lays the tower on its side: the funnel reads left to right.
+    rot = W > H * 1.05;
+    const pitch = rot ? PITCH.lying : PITCH.upright;
+    if (layout.pitch !== pitch) layout.relayout(pitch);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
   }
   function basis() {
@@ -80,8 +85,13 @@ export function createStage(canvas, scene, model, layout) {
   function project(p) {
     const d = sub(p, B.eye), z = dot(d, B.f);
     if (z < 0.5) return null;
-    return {x: W / 2 + B.focal * dot(d, B.r) / z, y: H / 2 - B.focal * dot(d, B.u) / z, z, s: B.focal / z};
+    const a = B.focal * dot(d, B.r) / z, b = B.focal * dot(d, B.u) / z;
+    // On its side the picture turns a quarter clockwise: the camera's up points right.
+    return rot ? {x: W / 2 + b, y: H / 2 + a, z, s: B.focal / z} : {x: W / 2 + a, y: H / 2 - b, z, s: B.focal / z};
   }
+  // World directions that read as screen right and screen down for a camera frame {r, u}.
+  const screenRight = ({r, u}) => rot ? u : r;
+  const screenDown = ({r, u}) => rot ? r : scale(u, -1);
 
   // Expanded layout: entity groups on a ring in the camera plane around the cloud, the open
   // group's facts as a column beside it.
@@ -92,9 +102,9 @@ export function createStage(canvas, scene, model, layout) {
     return add(center, add(scale(r, R * Math.cos(a)), scale(u, R * Math.sin(a))));
   }
   function factSlot(c, gi, k, n) {
-    const gc = groupCenter(c, gi), {r, u} = view.basis;
+    const gc = groupCenter(c, gi), right = screenRight(view.basis), down = screenDown(view.basis);
     const top = (Math.min(n, MAX_FACTS) - 1) / 2 * FACT_GAP;
-    return add(gc, add(scale(r, cloudRadius(n) * 0.7 + 0.8), scale(u, top - k * FACT_GAP)));
+    return add(gc, add(scale(right, cloudRadius(n) * 0.7 + 0.8), scale(down, k * FACT_GAP - top)));
   }
   function targetOf(c, p) {
     const center = layout.pos.get(c.id), R = layout.radius.get(c.id), shape = layout.shape.get(c.id);
@@ -171,33 +181,47 @@ export function createStage(canvas, scene, model, layout) {
     const c = byId.get(view.cluster);
     if (view.group != null) {
       const g = c.groups[view.group];
-      const t = add(groupCenter(c, view.group), scale(view.basis.r, 2.6));
+      const t = add(groupCenter(c, view.group), scale(screenRight(view.basis), 2.6));
       return {target: t, yaw: cam.yaw, pitch: cam.pitch, dist: Math.max(10, Math.min(g.fids.length, MAX_FACTS) * FACT_GAP * 1.9 + 4)};
     }
     return {target: layout.pos.get(c.id), yaw: cam.yaw, pitch: cam.pitch, dist: Math.max(12, groupRing(c) * 4.2)};
   }
 
-  // A preset marked fit frames the whole cone in the canvas area left free by the phase ruler
-  // and the inspector: the distance fits both its height and its width, and the target slides
-  // sideways so the tower centres in that area.
-  function fitGoal(g) {
-    const tan = Math.tan(cam.fov / 2), cp = Math.cos(g.pitch), sp = Math.abs(Math.sin(g.pitch));
-    const R = TIERS[0].plate, h = layout.top + 2.5 - layout.bottom;
-    const box = canvas.getBoundingClientRect();
-    const page = canvas.closest(".qg");
+  // How much of the canvas the HUD covers on each side: header, footer, the open panels, and
+  // the phase ruler (left when upright, along the bottom when on its side).
+  function hudInsets() {
+    const box = canvas.getBoundingClientRect(), page = canvas.closest(".qg");
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
-    const panel = rect(".qg-inspect:not([hidden])"), legend = rect(".qg-legend"), head = rect(".qg > header"), foot = rect(".qg-foot");
-    const left = Math.max(130, legend ? legend.right - box.left + 12 : 0), right = panel ? Math.max(0, box.right - panel.left + 12) : 0;
-    const top = head ? Math.max(0, head.bottom - box.top) : 0, bottom = foot ? Math.max(0, box.bottom - foot.top + 8) : 0;
-    const freeW = Math.max(240, W - left - right), freeH = Math.max(240, H - top - bottom);
-    const dist = 1.08 * Math.max((h * cp + 2 * R * sp) / (2 * tan * freeH / H), 2 * R / (2 * tan * freeW / H));
-    const px = dist / (H / (2 * tan));          // world units per screen pixel at the target
-    const dx = (right - left) / 2 * px, dy = (bottom - top) / 2 * px;
-    const mid = (layout.top + layout.bottom) / 2 + 0.6;
-    // Slide right along the camera's right vector, and down along its up vector.
-    const r = [Math.cos(g.yaw), 0, -Math.sin(g.yaw)];
-    const u = [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)];
-    return {...g, dist, target: [r[0] * dx - u[0] * dy, mid - u[1] * dy, r[2] * dx - u[2] * dy]};
+    const panel = rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)");
+    const head = rect(".qg > header"), foot = rect(".qg-foot");
+    const ruler = rot ? 0 : 130;
+    return {
+      left: Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0),
+      right: Math.max(16, panel ? box.right - panel.left + 12 : 0),
+      top: head ? Math.max(0, head.bottom - box.top) : 0,
+      bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot ? 36 : 0),
+    };
+  }
+  // A preset marked fit frames the whole cone in the canvas area the HUD leaves free: the
+  // distance fits the cone's length and width to that area in either orientation, and the
+  // target slides so the cone centres in it.
+  function fitGoal(g) {
+    // Lying down, a low camera sees the cone from the side instead of down its length.
+    if (rot && g.pitch < 0.6) g = {...g, pitch: g.pitch * 0.35};
+    const cp = Math.cos(g.pitch), sp = Math.abs(Math.sin(g.pitch));
+    const R = TIERS[0].plate, along = (layout.top + 2.5 - layout.bottom) * cp + 2 * R * sp, across = 2 * R;
+    const {left, right, top, bottom} = hudInsets();
+    const freeW = Math.max(240, W - left - right), freeH = Math.max(200, H - top - bottom);
+    const [needW, needH] = rot ? [along, across] : [across, along];
+    const focal = H / (2 * Math.tan(cam.fov / 2));
+    const dist = 1.08 * focal * Math.max(needW / freeW, needH / freeH);
+    const px = dist / focal;                    // world units per screen pixel at the target
+    const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
+    const frame = {r: [Math.cos(g.yaw), 0, -Math.sin(g.yaw)],
+                   u: [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)]};
+    // Moving the target against a screen direction moves the picture along it.
+    const shift = add(scale(screenRight(frame), -ox), scale(screenDown(frame), -oy));
+    return {...g, dist, target: add([0, (layout.top + layout.bottom) / 2 + 0.6, 0], shift)};
   }
 
   function setView(cluster, group = null) {
@@ -274,6 +298,7 @@ export function createStage(canvas, scene, model, layout) {
   // Phase ruler: a fixed HUD scale on the left whose ticks sit at each tier's projected height,
   // one segment per phase, the current tier lit.
   function ruler(shown, current) {
+    if (rot) return rulerAcross(shown, current);
     const x = 18, top = 96, bottom = H - 150;
     const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
       .map(t => ({t, y: project([0, t.y, 0])?.y})).filter(r => r.y != null)
@@ -305,6 +330,41 @@ export function createStage(canvas, scene, model, layout) {
     });
     ctx.globalAlpha = 1;
   }
+  // On its side the same ruler runs along the bottom, ticks under each floor, labels above.
+  function rulerAcross(shown, current) {
+    const {left, right, bottom} = hudInsets();
+    const y = H - bottom + 22, x0 = left + 8, x1 = W - right - 8;
+    const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
+      .map(t => ({t, x: project([0, t.y, 0])?.x})).filter(r => r.x != null)
+      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 90, r.x))}));
+    if (!tiers.length) return;
+    // Clamped ticks keep at least a label's width between them, pushing right.
+    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 96);
+    stroke(colors.line, 1, 1);
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    tiers.forEach((r, k) => {
+      const color = colors.phase[r.t.phase], next = tiers[k + 1], on = current === r.t.tier;
+      if (next) {
+        stroke(color, on ? 1 : 0.55, on ? 3 : 2);
+        ctx.beginPath(); ctx.moveTo(r.x, y); ctx.lineTo(next.x - 3, y); ctx.stroke();
+      }
+      stroke(color, 1, 1);
+      ctx.beginPath(); ctx.moveTo(r.x, y - 5); ctx.lineTo(r.x, y + 6); ctx.stroke();
+      const n = shown.filter(c => c.tier === r.t.tier).length;
+      ctx.textAlign = "left";
+      ctx.globalAlpha = on ? 1 : 0.75;
+      ctx.fillStyle = color;
+      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, r.x + 4, y - 18);
+      // The floor's name only where the next tick leaves room for it.
+      if (!next || next.x - r.x > 150) {
+        ctx.fillStyle = colors["label-dim"];
+        ctx.font = "10px 'IBM Plex Mono', monospace";
+        ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, r.x + 4, y - 7);
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
 
   function brackets(x, y, r, color, alpha = 1) {
     const L = Math.max(5, Math.min(10, r * 0.4));
@@ -319,6 +379,7 @@ export function createStage(canvas, scene, model, layout) {
   // A cloud's name, led out away from the tower's axis so names on the two sides never cross it;
   // a fixed side (+1 right, -1 left) overrides that.
   function tag(x, y, r, title, detail, color, alpha = 1, side = 0) {
+    if (rot) return tagAcross(x, y, r, title, detail, color, alpha, -side);
     const axis = project([0, cam.target[1], 0]);
     const s = side || (axis && x < axis.x - 4 ? -1 : 1);
     // Leader: a short diagonal from the bracket corner, then the text.
@@ -334,6 +395,26 @@ export function createStage(canvas, scene, model, layout) {
       ctx.fillStyle = colors["label-dim"];
       ctx.font = "10px 'IBM Plex Mono', monospace";
       ctx.fillText(detail, x1 + s * 10, y1 + 17);
+    }
+  }
+  // On its side the axis runs across, so a name leads up (above the axis) or down (below it);
+  // a fixed side is -1 up, +1 down.
+  function tagAcross(x, y, r, title, detail, color, alpha, side) {
+    const axis = project([0, cam.target[1], 0]);
+    const s = side || (axis && y < axis.y - 4 ? -1 : 1);
+    const x0 = x + r, y0 = y + s * r, x1 = x0 + 10, y1 = y0 + s * 10;
+    stroke(color, alpha * 0.8, 1);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + 6, y1); ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = "left";
+    ctx.fillStyle = color;
+    ctx.font = "500 11px 'IBM Plex Mono', monospace";
+    const ty = s < 0 && detail ? y1 - 9 : y1 + 4;
+    ctx.fillText(title, x1 + 10, ty);
+    if (detail) {
+      ctx.fillStyle = colors["label-dim"];
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillText(detail, x1 + 10, ty + 13);
     }
   }
   // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
@@ -598,8 +679,10 @@ export function createStage(canvas, scene, model, layout) {
   const onMove = e => {
     const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
     if (drag) {
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 3) { drag.moved = true; takeOver(); }
+      const sx = e.clientX - drag.x, sy = e.clientY - drag.y;
+      if (!drag.moved && Math.abs(sx) + Math.abs(sy) > 3) { drag.moved = true; takeOver(); }
+      // Work in the camera's own frame: on its side, screen down is the camera's right.
+      const [dx, dy] = rot ? [sy, -sx] : [sx, sy];
       if (!drag.moved) return;
       if (drag.pan) { const s = cam.dist / B.focal; for (let i = 0; i < 3; i++) cam.target[i] = drag.target[i] - (B.r[i] * dx - B.u[i] * dy) * s; }
       else { cam.yaw = drag.yaw - dx * 0.006; cam.pitch = Math.max(-0.3, Math.min(1.45, drag.pitch + dy * 0.005)); }

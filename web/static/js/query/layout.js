@@ -2,14 +2,16 @@
 // is a fixed size that shrinks toward the top, whatever the number of clouds on it, so the
 // outline reads as the search narrowing from the whole record to one conclusion. The record
 // core is the base; ROUTE queries climb a helix in call order. Each tier belongs to a phase.
-const PITCH = 5;
+// A floor's height is its index k times the pitch; a cone lying on its side (a landscape
+// canvas) gets a longer pitch so it fills the width.
+export const PITCH = {upright: 5, lying: 8};
 export const TIERS = [
-  {tier: 0, y: -PITCH, plate: 8.6, ring: 0, phase: "PARSE", label: "DSL record", sub: "Entity · Fact · Goal"},
-  {tier: 1, y: 0, plate: 8.2, ring: 6.6, rise: 2.6, phase: "ROUTE", label: "ROUTE access", sub: "one cloud per query"},
-  {tier: 2, y: PITCH, plate: 6.2, ring: 4.4, phase: "ROUTE", label: "Suspect windows", sub: "route_cases"},
-  {tier: 3, y: 2 * PITCH, plate: 4.6, ring: 3.1, phase: "TRACE", label: "TRACE lanes", sub: "assigned questions, SQL"},
-  {tier: 4, y: 3 * PITCH, plate: 3.2, ring: 2, phase: "TRACE", label: "Candidates", sub: "assess"},
-  {tier: 5, y: 4 * PITCH, plate: 2, ring: 0, phase: "SUBMIT", label: "Conclusion", sub: "SUBMIT root"},
+  {tier: 0, k: -1, plate: 8.6, ring: 0, phase: "PARSE", label: "DSL record", sub: "Entity · Fact · Goal"},
+  {tier: 1, k: 0, plate: 8.2, ring: 6.6, rise: 2.6, phase: "ROUTE", label: "ROUTE access", sub: "one cloud per query"},
+  {tier: 2, k: 1, plate: 6.2, ring: 4.4, phase: "ROUTE", label: "Suspect windows", sub: "route_cases"},
+  {tier: 3, k: 2, plate: 4.6, ring: 3.1, phase: "TRACE", label: "TRACE lanes", sub: "assigned questions, SQL"},
+  {tier: 4, k: 3, plate: 3.2, ring: 2, phase: "TRACE", label: "Candidates", sub: "assess"},
+  {tier: 5, k: 4, plate: 2, ring: 0, phase: "SUBMIT", label: "Conclusion", sub: "SUBMIT root"},
 ];
 
 // Cloud radius grows with the cube root of its size, like a ball of packed points.
@@ -20,23 +22,36 @@ const clampR = (r, lo, hi) => Math.max(lo, Math.min(hi, r));
 const towerRadius = c => c.kind === "core" ? clampR(0.34 * Math.cbrt(c.fids.length) + 0.3, 1, 2)
   : clampR(cloudRadius(c.fids.length), 0.45, 1.15);
 
+// Lays the clouds out at a pitch; relayout(pitch) moves them in place (the stage calls it when
+// the canvas turns between portrait and landscape, and the points glide to their new seats).
 export function layoutClusters({clusters}) {
   const pos = new Map(), radius = new Map(), angle = new Map();
-  for (const t of TIERS) {
-    const members = clusters.filter(c => c.tier === t.tier);
-    members.forEach((c, k) => {
-      // Ring order follows call order, starting at the front (+z) and turning clockwise; on a
-      // floor with a rise each call also sits a little higher than the one before.
-      const a = members.length === 1 && !t.ring ? 0 : Math.PI / 2 - (k / members.length) * Math.PI * 2;
-      angle.set(c.id, a);
-      const r = members.length === 1 && t.tier > 1 ? 0 : t.ring;
-      const y = t.y + (t.rise && members.length > 1 ? t.rise * k / (members.length - 1) : 0);
-      pos.set(c.id, [r * Math.cos(a), y, r * Math.sin(a)]);
-      radius.set(c.id, towerRadius(c));
-    });
-  }
   const shape = new Map(clusters.map(c => [c.id, relaxCloud(c)]));
-  return {pos, radius, angle, shape, top: TIERS[TIERS.length - 1].y, bottom: TIERS[0].y};
+  const layout = {pos, radius, angle, shape, top: 0, bottom: 0, pitch: 0, relayout};
+  function relayout(pitch) {
+    layout.pitch = pitch;
+    for (const t of TIERS) t.y = t.k * pitch;
+    place();
+    layout.top = TIERS[TIERS.length - 1].y; layout.bottom = TIERS[0].y;
+  }
+  relayout(PITCH.upright);
+  return layout;
+
+  function place() {
+    for (const t of TIERS) {
+      const members = clusters.filter(c => c.tier === t.tier);
+      members.forEach((c, k) => {
+        // Ring order follows call order, starting at the front (+z) and turning clockwise; on a
+        // floor with a rise each call also sits a little higher than the one before.
+        const a = members.length === 1 && !t.ring ? 0 : Math.PI / 2 - (k / members.length) * Math.PI * 2;
+        angle.set(c.id, a);
+        const r = members.length === 1 && t.tier > 1 ? 0 : t.ring;
+        const y = t.y + (t.rise && members.length > 1 ? t.rise * k / (members.length - 1) : 0);
+        pos.set(c.id, [r * Math.cos(a), y, r * Math.sin(a)]);
+        radius.set(c.id, towerRadius(c));
+      });
+    }
+  }
 }
 
 // A cloud's inner shape: a short Fruchterman–Reingold relaxation of its facts and entity hubs

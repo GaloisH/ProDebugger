@@ -1,29 +1,38 @@
-// World layout of the cluster tower. The record core sits one floor below the ROUTE ring, so
-// every query visibly pulls its facts up from it; each later tier is a smaller ring higher up,
-// so the search narrows from the whole record to one conclusion. Each tier belongs to a phase.
+// World layout of the cluster tower: a cone. Floors sit at an even pitch and each floor's plate
+// is a fixed size that shrinks toward the top, whatever the number of clouds on it, so the
+// outline reads as the search narrowing from the whole record to one conclusion. The record
+// core is the base; ROUTE queries climb a helix in call order. Each tier belongs to a phase.
+const PITCH = 5;
 export const TIERS = [
-  {tier: 0, y: -4.5, ring: 0, phase: "PARSE", label: "DSL record", sub: "Entity · Fact · Goal"},
-  {tier: 1, y: 0, ring: 13, phase: "ROUTE", label: "ROUTE access", sub: "one cloud per query"},
-  {tier: 2, y: 6.5, ring: 4.5, phase: "ROUTE", label: "Suspect windows", sub: "route_cases"},
-  {tier: 3, y: 11.5, ring: 3.2, phase: "TRACE", label: "TRACE lanes", sub: "assigned questions, SQL"},
-  {tier: 4, y: 15.5, ring: 2.2, phase: "TRACE", label: "Candidates", sub: "assess"},
-  {tier: 5, y: 19, ring: 0, phase: "SUBMIT", label: "Conclusion", sub: "SUBMIT root"},
+  {tier: 0, y: -PITCH, plate: 8.6, ring: 0, phase: "PARSE", label: "DSL record", sub: "Entity · Fact · Goal"},
+  {tier: 1, y: 0, plate: 8.2, ring: 6.6, rise: 2.6, phase: "ROUTE", label: "ROUTE access", sub: "one cloud per query"},
+  {tier: 2, y: PITCH, plate: 6.2, ring: 4.4, phase: "ROUTE", label: "Suspect windows", sub: "route_cases"},
+  {tier: 3, y: 2 * PITCH, plate: 4.6, ring: 3.1, phase: "TRACE", label: "TRACE lanes", sub: "assigned questions, SQL"},
+  {tier: 4, y: 3 * PITCH, plate: 3.2, ring: 2, phase: "TRACE", label: "Candidates", sub: "assess"},
+  {tier: 5, y: 4 * PITCH, plate: 2, ring: 0, phase: "SUBMIT", label: "Conclusion", sub: "SUBMIT root"},
 ];
 
 // Cloud radius grows with the cube root of its size, like a ball of packed points.
 export const cloudRadius = n => n <= 1 ? 0.22 : 0.26 * Math.cbrt(n) + 0.18;
+// On the tower a cloud stays between these bounds, so a one-fact cloud and the record differ
+// by about 4x, not 10x; the core is the base and may reach the top bound of its own.
+const clampR = (r, lo, hi) => Math.max(lo, Math.min(hi, r));
+const towerRadius = c => c.kind === "core" ? clampR(0.34 * Math.cbrt(c.fids.length) + 0.3, 1, 2)
+  : clampR(cloudRadius(c.fids.length), 0.45, 1.15);
 
 export function layoutClusters({clusters}) {
   const pos = new Map(), radius = new Map(), angle = new Map();
   for (const t of TIERS) {
     const members = clusters.filter(c => c.tier === t.tier);
     members.forEach((c, k) => {
-      // Ring order follows call order, starting at the front (+z) and turning clockwise.
+      // Ring order follows call order, starting at the front (+z) and turning clockwise; on a
+      // floor with a rise each call also sits a little higher than the one before.
       const a = members.length === 1 && !t.ring ? 0 : Math.PI / 2 - (k / members.length) * Math.PI * 2;
       angle.set(c.id, a);
       const r = members.length === 1 && t.tier > 1 ? 0 : t.ring;
-      pos.set(c.id, [r * Math.cos(a), t.y, r * Math.sin(a)]);
-      radius.set(c.id, c.kind === "core" ? 0.34 * Math.cbrt(c.fids.length) + 0.3 : cloudRadius(c.fids.length));
+      const y = t.y + (t.rise && members.length > 1 ? t.rise * k / (members.length - 1) : 0);
+      pos.set(c.id, [r * Math.cos(a), y, r * Math.sin(a)]);
+      radius.set(c.id, towerRadius(c));
     });
   }
   const shape = new Map(clusters.map(c => [c.id, relaxCloud(c)]));

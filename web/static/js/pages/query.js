@@ -157,6 +157,10 @@ function template(scene, model, ref) {
         <dt>relations</dt><dd>${rels}</dd><dt>goals</dt><dd>${scene.goals.length}</dd><dt>steps</dt><dd>${scene.meta.steps}</dd>
       </dl>
       <p class="qg-formula">Fact ≔ rel(args) = value @t</p>
+      <ul class="qg-key qg-ties">
+        <li><i class="k-hub"></i>entity a fact names</li>
+        <li><i class="k-thread"></i>same state, next step</li>
+      </ul>
       <h2>A fact becomes evidence</h2>
       <ul class="qg-key">
         <li><i class="k-pt"></i>fact the debugger read</li>

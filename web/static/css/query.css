@@ -57,6 +57,10 @@ body.page-query .app { padding: 0; }
 .qg-key li[data-phase] { color: var(--qg-label); font-size: .7rem; }
 .qg-key .k-dot { background: linear-gradient(90deg, var(--qg-line-hi) 1px, transparent 1px) 0 50% / 4px 1px repeat-x; }
 .qg-key .k-line { background: linear-gradient(var(--qg-line-hi), var(--qg-line-hi)) 0 50% / 100% 1px no-repeat; }
+.qg-ties { margin-top: .5rem; }
+.qg-key .k-hub { background: linear-gradient(var(--qg-line-hi), var(--qg-line-hi)) 0 50% / 100% 1px no-repeat; }
+.qg-key .k-hub::after { content: ""; position: absolute; right: 0; top: .1rem; width: .4rem; height: .4rem; border: 1px solid var(--qg-label); border-radius: 50%; background: var(--qg-void); }
+.qg-key .k-thread { background: linear-gradient(var(--parse), var(--parse)) 0 50% / 100% 1px no-repeat; }
 .qg-key .k-dia::after { content: ""; position: absolute; left: .3rem; top: .1rem; width: .45rem; height: .45rem; border: 1px solid var(--qg-ink); transform: rotate(45deg); }
 .qg-key .k-dia.on::after { border-color: var(--qg-focus); background: var(--qg-focus); }
 .qg-hint { margin: .8rem 0 0; color: var(--qg-label-dim); font-size: .7rem; line-height: 1.45; }

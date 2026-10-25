@@ -44,6 +44,12 @@ export function createStage(canvas, scene, model, layout) {
   }
   const phaseColor = c => colors.phase[c.phaseKey] || colors.label;
   const groupOf = new Map(clusters.map(c => [c.id, new Map(c.groups.flatMap((g, gi) => g.fids.map(fid => [fid, gi])))]));
+  // Entity hubs travel like points; opened, a hub sits on its entity group (or the "+more" one).
+  const hubInst = new Map(clusters.map(c => [c.id, c.structure.hubs.map(() => ({cur: null}))]));
+  const hubGroup = new Map(clusters.map(c => {
+    const other = c.groups.findIndex(g => g.other);
+    return [c.id, c.structure.hubs.map(h => { const gi = c.groups.findIndex(g => g.key === h.key); return gi >= 0 ? gi : other; })];
+  }));
 
   function resize() {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -77,12 +83,74 @@ export function createStage(canvas, scene, model, layout) {
     return add(gc, add(scale(r, cloudRadius(n) * 0.7 + 0.8), scale(u, top - k * FACT_GAP)));
   }
   function targetOf(c, p) {
-    const center = layout.pos.get(c.id), R = layout.radius.get(c.id);
-    if (view.cluster !== c.id) return add(center, scale(ballPoint(p.k), R));
+    const center = layout.pos.get(c.id), R = layout.radius.get(c.id), shape = layout.shape.get(c.id);
+    if (view.cluster !== c.id) return add(center, scale(shape ? shape.fact.get(p.fid) : ballPoint(p.k), R));
     const gi = groupOf.get(c.id).get(p.fid), g = c.groups[gi];
     const k = g.fids.indexOf(p.fid);
     if (view.group === gi && k < MAX_FACTS) return factSlot(c, gi, k, g.fids.length);
     return add(groupCenter(c, gi), scale(ballPoint(k), cloudRadius(g.fids.length) * 0.7));
+  }
+  function hubTarget(c, j) {
+    const gi = hubGroup.get(c.id)[j];
+    if (view.cluster === c.id && gi >= 0) return groupCenter(c, gi);
+    return add(layout.pos.get(c.id), scale(layout.shape.get(c.id).hub[j], layout.radius.get(c.id)));
+  }
+
+  // The DSL inside a cloud: hairline spokes from each fact to the entities it names, threads in
+  // the phase colour along each state's timeline, and the hubs as small rings. With a group
+  // open, ties to its facts stay lit and the rest drop back.
+  function drawStructure(c, alpha, isOpen, m) {
+    const st = c.structure, hubs = hubInst.get(c.id);
+    if (!layout.shape.get(c.id)) return;
+    st.hubs.forEach((h, j) => {
+      const t = hubTarget(c, j), q = hubs[j];
+      if (!q.cur) q.cur = c.kind === "core" ? t : [...layout.pos.get("core")];
+      for (let i = 0; i < 3; i++) q.cur[i] += (t[i] - q.cur[i]) * m;
+    });
+    const cur = new Map(inst.get(c.id).map(p => [p.fid, p.cur]));
+    const lit = isOpen && view.group != null ? new Set(c.groups[view.group].fids) : null;
+    const path = (pairs, color, a) => {
+      if (!pairs.length || a < 0.01) return;
+      stroke(color, a, 1);
+      ctx.beginPath();
+      for (const [p, q] of pairs) {
+        const pa = project(p), pb = project(q);
+        if (pa && pb) { ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); }
+      }
+      ctx.stroke();
+    };
+    const split = (list, touches) => lit ? [list.filter(e => !touches(e)), list.filter(touches)] : [list, []];
+    const [spokeDim, spokeLit] = split(st.spokes, ([fid]) => lit.has(fid));
+    const [threadDim, threadLit] = split(st.threads, ([a, b]) => lit.has(a) || lit.has(b));
+    const spokeSeg = ([fid, j]) => [cur.get(fid), hubs[j].cur];
+    const threadSeg = ([a, b]) => [cur.get(a), cur.get(b)];
+    const base = lit ? 0.3 : 1;
+    path(spokeDim.map(spokeSeg), colors["line-hi"], alpha * (isOpen ? 0.3 : 0.22) * base);
+    path(threadDim.map(threadSeg), phaseColor(c), alpha * (isOpen ? 0.6 : 0.5) * base);
+    path(spokeLit.map(spokeSeg), colors["line-hi"], alpha * 0.7);
+    path(threadLit.map(threadSeg), phaseColor(c), alpha * 0.95);
+    ctx.setLineDash([]);
+    // Rings only for the entities the inspector lists; the rest still anchor their spokes.
+    const other = c.groups.findIndex(g => g.other);
+    hubs.forEach((q, j) => {
+      const s = hubGroup.get(c.id)[j] !== other && project(q.cur);
+      if (!s) return;
+      const agent = st.hubs[j].key.startsWith("agent:");
+      stroke(colors.label, alpha * (agent ? 0.9 : 0.7), 1);
+      ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(2, Math.min(agent ? 5 : 3.5, s.s * (agent ? 0.14 : 0.09))), 0, Math.PI * 2); ctx.stroke();
+    });
+  }
+  // A selected, folded cloud names its biggest hubs.
+  function hubLabels(c, alpha) {
+    const hubs = hubInst.get(c.id);
+    ctx.textAlign = "left";
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = colors["label-dim"];
+    ctx.globalAlpha = alpha;
+    c.structure.hubs.slice(0, 4).forEach((h, j) => {
+      const s = hubs[j].cur && project(hubs[j].cur);
+      if (s) ctx.fillText(h.key, s.x + 6, s.y - 4);
+    });
   }
 
   function expansionGoal() {
@@ -316,11 +384,14 @@ export function createStage(canvas, scene, model, layout) {
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
         const gmap = groupOf.get(c.id);
+        const m = 1 - Math.exp(-dt * 5);
         for (const p of inst.get(c.id)) {
           const t = targetOf(c, p);
           if (!p.cur) p.cur = c.kind === "core" ? t : [...layout.pos.get("core")];
-          const m = 1 - Math.exp(-dt * 5);
           for (let i = 0; i < 3; i++) p.cur[i] += (t[i] - p.cur[i]) * m;
+        }
+        if (!(frame.filter?.role && !isOpen)) drawStructure(c, alpha, isOpen, m);
+        for (const p of inst.get(c.id)) {
           const s = project(p.cur);
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
@@ -398,6 +469,7 @@ export function createStage(canvas, scene, model, layout) {
         continue;
       }
       const selected = view.selected === c.id;
+      if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubLabels(c, fade);
       const outside = frame.chain && !frame.chain.has(c.id);
       if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
       if (outside && !hot) continue;

@@ -103,8 +103,42 @@ export function buildClusters(scene) {
   const PHASE = {core: "PARSE", window: "ROUTE", lane: "TRACE", candidate: "TRACE", root: "SUBMIT"};
   for (const c of clusters) c.phaseKey = c.kind === "query" ? c.phase : PHASE[c.kind];
 
-  for (const c of clusters) c.groups = groupByEntity(c.fids, scene);
+  for (const c of clusters) {
+    c.groups = groupByEntity(c.fids, scene);
+    c.structure = structureOf(c.fids, scene);
+  }
   return {clusters, byId};
+}
+
+// Inside a cloud the DSL itself ties the facts together: every fact hangs off the entities it
+// names (a hub per entity with two or more facts here), and facts of one mutable relation on
+// the same key — at(agent:self, ·), open(cabinet:1) — form a thread through time.
+function structureOf(fids, scene) {
+  const relations = scene.meta.relations || {};
+  const named = new Map(), keyed = new Map();
+  for (const fid of fids) {
+    const f = scene.factById.get(fid);
+    if (!f) continue;
+    for (const a of new Set(f.args)) {
+      if (a.startsWith("req:") || a.startsWith("int:")) continue;
+      if (!named.has(a)) named.set(a, []);
+      named.get(a).push(fid);
+    }
+    const rel = relations[f.rel];
+    if (rel && !rel.props?.includes("mutable")) continue;
+    const key = `${f.rel}(${(rel?.key || [0]).map(i => f.args[i] ?? "").join(", ")})`;
+    if (!keyed.has(key)) keyed.set(key, []);
+    keyed.get(key).push(f);
+  }
+  const hubs = [...named].filter(([, list]) => list.length > 1).map(([key, list]) => ({key, fids: list}))
+    .sort((a, b) => b.fids.length - a.fids.length);
+  const spokes = hubs.flatMap((h, j) => h.fids.map(fid => [fid, j]));
+  const threads = [];
+  for (const [key, list] of keyed) {
+    list.sort((a, b) => a.t - b.t || a.fid - b.fid);
+    for (let k = 1; k < list.length; k++) threads.push([list[k - 1].fid, list[k].fid, key]);
+  }
+  return {hubs, spokes, threads};
 }
 
 // Everything upstream and downstream of a cloud along its links: for the root, the candidate,

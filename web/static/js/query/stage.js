@@ -186,8 +186,8 @@ export function createStage(canvas, scene, model, layout) {
     const box = canvas.getBoundingClientRect();
     const page = canvas.closest(".qg");
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
-    const panel = rect(".qg-inspect:not([hidden])"), head = rect(".qg > header"), foot = rect(".qg-foot");
-    const left = 130, right = panel ? Math.max(0, box.right - panel.left + 12) : 0;
+    const panel = rect(".qg-inspect:not([hidden])"), legend = rect(".qg-legend"), head = rect(".qg > header"), foot = rect(".qg-foot");
+    const left = Math.max(130, legend ? legend.right - box.left + 12 : 0), right = panel ? Math.max(0, box.right - panel.left + 12) : 0;
     const top = head ? Math.max(0, head.bottom - box.top) : 0, bottom = foot ? Math.max(0, box.bottom - foot.top + 8) : 0;
     const freeW = Math.max(240, W - left - right), freeH = Math.max(240, H - top - bottom);
     const dist = 1.08 * Math.max((h * cp + 2 * R * sp) / (2 * tan * freeH / H), 2 * R / (2 * tan * freeW / H));
@@ -241,25 +241,34 @@ export function createStage(canvas, scene, model, layout) {
     }
     ctx.stroke();
   }
-  // A tier's floor: a faint disc with a hairline rim in the phase colour.
-  function plate(center, R, color, alpha) {
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    let started = false;
-    for (let i = 0; i <= 96; i++) {
-      const a = i / 96 * Math.PI * 2, p = project([center[0] + R * Math.cos(a), center[1], center[2] + R * Math.sin(a)]);
-      if (!p) continue;
-      started ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y);
-      started = true;
+  // A tier's floor: only its rim in the phase colour, the near half drawn and the far half
+  // barely there, so six floors read as one cone instead of a stack of discs. The current
+  // floor alone gets a faint fill.
+  function plate(center, R, color, alpha, active) {
+    const N = 96, pts = [];
+    for (let i = 0; i <= N; i++) {
+      const a = i / N * Math.PI * 2, d = [R * Math.cos(a), 0, R * Math.sin(a)];
+      pts.push({p: project(add(center, d)), near: dot(d, B.f) < 0});
     }
-    ctx.closePath();
-    ctx.globalAlpha = 0.05 * alpha;
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.globalAlpha = 0.4 * alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.setLineDash([]);
+    if (active) {
+      ctx.beginPath();
+      pts.forEach(({p}, i) => p && (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.globalAlpha = 0.07 * alpha;
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+    for (const near of [false, true]) {
+      stroke(color, (near ? (active ? 0.75 : 0.38) : (active ? 0.3 : 0.1)) * alpha, 1);
+      ctx.beginPath();
+      for (let i = 1; i <= N; i++) {
+        const a = pts[i - 1], b = pts[i];
+        if (!a.p || !b.p || b.near !== near) continue;
+        ctx.moveTo(a.p.x, a.p.y); ctx.lineTo(b.p.x, b.p.y);
+      }
+      ctx.stroke();
+    }
   }
 
   // Phase ruler: a fixed HUD scale on the left whose ticks sit at each tier's projected height,
@@ -410,11 +419,16 @@ export function createStage(canvas, scene, model, layout) {
       const a = floors[k - 1], b = floors[k];
       for (const s of [-1, 1]) line3([s * side[0] * a.plate, a.y, s * side[2] * a.plate], [s * side[0] * b.plate, b.y, s * side[2] * b.plate]);
     }
+    // The current floor: the selected cloud's, else the hovered one's, else the tour's focus.
+    const tierOf = id => id ? byId.get(id)?.tier : undefined;
+    const current = tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
     for (const t of floors) {
       const members = shown.filter(c => c.tier === t.tier);
-      plate([0, t.y, 0], t.plate, colors.phase[t.phase], fade);
-      if (t.rise) { stroke(colors.line, 0.9 * fade, 1, [2, 5]); helix3(t, members.length); }
-      else if (members.length > 1) { stroke(colors.line, 0.9 * fade, 1, [2, 5]); ring3([0, t.y, 0], t.ring); }
+      const active = current === t.tier;
+      plate([0, t.y, 0], t.plate, colors.phase[t.phase], fade, active);
+      stroke(colors.line, (active ? 0.9 : 0.45) * fade, 1, [2, 5]);
+      if (t.rise) helix3(t, members.length);
+      else if (members.length > 1) ring3([0, t.y, 0], t.ring);
     }
 
     // Links between clouds, in the phase colour of the cloud they lead to. The edges of the
@@ -559,7 +573,6 @@ export function createStage(canvas, scene, model, layout) {
       }
     }
     for (const e of edgeLabels) edgeLabel(e);
-    const current = (view.selected && byId.get(view.selected)?.tier) ?? (frame.focus.size ? byId.get([...frame.focus][0])?.tier : null);
     ruler(shown, current);
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(draw);

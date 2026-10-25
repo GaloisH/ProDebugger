@@ -44,6 +44,20 @@ export function createStage(canvas, scene, model, layout) {
   }
   const phaseColor = c => colors.phase[c.phaseKey] || colors.label;
   const groupOf = new Map(clusters.map(c => [c.id, new Map(c.groups.flatMap((g, gi) => g.fids.map(fid => [fid, gi])))]));
+  // The main chain the overview lights: record → query → window → lane → candidate → root.
+  // Walk down from the root through its first link; at the window take the query that gave it
+  // most of its clues.
+  const backbone = new Set();
+  for (let c = byId.get("root"); c; ) {
+    backbone.add(c.id);
+    const links = c.links.filter(l => byId.has(l.from));
+    if (c.kind === "window") { const q = [...links].sort((a, b) => b.weight - a.weight)[0]; if (q) backbone.add(q.from); break; }
+    c = links[0] && byId.get(links[0].from);
+    if (c && (c.kind === "core" || c.kind === "query")) { backbone.add(c.id); break; }
+  }
+  if (backbone.size) backbone.add("core");
+  // Depth fog: clouds behind the tower's middle fade, those in front stay full.
+  const fog = z => 1 - 0.55 * Math.max(0, Math.min(1, (z - cam.dist + 9) / 18));
   // Entity hubs travel like points; opened, a hub sits on its entity group (or the "+more" one).
   const hubInst = new Map(clusters.map(c => [c.id, c.structure.hubs.map(() => ({cur: null}))]));
   const hubGroup = new Map(clusters.map(c => {
@@ -163,6 +177,29 @@ export function createStage(canvas, scene, model, layout) {
     return {target: layout.pos.get(c.id), yaw: cam.yaw, pitch: cam.pitch, dist: Math.max(12, groupRing(c) * 4.2)};
   }
 
+  // A preset marked fit frames the whole cone in the canvas area left free by the phase ruler
+  // and the inspector: the distance fits both its height and its width, and the target slides
+  // sideways so the tower centres in that area.
+  function fitGoal(g) {
+    const tan = Math.tan(cam.fov / 2), cp = Math.cos(g.pitch), sp = Math.abs(Math.sin(g.pitch));
+    const R = TIERS[0].plate, h = layout.top + 2.5 - layout.bottom;
+    const box = canvas.getBoundingClientRect();
+    const page = canvas.closest(".qg");
+    const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
+    const panel = rect(".qg-inspect:not([hidden])"), head = rect(".qg > header"), foot = rect(".qg-foot");
+    const left = 130, right = panel ? Math.max(0, box.right - panel.left + 12) : 0;
+    const top = head ? Math.max(0, head.bottom - box.top) : 0, bottom = foot ? Math.max(0, box.bottom - foot.top + 8) : 0;
+    const freeW = Math.max(240, W - left - right), freeH = Math.max(240, H - top - bottom);
+    const dist = 1.08 * Math.max((h * cp + 2 * R * sp) / (2 * tan * freeH / H), 2 * R / (2 * tan * freeW / H));
+    const px = dist / (H / (2 * tan));          // world units per screen pixel at the target
+    const dx = (right - left) / 2 * px, dy = (bottom - top) / 2 * px;
+    const mid = (layout.top + layout.bottom) / 2 + 0.6;
+    // Slide right along the camera's right vector, and down along its up vector.
+    const r = [Math.cos(g.yaw), 0, -Math.sin(g.yaw)];
+    const u = [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)];
+    return {...g, dist, target: [r[0] * dx - u[0] * dy, mid - u[1] * dy, r[2] * dx - u[2] * dy]};
+  }
+
   function setView(cluster, group = null) {
     if (cluster && cluster !== view.cluster) view.basis = {r: [...B.r], u: [...B.u]};
     view.cluster = cluster; view.group = group;
@@ -184,6 +221,20 @@ export function createStage(canvas, scene, model, layout) {
     let open = false;
     for (let i = 0; i <= seg; i++) {
       const a = i / seg * Math.PI * 2, p = project([center[0] + R * Math.cos(a), center[1], center[2] + R * Math.sin(a)]);
+      if (!p) { open = false; continue; }
+      open ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y);
+      open = true;
+    }
+    ctx.stroke();
+  }
+  // The ROUTE floor's guide: one turn of a helix through the query clouds, rising with call order.
+  function helix3(t, n) {
+    if (n < 2) return;
+    ctx.beginPath();
+    let open = false;
+    for (let i = 0; i <= 120; i++) {
+      const f = i / 120 * (n - 1) / n, a = Math.PI / 2 - f * Math.PI * 2;
+      const p = project([t.ring * Math.cos(a), t.y + t.rise * f * n / (n - 1), t.ring * Math.sin(a)]);
       if (!p) { open = false; continue; }
       open ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y);
       open = true;
@@ -256,20 +307,24 @@ export function createStage(canvas, scene, model, layout) {
     }
     ctx.stroke();
   }
-  function tag(x, y, r, title, detail, color, alpha = 1) {
+  // A cloud's name, led out away from the tower's axis so names on the two sides never cross it;
+  // a fixed side (+1 right, -1 left) overrides that.
+  function tag(x, y, r, title, detail, color, alpha = 1, side = 0) {
+    const axis = project([0, cam.target[1], 0]);
+    const s = side || (axis && x < axis.x - 4 ? -1 : 1);
     // Leader: a short diagonal from the bracket corner, then the text.
-    const x0 = x + r, y0 = y - r, x1 = x0 + 10, y1 = y0 - 10;
+    const x0 = x + s * r, y0 = y - r, x1 = x0 + s * 10, y1 = y0 - 10;
     stroke(color, alpha * 0.8, 1);
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + 6, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + s * 6, y1); ctx.stroke();
     ctx.globalAlpha = alpha;
-    ctx.textAlign = "left";
+    ctx.textAlign = s > 0 ? "left" : "right";
     ctx.fillStyle = color;
     ctx.font = "500 11px 'IBM Plex Mono', monospace";
-    ctx.fillText(title, x1 + 10, y1 + 4);
+    ctx.fillText(title, x1 + s * 10, y1 + 4);
     if (detail) {
       ctx.fillStyle = colors["label-dim"];
       ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(detail, x1 + 10, y1 + 17);
+      ctx.fillText(detail, x1 + s * 10, y1 + 17);
     }
   }
   // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
@@ -319,7 +374,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     B = basis();
     if (!manual) {
-      goal = view.cluster ? expansionGoal() : tourGoal;
+      goal = view.cluster ? expansionGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
       const k = 1 - Math.exp(-dt * 2.4);
       if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
       if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;
@@ -340,15 +395,26 @@ export function createStage(canvas, scene, model, layout) {
     const hiddenPhase = frame.filter?.phases;
     const shown = clusters.filter(c => frame.visible.has(c.id) && !hiddenPhase?.has(c.phaseKey));
     const tierUsed = new Set(shown.map(c => c.tier));
-    stroke(colors.line, 0.9 * fade, 1);
-    line3([0, layout.bottom, 0], [0, layout.top, 0]);
-    for (const t of TIERS) {
-      if (!tierUsed.has(t.tier)) continue;
+    const floors = TIERS.filter(t => tierUsed.has(t.tier));
+    // The axis in segments, each floor's phase colour up to the next floor.
+    floors.forEach((t, k) => {
+      const next = floors[k + 1];
+      stroke(colors.phase[t.phase], 0.55 * fade, 1);
+      line3([0, t.y, 0], [0, next ? next.y : t.y + 1.2, 0]);
+    });
+    // The cone's outline: the two silhouette edges between neighbouring plates, taken along the
+    // camera's horizontal right vector so they hug the rims from any angle.
+    const side = norm([B.r[0], 0, B.r[2]]);
+    stroke(colors["line-hi"], 0.45 * fade, 1, [3, 5]);
+    for (let k = 1; k < floors.length; k++) {
+      const a = floors[k - 1], b = floors[k];
+      for (const s of [-1, 1]) line3([s * side[0] * a.plate, a.y, s * side[2] * a.plate], [s * side[0] * b.plate, b.y, s * side[2] * b.plate]);
+    }
+    for (const t of floors) {
       const members = shown.filter(c => c.tier === t.tier);
-      const ringR = members.length > 1 || t.tier === 1 ? t.ring : 0;
-      const reach = Math.max(...members.map(c => layout.radius.get(c.id)));
-      plate([0, t.y, 0], ringR ? ringR + reach + 1 : Math.max(2, reach + 1.2), colors.phase[t.phase], fade);
-      if (ringR) { stroke(colors.line, 0.9 * fade, 1, [2, 5]); ring3([0, t.y, 0], ringR); }
+      plate([0, t.y, 0], t.plate, colors.phase[t.phase], fade);
+      if (t.rise) { stroke(colors.line, 0.9 * fade, 1, [2, 5]); helix3(t, members.length); }
+      else if (members.length > 1) { stroke(colors.line, 0.9 * fade, 1, [2, 5]); ring3([0, t.y, 0], t.ring); }
     }
 
     // Links between clouds, in the phase colour of the cloud they lead to. The edges of the
@@ -364,7 +430,9 @@ export function createStage(canvas, scene, model, layout) {
       const spoke = l.from === "core";
       const color = phaseColor(c);
       const quiet = frame.chain && !inChain ? 0.25 : 1;
-      stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet, 1, spoke ? [1, 4] : null);
+      const main = frame.labelAll && !frame.chain && !open && backbone.has(c.id) && backbone.has(l.from);
+      if (main) stroke(color, 0.9, 1.6);
+      else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
       const edgeHot = hover?.kind === "edge" && hover.link === l;
       if ((hot || hovered || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
@@ -380,7 +448,9 @@ export function createStage(canvas, scene, model, layout) {
       const focus = frame.focus.has(c.id);
       const isOpen = open?.id === c.id;
       const outside = frame.chain && !frame.chain.has(c.id);
-      const alpha = (open && !isOpen ? 0.07 : outside ? 0.13 : focus || isOpen || frame.chain ? 1 : c.kind === "core" ? 0.5 : 0.6) * appear;
+      const lead = frame.labelAll && !frame.chain && backbone.has(c.id) && c.kind !== "core";
+      const alpha = (open && !isOpen ? 0.07 : outside ? 0.13 : focus || isOpen || frame.chain || lead ? 1 : c.kind === "core" ? 0.5 : 0.6)
+        * appear * (pc && !isOpen ? fog(pc.z) : 1);
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
         const gmap = groupOf.get(c.id);
@@ -473,17 +543,19 @@ export function createStage(canvas, scene, model, layout) {
       const outside = frame.chain && !frame.chain.has(c.id);
       if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
       if (outside && !hot) continue;
-      const named = c.kind !== "query" || focus || hot || selected || (frame.chain && frame.chain.has(c.id));
+      const lead = frame.labelAll && !frame.chain && backbone.has(c.id);
+      const named = c.kind !== "query" || focus || hot || selected || lead || (frame.chain && frame.chain.has(c.id));
       if (named) {
-        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || c.kind === "root" ? phaseColor(c) : colors.label, fade * Math.min(1, alpha / 0.6));
+        // In the overview the main chain reads down the right; its tier-mates take the left.
+        const side = !frame.labelAll || frame.chain ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
+        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || c.kind === "root" ? phaseColor(c) : colors.label, fade * Math.min(1, alpha / 0.6), side);
       } else {
-        // Unnamed queries keep a one-line caption under the cloud: the call tag, and in the
-        // overview what it asked.
+        // Unnamed queries keep only their call tag under the cloud; hover names them.
         ctx.globalAlpha = 0.9 * fade * alpha;
-        ctx.fillStyle = frame.labelAll ? colors.label : colors["label-dim"];
+        ctx.fillStyle = colors["label-dim"];
         ctx.font = "10px 'IBM Plex Mono', monospace";
         ctx.textAlign = "center";
-        ctx.fillText(frame.labelAll ? clusterTitle(c) : callTag(c), pc.x, pc.y + sr + 12);
+        ctx.fillText(callTag(c), pc.x, pc.y + sr + 12);
       }
     }
     for (const e of edgeLabels) edgeLabel(e);

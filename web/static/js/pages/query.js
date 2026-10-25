@@ -18,11 +18,12 @@ const CASES = [
 ];
 export const DEFAULT_CASE = CASES[0].ref;
 const PHASES = ["PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"];
-// Overview camera presets: the whole tower from the front, from above, from the side.
+// Overview camera presets: the whole tower from the front, from above, from the side. The stage
+// fits distance and target to the canvas; these give the angle.
 const OVERVIEW_CAM = {
-  front: {target: [0, 6.5, 0], yaw: 0.55, pitch: 0.42, dist: 64},
-  top: {target: [0, 6, 0], yaw: 0.55, pitch: 1.42, dist: 58},
-  side: {target: [0, 7, 0], yaw: 0.55 + Math.PI / 2, pitch: 0.1, dist: 62},
+  front: {fit: true, target: [0, 7, 0], yaw: 0.55, pitch: 0.32, dist: 56},
+  top: {fit: true, target: [0, 7, 0], yaw: 0.55, pitch: 1.42, dist: 56},
+  side: {fit: true, target: [0, 7, 0], yaw: 0.55 + Math.PI / 2, pitch: 0.08, dist: 56},
 };
 const PHASE_NOTE = {
   PARSE: "compile the log into the DSL", MAP: "read the task contract", ROUTE: "query the record, open suspect windows",

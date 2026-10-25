@@ -151,7 +151,8 @@ function template(scene, model, ref) {
       </div>
       <ol class="qg-phases">${PHASES.filter(ph => scene.events.some(e => e.phase === ph)).map((ph, k) => `<li><button data-phase="${ph}" title="${esc(PHASE_NOTE[ph])}"><span>${String(k + 1).padStart(2, "0")}</span><b>${ph}</b></button></li>`).join("")}</ol>
     </header>
-    <aside class="qg-legend" aria-label="Legend">
+    <aside class="qg-legend is-collapsed" aria-label="Legend">
+      <button class="qg-pane-tab" data-pane="legend" aria-expanded="false" title="Show or hide the legend"><span>Legend</span><i>›</i></button>
       <h2>DSL record</h2>
       <dl class="qg-stats">
         <dt>facts</dt><dd>${scene.facts.length}</dd><dt>entities</dt><dd>${scene.entities.length}</dd>
@@ -177,7 +178,10 @@ function template(scene, model, ref) {
       </ul>
       <p class="qg-hint">Click a cloud to light its causal chain, click it again to open it by entity, then an entity to read its facts. Esc steps back. Legend rows filter.</p>
     </aside>
-    <aside class="qg-inspect" hidden></aside>
+    <aside class="qg-inspect is-collapsed" hidden>
+      <button class="qg-pane-tab" data-pane="inspect" aria-expanded="false" title="Show or hide the details"><i>‹</i><span>Details</span></button>
+      <div class="qg-inspect-body"></div>
+    </aside>
     <div class="qg-tip" hidden></div>
     <footer class="qg-foot">
       <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p></div></div>
@@ -197,8 +201,15 @@ function bindUi(root, scene, model, stage) {
   const $ = s => root.querySelector(s);
   const ticks = [...root.querySelectorAll(".qg-tick")];
   const handlers = {};
-  const inspect = $(".qg-inspect"), tip = $(".qg-tip");
+  const inspect = $(".qg-inspect"), panelBody = $(".qg-inspect-body"), tip = $(".qg-tip");
   let current = 0;
+  // Both side panels start folded to a tab; the details panel also opens when the user picks
+  // something on the stage and folds again when the pick is cleared.
+  const setPane = (name, open) => {
+    const pane = $(`.qg-${name}`);
+    pane.classList.toggle("is-collapsed", !open);
+    pane.querySelector(".qg-pane-tab").setAttribute("aria-expanded", String(open));
+  };
 
   $(".qg-case")?.addEventListener("change", e => { if (e.target.value.startsWith("#/")) location.hash = e.target.value; });
   root.addEventListener("click", e => {
@@ -229,6 +240,8 @@ function bindUi(root, scene, model, stage) {
     const fact = e.target.closest("[data-fact]");
     if (fact) { stage.selectFact(Number(fact.dataset.fact)); showFact(Number(fact.dataset.fact), stage.view); }
     if (e.target.closest("[data-fold]")) stage.back();
+    const tab = e.target.closest("[data-pane]");
+    if (tab) setPane(tab.dataset.pane, tab.closest("aside").classList.contains("is-collapsed"));
   });
 
   function showEvent(i) {
@@ -268,7 +281,7 @@ function bindUi(root, scene, model, stage) {
     const shared = c.kind !== "core" ? sharing(c) : [];
     const sharedHtml = shared.length ? `<h4>Shares facts with</h4><ul class="qg-rows">${shared.map(([o, k]) => `<li><button data-open="${esc(o.id)}"><span>${esc(clusterTitle(o))}</span><em>${k}</em></button></li>`).join("")}</ul>` : "";
     const phase = ev?.phase || "PARSE";
-    inspect.innerHTML = `${crumbs(c)}
+    panelBody.innerHTML = `${crumbs(c)}
       <p class="qg-kind"><span class="qg-chip" data-phase="${esc(phase)}">${esc(phase)}</span>${esc(c.kind)}${opened ? ` · <button class="qg-link" data-fold>fold</button>` : ""}</p>
       <h3>${esc(c.label)}</h3><p class="qg-muted">${esc(c.detail)}</p>
       ${!opened && c.groups.length ? `<button class="qg-open" data-open="${esc(c.id)}">Open by entity ›</button>` : ""}${body}${groups}${sharedHtml}`;
@@ -278,7 +291,7 @@ function bindUi(root, scene, model, stage) {
     const g = c.groups[gi];
     const ent = scene.entities.find(e => e.key === g.key);
     inspect.hidden = false;
-    inspect.innerHTML = `${crumbs(c, gi)}
+    panelBody.innerHTML = `${crumbs(c, gi)}
       <p class="qg-kind">entity group</p><h3>${esc(g.key)}</h3>
       ${ent ? `<dl><dt>kind</dt><dd>${esc(ent.kind)}${ent.parent ? ` ⊑ ${esc(ent.parent)}` : ""}</dd><dt>in record</dt><dd>${ent.facts.length} facts</dd></dl>` : ""}
       <h4>Facts in this access <small>${g.fids.length}</small></h4>
@@ -290,7 +303,7 @@ function bindUi(root, scene, model, stage) {
     const sig = scene.meta.relations[f.rel];
     const seen = model.clusters.filter(o => o.kind !== "core" && o.fids.includes(fid));
     inspect.hidden = false;
-    inspect.innerHTML = `${c ? crumbs(c, view.group, fid) : ""}
+    panelBody.innerHTML = `${c ? crumbs(c, view.group, fid) : ""}
       <p class="qg-kind">fact ${fid}</p><h3>${esc(`${f.rel}(${f.args.join(", ")})`)}</h3>
       <pre class="qg-code">${esc(factRepr(f))}</pre>
       <dl><dt>step</dt><dd>S${f.t} · ${SLOT_LABEL[f.slot]} · ${f.side}</dd>
@@ -370,6 +383,7 @@ function bindUi(root, scene, model, stage) {
     },
     inspect(sel) {
       this.syncFollow();
+      setPane("inspect", !!sel);
       if (!sel) { showEvent(current); return; }
       if (sel.kind === "cluster") showCluster(sel.cluster, scene.events[sel.cluster.event], sel.opened);
       else if (sel.kind === "group") showGroup(sel.cluster, sel.gi);

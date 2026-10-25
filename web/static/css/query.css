@@ -66,7 +66,25 @@ body.page-query .app { padding: 0; }
 .qg-hint { margin: .8rem 0 0; color: var(--qg-label-dim); font-size: .7rem; line-height: 1.45; }
 
 /* Inspector */
-.qg-inspect { right: 1.2rem; top: 6.6rem; width: 23rem; max-height: calc(100% - 6.6rem - 9.2rem); overflow: auto; padding: .8rem .95rem; font-size: .79rem; line-height: 1.45; }
+.qg-inspect { right: 1.2rem; top: 6.6rem; width: 23rem; padding: .8rem .95rem; font-size: .79rem; line-height: 1.45; }
+.qg-inspect-body { max-height: calc(100vh - var(--header-h) - 6.6rem - 11rem); overflow: auto; }
+
+/* Side panels fold to a tab; open, the tab hangs on the panel's inner edge as its handle. */
+.qg-pane-tab {
+  display: flex; align-items: center; gap: .45rem; padding: .4rem .65rem; border: 1px solid var(--qg-line); border-radius: 2px;
+  background: color-mix(in srgb, var(--qg-panel) 88%, transparent); color: var(--qg-label-dim); cursor: pointer;
+  font-family: var(--mono); font-size: .64rem; letter-spacing: .14em; text-transform: uppercase;
+}
+.qg-pane-tab:hover { color: var(--text-hi); border-color: var(--qg-line-hi); }
+.qg-pane-tab i { font-style: normal; font-size: .8rem; letter-spacing: 0; }
+.qg-legend.is-collapsed, .qg-inspect.is-collapsed { width: auto; padding: 0; border: 0; background: none; }
+.is-collapsed > :not(.qg-pane-tab) { display: none !important; }
+.qg-legend:not(.is-collapsed) > .qg-pane-tab, .qg-inspect:not(.is-collapsed) > .qg-pane-tab { position: absolute; top: -1px; padding: .4rem .45rem; }
+.qg-legend:not(.is-collapsed) > .qg-pane-tab { left: 100%; margin-left: -1px; }
+.qg-inspect:not(.is-collapsed) > .qg-pane-tab { right: 100%; margin-right: -1px; }
+:not(.is-collapsed) > .qg-pane-tab span { display: none; }
+.qg-legend:not(.is-collapsed) > .qg-pane-tab i { transform: scaleX(-1); }
+.qg-inspect:not(.is-collapsed) > .qg-pane-tab i { transform: scaleX(-1); }
 .qg-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin-bottom: .6rem; padding-bottom: .5rem; border-bottom: 1px solid var(--qg-line); font-family: var(--mono); font-size: .66rem; color: var(--qg-label-dim); }
 .qg-crumbs i { font-style: normal; }
 .qg-crumbs b { font-weight: 500; color: var(--qg-focus); }

@@ -229,4 +229,62 @@ export function factRoles(clusters) {
   return roles;
 }
 
+// The facts that earned each role, furthest-reaching first: a clue that went on to be the root
+// leads the clue list.
+export function roleFacts(clusters) {
+  const roles = factRoles(clusters);
+  const reach = fid => Math.max(...roles.get(fid).map(r => ROLE_ORDER.indexOf(r.role)));
+  const out = new Map(ROLE_ORDER.map(r => [r, []]));
+  for (const [fid, list] of roles) for (const r of new Set(list.map(x => x.role))) out.get(r).push(fid);
+  for (const list of out.values()) list.sort((a, b) => reach(b) - reach(a) || a - b);
+  return {byRole: out, reach: fid => roles.has(fid) ? ROLE_ORDER[reach(fid)] : null};
+}
+
+// One fact's way from the record to its verdict: every cloud that returned it, climbing the
+// tiers in call order, each stop saying what that step made of the fact. Where the way stops
+// short of the root, or starts above ROUTE, a note says why.
+export function journeyOf(scene, {clusters, byId}, fid) {
+  const f = scene.factById.get(fid);
+  const at = c => c.kind === "lane" ? c.fill : c.event;
+  const clouds = clusters.filter(c => c.kind !== "core" && c.fids.includes(fid)).sort((a, b) => at(a) - at(b) || a.tier - b.tier);
+  const stops = [{id: "core", kind: "core", event: 0, phase: "PARSE", outcome: `compiled from S${f.t} ${SLOT_LABEL[f.slot]}`}];
+  let seen = 0;
+  for (const c of clouds) {
+    const ev = scene.events[at(c)];
+    let outcome;
+    if (c.kind === "query") {
+      const verdict = (ev.calls || []).find(e => e.call?.arguments?.fid === fid && e.verdict)?.verdict;
+      outcome = `${seen++ ? "returned again" : "first returned"}${verdict ? ` · check → ${verdict}` : ""}`;
+    } else if (c.kind === "window") outcome = `clue of suspect window ${c.ref.caseId} at S${c.ref.step}`;
+    else if (c.kind === "lane") {
+      const own = c.ref.rows.some(r => r.step === f.t && r.module === SLOT_LABEL[f.slot]);
+      outcome = own ? `SQL returned its row (S${f.t} ${SLOT_LABEL[f.slot]})` : c.ref.rows.some(r => r.step === f.t) ? `SQL returned step S${f.t}` : "SQL returned it";
+    } else if (c.kind === "candidate") outcome = `blamed: S${c.ref.step} ${c.ref.module} · ${c.ref.status}${c.ref.faultClass ? ` · ${c.ref.faultClass}` : ""}`;
+    else if (c.kind === "root") outcome = `chosen as root cause${c.ref.rule?.id ? ` by rule ${c.ref.rule.id}` : ""}`;
+    stops.push({id: c.id, kind: c.kind, event: at(c), phase: c.phaseKey, outcome});
+  }
+
+  // Why it stops: judged at the highest tier it reached; in parallel lanes, by all of them.
+  const first = clouds[0], top = Math.max(-1, ...clouds.map(c => c.tier)), last = clouds.findLast(c => c.tier === top);
+  const start = !first || first.kind === "query" ? null
+    : first.kind === "window" ? "put in a window without a ROUTE view returning it"
+    : first.kind === "lane" ? "found by TRACE's SQL directly, not via ROUTE"
+    : first.kind === "candidate" ? "named by TRACE's assess directly" : "named by SUBMIT directly";
+  let end = null;
+  if (!last) end = "no debugger call returned it";
+  else if (last.kind === "query") end = "ROUTE read it but put it in no suspect window";
+  else if (last.kind === "window") {
+    const lanes = clusters.filter(c => c.kind === "lane" && (c.ref.anchor === last.ref.caseId || c.ref.cases.includes(last.ref.caseId)));
+    end = lanes.length ? `the SQL of ${lanes.map(l => l.ref.agent).join(", ")} did not return it` : `window ${last.ref.caseId} got no TRACE lane`;
+  } else if (last.kind === "lane") {
+    const lanes = new Set(clouds.filter(c => c.kind === "lane").map(c => c.id));
+    const blamed = [...new Set(clusters.filter(c => c.kind === "candidate" && lanes.has(c.ref.lane)).map(c => `S${c.ref.step} ${c.ref.module}`))];
+    end = blamed.length ? `TRACE blamed ${blamed.join(", ")} instead` : `TRACE blamed no step in ${last.ref.agent}`;
+  } else if (last.kind === "candidate") {
+    const root = byId.get("root")?.ref;
+    end = root ? `SUBMIT chose S${root.step} ${root.module} instead` : "SUBMIT named no root";
+  }
+  return {fid, fact: f, stops, start, end};
+}
+
 export const factLabel = f => `${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 46)}  @S${f.t}`;

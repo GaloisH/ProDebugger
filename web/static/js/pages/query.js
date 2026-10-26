@@ -192,29 +192,29 @@ function template(scene, model, ref, roles) {
     </header>
     <aside class="qg-legend is-collapsed" aria-label="Legend">
       <button class="qg-pane-tab" data-pane="legend" aria-expanded="false" title="Show or hide the legend"><span>Legend</span><i>›</i></button>
+      <div class="qg-legend-body">
+      <h2>A fact becomes evidence</h2>
+      <ul class="qg-key">
+        <li><i class="k-pt"></i>fact the debugger read</li>
+      </ul>
+      <p class="qg-sub">Follow a fact from the record to the verdict:</p>
+      <div class="qg-follows">
+        ${ROLE_ROWS.map(r => { const n = roles.byRole.get(r.role).length; return `<button data-journey-role="${r.role}"${n ? ` title="Follow these facts from the record to the verdict"` : " disabled"}><i class="k-pt" data-role="${r.role}"></i><span>${r.label}</span><em>${n}</em><b>Follow ›</b></button>`; }).join("")}
+      </div>
       <h2>DSL record</h2>
-      <dl class="qg-stats">
-        <dt>facts</dt><dd>${scene.facts.length}</dd><dt>entities</dt><dd>${scene.entities.length}</dd>
-        <dt>relations</dt><dd>${rels}</dd><dt>goals</dt><dd>${scene.goals.length}</dd><dt>steps</dt><dd>${scene.meta.steps}</dd>
-      </dl>
+      <dl class="qg-stats">${[["facts", scene.facts.length], ["entities", scene.entities.length], ["relations", rels], ["steps", scene.meta.steps]].map(([k, v]) => `<div><dd>${v}</dd><dt>${k}</dt></div>`).join("")}</dl>
       <p class="qg-formula">Fact ≔ rel(args) = value @t</p>
       <ul class="qg-key qg-ties">
         <li><i class="k-hub"></i>entity a fact names</li>
         <li><i class="k-thread"></i>same state, next step</li>
       </ul>
-      <h2>A fact becomes evidence</h2>
-      <ul class="qg-key">
-        <li><i class="k-pt"></i>fact the debugger read</li>
-        ${ROLE_ROWS.map(r => { const n = roles.byRole.get(r.role).length; return `<li data-journey-role="${r.role}"${n ? ` title="Follow these facts from the record to the verdict"` : " class=\"none\""}><i class="k-pt" data-role="${r.role}"></i>${r.label}<em>${n}</em></li>`; }).join("")}
-      </ul>
-      <p class="qg-hint qg-hint-role">Click a row to follow its facts from the record to the verdict.</p>
       <h2>Clouds by phase</h2>
       <ul class="qg-key">
-        ${["PARSE", "MAP", "ROUTE", "TRACE", "SUBMIT"].filter(ph => model.clusters.some(c => c.phaseKey === ph)).map(ph => `<li data-phase="${ph}" data-filter-phase="${ph}" title="Hide or show this phase"><i class="k-cloud"></i>${ph.toLowerCase()} · ${PHASE_NOTE[ph]}</li>`).join("")}
+        ${["PARSE", "MAP", "ROUTE", "TRACE", "SUBMIT"].filter(ph => model.clusters.some(c => c.phaseKey === ph)).map(ph => `<li data-phase="${ph}" data-filter-phase="${ph}" title="${esc(`${PHASE_NOTE[ph]} · click to hide or show`)}"><i class="k-cloud"></i>${ph.toLowerCase()}</li>`).join("")}
         <li><i class="k-dot"></i>pulled from the record</li>
         <li><i class="k-line"></i>leads to</li>
       </ul>
-      <p class="qg-hint">Click a cloud to light its causal chain, click it again to open it by entity, then an entity to read its facts. Esc steps back. Legend rows filter.</p>
+      </div>
     </aside>
     <aside class="qg-inspect is-collapsed" hidden>
       <button class="qg-pane-tab" data-pane="inspect" aria-expanded="false" title="Show or hide the details"><i>‹</i><span>Details</span></button>
@@ -249,6 +249,9 @@ function bindUi(root, scene, model, stage, roles) {
     pane.querySelector(".qg-pane-tab").setAttribute("aria-expanded", String(open));
   };
 
+  // The side panels stop above the footer, whose height changes with the caption's length.
+  const foot = $(".qg-foot");
+  new ResizeObserver(() => root.style.setProperty("--qg-foot-h", `${foot.offsetHeight}px`)).observe(foot);
   $(".qg-case")?.addEventListener("change", e => { if (e.target.value.startsWith("#/")) location.hash = e.target.value; });
   panelBody.addEventListener("mouseover", e => stage.highlightChainEdge(e.target.closest("[data-chain-edge]") ? Number(e.target.closest("[data-chain-edge]").dataset.chainEdge) : null));
   panelBody.addEventListener("mouseleave", () => stage.highlightChainEdge(null));
@@ -267,7 +270,7 @@ function bindUi(root, scene, model, stage, roles) {
     if (cam) handlers.view?.(cam.dataset.view);
     const fp = e.target.closest("[data-filter-phase]");
     if (fp) handlers.filterPhase?.(fp.dataset.filterPhase);
-    const jr = e.target.closest("[data-journey-role]:not(.none)");
+    const jr = e.target.closest("[data-journey-role]:not(:disabled)");
     if (jr) handlers.journeyRole?.(jr.dataset.journeyRole, !!jr.closest(".qg-roles"));
     const jf = e.target.closest("[data-journey-fact]");
     if (jf) handlers.journeyFact?.(Number(jf.dataset.journeyFact), jf.dataset.role);

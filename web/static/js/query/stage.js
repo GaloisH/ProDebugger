@@ -20,8 +20,8 @@ const POINT_DIM = 0.32;   // brightness of plain points in a cloud nobody is loo
 const POINT_LIFT = 0.65;  // ... in the focused or selected cloud
 const SIDE_SCALE = 0.45;  // size of a cloud off the main chain while nobody looks at it
 const CORE_POINTS = 140;  // points the folded record cloud keeps (plus every role point)
-const LABEL_ROOM = 240;   // px kept free each side of an upright journey for its stop labels
-const LABEL_ROW = 90;     // px kept free above and below a journey lying across
+const LABEL_ROOM = 300;   // px kept free each side of an upright journey for its stop labels
+const LABEL_ROW = 110;    // px kept free above and below a journey lying across
 
 export function createStage(canvas, scene, model, layout) {
   const ctx = canvas.getContext("2d");
@@ -270,15 +270,15 @@ export function createStage(canvas, scene, model, layout) {
       ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
       if (!lit) continue;
       const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2, t = String(n);
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      const w = ctx.measureText(t).width + 8;
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      const w = ctx.measureText(t).width + 10;
       ctx.globalAlpha = 0.9 * alpha;
       ctx.fillStyle = colors.void;
-      ctx.fillRect(mx - w / 2, my - 7, w, 14);
+      ctx.fillRect(mx - w / 2, my - 8, w, 16);
       ctx.globalAlpha = alpha;
       ctx.fillStyle = colors.label;
       ctx.textAlign = "center";
-      ctx.fillText(t, mx, my + 3.5);
+      ctx.fillText(t, mx, my + 4);
     }
     for (const p of inst.get(c.id)) {
       const gi = own.get(p.fid);
@@ -294,7 +294,7 @@ export function createStage(canvas, scene, model, layout) {
   function hubLabels(c, alpha) {
     const hubs = hubInst.get(c.id);
     ctx.textAlign = "left";
-    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.font = "12px 'IBM Plex Mono', monospace";
     ctx.fillStyle = colors["label-dim"];
     ctx.globalAlpha = alpha;
     c.structure.hubs.slice(0, 4).forEach((h, j) => {
@@ -430,11 +430,11 @@ export function createStage(canvas, scene, model, layout) {
     for (const it of shown) {
       const s = J.stops[it.k], on = lit(it.k);
       it.color = colors.phase[s.phase] || colors.focus;
-      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 11px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "10px", on ? colors.label : colors["label-dim"]]];
-      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "10px", colors.label]);
-      if (it.k === last && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 10px", colors["ink-hi"]]);
-      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 14;
-      it.h = it.lines.length * 13 + 6;
+      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 13px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "12px", on ? colors.label : colors["label-dim"]]];
+      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "12px", colors.label]);
+      if (it.k === last && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 12px", colors["ink-hi"]]);
+      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 16;
+      it.h = it.lines.length * 16 + 7;
     }
     const order = [...shown].sort((a, b) => wide ? a.p.x - b.p.x : a.p.y - b.p.y);
     const ins = hudInsets(), GAP = wide ? 10 : 6;
@@ -479,7 +479,7 @@ export function createStage(canvas, scene, model, layout) {
       it.lines.forEach(([t, f, col], i) => {
         ctx.font = `${f} 'IBM Plex Mono', monospace`;
         ctx.fillStyle = col;
-        ctx.fillText(t, x + 8, y + 14 + i * 13);
+        ctx.fillText(t, x + 9, y + 16 + i * 16);
       });
       targets.push({kind: "stop", k: it.k, stop: J.stops[it.k], x: x + w / 2, y: y + h / 2, r: 0, rect: [x, y, w, h]});
     }
@@ -489,14 +489,14 @@ export function createStage(canvas, scene, model, layout) {
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
       ctx.fillStyle = J.focus === k ? color : colors.void;
-      ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+      ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
       stroke(color, on ? 1 : 0.5, 1);
-      ctx.strokeRect(p.x - 7.5, p.y - 7.5, 15, 15);
+      ctx.strokeRect(p.x - 9.5, p.y - 9.5, 19, 19);
       ctx.fillStyle = J.focus === k ? colors.void : on ? colors["ink-hi"] : colors["label-dim"];
-      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      ctx.font = "600 12px 'IBM Plex Mono', monospace";
       ctx.textAlign = "center";
-      ctx.fillText(String(k + 1), p.x, p.y + 3.5);
-      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 10});
+      ctx.fillText(String(k + 1), p.x, p.y + 4);
+      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 12});
     }
     ctx.globalAlpha = 1;
   }
@@ -582,7 +582,7 @@ export function createStage(canvas, scene, model, layout) {
       .map(r => ({...r, y: Math.max(top, Math.min(bottom, r.y))}));
     if (!tiers.length) return;
     // Clamped ticks keep at least a label's height between them, pushing upward.
-    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 28);
+    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 34);
     stroke(colors.line, 1, 1);
     ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
     tiers.forEach((r, k) => {
@@ -599,11 +599,11 @@ export function createStage(canvas, scene, model, layout) {
       ctx.textAlign = "left";
       ctx.globalAlpha = on ? 1 : 0.75;
       ctx.fillStyle = color;
-      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
-      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, x + 10, r.y - 2);
+      ctx.font = `${on ? 600 : 500} 12px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, x + 10, r.y - 3);
       ctx.fillStyle = colors["label-dim"];
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 10);
+      ctx.font = "11px 'IBM Plex Mono', monospace";
+      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 12);
     });
     ctx.globalAlpha = 1;
   }
@@ -613,10 +613,10 @@ export function createStage(canvas, scene, model, layout) {
     const y = H - bottom + 22, x0 = left + 8, x1 = W - right - 8;
     const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
       .map(t => ({t, x: project([0, t.y, 0])?.x})).filter(r => r.x != null)
-      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 90, r.x))}));
+      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 104, r.x))}));
     if (!tiers.length) return;
     // Clamped ticks keep at least a label's width between them, pushing right.
-    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 96);
+    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 112);
     stroke(colors.line, 1, 1);
     ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
     tiers.forEach((r, k) => {
@@ -631,12 +631,12 @@ export function createStage(canvas, scene, model, layout) {
       ctx.textAlign = "left";
       ctx.globalAlpha = on ? 1 : 0.75;
       ctx.fillStyle = color;
-      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
-      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, r.x + 4, y - 18);
+      ctx.font = `${on ? 600 : 500} 12px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, r.x + 4, y - 21);
       // The floor's name only where the next tick leaves room for it.
-      if (!next || next.x - r.x > 150) {
+      if (!next || next.x - r.x > 170) {
         ctx.fillStyle = colors["label-dim"];
-        ctx.font = "10px 'IBM Plex Mono', monospace";
+        ctx.font = "11px 'IBM Plex Mono', monospace";
         ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, r.x + 4, y - 7);
       }
     });
@@ -666,12 +666,12 @@ export function createStage(canvas, scene, model, layout) {
     ctx.globalAlpha = alpha;
     ctx.textAlign = s > 0 ? "left" : "right";
     ctx.fillStyle = color;
-    ctx.font = "500 11px 'IBM Plex Mono', monospace";
-    ctx.fillText(title, x1 + s * 10, y1 + 4);
+    ctx.font = "500 14px 'IBM Plex Mono', monospace";
+    ctx.fillText(title, x1 + s * 10, y1 + 5);
     if (detail) {
       ctx.fillStyle = colors["label-dim"];
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(detail, x1 + s * 10, y1 + 17);
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.fillText(detail, x1 + s * 10, y1 + 21);
     }
   }
   // On its side the axis runs across, so a name leads up (above the axis) or down (below it);
@@ -685,13 +685,13 @@ export function createStage(canvas, scene, model, layout) {
     ctx.globalAlpha = alpha;
     ctx.textAlign = "left";
     ctx.fillStyle = color;
-    ctx.font = "500 11px 'IBM Plex Mono', monospace";
-    const ty = s < 0 && detail ? y1 - 9 : y1 + 4;
+    ctx.font = "500 14px 'IBM Plex Mono', monospace";
+    const ty = s < 0 && detail ? y1 - 12 : y1 + 5;
     ctx.fillText(title, x1 + 10, ty);
     if (detail) {
       ctx.fillStyle = colors["label-dim"];
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(detail, x1 + 10, ty + 13);
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.fillText(detail, x1 + 10, ty + 16);
     }
   }
   // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
@@ -701,11 +701,11 @@ export function createStage(canvas, scene, model, layout) {
     const pa = project(a), pb = project(b);
     if (!pa || !pb) return;
     const x = pa.x + (pb.x - pa.x) * 0.4, y = pa.y + (pb.y - pa.y) * 0.4;
-    ctx.font = "500 10px 'IBM Plex Mono', monospace";
+    ctx.font = "500 12px 'IBM Plex Mono', monospace";
     const w1 = ctx.measureText(link.title).width;
-    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.font = "12px 'IBM Plex Mono', monospace";
     const w2 = link.detail ? ctx.measureText(link.detail).width : 0;
-    const w = Math.max(w1, w2) + 14, h = link.detail ? 30 : 17;
+    const w = Math.max(w1, w2) + 16, h = link.detail ? 36 : 20;
     const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
     ctx.setLineDash([]);
     ctx.globalAlpha = 0.94;
@@ -718,12 +718,12 @@ export function createStage(canvas, scene, model, layout) {
     ctx.globalAlpha = 1;
     ctx.textAlign = "left";
     ctx.fillStyle = color;
-    ctx.font = "500 10px 'IBM Plex Mono', monospace";
-    ctx.fillText(link.title, x0 + 8, y0 + 12);
+    ctx.font = "500 12px 'IBM Plex Mono', monospace";
+    ctx.fillText(link.title, x0 + 9, y0 + 14);
     if (link.detail) {
       ctx.fillStyle = colors.label;
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(link.detail, x0 + 8, y0 + 25);
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.fillText(link.detail, x0 + 9, y0 + 30);
     }
     targets.push({kind: "edge", link, cluster, x, y, rect: [x0, y0, w, h]});
   }
@@ -740,14 +740,14 @@ export function createStage(canvas, scene, model, layout) {
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
       ctx.fillStyle = hi ? color : colors.void;
-      ctx.fillRect(x - 8, y - 8, 16, 16);
+      ctx.fillRect(x - 10, y - 10, 20, 20);
       stroke(color, 1, 1);
-      ctx.strokeRect(x - 7.5, y - 7.5, 15, 15);
+      ctx.strokeRect(x - 9.5, y - 9.5, 19, 19);
       ctx.fillStyle = hi ? colors.void : colors["ink-hi"];
-      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      ctx.font = "600 12px 'IBM Plex Mono', monospace";
       ctx.textAlign = "center";
-      ctx.fillText(String(k + 1), x, y + 3.5);
-      targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 9, y - 9, 18, 18]});
+      ctx.fillText(String(k + 1), x, y + 4);
+      targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 11, y - 11, 22, 22]});
     });
   }
   function diamond(x, y, r, fill) {
@@ -887,7 +887,7 @@ export function createStage(canvas, scene, model, layout) {
             targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
             ctx.globalAlpha = 1;
             ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid ? colors["ink-hi"] : colors.label;
-            ctx.font = "11px 'IBM Plex Mono', monospace";
+            ctx.font = "12.5px 'IBM Plex Mono', monospace";
             ctx.textAlign = "left";
             ctx.fillText(factLabel(scene.factById.get(p.fid)), s.x + 9, s.y + 4);
           }
@@ -927,14 +927,14 @@ export function createStage(canvas, scene, model, layout) {
           ctx.globalAlpha = view.group != null ? 0.5 : 1;
           ctx.textAlign = "left";
           ctx.fillStyle = hot ? phaseColor(open) : colors.label;
-          ctx.font = "11px 'IBM Plex Mono', monospace";
+          ctx.font = "13px 'IBM Plex Mono', monospace";
           ctx.fillText(g.key, p.x + r + 5, p.y - 1);
           ctx.fillStyle = colors["label-dim"];
-          ctx.font = "10px 'IBM Plex Mono', monospace";
-          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 11);
+          ctx.font = "11.5px 'IBM Plex Mono', monospace";
+          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 13);
         } else if (g.fids.length > MAX_FACTS) {
           const q = project(factSlot(open, gi, MAX_FACTS, g.fids.length));
-          if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = "10px 'IBM Plex Mono', monospace"; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
+          if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
         }
         targets.push({kind: "group", cluster: open, gi, x: p.x, y: p.y, r: r + 4});
       });
@@ -967,9 +967,9 @@ export function createStage(canvas, scene, model, layout) {
         // Unnamed queries keep only their call tag under the cloud; hover names them.
         ctx.globalAlpha = 0.9 * fade * alpha;
         ctx.fillStyle = colors["label-dim"];
-        ctx.font = "10px 'IBM Plex Mono', monospace";
+        ctx.font = "12px 'IBM Plex Mono', monospace";
         ctx.textAlign = "center";
-        ctx.fillText(callTag(c), pc.x, pc.y + sr + 12);
+        ctx.fillText(callTag(c), pc.x, pc.y + sr + 15);
       }
     }
     for (const e of edgeLabels) edgeLabel(e);

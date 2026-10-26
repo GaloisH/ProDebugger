@@ -3,13 +3,13 @@
 // three rows the calls scroll inside the card.
 // Handoff edges join consecutive phases: from every column's last node (or the collapsed card)
 // to every column's first node (or the card). TRACE has one column per manager assignment.
-import {CALL_PHASES} from "../case/calls.js?v=d7ea551f31";
-import {factChip} from "../case/format.js?v=d7ea551f31";
-import {esc, loader, number, raw, short} from "../util.js?v=d7ea551f31";
-import {routeBadge, routeDetail, routeOverview, routeTitle} from "./route.js?v=d7ea551f31";
-import {managerDetail, managerOverview, managerTitle, traceBadge, traceDetail, traceOverview, traceSummary, traceTitle} from "./trace.js?v=d7ea551f31";
-import {submitDetail, submitOverview, submitTitle} from "./submit.js?v=d7ea551f31";
-import {toolList} from "./tools.js?v=d7ea551f31";
+import {CALL_PHASES} from "../case/calls.js?v=edc30cc901";
+import {factChip} from "../case/format.js?v=edc30cc901";
+import {esc, loader, number, raw, short} from "../util.js?v=edc30cc901";
+import {routeBadge, routeDetail, routeOverview, routeTitle} from "./route.js?v=edc30cc901";
+import {managerDetail, managerOverview, managerTitle, traceBadge, traceDetail, traceOverview, traceSummary, traceTitle} from "./trace.js?v=edc30cc901";
+import {submitDetail, submitOverview, submitTitle} from "./submit.js?v=edc30cc901";
+import {toolList} from "./tools.js?v=edc30cc901";
 
 // Card (collapsed, and the header of an open card), node size and gaps.
 const CW = 216, CH = 124, W = 184, H = 80, GY = 34, LANE_GAP = 12, BAND_GAP = 44, PAD = 20;

@@ -1,0 +1,146 @@
+{
+  "schema": "trace-investigation-plan/v1",
+  "assignments": [
+    {
+      "agent_id": "origin_premise",
+      "anchor_case_id": "c1",
+      "route_case_ids": [
+        "c1",
+        "c2"
+      ],
+      "question": "Was the step-4 claim that men's dress shirts with women's fit conflict an unsupported causal premise that deliberately relaxed task requirements, or a reasonable exploratory response to the poor first search for an ambiguous, potentially jointly satisfiable description? Search for where this compatibility/relaxation premise first entered memory, reflection, or plan, not just its step-4 repetition. Independently compare the original search/page feedback and subsequent decisions; distinguish query variation from actual abandonment. The task's simultaneous men's and women-fit wording does not itself establish impossibility.",
+      "search_targets": [
+        "Backward-discover the origin of the claim that men's shirts and women fit are incompatible, or that fit/material constraints should be relaxed, in memory/reflection/plan from step 1 through step 4; search stable terms such as men's dress shirts, women/women's fit, fit type, compatibility/conflict, and material/heather as well as paraphrases. Do not presume the first source is step 4 or that identical wording was used.",
+        "Search mental sources across steps 1-29 for earlier summaries or plans that interpreted the initial results as proof of incompatibility or endorsed dropping fit/material criteria; use FIND_CLAIMS topics result_assessment, hypothesis, decision_basis, and state alongside literal claim variants. Establish whether a prior mistaken summary rather than step 4 introduced the premise.",
+        "Compare step-1 action and the actual step-2/3 listings with the step-4 reflection/plan/action, and relevant later search actions at 12 and 22. Listing results that are poor matches do not prove impossibility; query terms and search admission do not verify product properties.",
+        "At any discovered mental claim step, compare targeted peer-module excerpts for the same step. Check whether the premise was promoted from tentative concern to a decision to abandon required fit/material attributes, whether later searches restored them, and whether any subsequent decision actually relied on the premise without correction. Return the most decision-discriminating original step and same-step module alternatives, not a reconstructed full history."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:4:reflection",
+          "quote": "especially since men's dress shirts with a women's fit is a conflicting requirement."
+        },
+        {
+          "source_id": "source:4:plan",
+          "quote": "I should pay attention to the material and fit type, ensuring compatibility."
+        },
+        {
+          "source_id": "source:4:action",
+          "quote": "search[\"men's dress shirts machine wash classic fit needle sleeve purple large under 50 dollars\"]"
+        },
+        {
+          "source_id": "source:1:action",
+          "quote": "search[\"men's dress shirts machine wash polyester heathers heathers cotton cotton heather needle sleeve classic fit purple women large under 50 dollars\"]"
+        }
+      ],
+      "criteria": {
+        "supported": "Original mental-source evidence locates an unsupported incompatibility/relaxation premise (at its actual source, not automatically step 4), and the contemporaneous independent search feedback does not establish incompatibility; the evidence shows this was adopted as a requirement-relaxing decision rather than merely a tentative query experiment. Identify the source step and any contradictory peer-module intent.",
+        "refuted": "The original source is only tentative/compatibility-checking or an exploratory query variation, or independent evidence available then supports the stated assessment; alternatively no commitment to relax requirements is evidenced. This refutes this proposed origin, not every possible later error.",
+        "unknown": "The source of the premise, intended scope, or semantic compatibility cannot be resolved from retrieved original excerpts. Poor or unrelated search listings and absent typed state do not prove impossibility or an agent fault; state which causal link remains unknown."
+      }
+    },
+    {
+      "agent_id": "downstream_reliance",
+      "anchor_case_id": "c2",
+      "route_case_ids": [
+        "c1",
+        "c2"
+      ],
+      "question": "Did the later search behavior at step 29 continue a consequential relaxation/under-specification of the requested shirt attributes that originated in the earlier incompatibility premise, or was it an ordinary search-index rephrasing after repeated poor results with key constraints still retained? This is a distinct downstream-dependence and recovery check: search memory/reflection/plan backward through step 29 for origins of the late focus/broadening decision, and assess whether step 12/22 actually corrected the earlier premise and whether step 29 reintroduced it. The query still contains women and the task's free-text qualifiers are not deterministically parsed, so omissions or search wording alone are not proof of abandonment.",
+      "search_targets": [
+        "Search backward through steps 1-29 in memory/reflection/plan for origins of the step-29 decision to focus on critical attributes, broaden/rephrase, or adjust fit type; use stable terms women/women's fit, fit type, needle sleeve, machine wash, polyester/cotton heather, and claim variants. Do not assume step 28 or step 4 is the origin; compare later sources with earlier ones.",
+        "Find relevant mental-source claims about result assessments, expected gains, hypotheses, decision basis, and decisions; at discovered steps use targeted peer excerpts to compare stated requirement handling with the actual search action. Distinguish tentative search strategy from an established choice to discard a required constraint.",
+        "Check the actions and immediate subsequent observations around searches 12, 22, and 29, including the supplied step-29/30 evidence. Determine whether step 12/22 reintroduced fit/material language and whether step 29 retained women, price/size/color/classic fit while dropping other terms; query text and broad unrelated listings do not establish product truth or abandonment.",
+        "Test actual causal reliance and effective correction: did a later plan/action invoke the incompatibility/relaxation premise or independently loosen constraints, and did a relevant feedback or plan correct it before that decision? Return the single most discriminating original source step with same-step module alternatives; do not treat missing step-30 feedback as a failed outcome."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:29:reflection",
+          "quote": "The products found did not meet the requirements, such as the specific color, fit type, and size."
+        },
+        {
+          "source_id": "source:29:plan",
+          "quote": "By slightly broadening the search parameters or rephrasing, I expect to find at least one product closer to the desired specifications."
+        },
+        {
+          "source_id": "source:29:action",
+          "quote": "search[machine wash men's dress shirts polyester cotton heather purple classic fit women large price under 50]"
+        },
+        {
+          "source_id": "source:22:action",
+          "quote": "search[machine wash men's dress shirts polyester cotton heather purple classic fit women large under 50 dollars]"
+        }
+      ],
+      "criteria": {
+        "supported": "Original mental and action evidence shows a specific requirement-relaxing or failed-update decision, not merely omitted query words, and demonstrates actual later reliance without an effective correction; identify whether it depends on the earlier premise or is a distinct later mechanism. Compare the action/result and peer modules at the returned step.",
+        "refuted": "Evidence shows step 29 was a query/indexing experiment that retained the material fit-type requirements in its operative intent, or an effective correction separated it from the earlier premise; alternatively the proposed relaxation is not present in the original source. Poor results alone do not refute the task constraints or prove a bad plan.",
+        "unknown": "No source establishes whether broadening changed the operative requirement, whether the late decision used the earlier premise, or whether the missing subsequent feedback changed the course. Treat absent feedback and unmentioned qualifiers as unknown; do not infer failed correction or task failure."
+      }
+    }
+  ],
+  "decision_rules": [
+    {
+      "rule_id": "early_origin_and_later_reliance",
+      "conditions": [
+        {
+          "agent_id": "origin_premise",
+          "outcome": "supported",
+          "finding": "Original sources establish that an unsupported incompatibility/relaxation premise was adopted as a decision rather than a tentative search hypothesis."
+        },
+        {
+          "agent_id": "downstream_reliance",
+          "outcome": "supported",
+          "finding": "Original later evidence establishes that the consequential decision actually relied on that premise without effective correction, rather than merely rephrasing a search."
+        }
+      ],
+      "conclusion": "The located source of the adopted premise is a supported causal candidate over mere later propagation, subject to comparing the actual evidence for any competing independently consequential decision.",
+      "caveat": "A supported earlier premise without demonstrated downstream reliance is not a root attribution; recovery at steps 12/22 may break the causal chain. If either finding does not match the original text, mark the condition unsupported and assess the actual source-supported candidate, including a distinct late mechanism outside the proposed search terms."
+    },
+    {
+      "rule_id": "distinct_late_mechanism",
+      "conditions": [
+        {
+          "agent_id": "origin_premise",
+          "outcome": "refuted",
+          "finding": "Original step-4-or-earlier evidence does not establish an adopted unsupported incompatibility/relaxation premise, or supports only tentative query exploration."
+        },
+        {
+          "agent_id": "downstream_reliance",
+          "outcome": "supported",
+          "finding": "Original step-29-era evidence establishes a distinct consequential relaxation/failed update with actual reliance, not just a lexical omission or exploratory broadening."
+        }
+      ],
+      "conclusion": "Compare the evidenced late decision as a causal candidate independently of the refuted early-premise account.",
+      "caveat": "Do not infer a distinct late fault from search wording alone; retained 'women' and the unknown status of free-text qualifiers matter. If the actual finding differs, compare candidates on the source evidence rather than forcing this rule."
+    },
+    {
+      "rule_id": "no_demonstrated_chain",
+      "conditions": [
+        {
+          "agent_id": "origin_premise",
+          "outcome": "supported",
+          "finding": "The early premise is supported, but the later investigator finds no actual downstream reliance, or finds effective correction before the alleged consequential decision."
+        },
+        {
+          "agent_id": "downstream_reliance",
+          "outcome": "refuted",
+          "finding": "The late behavior is supported as exploratory/rephrasing or effectively corrected, with no demonstrated continuing dependence on the early premise."
+        }
+      ],
+      "conclusion": "Do not attribute the late symptom to propagation of the early premise; assess any independently evidenced candidate and otherwise leave root attribution unresolved.",
+      "caveat": "Refuting this proposed chain does not establish that all requirements were met or that no other allowed error occurred; missing evidence is unknown, not refutation."
+    }
+  ],
+  "uncertainty": "The verbatim task contains an unusual but not proven-impossible combination; the free-text description is unmodeled and selected fit/color/size are unverified. Search-result pages are not semantic product verification, and query variations alone do not demonstrate constraint abandonment. All action/observation history is supplied, but intervening memory/reflection/plan texts are not; workers have one query and can return only one original step with same-step alternatives. Step 30 has no feedback. No rule can establish a globally unique root from this partial evidence.",
+  "plan_digest": "6540df92dab3bd5924ba52d004165fa298cbbf98f0c9603f17ce6e00b489ceea",
+  "source_coverage": {
+    "step_range": [
+      1,
+      30
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "schema": "trace-investigation-plan/v1",
+  "assignments": [
+    {
+      "agent_id": "ladle_origin",
+      "anchor_case_id": "c2",
+      "route_case_ids": [
+        "c1",
+        "c2"
+      ],
+      "question": "Across the full history through step 10, where does a consequential belief or decision about ladle cleanliness first arise, and does the original evidence support it? Test ROUTE's step-7 plan/action divergence against the rival that taking ladle 1 was a preparatory move toward examining it (or that another supported source established cleanliness); also test whether the step-10 completion reflection is a new unsupported inference rather than merely later wording. Identify the relevant source/step, but do not assume the earliest phrase is causal.",
+      "search_targets": [
+        "Backward-search memory, reflection, and plan from step 1 through 10 for the stable entity ladle / ladle 1 and attribute clean, including claim variants such as determine/examine which ladle is clean, selected/known clean, cleaning, ready, task complete, and verification; use FIND_CLAIMS topics verification, completion, state, selection, and decision_basis together with literal entity/attribute searches, not only an exact phrase.",
+        "At discovered claim steps, compare same-step memory/reflection/plan excerpts with action and next observation feedback: especially whether the step-7 planned examination was abandoned or the take action could be preparation, and what the step-10 placement observation actually confirms.",
+        "Check any independently recorded ladle cleanliness/selection/cleaning support in observations or state/action evidence through step 10; distinguish no recorded evidence (unknown) from evidence that ladle 1 was dirty.",
+        "The related downstream reliance/correction check is assigned to ladle_dependence; report the best-supported originating or plan/action decision and whether evidence challenges the proposed cleanliness premise."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:7:plan",
+          "quote": "I should examine the ladles to determine which one is clean."
+        },
+        {
+          "source_id": "source:7:action",
+          "quote": "take ladle 1 from countertop 1"
+        },
+        {
+          "source_id": "source:8:observation",
+          "quote": "You pick up the ladle 1 from the countertop 1."
+        },
+        {
+          "source_id": "source:10:observation",
+          "quote": "You move the ladle 1 to the diningtable 1."
+        },
+        {
+          "source_id": "source:10:reflection",
+          "quote": "Yes, the task goal was to put a clean ladle on the dining table, which I have accomplished by placing ladle 1 on diningtable 1."
+        }
+      ],
+      "criteria": {
+        "supported": "Original text/action/feedback identifies a consequential unsupported cleanliness or clean-selection inference, or a material plan/action divergence that actually abandons needed clean verification; placement/pickup alone does not establish clean state. Locate its source and distinguish a prior premise from the step-10 completion assertion.",
+        "refuted": "Original evidence supports ladle 1 as clean or establishes an adequate clean verification/cleaning path, or taking ladle 1 is shown to be preparatory and the relevant premise is otherwise supported; do not infer dirtiness from absent records.",
+        "unknown": "No recorded cleanliness evidence is not proof of dirtiness; if source text, action purpose, entity binding, or independent support is unresolved, state which causal link is unknown and do not attribute the issue to c1/c2 on that basis."
+      }
+    },
+    {
+      "agent_id": "ladle_dependence",
+      "anchor_case_id": "c1",
+      "route_case_ids": [
+        "c1",
+        "c2"
+      ],
+      "question": "Did the step-10 unsupported completion belief (or another evidenced cleanliness/verification premise) actually cause the later cessation/repetition of no-further-action behavior, or is the apparent recurrence better explained by a different decision or by effective verification/correction? This is a distinct downstream-dependence question: inspect subsequent original claims and actions/feedback, including whether the step-25 examination and step-26 observation only establish presence, and whether any later step resumes or corrects the clean requirement. ladle_origin owns full-history origin discovery; do not treat recurrence as origin evidence.",
+      "search_targets": [
+        "Search memory/reflection/plan from step 1 through 30 for ladle/ladle 1, clean, completion, verification, decision_basis and related claim variants to establish whether subsequent decisions actually rely on the cleanliness/completion premise; prioritize the exact downstream decision step and its same-step peer modules.",
+        "Check actual subsequent actions and immediate observations for functional reliance or correction: repeated no-further-action declarations, table presence checks, and step-25 examination with step-26 feedback. Presence/placement evidence does not itself verify cleanliness.",
+        "Look for an independent later clean inspection, cleaning action, contrary feedback, or renewed plan to determine cleanliness that would break or qualify the proposed dependency; distinguish an action string that causes 'Nothing happens' from an achieved task outcome.",
+        "Do not use this query as a substitute for backward origin discovery, which is assigned to ladle_origin; report one most decision-relevant downstream step and its same-step alternatives."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:10:reflection",
+          "quote": "Yes, the task goal was to put a clean ladle on the dining table, which I have accomplished by placing ladle 1 on diningtable 1."
+        },
+        {
+          "source_id": "source:10:plan",
+          "quote": "Given that I have completed the task, the next step is to confirm that the task is complete or to explore further actions if necessary."
+        },
+        {
+          "source_id": "source:13:action",
+          "quote": "No further action is necessary as the task has been completed."
+        },
+        {
+          "source_id": "source:25:action",
+          "quote": "examine diningtable 1"
+        },
+        {
+          "source_id": "source:26:observation",
+          "quote": "On the diningtable 1, you see a bowl 1, a bread 1, a cup 1, a knife 3, a knife 2, a ladle 1, a mug 3, a peppershaker 2, a plate 3, a pot 1, a saltshaker 3, a soapbottle 3, a soapbottle 2, a spatula 3, a spatula 2, a spatula 1, a spoon 2, and a spoon 1."
+        }
+      ],
+      "criteria": {
+        "supported": "A specific subsequent decision/action is shown by original same-step text to rely on an unsupported cleanliness/completion premise without an intervening effective correction, and the observed check/repeated behavior fails to establish the clean requirement; identify the step and dependency, not merely later timing.",
+        "refuted": "Original evidence shows later decisions did not rely on the disputed premise, an effective cleanliness verification/correction occurred before them, or the later behavior had a different evidenced basis; placement/presence alone is not cleanliness verification.",
+        "unknown": "If only action wording, repeated assertions, missing mental modules, or presence feedback is available without a demonstrated decision link, dependence/correction remains unknown; that is not evidence of a clean or dirty ladle."
+      }
+    }
+  ],
+  "decision_rules": [
+    {
+      "rule_id": "unsupported_origin_and_effective_reliance",
+      "conditions": [
+        {
+          "agent_id": "ladle_origin",
+          "outcome": "supported",
+          "finding": "Original evidence establishes a consequential unsupported cleanliness/clean-selection inference or material abandoned verification path, rather than merely missing typed data or a permissible preparatory take."
+        },
+        {
+          "agent_id": "ladle_dependence",
+          "outcome": "supported",
+          "finding": "A later decision actually relies on that unsupported premise without effective correction, and subsequent feedback/checking does not establish cleanliness."
+        }
+      ],
+      "conclusion": "Treat the located originating or plan/action decision as causally relevant to the later premature stopping behavior, and compare it against the later propagation/completion assertion using the demonstrated dependency; do not infer that the ladle was dirty.",
+      "caveat": "If taking the ladle was preparation, if original evidence supports cleanliness, or if a correction breaks reliance, this inference fails. The returned source need not fit the manager's suggested targets: assess any different retrieved allowed-by-scope mechanism on its own support and dependence. Partial history cannot establish a globally unique root."
+    },
+    {
+      "rule_id": "origin_premise_not_supported",
+      "conditions": [
+        {
+          "agent_id": "ladle_origin",
+          "outcome": "refuted",
+          "finding": "Original evidence supports a clean ladle or shows no material plan/action divergence/unsupported cleanliness inference."
+        }
+      ],
+      "conclusion": "Reject c2 and the cleanliness-origin premise as established by this investigation; assess c1 or any different evidenced candidate independently rather than inferring a cause from absent clean-state records.",
+      "caveat": "This does not establish that the task was satisfied or that all later completion claims were justified. Missing cleanliness evidence is unknown, not proof of either cleanliness or dirtiness."
+    },
+    {
+      "rule_id": "no_downstream_causal_link",
+      "conditions": [
+        {
+          "agent_id": "ladle_dependence",
+          "outcome": "refuted",
+          "finding": "Subsequent decisions did not rely on the disputed premise, or an effective cleanliness verification/correction severed the proposed dependency before the relevant later behavior."
+        }
+      ],
+      "conclusion": "Do not attribute later repeated stopping to the step-7/10 premise through this proposed pathway; compare the independently supported origin, later candidate, or other retrieved mechanism without assuming an error.",
+      "caveat": "A refuted dependency does not verify task satisfaction or prove that no separate error occurred; absence of an extracted link alone should be unknown, not refuted."
+    },
+    {
+      "rule_id": "incomplete_causal_chain",
+      "conditions": [
+        {
+          "agent_id": "ladle_origin",
+          "outcome": "unknown",
+          "finding": "Source support or the proposed cleanliness/plan-action origin remains unresolved."
+        },
+        {
+          "agent_id": "ladle_dependence",
+          "outcome": "unknown",
+          "finding": "Downstream reliance or effective correction cannot be determined from the returned original evidence."
+        }
+      ],
+      "conclusion": "Keep root attribution unresolved; treat the clean state and causal connection as unknown rather than converting missing records into a fault finding.",
+      "caveat": "One unknown link cannot be supplied by the other worker's result or by ROUTE's hypothesis alone. A different returned candidate may still be compared on its own original evidence."
+    }
+  ],
+  "uncertainty": "The supplied timeline confirms pick-up and dining-table presence, not cleanliness. Source coverage supplies all actions/observations but not all memory/reflection/plan texts; each worker is limited to one returned original step with same-step alternatives. No compiled unknown, absent state assignment, or repeated assertion establishes dirty state, task failure, or a globally unique causal root.",
+  "plan_digest": "b15280bbacf382cbf2e4f4caee5a0e73ea2dd5d27c4857b60185d9482e7cb1f1",
+  "source_coverage": {
+    "step_range": [
+      1,
+      30
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  }
+}

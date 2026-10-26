@@ -1,0 +1,168 @@
+{
+  "schema": "trace-investigation-plan/v1",
+  "assignments": [
+    {
+      "agent_id": "cooling_origin",
+      "anchor_case_id": "c1",
+      "route_case_ids": [
+        "c1"
+      ],
+      "question": "Was the step-17 premise that cleaning the pot with the sink basin would cool it an unsupported source belief or plan/action assumption, or was cooling supported by an earlier reliable source/action? Search for the origin of this specific cooling mechanism rather than assuming step 17 introduced it. The strongest rival is that “normal” is semantically ambiguous and the plan only expected cooling, while the task state might nevertheless have been cool; distinguish actual feedback from expectation. Identify any earlier premise or skipped/contradictory feedback that better explains the attempt.",
+      "search_targets": [
+        "Backward origin discovery: search memory, reflection, and plan from step 1 through step 17 for pot 1 and the disputed cool/cooling/cool down state or mechanism, including variants such as clean/wash, sink basin, temperature, and ready; do not assume an exact phrase or a particular earlier step. Use topic claim discovery plus entity/term searches; compare same-step peer modules at the selected diagnostic claim.",
+        "Compare any earlier claims with actual pot actions and observations through step 17: especially examination of pot 1, whether cleaning is described as cooling, and the action-feedback pair for clean pot 1 with sinkbasin 1. An intended or expected gain is not evidence of achieved cooling.",
+        "Assess whether step 17's action premise was acted on and whether immediate feedback at step 18 or later evidence verifies cooling, contradicts it, or leaves it unknown; distinguish a cooling failure from an unsupported expectation and from an independently caused later false-completion assessment."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:17:plan",
+          "quote": "Given what I've learned, the next step should be to clean the pot with the sinkbasin to cool it down."
+        },
+        {
+          "source_id": "source:17:plan",
+          "quote": "I expect this action to cool down the pot, making it ready to be placed on the countertop, thus progressing towards completing the task."
+        },
+        {
+          "source_id": "source:17:reflection",
+          "quote": "I did not complete the task goal as the pot has not been cooled yet."
+        },
+        {
+          "source_id": "source:16:observation",
+          "quote": "This is a normal pot 1. In it, you see nothing."
+        },
+        {
+          "source_id": "source:18:observation",
+          "quote": "You clean the pot 1 using the sinkbasin 1."
+        }
+      ],
+      "criteria": {
+        "supported": "Original mental evidence locates an unsupported premise or material failed update that cleaning with the sink basin cools this pot, and independent action/feedback does not establish cooling; report the actual source step and distinguish an expected outcome from an asserted achieved state. This supports a plan or earlier-source candidate only if it materially guided the step-17 cleaning/replacement sequence.",
+        "refuted": "Original independent evidence supports that this pot was cooled by the relevant action or another valid process, or the exact mental claim is only a qualified expectation and no unsupported premise materially directed behavior; reject this specific accusation while considering any better-supported discovered mechanism.",
+        "unknown": "The source origin is not found, “normal” or other feedback cannot be interpreted as cool/not cool, or the action outcome remains unobserved; absence of a cool-state assignment is not proof the pot was not cool. State which support, truth, or causal link remains unresolved."
+      }
+    },
+    {
+      "agent_id": "completion_dependence",
+      "anchor_case_id": "c2",
+      "route_case_ids": [
+        "c2"
+      ],
+      "question": "Did the step-20 completion assessment actually cause a decision to stop satisfying the cool-pot requirement or otherwise affect later behavior, or was it a placement-focused progress statement followed by independent exploration/correction? The strongest rival to the false-completion account is that placement was genuinely verified and the later take/re-placement had another reason, while coolness remained unknown. The step-20 assertion and its origin are already visible; use this one-step investigation for the missing downstream reliance/recovery link, not a duplicate search for its wording.",
+      "search_targets": [
+        "Search subsequent memory/reflection/plan from steps 21 through 30 for the pot 1, cool/cooling, task complete/completion, verification, countertop placement, taking or moving the pot, and any stated decision basis; use FIND_CLAIMS topics as well as claim variants so relevant clauses need not repeat the anchor wording. Return the single most diagnostic downstream original step with its same-step peer excerpts.",
+        "Test whether later decisions actually rely on treating the whole goal as complete despite only placement evidence, whether any later module recognizes or corrects the missing cool qualifier, or whether the pot is handled for a different stated reason. Compare the step-25 take and subsequent actions/feedback with any retrieved mental statement; later placement alone does not verify coolness.",
+        "Treat step-21/22 placement observations as confirmation of location only. Check whether later behavior reopens the cool requirement, whether step 30's attempted placement has feedback (it does not), and whether any discovered original source better explains the episode. No typed status or missing claim establishes the pot was not cool."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:20:reflection",
+          "quote": "The task goal of placing a cool pot on a countertop has been completed."
+        },
+        {
+          "source_id": "source:20:reflection",
+          "quote": "Progress has been made; the task is now complete as the pot is on the countertop."
+        },
+        {
+          "source_id": "source:20:plan",
+          "quote": "Since the task goal is complete, the next step is to verify that the pot is indeed on the countertop."
+        },
+        {
+          "source_id": "source:21:observation",
+          "quote": "On the countertop 1, you see a pot 1, and a spatula 1."
+        },
+        {
+          "source_id": "source:25:action",
+          "quote": "take pot 1 from countertop 1"
+        },
+        {
+          "source_id": "source:30:action",
+          "quote": "move pot 1 to countertop 1"
+        }
+      ],
+      "criteria": {
+        "supported": "A downstream original source shows that a later decision actually relied on the step-20 whole-goal completion premise without an effective correction, and this reliance materially explains stopping, needless handling, or failure to verify the cool requirement; distinguish that causal link from the already verified placement. The result supports c2 only to the extent the source demonstrates such dependence.",
+        "refuted": "Downstream original evidence shows the completion premise was corrected or not used, or establishes that later behavior had a different stated basis and no material consequence from the step-20 assessment; this defeats the proposed c2 causal link, not the separate possibility of an earlier cooling-plan error.",
+        "unknown": "No relevant downstream mental text is returned, the reason for later handling is unstated, correction/reliance cannot be resolved, or coolness remains ambiguous. Missing claims and final-step feedback are unknown, not evidence of no correction or of a failed cool state."
+      }
+    }
+  ],
+  "decision_rules": [
+    {
+      "rule_id": "cooling_premise_and_use",
+      "conditions": [
+        {
+          "agent_id": "cooling_origin",
+          "outcome": "supported",
+          "finding": "Original evidence identifies an unsupported cleaning-cools-pot premise or material failed update, with no independent feedback verifying cooling, and establishes that this premise materially guided the step-17 action sequence."
+        }
+      ],
+      "conclusion": "Treat the evidenced source of the cooling assumption as a plausible causal candidate for the step-17 cleaning and subsequent placement, and compare its support and dependence against any independently established step-20 completion mechanism.",
+      "caveat": "The word “normal,” missing cool-state extraction, or lack of explicit feedback does not prove the pot was not cool. If original evidence supports cooling or shows only a tentative expectation without material reliance, reject this accusation. If the worker finds a different better-supported source or mechanism, evaluate that candidate rather than forcing the result into the search terms."
+    },
+    {
+      "rule_id": "completion_premise_dependence",
+      "conditions": [
+        {
+          "agent_id": "completion_dependence",
+          "outcome": "supported",
+          "finding": "A downstream original mental source demonstrates actual reliance on step-20's whole-goal completion claim without effective correction, with a material consequence for later decisions or verification."
+        }
+      ],
+      "conclusion": "Treat the step-20 completion assessment as a plausible causal candidate only for the downstream consequence actually demonstrated, separately from the earlier cooling-plan candidate.",
+      "caveat": "Placement was independently observed; this does not verify coolness. If later behavior had another reason, the claim was corrected, or no consequence is established, do not attribute the symptom to c2. A different discovered mechanism remains eligible for comparison even if outside the stated search targets."
+    },
+    {
+      "rule_id": "compare_both_supported",
+      "conditions": [
+        {
+          "agent_id": "cooling_origin",
+          "outcome": "supported",
+          "finding": "The unsupported cooling premise materially guided the step-17 cleaning/replacement sequence."
+        },
+        {
+          "agent_id": "completion_dependence",
+          "outcome": "supported",
+          "finding": "A downstream decision materially relied on step-20's uncorrected completion premise."
+        }
+      ],
+      "conclusion": "Compare the two evidenced causal contributions by which one explains the relevant consequential behavior; do not infer a unique root from chronology, and allow distinct errors to contribute to distinct symptoms.",
+      "caveat": "If either finding is unsupported by exact original evidence, do not apply this joint inference. Neither cleaning feedback nor observed placement proves cooling; downstream reliance and an effect are required for c2."
+    },
+    {
+      "rule_id": "cooling_refuted_or_unknown",
+      "conditions": [
+        {
+          "agent_id": "cooling_origin",
+          "outcome": "refuted",
+          "finding": "Independent original evidence supports cooling or shows no materially relied-on unsupported cooling premise."
+        }
+      ],
+      "conclusion": "Reject the proposed c1 cooling-premise attribution and assess c2 or any better-supported discovered candidate on its own evidence.",
+      "caveat": "A refutation of c1 does not establish c2. If the result is unknown rather than refuted, preserve uncertainty; parsing ambiguity and unavailable feedback are not counterevidence."
+    },
+    {
+      "rule_id": "completion_refuted_or_unknown",
+      "conditions": [
+        {
+          "agent_id": "completion_dependence",
+          "outcome": "refuted",
+          "finding": "Original downstream evidence shows no reliance or an effective correction, or a different stated cause explains later behavior without material effect from c2."
+        }
+      ],
+      "conclusion": "Reject the proposed downstream c2 causal attribution; assess the earlier cooling-plan candidate independently.",
+      "caveat": "Absence of a retrieved later claim is unknown, not refutation. If the later motive or correction is unclear, do not force this rule; compare any better-supported discovered cause."
+    }
+  ],
+  "uncertainty": "The full action/observation timeline is supplied, but non-anchor memory/reflection/plan text is not. The two investigators therefore target distinct missing links: the backward origin of the cooling assumption and downstream dependence/recovery from the step-20 completion assessment. “Normal” is not semantically resolved by the parser, cleaning feedback reports cleaning but not cooling, and step 30 has no feedback. The task's structured status remains unknown; neither missing extraction nor placement observation establishes coolness or a globally unique root.",
+  "plan_digest": "f497aed6a0d1d53d5d35dc0148e55e88540285962d418874d3fb7958d886cf2d",
+  "source_coverage": {
+    "step_range": [
+      1,
+      30
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  }
+}

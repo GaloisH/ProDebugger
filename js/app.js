@@ -1,12 +1,13 @@
 // Hash router: #/ is the home page; #/runs lists runs; #/case/<source>/<group>/<trajectory>/<tab>
 // opens the workbench; #/chat[/<group>/<trajectory>] opens the chat page.
-import {esc} from "./util.js?v=d7ea551f31";
-import {parseRoute, runsHref} from "./routes.js?v=d7ea551f31";
-import {mountHome} from "./pages/home.js?v=d7ea551f31";
-import {mountRuns} from "./pages/runs.js?v=d7ea551f31";
-import {mountChat} from "./pages/chat.js?v=d7ea551f31";
-import {mountWorkbench} from "./pages/workbench.js?v=d7ea551f31";
-import {initTheme, setThemePage} from "./theme.js?v=d7ea551f31";
+import {esc} from "./util.js?v=edc30cc901";
+import {parseRoute, runsHref} from "./routes.js?v=edc30cc901";
+import {mountHome} from "./pages/home.js?v=edc30cc901";
+import {mountRuns} from "./pages/runs.js?v=edc30cc901";
+import {mountChat} from "./pages/chat.js?v=edc30cc901";
+import {mountWorkbench} from "./pages/workbench.js?v=edc30cc901";
+import {mountQuery} from "./pages/query.js?v=edc30cc901";
+import {initTheme, setThemePage} from "./theme.js?v=edc30cc901";
 
 const app = document.getElementById("app");
 const crumbs = document.getElementById("crumbs");
@@ -15,6 +16,10 @@ let current = null;
 
 function setCrumbs(route) {
   nav.querySelectorAll("a").forEach(a => a.setAttribute("aria-current", String(a.dataset.page === (route.page === "case" ? "runs" : route.page))));
+  if (route.page === "query") {
+    crumbs.innerHTML = route.ref ? `<span class="sep">/</span><span class="current" title="${esc(route.ref[1])}">${esc(route.ref[1])}</span>` : "";
+    return;
+  }
   if (route.page === "chat") {
     crumbs.innerHTML = route.ref ? `<span class="sep">/</span><span class="current" title="${esc(route.ref[2])}">${esc(route.ref[2])}</span>` : "";
     return;
@@ -30,7 +35,8 @@ function render() {
   const route = parseRoute();
   // The home page brings its own light header and full-bleed layout.
   document.body.classList.toggle("page-home", route.page === "home");
-  setThemePage(route.page === "home");
+  document.body.classList.toggle("page-query", route.page === "query");
+  setThemePage(route.page === "home", route.page === "query" ? "dark" : null);
   setCrumbs(route);
   // Switching tabs inside the same case keeps the loaded store alive.
   // The chat page keeps its sidebar and composer while switching conversations.
@@ -38,7 +44,7 @@ function render() {
   if (current && current.key === key && current.update) { current.update(route); return; }
   current?.unmount?.();
   app.innerHTML = "";
-  const mount = {case: mountWorkbench, chat: mountChat, runs: mountRuns, home: mountHome}[route.page];
+  const mount = {case: mountWorkbench, query: mountQuery, chat: mountChat, runs: mountRuns, home: mountHome}[route.page];
   current = {key, ...mount(app, route)};
 }
 

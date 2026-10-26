@@ -1,6 +1,6 @@
 // Thin client for web/server.py. Paths are built from validated route segments.
 // On the static project site (web/export_static.py) every call goes to static-site.js.
-import * as site from "./static-site.js?v=d7ea551f31";
+import * as site from "./static-site.js?v=edc30cc901";
 
 export const STATIC = site.enabled;
 const enc = parts => parts.map(encodeURIComponent).join("/");

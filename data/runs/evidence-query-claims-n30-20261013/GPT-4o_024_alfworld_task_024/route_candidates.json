@@ -1,0 +1,35 @@
+[
+  {
+    "version": 1,
+    "windows": [
+      {
+        "candidate_id": "c1",
+        "issue_step": 17,
+        "issue_fids": [
+          195,
+          196
+        ],
+        "goal_links": [
+          "req:pot_in_countertop"
+        ],
+        "hypothesis": "Affects the necessary cool-pot subgoal before re-placement. The step-17 plan explicitly says to clean the pot with the sink basin “to cool it down,” and the action is “clean pot 1 with sinkbasin 1.” Immediate feedback is only “You clean the pot 1 using the sinkbasin 1”; the subsequent extracted state records clean=true, not cool=true. This supports a concrete unsupported action premise: treating cleaning as cooling, rather than evidence that the cool condition was achieved. Later step 19 does re-place the pot and step 20 sees it on the countertop, but neither verifies cooling; step 20’s completion assessment is counterevidence to ongoing placement failure, not evidence of coolness. Raw step 15 called the pot “normal,” while steps 16/30 observation parsing cannot interpret “normal” or local empty-container text, so whether that definitively means not cool remains uncertain; TRACE should assess this semantic/parser rival rather than assume the missing cool fact is false.",
+        "lo": 17,
+        "hi": 17
+      },
+      {
+        "candidate_id": "c2",
+        "issue_step": 20,
+        "issue_fids": [
+          223,
+          224
+        ],
+        "goal_links": [
+          "req:pot_in_countertop"
+        ],
+        "hypothesis": "Affects correct completion/maintenance of the required cool-pot-on-countertop state. At step 20, after feedback that the pot was moved onto countertop 1, the reflection says the task is complete because the pot is on the countertop, omitting the still-unverified “cool” qualifier; the plan then proposes only verifying countertop placement. This is a distinct possible false-completion decision, plausibly encouraging the later unnecessary take at step 25. The strongest counterevidence is that the pot was in fact observed on countertop 1 at step 21 and step 30 again attempts to place it there; the trajectory does not end with confirmed absence from the countertop. However, no raw observation establishes coolness, step 15 says “normal,” and the final step has no feedback, so the impact on terminal satisfaction is unresolved. Parser/semantic uncertainty around “normal” and the structured status being unknown must not be treated as proof of violation.",
+        "lo": 20,
+        "hi": 20
+      }
+    ]
+  }
+]

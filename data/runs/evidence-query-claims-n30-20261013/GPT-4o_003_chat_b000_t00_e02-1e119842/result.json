@@ -1,0 +1,713 @@
+{
+  "schema": "debugger-result/v1",
+  "status": "diagnosed",
+  "accepted": true,
+  "policy": "window-candidates-submit/v5-manager-forced-choice",
+  "root": {
+    "root_id": "trace-window:origin_premise:1",
+    "step": 4,
+    "module": "reflection",
+    "fid": 88,
+    "fault_class": "causal_misattribution",
+    "source_trace_status": "error",
+    "output_quote": "especially since men's dress shirts with a women's fit is a conflicting requirement.",
+    "status": "error",
+    "proposition": "The reflection treats men's dress shirts combined with women's fit as an established conflict, although the available search feedback only reports poor matches and does not establish incompatibility.",
+    "reasoning": "At step 4, the reflection turns poor or unrelated search results into an asserted incompatibility between men's dress shirts and women's fit. Step 1 had retained the requested constraints, and the step 2–3 listings do not establish that they cannot coexist. The step 4 plan then treats the supposed conflict as a reason to focus on more attainable criteria, and the step 4 action omits both women-fit and the requested materials; this makes the reflection's unsupported premise an originating semantic error, while the plan candidate is its operational consequence. The premise is not merely tentative: the reflection calls the requirement conflicting, and the plan says its reduced focus is more realistic. Counterevidence is that the unusual wording could warrant experimentation, and the plan also says to pay attention to fit and material compatibility. Later, step 12 again entertains that women's fit might not exist and the search omits it, indicating recurrence of the concern, but step 22's plan and action restore women-fit and material terms, and step 29's action retains them. Under rule early_origin_and_later_reliance, origin_premise is supported, but downstream_reliance is not supported for step 29: its plan describes broadening or rephrasing and its action retains women-fit, so the required later dependence is not established. Rule no-demonstrated-chain therefore cautions against attributing the late search to continued propagation; it does not erase the directly evidenced step-4 narrowing. The evidence supports this as the best available originating mistake, not as proof it caused the eventual outcome.",
+    "goal_links": [
+      "req:description",
+      "req:fit_type"
+    ],
+    "supporting_fids": [
+      88
+    ],
+    "counterevidence": []
+  },
+  "reasoning": "At step 4, the reflection turns poor or unrelated search results into an asserted incompatibility between men's dress shirts and women's fit. Step 1 had retained the requested constraints, and the step 2–3 listings do not establish that they cannot coexist. The step 4 plan then treats the supposed conflict as a reason to focus on more attainable criteria, and the step 4 action omits both women-fit and the requested materials; this makes the reflection's unsupported premise an originating semantic error, while the plan candidate is its operational consequence. The premise is not merely tentative: the reflection calls the requirement conflicting, and the plan says its reduced focus is more realistic. Counterevidence is that the unusual wording could warrant experimentation, and the plan also says to pay attention to fit and material compatibility. Later, step 12 again entertains that women's fit might not exist and the search omits it, indicating recurrence of the concern, but step 22's plan and action restore women-fit and material terms, and step 29's action retains them. Under rule early_origin_and_later_reliance, origin_premise is supported, but downstream_reliance is not supported for step 29: its plan describes broadening or rephrasing and its action retains women-fit, so the required later dependence is not established. Rule no-demonstrated-chain therefore cautions against attributing the late search to continued propagation; it does not erase the directly evidenced step-4 narrowing. The evidence supports this as the best available originating mistake, not as proof it caused the eventual outcome.",
+  "supporting_evidence": [
+    88
+  ],
+  "counterevidence": [],
+  "causal_chain": [],
+  "repair": "In the step-4 reflection, treat the poor results as evidence that the search query or indexing may be ineffective, not that men's dress shirts and women's fit are incompatible; keep all requested constraints in the next search and test alternate phrasings without dropping them.",
+  "uncertainty": "No retrieved listing verifies whether a product satisfying every requested attribute exists, and the unusual description could reasonably motivate query experimentation. Step 4's unsupported premise and its immediate narrowing are evidenced, but later searches partially restored constraints, and the evidence does not establish that this early mistake caused the final task outcome or that step 29 abandoned any requirement. Intervening mental-source evidence is selective, and feedback after step 30 is unavailable.",
+  "alternatives": [
+    {
+      "candidate_id": "trace-window:origin_premise:2",
+      "window": {
+        "candidate_id": "origin_premise",
+        "lo": 4,
+        "hi": 4
+      },
+      "step": 4,
+      "module": "plan",
+      "assessment": {
+        "output_quote": "This plan is helpful as it addresses the contradiction in the original query and focuses on more realistic and attainable criteria.",
+        "proposition": "The plan treats a reduced search that leaves out required fit and material criteria as a more realistic solution to an unverified contradiction.",
+        "reasoning": "The plan's concrete focus lists men's dress-shirt/style/color/size/price attributes while omitting women's fit and material; its stated rationale is the supposed contradiction, and the actual step-4 query omits those terms. This is a downstream planning fault rather than the source of the premise: the step-4 reflection states the conflict and the plan adopts it. Counterevidence is the plan's adjacent statement to pay attention to material and fit compatibility, and a narrowed search can be exploratory; however, the concrete plan calls the reduced criteria more realistic and the action implements that reduction.",
+        "immediate_effect": "The step-4 action searches without women-fit or material terms; feedback shows largely unrelated apparel and does not verify a satisfying product.",
+        "uncertainty": "The plan's compatibility reminder leaves some ambiguity about whether omissions were intended as a temporary query experiment. The evidence supports that this particular search relaxed the criteria, but does not show the agent permanently abandoned them.",
+        "status": "error",
+        "step": 4,
+        "module": "plan",
+        "fault_class": "constraint_ignorance",
+        "requirement_links": [
+          "req:description",
+          "req:fit_type"
+        ],
+        "primary_fid": 89,
+        "evidence_for": [
+          89
+        ],
+        "evidence_against": []
+      },
+      "local_context_ref": "local:4",
+      "related_evidence": [
+        {
+          "event_ref": "event:2",
+          "roles": [
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:3",
+          "roles": [
+            "previous_event",
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:5",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:28",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:29",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        }
+      ],
+      "evidence_selection": {
+        "search_range": [
+          1,
+          30
+        ],
+        "method": "previous/cited steps and normalized-action/entity-word matches",
+        "matching_steps": 28,
+        "selected_steps": [
+          2,
+          3,
+          5,
+          28,
+          29
+        ],
+        "omitted_matching_steps": 23,
+        "max_related_events": 12,
+        "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+      }
+    },
+    {
+      "candidate_id": "trace-window:downstream_reliance:1",
+      "window": {
+        "candidate_id": "downstream_reliance",
+        "lo": 29,
+        "hi": 29
+      },
+      "step": 4,
+      "module": "plan",
+      "assessment": {
+        "output_quote": "This plan is helpful as it addresses the contradiction in the original query and focuses on more realistic and attainable criteria.",
+        "proposition": "At step 4, the plan treats the task's requested women's fit as a contradiction and focuses on narrowed criteria that omit it, without evidence that men's shirts cannot meet the requested fit type.",
+        "reasoning": "This is a substantive plan constraint_ignorance: the task explicitly requires fit type women, while the step-4 plan calls the criteria contradictory and frames narrowing them as realistic. This quote states an unsupported incompatibility rather than merely proposing a different search phrase. Counterevidence for downstream reliance is that step 22's plan explicitly lists fit type women and its search action includes women; step 29's search action also includes women, and its stated rationale is indexing/rephrasing. Thus the step-4 plan fault does not explain the apparent late omission/relaxation at step 29. The search query omits needle sleeve, but that omission is not enough to establish abandonment.",
+        "immediate_effect": "The step-4 plan narrowed the operative criteria it named; the immediate product/search feedback is not established by the retrieved excerpts. Later evidence shows step 22 and step 29 searches include women.",
+        "uncertainty": "The evidence identifies a step-4 plan fault, but does not prove that this premise caused the step-29 broadening. The later plan is general and may describe an indexing experiment; omitted query words do not establish abandoned requirements.",
+        "status": "error",
+        "step": 4,
+        "module": "plan",
+        "fault_class": "constraint_ignorance",
+        "requirement_links": [
+          "req:fit_type"
+        ],
+        "primary_fid": 89,
+        "evidence_for": [
+          89
+        ],
+        "evidence_against": []
+      },
+      "local_context_ref": "local:4",
+      "related_evidence": [
+        {
+          "event_ref": "event:2",
+          "roles": [
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:3",
+          "roles": [
+            "previous_event",
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:5",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:22",
+          "roles": [
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:28",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:29",
+          "roles": [
+            "later_related_observation",
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        }
+      ],
+      "evidence_selection": {
+        "search_range": [
+          1,
+          30
+        ],
+        "method": "previous/cited steps and normalized-action/entity-word matches",
+        "matching_steps": 28,
+        "selected_steps": [
+          2,
+          3,
+          5,
+          22,
+          28,
+          29
+        ],
+        "omitted_matching_steps": 22,
+        "max_related_events": 12,
+        "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+      }
+    }
+  ],
+  "candidate_comparisons": [
+    {
+      "candidate_id": "trace-window:origin_premise:1",
+      "reasoning": "Selected. The original step-4 reflection itself asserts an unverified incompatibility; contemporaneous poor search results do not establish that premise, while the step-4 plan and action show it informed a search that dropped fit and material terms. This supports the early-origin finding in rule early_origin_and_later_reliance, but the rule's separate later-reliance condition is not established."
+    },
+    {
+      "candidate_id": "trace-window:origin_premise:2",
+      "reasoning": "This is the same step-4 decision expressed in the plan: it calls the reduced criteria more realistic and the action implements that reduction. The plan's constraint_ignorance is a supported consequential manifestation, but the step-4 reflection supplied the specific unsupported incompatibility premise that motivated it, making the reflection the more fundamental candidate. The plan's reminder to attend to fit and material is counterevidence about intent, but its stated rationale and concrete action still narrow the search."
+    },
+    {
+      "candidate_id": "trace-window:downstream_reliance:1",
+      "reasoning": "This candidate repeats the step-4 plan fault, not a distinct step-29 fault. For the manager's downstream_reliance question, step 29's plan describes broadening/rephrasing and its action retains women-fit, material terms, and other key constraints; step 22 also explicitly restores women-fit and material. Thus the proposed step-29 relaxation and actual continued reliance are refuted by the available original evidence, although query wording cannot settle every operative intention. Rule no-demonstrated-chain applies to the alleged late propagation, not to the direct step-4 narrowing."
+    }
+  ],
+  "coverage": {
+    "windows": [
+      {
+        "issue_step": 4,
+        "issue_fids": [
+          88,
+          89,
+          90
+        ],
+        "goal_links": [
+          "req:description",
+          "req:fit_type"
+        ],
+        "hypothesis": "Potential early query-selection error: after step 3's assessment, step 4 reflection says men's dress shirts with women's fit is a conflicting requirement, and its plan/action query omits fit_type=women and the requested polyester/cotton-heather material while retaining generic shirt/style/price terms. This could block discovery of a product satisfying the verbatim description and fit type if the search terms were deliberately discarded on an unsupported incompatibility premise. Recorded support: step 4 query returns largely unrelated apparel; inferred causal contribution is uncertain because search queries are exploratory, search admission is not semantic verification, and this may have been an experiment. Counterevidence/recovery: step 12 reintroduces material terms; step 22 includes women and cotton heather, though still not all exact qualifiers. TRACE should investigate whether the step-3/4 premise caused consequential requirement relaxation rather than legitimate query exploration.",
+        "candidate_id": "origin_premise",
+        "lo": 4,
+        "hi": 4,
+        "missing_steps": []
+      },
+      {
+        "issue_step": 29,
+        "issue_fids": [
+          765,
+          766,
+          767
+        ],
+        "goal_links": [
+          "req:description",
+          "req:fit_type"
+        ],
+        "hypothesis": "Potential late search-plan premise/omission: step 29 reflection says the prior search did not meet color/fit/size, while the plan proposes focusing on achievable attributes and says fit type might need adjustment to men's categories; the action query keeps 'women' but drops 'needle sleeve' and compresses the material alternatives to 'polyester cotton heather.' This may reflect a mistaken decision to relax/under-specify necessary description criteria, but action does not actually remove women and search-query wording may be an exploratory variant rather than abandonment. Immediate result at step 29 is the same broad, mostly unrelated page-1 list; step 30 clicks next, whose feedback is missing/unknown. Counterevidence/recovery: step 22 earlier included women plus material words, and step 29 still includes women/classic fit/price; no later recovery or outcome can be assessed beyond step 30's missing feedback. TRACE should distinguish this possible late requirement-relaxation from parser/selective-extraction artifacts and ordinary iterative search.",
+        "candidate_id": "downstream_reliance",
+        "lo": 29,
+        "hi": 29,
+        "missing_steps": []
+      }
+    ],
+    "window_version": 2,
+    "selected_steps": [
+      1,
+      2,
+      3,
+      4,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "assessed_steps": [
+      4
+    ],
+    "missing_steps": [],
+    "unassessed_steps": [
+      1,
+      2,
+      3,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "trace_complete": true,
+    "completed_windows": [
+      "origin_premise",
+      "downstream_reliance"
+    ],
+    "missing_windows": [],
+    "assessment_unit": "single_step_per_route_candidate"
+  },
+  "benchmark_scope": {
+    "schema": "benchmark-error-scope/v1",
+    "allowed_by_module": {
+      "memory": [
+        "hallucination",
+        "over_simplification",
+        "memory_retrieval_failure"
+      ],
+      "reflection": [
+        "progress_misjudge",
+        "causal_misattribution",
+        "outcome_misinterpretation"
+      ],
+      "plan": [
+        "inefficient_plan",
+        "constraint_ignorance",
+        "impossible_action"
+      ],
+      "action": [
+        "invalid_action",
+        "parameter_error",
+        "misalignment"
+      ],
+      "system": [
+        "environment_error",
+        "step_limit",
+        "llm_limit",
+        "tool_execution_error"
+      ]
+    },
+    "source": "core/local_judgement.py:FAULT with user-requested exclusions",
+    "excluded_causes": [
+      "formatting",
+      "spelling",
+      "literal quotation marks",
+      "serialization"
+    ],
+    "premise": "All genuine benchmark errors are within allowed_by_module. Formatting and spelling cannot cause the benchmark failure. Do not relabel these causes as another allowed error."
+  },
+  "stop_reason": "direct TRACE-candidate comparison completed",
+  "semantic_verdict": "Model judgement under the user's benchmark premise; structural validation only",
+  "run_id": "evidence-query-claims-n30-20261013",
+  "trajectory_id": "GPT-4o_003_chat_b000_t00_e02-1e119842",
+  "canonical_fingerprint": "488eb9aad2c705c7fdcfe7f17a5733d0d4d9ecfe28ae21b0f0da82334b8b53a9",
+  "phase": "SUBMIT",
+  "route_history": [
+    {
+      "version": 1,
+      "windows": [
+        {
+          "candidate_id": "c1",
+          "issue_step": 4,
+          "issue_fids": [
+            88,
+            89,
+            90
+          ],
+          "goal_links": [
+            "req:description",
+            "req:fit_type"
+          ],
+          "hypothesis": "Potential early query-selection error: after step 3's assessment, step 4 reflection says men's dress shirts with women's fit is a conflicting requirement, and its plan/action query omits fit_type=women and the requested polyester/cotton-heather material while retaining generic shirt/style/price terms. This could block discovery of a product satisfying the verbatim description and fit type if the search terms were deliberately discarded on an unsupported incompatibility premise. Recorded support: step 4 query returns largely unrelated apparel; inferred causal contribution is uncertain because search queries are exploratory, search admission is not semantic verification, and this may have been an experiment. Counterevidence/recovery: step 12 reintroduces material terms; step 22 includes women and cotton heather, though still not all exact qualifiers. TRACE should investigate whether the step-3/4 premise caused consequential requirement relaxation rather than legitimate query exploration.",
+          "lo": 4,
+          "hi": 4
+        },
+        {
+          "candidate_id": "c2",
+          "issue_step": 29,
+          "issue_fids": [
+            765,
+            766,
+            767
+          ],
+          "goal_links": [
+            "req:description",
+            "req:fit_type"
+          ],
+          "hypothesis": "Potential late search-plan premise/omission: step 29 reflection says the prior search did not meet color/fit/size, while the plan proposes focusing on achievable attributes and says fit type might need adjustment to men's categories; the action query keeps 'women' but drops 'needle sleeve' and compresses the material alternatives to 'polyester cotton heather.' This may reflect a mistaken decision to relax/under-specify necessary description criteria, but action does not actually remove women and search-query wording may be an exploratory variant rather than abandonment. Immediate result at step 29 is the same broad, mostly unrelated page-1 list; step 30 clicks next, whose feedback is missing/unknown. Counterevidence/recovery: step 22 earlier included women plus material words, and step 29 still includes women/classic fit/price; no later recovery or outcome can be assessed beyond step 30's missing feedback. TRACE should distinguish this possible late requirement-relaxation from parser/selective-extraction artifacts and ordinary iterative search.",
+          "lo": 29,
+          "hi": 29
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "mode": "online",
+    "model_calls": 15,
+    "replay_calls": 0,
+    "input_tokens": 1681098,
+    "output_tokens": 45495,
+    "accounted_input": 2229095,
+    "accounted_output": 45495,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 441.45692205900104,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 4327,
+        "output_tokens": 199,
+        "latency_seconds": 5.151458307000212,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 8,
+        "replay_calls": 0,
+        "input_tokens": 1110669,
+        "output_tokens": 16475,
+        "latency_seconds": 177.1789076970008,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 4,
+        "replay_calls": 0,
+        "input_tokens": 345994,
+        "output_tokens": 15203,
+        "latency_seconds": 130.0594509350003,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 116690,
+        "output_tokens": 4567,
+        "latency_seconds": 41.67144834699957,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 103418,
+        "output_tokens": 9051,
+        "latency_seconds": 87.39565677300016,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    },
+    "tool_calls": 68,
+    "assistant_turns": 15,
+    "claim_parsing": {
+      "mode": "online",
+      "model_calls": 2,
+      "replay_calls": 0,
+      "input_tokens": 53873,
+      "output_tokens": 21539,
+      "accounted_input": 56056,
+      "accounted_output": 21539,
+      "unknown_usage_calls": 0,
+      "latency_seconds": 148.715498605,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null,
+      "by_phase": {
+        "MAP": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "ROUTE": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "TRACE": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "SUBMIT": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "MANAGER": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "PARSE": {
+          "model_calls": 2,
+          "replay_calls": 0,
+          "input_tokens": 53873,
+          "output_tokens": 21539,
+          "latency_seconds": 148.715498605,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        }
+      }
+    }
+  },
+  "evaluation_mode": "evidence-query-step/v2-elements",
+  "facts": 807,
+  "candidates": 1,
+  "compilation_mode": "canonical-core-dsl-projection/v1",
+  "parsing_usage": {
+    "mode": "online",
+    "model_calls": 0,
+    "replay_calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "accounted_input": 0,
+    "accounted_output": 0,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 0.0,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    }
+  },
+  "claim_parsing_usage": {
+    "mode": "online",
+    "model_calls": 2,
+    "replay_calls": 0,
+    "input_tokens": 53873,
+    "output_tokens": 21539,
+    "accounted_input": 56056,
+    "accounted_output": 21539,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 148.715498605,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 2,
+        "replay_calls": 0,
+        "input_tokens": 53873,
+        "output_tokens": 21539,
+        "latency_seconds": 148.715498605,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    }
+  },
+  "parse_audit_summary": {
+    "template": 31
+  }
+}

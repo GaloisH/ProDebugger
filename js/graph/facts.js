@@ -1,9 +1,9 @@
 // Fact dependency graph: columns are steps, bands are sides, edges follow `basis`.
 // A step-range brush keeps large records readable; dependencies leaving the range
 // end at ghost nodes on either side.
-import {factText} from "../case/format.js?v=d7ea551f31";
-import {debounce, esc, short} from "../util.js?v=d7ea551f31";
-import {factIndex, factInspector, wireInspector} from "./inspect.js?v=d7ea551f31";
+import {factText} from "../case/format.js?v=edc30cc901";
+import {debounce, esc, short} from "../util.js?v=edc30cc901";
+import {factIndex, factInspector, wireInspector} from "./inspect.js?v=edc30cc901";
 
 const W = 210, H = 36, VGAP = 8, HGAP = 14, COL_GAP = 110, BAND_GAP = 34, GHOST_MAX = 30, MAX_ROWS = 10;
 const SIDE_ORDER = ["task", "env", "mind"];

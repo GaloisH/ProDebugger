@@ -1,13 +1,13 @@
 // Debugger process (one card per phase, expanding into one node per model call) above the
 // original agent steps. Selecting a phase or call opens it in the side panel and links it
 // to the steps it touched.
-import {getJSON} from "../api.js?v=d7ea551f31";
-import {EVAL_CLASS, factChip, factText, icon} from "../case/format.js?v=d7ea551f31";
-import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js?v=d7ea551f31";
-import {esc, pretty, short} from "../util.js?v=d7ea551f31";
-import {callDetail, expandable, handoffHtml, layoutPhases, layoutProcess, overviewHtml, phaseDetail, processHtml, requestHtml} from "./process.js?v=d7ea551f31";
-import {anchorsByStep, anchorTitle} from "./route.js?v=d7ea551f31";
-import {candidateCard, candidatesByStep, planOf} from "./trace.js?v=d7ea551f31";
+import {getJSON} from "../api.js?v=edc30cc901";
+import {EVAL_CLASS, factChip, factText, icon} from "../case/format.js?v=edc30cc901";
+import {actionLabel, ROLE_LABEL, stepRoles} from "../case/roles.js?v=edc30cc901";
+import {esc, pretty, short} from "../util.js?v=edc30cc901";
+import {callDetail, expandable, handoffHtml, layoutPhases, layoutProcess, overviewHtml, phaseDetail, processHtml, requestHtml} from "./process.js?v=edc30cc901";
+import {anchorsByStep, anchorTitle} from "./route.js?v=edc30cc901";
+import {candidateCard, candidatesByStep, planOf} from "./trace.js?v=edc30cc901";
 
 export function createView(root, ctx) {
   const state = {

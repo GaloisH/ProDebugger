@@ -9,6 +9,9 @@ export function parseRoute(hash = location.hash) {
   if (parts[0] === "case" && parts.length >= 4) {
     return {page: "case", ref: parts.slice(1, 4), tab: parts[4] || "trajectory", extra: parts.slice(5), query};
   }
+  if (parts[0] === "query") {
+    return {page: "query", ref: parts.length >= 3 ? parts.slice(1, 3) : null, query};
+  }
   if (parts[0] === "runs") return {page: "runs", query};
   return {page: "home", query};
 }
@@ -17,6 +20,9 @@ export const runsHref = group => "#/runs" + (group ? "?group=" + encodeURICompon
 
 export const chatHref = (group, trajectory) =>
   "#/chat" + (group ? "/" + [group, trajectory].map(s => encodeURIComponent(String(s))).join("/") : "");
+
+export const queryHref = ([group, trajectory] = []) =>
+  "#/query" + (group ? "/" + [group, trajectory].map(s => encodeURIComponent(String(s))).join("/") : "");
 
 export const caseHref = (ref, tab = "trajectory", ...extra) =>
   "#/" + ["case", ...ref, tab, ...extra].map(s => encodeURIComponent(String(s))).join("/");

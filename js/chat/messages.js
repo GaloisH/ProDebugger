@@ -1,8 +1,8 @@
 // Turns one run's case model into chat messages: the request, one message per phase
 // (MANAGER's plan, one per TRACE assignment), the live "working" indicator and run
 // notices. Built from the model calls, like the process graph.
-import {CALL_PHASES} from "../case/calls.js?v=d7ea551f31";
-import {assessOf, planOf, queryOf} from "../views/trace.js?v=d7ea551f31";
+import {CALL_PHASES} from "../case/calls.js?v=edc30cc901";
+import {assessOf, planOf, queryOf} from "../views/trace.js?v=edc30cc901";
 
 const sum = (list, f) => list.reduce((s, x) => s + (Number(f(x)) || 0), 0);
 

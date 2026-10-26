@@ -2,15 +2,15 @@
 // view gives a diagnosed run the AgentDebugger treatment: one root-cause card with its step
 // chain, evidence cards beside it and the compared TRACE candidates. Any other status
 // explains where and why the run stopped.
-import {createCanvas} from "../graph/engine.js?v=d7ea551f31";
-import {entityChip} from "../graph/inspect.js?v=d7ea551f31";
-import {factText, SIDE_CLASS} from "../case/format.js?v=d7ea551f31";
-import {actionLabel, stepRoles} from "../case/roles.js?v=d7ea551f31";
-import {esc, number, short} from "../util.js?v=d7ea551f31";
-import {anchorsByStep} from "./route.js?v=d7ea551f31";
-import {buildEvidence, evidenceDetail, layoutEvidence} from "./evidence.js?v=d7ea551f31";
-import {answerOf} from "./submit.js?v=d7ea551f31";
-import {assessOf, candidateIndex, queryOf} from "./trace.js?v=d7ea551f31";
+import {createCanvas} from "../graph/engine.js?v=edc30cc901";
+import {entityChip} from "../graph/inspect.js?v=edc30cc901";
+import {factText, SIDE_CLASS} from "../case/format.js?v=edc30cc901";
+import {actionLabel, stepRoles} from "../case/roles.js?v=edc30cc901";
+import {esc, number, short} from "../util.js?v=edc30cc901";
+import {anchorsByStep} from "./route.js?v=edc30cc901";
+import {buildEvidence, evidenceDetail, layoutEvidence} from "./evidence.js?v=edc30cc901";
+import {answerOf} from "./submit.js?v=edc30cc901";
+import {assessOf, candidateIndex, queryOf} from "./trace.js?v=edc30cc901";
 
 const human = s => String(s || "").replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase());
 const S = t => `S${String(t).padStart(2, "0")}`;
@@ -26,7 +26,7 @@ function stopPoint(m, r) {
   if (r.phase === "ROUTE") return {phase: "ROUTE", label: "No anchor cases", title: "ROUTE ended without anchor cases.",
     text: "ROUTE did not find a concrete, evidence-backed lead for TRACE to investigate.", call: last("ROUTE")};
   return {phase: r.phase, label: r.status === "uncertain" ? "No root accepted" : `Stopped · ${human(r.status)}`,
-    title: r.status === "uncertain" ? "No root cause accepted." : `Status: ${human(r.status)}.`, text: "", call: calls.at(-1)};
+    title: r.status === "uncertain" ? "No diagnosis accepted." : `Status: ${human(r.status)}.`, text: "", call: calls.at(-1)};
 }
 
 export function createView(root, ctx) {
@@ -43,7 +43,7 @@ export function createView(root, ctx) {
     const queried = new Set(d.calls.flatMap(c => queryOf(c)?.returned_steps || []));
     const candidates = new Set(d.calls.flatMap(c => (assessOf(c)?.candidates || []).map(x => x.step)));
     const root = d.result?.root?.step;
-    const LEVELS = [["is-root", "root cause"], ["is-candidate", "TRACE candidate"], ["is-queried", "returned by a TRACE query"], ["is-anchor", "ROUTE anchor"]];
+    const LEVELS = [["is-root", "selected hypothesis"], ["is-candidate", "TRACE candidate"], ["is-queried", "returned by a TRACE query"], ["is-anchor", "ROUTE anchor"]];
     const level = t => t === root ? 0 : candidates.has(t) ? 1 : queried.has(t) ? 2 : anchors.has(t) ? 3 : null;
     return `<div class="cov-strip" aria-label="Evidence coverage">${m.steps.map((s, i) => {
       const t = s.t ?? i + 1, l = level(t);
@@ -134,10 +134,10 @@ export function createView(root, ctx) {
       ...(r.counterevidence || []).map(fid => ({kind: "counter", fid})),
     ];
     return `<section class="result-diagnosed">
-      <div class="result-headline"><button class="btn" data-nav="trajectory">← Trajectory</button><div><div class="eyebrow">Failure attribution</div><h2 class="result-title">One root cause. Connected evidence.</h2></div></div>
+      <div class="result-headline"><button class="btn" data-nav="trajectory">← Trajectory</button><div><div class="eyebrow">Failure attribution</div><h2 class="result-title">Selected hypothesis. Linked evidence.</h2></div></div>
       <div class="result-grid">
         <article class="root-card">
-          <div class="eyebrow root-eyebrow">One root cause · ${S(rc.step)}</div>
+          <div class="eyebrow root-eyebrow">Selected hypothesis · ${S(rc.step)}</div>
           <h3>${esc(human(rc.fault_class))}</h3>
           <p>${esc(rc.proposition || r.reasoning || "")}</p>
           <ol class="root-chain">${chain.map(([label, text, cls], i) => `<li class="${cls}" style="--i:${i}"><span class="chain-label">${esc(label)}${cls ? '<em>error layer</em>' : ""}</span><span class="chain-text">${esc(text)}</span></li>`).join("")}</ol>

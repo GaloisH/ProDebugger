@@ -1,0 +1,633 @@
+{
+  "schema": "debugger-result/v1",
+  "status": "diagnosed",
+  "accepted": true,
+  "policy": "window-candidates-submit/v5-manager-forced-choice",
+  "root": {
+    "root_id": "trace-window:cooling_origin:1",
+    "step": 17,
+    "module": "plan",
+    "fid": 195,
+    "fault_class": "inefficient_plan",
+    "source_trace_status": "uncertain",
+    "output_quote": "Given what I've learned, the next step should be to clean the pot with the sinkbasin to cool it down.",
+    "status": "error",
+    "proposition": "The plan treats cleaning pot 1 with the sinkbasin as a route to cooling it, although the retrieved earlier record offers only the sink as a possible method and no source verifies that cleaning cools the pot.",
+    "reasoning": "At step 17, the plan turns an unverified cooling possibility into the actionable premise that cleaning the pot with the sink basin will cool it. Step 16's plan only suggests the sink or fridge as possibilities; it does not establish that cleaning cools the pot. The step-17 reflection still says the pot has not been cooled, and the step-17 action performs the planned cleaning. Step 18's original feedback confirms cleaning only, not cooling, yet the step-18 reflection says cleaning suggests the pot is cool and its plan calls it a now-cool pot. The later step-22 memory likewise says cleaning makes it presumably cool, connecting the step-17 assumption to later completion judgments. This supports manager rule cooling_premise_and_use: its conditions are supported by the step-16/17 plan and reflection, the step-17 cleaning action, and the step-18 feedback that does not establish cooling. The strongest counterevidence is that “normal” at step 16 is ambiguous and no observation proves the pot was physically not cool; thus the evidence establishes an unsupported inference and its use, not the pot's actual temperature or that cleaning could not cool it. Recovery is partial: step 21 says completion is not confirmed, and step 24 explicitly reopens the cool requirement; steps 25–29 investigate or handle the pot. Step 30 has no feedback, so neither final placement nor goal completion is verified.",
+    "goal_links": [
+      "req:pot_in_countertop"
+    ],
+    "supporting_fids": [
+      195
+    ],
+    "counterevidence": []
+  },
+  "reasoning": "At step 17, the plan turns an unverified cooling possibility into the actionable premise that cleaning the pot with the sink basin will cool it. Step 16's plan only suggests the sink or fridge as possibilities; it does not establish that cleaning cools the pot. The step-17 reflection still says the pot has not been cooled, and the step-17 action performs the planned cleaning. Step 18's original feedback confirms cleaning only, not cooling, yet the step-18 reflection says cleaning suggests the pot is cool and its plan calls it a now-cool pot. The later step-22 memory likewise says cleaning makes it presumably cool, connecting the step-17 assumption to later completion judgments. This supports manager rule cooling_premise_and_use: its conditions are supported by the step-16/17 plan and reflection, the step-17 cleaning action, and the step-18 feedback that does not establish cooling. The strongest counterevidence is that “normal” at step 16 is ambiguous and no observation proves the pot was physically not cool; thus the evidence establishes an unsupported inference and its use, not the pot's actual temperature or that cleaning could not cool it. Recovery is partial: step 21 says completion is not confirmed, and step 24 explicitly reopens the cool requirement; steps 25–29 investigate or handle the pot. Step 30 has no feedback, so neither final placement nor goal completion is verified.",
+  "supporting_evidence": [
+    195
+  ],
+  "counterevidence": [],
+  "causal_chain": [],
+  "repair": "At step 17, do not plan cleaning as a cooling method without evidence; choose a supported cooling operation and keep the cool requirement unverified until there is evidence the pot is cool.",
+  "uncertainty": "The evidence does not establish the pot's actual temperature, whether cleaning physically cooled it, or the result of the final step-30 action. “Normal” is not semantically resolved, and the step-18 feedback reports cleaning only. The evidence supports an ungrounded plan premise that guided action and later assumptions, but cannot prove a unique global root or that step 22's completion judgment depended on step 20 rather than being a renewed error.",
+  "alternatives": [
+    {
+      "candidate_id": "trace-window:completion_dependence:1",
+      "window": {
+        "candidate_id": "completion_dependence",
+        "lo": 20,
+        "hi": 20
+      },
+      "step": 22,
+      "module": "reflection",
+      "assessment": {
+        "output_quote": "No further action is needed since the goal is complete.",
+        "proposition": "At step 22, the reflection treats the whole cool-pot placement goal as complete and says no further action is needed, although the available observation confirms only that the pot is on the countertop.",
+        "reasoning": "This is a substantive progress misjudgment: the task requires a cool pot, while the contemporaneous placement observation establishes location, not coolness. The statement makes the completion premise actionable; subsequent step-22/23 completion-focused plans reinforce that reliance. However, step 20 already made the same completion claim, so this is not the originating assertion. Counterevidence and limits: the pot may in fact have been cool, and step 24 explicitly recognizes that coolness may be unmet; steps 25–29 then focus on checking/cooling or placement, so this episode does not establish a lasting failure or that step 20 caused the later take. The “normal pot” observation does not resolve coolness.",
+        "immediate_effect": "The reflection says no further action is needed; later step-22/23 plans continue treating completion as established. By step 24, the cool qualifier is reopened. No physical effect or terminal task result is established by this reflection.",
+        "uncertainty": "The cool state itself is unknown, and the subsequent behavior's causal dependence on this reflection versus the earlier completion claim is not fully resolved. Placement is independently confirmed; the final step-30 move has no feedback.",
+        "status": "error",
+        "step": 22,
+        "module": "reflection",
+        "fault_class": "progress_misjudge",
+        "requirement_links": [
+          "req:pot_in_countertop"
+        ],
+        "primary_fid": 247,
+        "evidence_for": [
+          247
+        ],
+        "evidence_against": []
+      },
+      "local_context_ref": "local:22",
+      "related_evidence": [
+        {
+          "event_ref": "event:20",
+          "roles": [
+            "prior_related",
+            "trace_cited_step"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:21",
+          "roles": [
+            "previous_event",
+            "prior_related"
+          ],
+          "temporal_role": "prior"
+        },
+        {
+          "event_ref": "event:23",
+          "roles": [
+            "later_related_observation",
+            "later_same_action"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:24",
+          "roles": [
+            "later_related_no_effect",
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:25",
+          "roles": [
+            "trace_cited_step"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:27",
+          "roles": [
+            "later_related_no_effect"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:28",
+          "roles": [
+            "later_related_observation",
+            "later_same_action"
+          ],
+          "temporal_role": "later"
+        },
+        {
+          "event_ref": "event:29",
+          "roles": [
+            "later_related_observation"
+          ],
+          "temporal_role": "later"
+        }
+      ],
+      "evidence_selection": {
+        "search_range": [
+          1,
+          30
+        ],
+        "method": "previous/cited steps and normalized-action/entity-word matches",
+        "matching_steps": 23,
+        "selected_steps": [
+          20,
+          21,
+          23,
+          24,
+          25,
+          27,
+          28,
+          29
+        ],
+        "omitted_matching_steps": 15,
+        "max_related_events": 12,
+        "limitation": "Lexical selection is not complete causal/recovery coverage. TRACE citations are unverified hints; missing or omitted evidence cannot establish absence, dependency or irreversibility."
+      }
+    }
+  ],
+  "candidate_comparisons": [
+    {
+      "candidate_id": "trace-window:cooling_origin:1",
+      "reasoning": "Selected as the best-supported originating semantic mistake: the step-17 plan supplies the unsupported cleaning-cools-pot premise, the action follows it, and later original text treats cleaning as evidence of cooling. Under cooling_premise_and_use, the premise, its material use, and lack of confirming feedback are supported. The temperature outcome remains unknown because “normal” is unresolved and cleaning feedback reports no temperature."
+    },
+    {
+      "candidate_id": "trace-window:completion_dependence:1",
+      "reasoning": "At step 22, the reflection says the whole task is complete although the observation confirms only that the pot is on the countertop; its plan says no further action is needed, and step 23 continues completion-focused plans. This is a substantive progress_misjudge and a plausible short-lived contributor. However, the specific manager rule completion_premise_dependence—that later decisions relied on the step-20 completion claim without effective correction—is not established: step 21 explicitly says the goal is not confirmed complete before the step-22 reassertion, and step 22 also cites the pot's placement and cleaning. The step-22 error is later than the unsupported cooling premise, and step-24 onward reopens the cool requirement and investigates it. It is therefore a strong rival consequence/recurrence, but the step-17 plan better explains the cleaning-to-presumed-cooling chain."
+    }
+  ],
+  "coverage": {
+    "windows": [
+      {
+        "issue_step": 17,
+        "issue_fids": [
+          195,
+          196
+        ],
+        "goal_links": [
+          "req:pot_in_countertop"
+        ],
+        "hypothesis": "Affects the necessary cool-pot subgoal before re-placement. The step-17 plan explicitly says to clean the pot with the sink basin “to cool it down,” and the action is “clean pot 1 with sinkbasin 1.” Immediate feedback is only “You clean the pot 1 using the sinkbasin 1”; the subsequent extracted state records clean=true, not cool=true. This supports a concrete unsupported action premise: treating cleaning as cooling, rather than evidence that the cool condition was achieved. Later step 19 does re-place the pot and step 20 sees it on the countertop, but neither verifies cooling; step 20’s completion assessment is counterevidence to ongoing placement failure, not evidence of coolness. Raw step 15 called the pot “normal,” while steps 16/30 observation parsing cannot interpret “normal” or local empty-container text, so whether that definitively means not cool remains uncertain; TRACE should assess this semantic/parser rival rather than assume the missing cool fact is false.",
+        "candidate_id": "cooling_origin",
+        "lo": 17,
+        "hi": 17,
+        "missing_steps": []
+      },
+      {
+        "issue_step": 20,
+        "issue_fids": [
+          223,
+          224
+        ],
+        "goal_links": [
+          "req:pot_in_countertop"
+        ],
+        "hypothesis": "Affects correct completion/maintenance of the required cool-pot-on-countertop state. At step 20, after feedback that the pot was moved onto countertop 1, the reflection says the task is complete because the pot is on the countertop, omitting the still-unverified “cool” qualifier; the plan then proposes only verifying countertop placement. This is a distinct possible false-completion decision, plausibly encouraging the later unnecessary take at step 25. The strongest counterevidence is that the pot was in fact observed on countertop 1 at step 21 and step 30 again attempts to place it there; the trajectory does not end with confirmed absence from the countertop. However, no raw observation establishes coolness, step 15 says “normal,” and the final step has no feedback, so the impact on terminal satisfaction is unresolved. Parser/semantic uncertainty around “normal” and the structured status being unknown must not be treated as proof of violation.",
+        "candidate_id": "completion_dependence",
+        "lo": 20,
+        "hi": 20,
+        "missing_steps": []
+      }
+    ],
+    "window_version": 2,
+    "selected_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "assessed_steps": [
+      17,
+      22
+    ],
+    "missing_steps": [],
+    "unassessed_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      18,
+      19,
+      20,
+      21,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30
+    ],
+    "trace_complete": true,
+    "completed_windows": [
+      "cooling_origin",
+      "completion_dependence"
+    ],
+    "missing_windows": [],
+    "assessment_unit": "single_step_per_route_candidate"
+  },
+  "benchmark_scope": {
+    "schema": "benchmark-error-scope/v1",
+    "allowed_by_module": {
+      "memory": [
+        "hallucination",
+        "over_simplification",
+        "memory_retrieval_failure"
+      ],
+      "reflection": [
+        "progress_misjudge",
+        "causal_misattribution",
+        "outcome_misinterpretation"
+      ],
+      "plan": [
+        "inefficient_plan",
+        "constraint_ignorance",
+        "impossible_action"
+      ],
+      "action": [
+        "invalid_action",
+        "parameter_error",
+        "misalignment"
+      ],
+      "system": [
+        "environment_error",
+        "step_limit",
+        "llm_limit",
+        "tool_execution_error"
+      ]
+    },
+    "source": "core/local_judgement.py:FAULT with user-requested exclusions",
+    "excluded_causes": [
+      "formatting",
+      "spelling",
+      "literal quotation marks",
+      "serialization"
+    ],
+    "premise": "All genuine benchmark errors are within allowed_by_module. Formatting and spelling cannot cause the benchmark failure. Do not relabel these causes as another allowed error."
+  },
+  "stop_reason": "direct TRACE-candidate comparison completed",
+  "semantic_verdict": "Model judgement under the user's benchmark premise; structural validation only",
+  "run_id": "evidence-query-claims-n30-20261013",
+  "trajectory_id": "GPT-4o_024_alfworld_task_024",
+  "canonical_fingerprint": "0133effbdfa43d7bf3eac099fe6c6b482c737f382694ed055a36265e92e894fa",
+  "phase": "SUBMIT",
+  "route_history": [
+    {
+      "version": 1,
+      "windows": [
+        {
+          "candidate_id": "c1",
+          "issue_step": 17,
+          "issue_fids": [
+            195,
+            196
+          ],
+          "goal_links": [
+            "req:pot_in_countertop"
+          ],
+          "hypothesis": "Affects the necessary cool-pot subgoal before re-placement. The step-17 plan explicitly says to clean the pot with the sink basin “to cool it down,” and the action is “clean pot 1 with sinkbasin 1.” Immediate feedback is only “You clean the pot 1 using the sinkbasin 1”; the subsequent extracted state records clean=true, not cool=true. This supports a concrete unsupported action premise: treating cleaning as cooling, rather than evidence that the cool condition was achieved. Later step 19 does re-place the pot and step 20 sees it on the countertop, but neither verifies cooling; step 20’s completion assessment is counterevidence to ongoing placement failure, not evidence of coolness. Raw step 15 called the pot “normal,” while steps 16/30 observation parsing cannot interpret “normal” or local empty-container text, so whether that definitively means not cool remains uncertain; TRACE should assess this semantic/parser rival rather than assume the missing cool fact is false.",
+          "lo": 17,
+          "hi": 17
+        },
+        {
+          "candidate_id": "c2",
+          "issue_step": 20,
+          "issue_fids": [
+            223,
+            224
+          ],
+          "goal_links": [
+            "req:pot_in_countertop"
+          ],
+          "hypothesis": "Affects correct completion/maintenance of the required cool-pot-on-countertop state. At step 20, after feedback that the pot was moved onto countertop 1, the reflection says the task is complete because the pot is on the countertop, omitting the still-unverified “cool” qualifier; the plan then proposes only verifying countertop placement. This is a distinct possible false-completion decision, plausibly encouraging the later unnecessary take at step 25. The strongest counterevidence is that the pot was in fact observed on countertop 1 at step 21 and step 30 again attempts to place it there; the trajectory does not end with confirmed absence from the countertop. However, no raw observation establishes coolness, step 15 says “normal,” and the final step has no feedback, so the impact on terminal satisfaction is unresolved. Parser/semantic uncertainty around “normal” and the structured status being unknown must not be treated as proof of violation.",
+          "lo": 20,
+          "hi": 20
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "mode": "online",
+    "model_calls": 10,
+    "replay_calls": 0,
+    "input_tokens": 1120416,
+    "output_tokens": 44393,
+    "accounted_input": 1522630,
+    "accounted_output": 44393,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 436.41964453200035,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 4177,
+        "output_tokens": 180,
+        "latency_seconds": 4.938206662000084,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 3,
+        "replay_calls": 0,
+        "input_tokens": 622773,
+        "output_tokens": 8281,
+        "latency_seconds": 96.2508843809992,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 4,
+        "replay_calls": 0,
+        "input_tokens": 299318,
+        "output_tokens": 18891,
+        "latency_seconds": 183.07551399500062,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 118155,
+        "output_tokens": 6131,
+        "latency_seconds": 60.373394402000486,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 75993,
+        "output_tokens": 10910,
+        "latency_seconds": 91.78164509199996,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    },
+    "tool_calls": 18,
+    "assistant_turns": 10,
+    "claim_parsing": {
+      "mode": "online",
+      "model_calls": 2,
+      "replay_calls": 0,
+      "input_tokens": 60672,
+      "output_tokens": 27682,
+      "accounted_input": 60672,
+      "accounted_output": 27682,
+      "unknown_usage_calls": 0,
+      "latency_seconds": 191.45305723300044,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null,
+      "by_phase": {
+        "MAP": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "ROUTE": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "TRACE": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "SUBMIT": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "MANAGER": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "PARSE": {
+          "model_calls": 2,
+          "replay_calls": 0,
+          "input_tokens": 60672,
+          "output_tokens": 27682,
+          "latency_seconds": 191.45305723300044,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        }
+      }
+    }
+  },
+  "evaluation_mode": "evidence-query-step/v2-elements",
+  "facts": 323,
+  "candidates": 10,
+  "compilation_mode": "canonical-core-dsl-projection/v1",
+  "parsing_usage": {
+    "mode": "online",
+    "model_calls": 2,
+    "replay_calls": 0,
+    "input_tokens": 26428,
+    "output_tokens": 4465,
+    "accounted_input": 26797,
+    "accounted_output": 4465,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 44.51993861799929,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 2,
+        "replay_calls": 0,
+        "input_tokens": 26428,
+        "output_tokens": 4465,
+        "latency_seconds": 44.51993861799929,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    }
+  },
+  "claim_parsing_usage": {
+    "mode": "online",
+    "model_calls": 2,
+    "replay_calls": 0,
+    "input_tokens": 60672,
+    "output_tokens": 27682,
+    "accounted_input": 60672,
+    "accounted_output": 27682,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 191.45305723300044,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 2,
+        "replay_calls": 0,
+        "input_tokens": 60672,
+        "output_tokens": 27682,
+        "latency_seconds": 191.45305723300044,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    }
+  },
+  "parse_audit_summary": {
+    "template": 29,
+    "unresolved": 2
+  }
+}

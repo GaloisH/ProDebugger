@@ -1,12 +1,12 @@
 // Home page: a light, business-style overview with its own header. In-page links scroll
 // instead of changing the hash, which belongs to the router.
-import {CaseStore} from "../case/store.js?v=d7ea551f31";
-import {createCaseViews, TABS} from "../case/views.js?v=d7ea551f31";
-import {caseHref} from "../routes.js?v=d7ea551f31";
-import {domainIcon} from "./runs.js?v=d7ea551f31";
-import {esc, loader} from "../util.js?v=d7ea551f31";
-import {STATIC} from "../api.js?v=d7ea551f31";
-import {PROJECT} from "../site.js?v=d7ea551f31";
+import {CaseStore} from "../case/store.js?v=edc30cc901";
+import {createCaseViews, TABS} from "../case/views.js?v=edc30cc901";
+import {caseHref} from "../routes.js?v=edc30cc901";
+import {domainIcon} from "./runs.js?v=edc30cc901";
+import {esc, loader} from "../util.js?v=edc30cc901";
+import {STATIC} from "../api.js?v=edc30cc901";
+import {PROJECT} from "../site.js?v=edc30cc901";
 
 // The showcase case: a fully correct reference run kept under artifacts/.
 export const DEMO_REF = ["runs", "dsl-route-causal-timeline-high-unlimited-alf18-20261007-live", "GPT-4o_018_alfworld_task_018"];
@@ -21,10 +21,10 @@ const PAINS = [
 ];
 
 const CAPABILITIES = [
-  ["Root cause, not symptoms", '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
-   "Pinpoints the decisive step, the module that went wrong — memory, reflection, plan or action — and the fault type, not just where things broke."],
+  ["Compare failure hypotheses", '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+   "Investigates candidate steps, modules and fault types, with evidence that can support or challenge each hypothesis."],
   ["Evidence you can verify", '<path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="m9 12 2 2 4-4"/>',
-   "Every finding quotes the original trajectory and links to compiled facts. When the evidence is not enough, it answers “uncertain” instead of guessing."],
+   "Inspect source quotations and compiled facts behind each candidate. SUBMIT selects an available candidate and records evidence limits in its uncertainty explanation."],
   ["Watch it think, live", '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
    "Follow each stage and every window review as the run writes it, or replay a finished diagnosis step by step."],
   ["See the structure", '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="8" cy="18" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.3 7 15.6 7M7 8.4l.7 7.1M10.4 17.8l5.1-.6M17.9 9.5l.1 5"/>',
@@ -36,15 +36,15 @@ const USE_CASES = [
    "Agents that move through rooms, open receptacles and handle objects. ProDebugger checks each action against the goal and the world state the agent had already observed.",
    ["Repeated or ineffective actions", "Plans that drift from the goal", "Misread observations"]],
   ["webshop", "Web shopping agents", "WebShop",
-   "Agents that search, compare and buy products against a list of constraints. ProDebugger finds which requirement slipped, and the step where it did.",
+   "Inspect search, product options and purchase actions against recorded shopping requirements, and compare candidate explanations for unmet constraints.",
    ["Constraints lost during search", "Wrong option or attribute chosen", "Premature purchase"]],
 ];
 
 const STAGES = [
-  ["map", "MAP", "Map the goal", "Reads the task requirements into one authoritative goal map, so every later judgement uses the same yardstick.", "Goal map"],
+  ["map", "MAP", "Map the goal", "Builds a goal map from task requirements, retaining unresolved parsing as evidence gaps.", "Goal map"],
   ["route", "ROUTE", "Route to suspects", "Reads the full action–feedback timeline and the original modules, tests parser gaps as rival explanations, and declares a few evidence-backed anchor cases.", "Anchor cases"],
-  ["trace", "TRACE", "Trace the evidence", "Reviews each window independently across memory, reflection, plan and action, quoting the exact source text for every candidate.", "Validated candidates"],
-  ["submit", "SUBMIT", "Submit the verdict", "Compares all candidates against the full history and returns one root cause with step, module, fault type and fix — or abstains.", "Root cause or uncertain"],
+  ["trace", "TRACE", "Trace the evidence", "A manager allocates investigations. Each investigator makes one targeted query across the trajectory and reports a step-level candidate with source evidence.", "Evidence-backed candidates"],
+  ["submit", "SUBMIT", "Submit the verdict", "Compares TRACE candidates using supplied evidence and selects one existing candidate with an uncertainty explanation. If TRACE supplies no candidate, SUBMIT is skipped.", "Selected hypothesis"],
 ];
 
 // Project-site links (static export only): paper, code and a video section.
@@ -92,7 +92,7 @@ function videoSection() {
 
 // Hero screenshots of the workbench (web/capture_shots.py); each opens the live view.
 const SHOTS = [
-  ["result", "Result", "One root cause, connected evidence", caseHref(DEMO_REF, "result")],
+  ["result", "Result", "Selected hypothesis, linked evidence", caseHref(DEMO_REF, "result")],
   ["trajectory", "Trajectory", "Debugger decisions linked to agent steps", caseHref(DEMO_REF, "trajectory", "step", 4)],
   ["graph", "DSL Graph", "World state compiled from the trajectory", caseHref(DEMO_REF, "graph", "entities")],
   ["chat", "Chat", "Launch or replay a diagnosis", "#/chat"],
@@ -221,8 +221,8 @@ export function mountHome(root) {
       <section class="home-hero">
         <div class="hero-copy" data-reveal-group>
           <h1 class="hero-title">Pro<em>Debugger</em></h1>
-          <p class="hero-subtitle">Evidence-Grounded Root-Cause Debugging of LLM Agent Trajectories</p>
-          <p class="hero-sub">Find why your agent failed — every failure traced back to its root cause, with evidence you can verify.</p>
+          <p class="hero-subtitle">Evidence-Grounded Debugging of LLM Agent Trajectories</p>
+          <p class="hero-sub">Investigate why an agent failed. Inspect candidate explanations and the recorded evidence behind them.</p>
           ${STATIC ? projectLinks() : ""}
           <div class="hero-ctas">
             <a class="h-btn primary" href="#/chat">${STATIC ? "Replay a diagnosis" : "Try a live diagnosis"} ${ARROW}</a>

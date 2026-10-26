@@ -1,0 +1,467 @@
+{
+  "schema": "debugger-result/v1",
+  "status": "diagnosed",
+  "accepted": true,
+  "policy": "window-candidates-submit/v5-manager-forced-choice",
+  "root": {
+    "root_id": "trace-window:product_claim_trace:1",
+    "step": 9,
+    "module": "plan",
+    "fid": 335,
+    "fault_class": "constraint_ignorance",
+    "source_trace_status": "error",
+    "output_quote": "This action directly achieves the task goal without further verification steps, as the product attributes are already confirmed.",
+    "status": "error",
+    "proposition": "The step-9 plan treats all product attributes as confirmed and directs purchase without verification, although the same-step reflection says product details still need confirmation before purchasing and the observations establish only options available, not the required attributes or medium selection.",
+    "reasoning": "At step 9, the plan treats required attributes as confirmed and directs buy now, despite the same-step reflection explicitly saying product details need confirmation. The listing supports the short-sleeve women's-top title and price range, but the unresolved page extraction does not establish material, care, fit, or that medium was selected; the visible medium option establishes availability only. The evidence points to a prior unsupported premise in step-8 memory, which first says the product matches material, fit, and medium, and step-8 plan says the attributes align. Step 2 memory and step 6 memory instead describe material/attributes as unverified or unknown. Step 9 memory carries the claim forward, and the step-9 plan relies on attributes being confirmed while bypassing the reflection's warning. Thus manager rule unsupported_origin_and_dependence is supported on the available evidence, although the truth of the product attributes remains unknown. The plan's disregard of its own warning is also an independently visible proximate fault. The step-7 plan proposed selecting medium after color, but the recorded step-7 and step-8 actions are both clicks on b16-blue; no medium click is recorded in the supplied action evidence. A default or unrecorded selection remains possible. No effective verification or correction is shown before the recorded buy-now action, and no post-action feedback establishes the purchase outcome.",
+    "goal_links": [
+      "req:description",
+      "req:size"
+    ],
+    "supporting_fids": [
+      335
+    ],
+    "counterevidence": []
+  },
+  "reasoning": "At step 9, the plan treats required attributes as confirmed and directs buy now, despite the same-step reflection explicitly saying product details need confirmation. The listing supports the short-sleeve women's-top title and price range, but the unresolved page extraction does not establish material, care, fit, or that medium was selected; the visible medium option establishes availability only. The evidence points to a prior unsupported premise in step-8 memory, which first says the product matches material, fit, and medium, and step-8 plan says the attributes align. Step 2 memory and step 6 memory instead describe material/attributes as unverified or unknown. Step 9 memory carries the claim forward, and the step-9 plan relies on attributes being confirmed while bypassing the reflection's warning. Thus manager rule unsupported_origin_and_dependence is supported on the available evidence, although the truth of the product attributes remains unknown. The plan's disregard of its own warning is also an independently visible proximate fault. The step-7 plan proposed selecting medium after color, but the recorded step-7 and step-8 actions are both clicks on b16-blue; no medium click is recorded in the supplied action evidence. A default or unrecorded selection remains possible. No effective verification or correction is shown before the recorded buy-now action, and no post-action feedback establishes the purchase outcome.",
+  "supporting_evidence": [
+    335
+  ],
+  "counterevidence": [],
+  "causal_chain": [],
+  "repair": "Before planning or taking buy now, open the product details/features and verify the required material, care, fit, and product type; explicitly select medium and confirm the selected variant and b16-blue. Proceed only if those checks establish a match.",
+  "uncertainty": "The evidence does not establish whether the product actually meets the disputed attributes, whether medium was selected by a UI default, or whether the purchase succeeded. Page extraction is unresolved and final feedback is absent. Step-8 memory is the stronger evidenced origin of the unsupported premise, but it is not a supplied candidate; the available candidate is the step-9 plan that propagates the premise while explicitly bypassing verification. The bounded retrieval does not prove a globally unique root or exclude unobserved recovery.",
+  "alternatives": [],
+  "candidate_comparisons": [
+    {
+      "candidate_id": "trace-window:product_claim_trace:1",
+      "reasoning": "This is the only supplied candidate, and its step-9 plan is directly contradicted by the step-9 reflection's explicit verification warning. The strongest causal rival is the earlier step-8 memory claim that the product already matches several requirements: retrieved evidence makes that the earliest supported source of the unsupported premise and shows step 9 carrying it forward. However, step 8 is not a supplied candidate, so it cannot be selected here; the selected step-9 plan independently chooses to bypass verification. Under unsupported_origin_and_dependence, the premise's unsupported status and its carry-forward into the buy decision are supported, while actual product nonconformity and selected-size state are unknown. Rule premise_refuted_or_independent_cause does not apply because the evidence does not show that the premise was supported or corrected. The step-9 plan's independent disregard of its own warning remains a relevant proximate fault."
+    }
+  ],
+  "coverage": {
+    "windows": [
+      {
+        "issue_step": 8,
+        "issue_fids": [
+          274,
+          276,
+          277,
+          278
+        ],
+        "goal_links": [
+          "req:size",
+          "req:description"
+        ],
+        "hypothesis": "Potential upstream source/implementation failure: at step 8 the original memory (fid 274) and reflection (fid 276) describe B09NPML43M as already matching size medium, material/polyester spandex, price and fit, although the observed item page at step 7 only shows the title and $1.01-$1.74 price plus lists of color and size options; medium is listed but no size selection or evidence for material/care/fit is shown. The step-8 plan (fid 277) says to click b16-blue and then proceed to select medium, but the action (fid 278) clicks b16-blue again, not medium. Immediate post-action timeline output is unchanged, and step 7 had already clicked b16-blue; the compiled evidence records color chosen at step 7, whereas size has no recorded decision. This makes a stale/unsupported memory premise and/or failure to implement the explicit size-selection subgoal plausible sources of the later unsupported completion belief. Causal inference, not proven: the repeated color click may have been a retry or a UI limitation, and the end-of-step output contains no explicit error. Strong counterevidence/recovery: step 9 reflection says product details still need verification before purchase, but the final plan contradicts that; no later recovery occurs before trajectory ends. Trace the origin and causal effect of the unsupported step-8 premise, without treating missing parsed description facts alone as proof of noncompliance.",
+        "candidate_id": "product_claim_trace",
+        "lo": 8,
+        "hi": 8,
+        "missing_steps": []
+      }
+    ],
+    "window_version": 2,
+    "selected_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "assessed_steps": [
+      9
+    ],
+    "missing_steps": [],
+    "unassessed_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "trace_complete": true,
+    "completed_windows": [
+      "product_claim_trace"
+    ],
+    "missing_windows": [],
+    "assessment_unit": "single_step_per_route_candidate"
+  },
+  "benchmark_scope": {
+    "schema": "benchmark-error-scope/v1",
+    "allowed_by_module": {
+      "memory": [
+        "hallucination",
+        "over_simplification",
+        "memory_retrieval_failure"
+      ],
+      "reflection": [
+        "progress_misjudge",
+        "causal_misattribution",
+        "outcome_misinterpretation"
+      ],
+      "plan": [
+        "inefficient_plan",
+        "constraint_ignorance",
+        "impossible_action"
+      ],
+      "action": [
+        "invalid_action",
+        "parameter_error",
+        "misalignment"
+      ],
+      "system": [
+        "environment_error",
+        "step_limit",
+        "llm_limit",
+        "tool_execution_error"
+      ]
+    },
+    "source": "core/local_judgement.py:FAULT with user-requested exclusions",
+    "excluded_causes": [
+      "formatting",
+      "spelling",
+      "literal quotation marks",
+      "serialization"
+    ],
+    "premise": "All genuine benchmark errors are within allowed_by_module. Formatting and spelling cannot cause the benchmark failure. Do not relabel these causes as another allowed error."
+  },
+  "stop_reason": "direct TRACE-candidate comparison completed",
+  "semantic_verdict": "Model judgement under the user's benchmark premise; structural validation only",
+  "run_id": "evidence-query-claims-n30-20261013",
+  "trajectory_id": "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d",
+  "canonical_fingerprint": "f98b1328af3862242ca820cfa2ae01cb86592958512bec514a6ccc36dfc2b0ff",
+  "phase": "SUBMIT",
+  "route_history": [
+    {
+      "version": 1,
+      "windows": [
+        {
+          "candidate_id": "c1",
+          "issue_step": 8,
+          "issue_fids": [
+            274,
+            276,
+            277,
+            278
+          ],
+          "goal_links": [
+            "req:size",
+            "req:description"
+          ],
+          "hypothesis": "Potential upstream source/implementation failure: at step 8 the original memory (fid 274) and reflection (fid 276) describe B09NPML43M as already matching size medium, material/polyester spandex, price and fit, although the observed item page at step 7 only shows the title and $1.01-$1.74 price plus lists of color and size options; medium is listed but no size selection or evidence for material/care/fit is shown. The step-8 plan (fid 277) says to click b16-blue and then proceed to select medium, but the action (fid 278) clicks b16-blue again, not medium. Immediate post-action timeline output is unchanged, and step 7 had already clicked b16-blue; the compiled evidence records color chosen at step 7, whereas size has no recorded decision. This makes a stale/unsupported memory premise and/or failure to implement the explicit size-selection subgoal plausible sources of the later unsupported completion belief. Causal inference, not proven: the repeated color click may have been a retry or a UI limitation, and the end-of-step output contains no explicit error. Strong counterevidence/recovery: step 9 reflection says product details still need verification before purchase, but the final plan contradicts that; no later recovery occurs before trajectory ends. Trace the origin and causal effect of the unsupported step-8 premise, without treating missing parsed description facts alone as proof of noncompliance.",
+          "lo": 8,
+          "hi": 8
+        },
+        {
+          "candidate_id": "c2",
+          "issue_step": 9,
+          "issue_fids": [
+            332,
+            334,
+            335,
+            336
+          ],
+          "goal_links": [
+            "req:size",
+            "req:description"
+          ],
+          "hypothesis": "Potential proximate decision failure: step-9 memory (fid 332) says color and size options are available and treats this as aligning with task requirements; reflection (fid 334) explicitly says verification of product details is still needed before purchase. Nevertheless, plan fid 335 asserts that all criteria—including size, material, price and type—are confirmed and says no further verification is needed, and action fid 336 clicks buy now. Original pre-action page still displays medium only as an available option, not selected, and shows only the title and price ($1.01-$1.74); it does not display evidence for polyester-spandex, hand-wash, day comfort, loose fit, or teen suitability. Thus buying/finalizing based on a claim that contradicts its own reflection and exceeds observed evidence could block the necessary size and product-description subgoals. Do not construe the user's 'Find me' request alone as forbidding purchase; the concern is unsupported match/selection before purchase. The final post-action feedback is null/unknown, so purchase effect is not established and there is no later recovery in this 9-step trajectory. Parser gaps at steps 7-9 make the unmodeled description truth uncertain, not false; trace whether the unsupported premise originated earlier or whether the apparent contradiction is an extraction/semantic artifact.",
+          "lo": 9,
+          "hi": 9
+        }
+      ]
+    }
+  ],
+  "usage": {
+    "mode": "online",
+    "model_calls": 11,
+    "replay_calls": 0,
+    "input_tokens": 1163179,
+    "output_tokens": 37472,
+    "accounted_input": 1482053,
+    "accounted_output": 37472,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 354.0599850419967,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 3952,
+        "output_tokens": 155,
+        "latency_seconds": 3.5742820790001133,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 6,
+        "replay_calls": 0,
+        "input_tokens": 834594,
+        "output_tokens": 16847,
+        "latency_seconds": 185.55924058699748,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 2,
+        "replay_calls": 0,
+        "input_tokens": 167246,
+        "output_tokens": 8979,
+        "latency_seconds": 71.84288186199956,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 67903,
+        "output_tokens": 4086,
+        "latency_seconds": 35.81484252700011,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 89484,
+        "output_tokens": 7405,
+        "latency_seconds": 57.26873798699944,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    },
+    "tool_calls": 55,
+    "assistant_turns": 11,
+    "claim_parsing": {
+      "mode": "online",
+      "model_calls": 1,
+      "replay_calls": 0,
+      "input_tokens": 28241,
+      "output_tokens": 12413,
+      "accounted_input": 28241,
+      "accounted_output": 12413,
+      "unknown_usage_calls": 0,
+      "latency_seconds": 86.68564429200069,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null,
+      "by_phase": {
+        "MAP": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "ROUTE": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "TRACE": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "SUBMIT": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "MANAGER": {
+          "model_calls": 0,
+          "replay_calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "latency_seconds": 0.0,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        },
+        "PARSE": {
+          "model_calls": 1,
+          "replay_calls": 0,
+          "input_tokens": 28241,
+          "output_tokens": 12413,
+          "latency_seconds": 86.68564429200069,
+          "cache_hit_input_tokens": null,
+          "cache_miss_input_tokens": null
+        }
+      }
+    }
+  },
+  "evaluation_mode": "evidence-query-step/v2-elements",
+  "facts": 338,
+  "candidates": 0,
+  "compilation_mode": "canonical-core-dsl-projection/v1",
+  "parsing_usage": {
+    "mode": "online",
+    "model_calls": 3,
+    "replay_calls": 0,
+    "input_tokens": 94283,
+    "output_tokens": 27295,
+    "accounted_input": 94283,
+    "accounted_output": 27295,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 174.5359807449986,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 3,
+        "replay_calls": 0,
+        "input_tokens": 94283,
+        "output_tokens": 27295,
+        "latency_seconds": 174.5359807449986,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    }
+  },
+  "claim_parsing_usage": {
+    "mode": "online",
+    "model_calls": 1,
+    "replay_calls": 0,
+    "input_tokens": 28241,
+    "output_tokens": 12413,
+    "accounted_input": 28241,
+    "accounted_output": 12413,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 86.68564429200069,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 1,
+        "replay_calls": 0,
+        "input_tokens": 28241,
+        "output_tokens": 12413,
+        "latency_seconds": 86.68564429200069,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    }
+  },
+  "parse_audit_summary": {
+    "template": 7,
+    "unresolved": 3
+  }
+}

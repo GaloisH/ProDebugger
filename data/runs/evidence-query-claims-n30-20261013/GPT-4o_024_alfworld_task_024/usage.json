@@ -1,0 +1,140 @@
+{
+  "mode": "online",
+  "model_calls": 10,
+  "replay_calls": 0,
+  "input_tokens": 1120416,
+  "output_tokens": 44393,
+  "accounted_input": 1522630,
+  "accounted_output": 44393,
+  "unknown_usage_calls": 0,
+  "latency_seconds": 436.41964453200035,
+  "cache_hit_input_tokens": null,
+  "cache_miss_input_tokens": null,
+  "by_phase": {
+    "MAP": {
+      "model_calls": 1,
+      "replay_calls": 0,
+      "input_tokens": 4177,
+      "output_tokens": 180,
+      "latency_seconds": 4.938206662000084,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null
+    },
+    "ROUTE": {
+      "model_calls": 3,
+      "replay_calls": 0,
+      "input_tokens": 622773,
+      "output_tokens": 8281,
+      "latency_seconds": 96.2508843809992,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null
+    },
+    "TRACE": {
+      "model_calls": 4,
+      "replay_calls": 0,
+      "input_tokens": 299318,
+      "output_tokens": 18891,
+      "latency_seconds": 183.07551399500062,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null
+    },
+    "SUBMIT": {
+      "model_calls": 1,
+      "replay_calls": 0,
+      "input_tokens": 118155,
+      "output_tokens": 6131,
+      "latency_seconds": 60.373394402000486,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null
+    },
+    "MANAGER": {
+      "model_calls": 1,
+      "replay_calls": 0,
+      "input_tokens": 75993,
+      "output_tokens": 10910,
+      "latency_seconds": 91.78164509199996,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null
+    },
+    "PARSE": {
+      "model_calls": 0,
+      "replay_calls": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "latency_seconds": 0.0,
+      "cache_hit_input_tokens": null,
+      "cache_miss_input_tokens": null
+    }
+  },
+  "tool_calls": 18,
+  "assistant_turns": 10,
+  "claim_parsing": {
+    "mode": "online",
+    "model_calls": 2,
+    "replay_calls": 0,
+    "input_tokens": 60672,
+    "output_tokens": 27682,
+    "accounted_input": 60672,
+    "accounted_output": 27682,
+    "unknown_usage_calls": 0,
+    "latency_seconds": 191.45305723300044,
+    "cache_hit_input_tokens": null,
+    "cache_miss_input_tokens": null,
+    "by_phase": {
+      "MAP": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "ROUTE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "TRACE": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "SUBMIT": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "MANAGER": {
+        "model_calls": 0,
+        "replay_calls": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "latency_seconds": 0.0,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      },
+      "PARSE": {
+        "model_calls": 2,
+        "replay_calls": 0,
+        "input_tokens": 60672,
+        "output_tokens": 27682,
+        "latency_seconds": 191.45305723300044,
+        "cache_hit_input_tokens": null,
+        "cache_miss_input_tokens": null
+      }
+    }
+  }
+}

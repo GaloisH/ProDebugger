@@ -1,0 +1,100 @@
+{
+  "schema": "trace-investigation-plan/v1",
+  "assignments": [
+    {
+      "agent_id": "product_claim_trace",
+      "anchor_case_id": "c1",
+      "route_case_ids": [
+        "c1",
+        "c2"
+      ],
+      "question": "Trace whether the claim that B09NPML43M already satisfies medium/material/care/fit/type first entered memory, reflection, or plan before or at step 8, and whether step 9's buy decision actually relied on that unsupported premise without effective verification. Strong rival: the variant may have been selected by a UI default or supported in details not represented by the unresolved page extraction, while step 9 could be a separate planning failure that contradicts its own verification warning rather than mere propagation. Find the earliest supported source or a better evidenced alternative; a verified selection/detail, effective correction, or lack of causal reliance defeats the proposed upstream account.",
+      "search_targets": [
+        "Backward origin discovery across memory, reflection, and plan from step 1 through 9 for product B09NPML43M and variants of the disputed claims: medium selected/available, polyester spandex, hand wash, loose fit, day comfort, short sleeve, teen/women's tops, and matching/all criteria. Do not assume step 7 is the origin; use literal SEARCH_TEXT terms and FIND_CLAIMS topics such as state, availability, selection, verification, result_assessment, and decision_basis, retaining the source step and module.",
+        "At any discovered claim, compare same-step mental-module excerpts and independent product-page/listing observations and clicks: distinguish product title/price and listed options from material/care/fit support and from actual size selection. Track clicks for medium versus b16-blue and whether the repeated color click had a plausible UI/retry explanation.",
+        "Check actual causal dependence and correction through the step-9 purchase decision: whether step-8's premise is reused, whether the step-9 reflection's request to verify details effectively corrects it, and whether the plan/action proceeds despite that correction. Consider whether step 9 is an independent proximate planning failure; no final feedback is available, so do not infer purchase outcome."
+      ],
+      "evidence": [
+        {
+          "source_id": "source:8:memory",
+          "quote": "In step 7, the search result included the product B09NPML43M with attributes matching most criteria (polyester spandex, short sleeve, loose fit, size medium, price under $30), but color options were listed as \"various.\""
+        },
+        {
+          "source_id": "source:8:plan",
+          "quote": "This action ensures all attributes (color, size, material, price, fit) align with the user's criteria."
+        },
+        {
+          "source_id": "source:8:action",
+          "quote": "click[b16-blue]"
+        },
+        {
+          "source_id": "source:7:observation",
+          "quote": "'size' [SEP] 'small' [SEP] 'medium' [SEP] 'large' [SEP] 'x-large' [SEP] 'xx-large' [SEP] '3x-large' [SEP] 'Womens Short Sleeve Tops, Womens Casual Dandelion Printing T-Shirts Loose O-Neck Blouse Tops Funny Graphic Tee Shirts' [SEP] 'Price: $1.01 to $1.74' [SEP] 'Rating: N.A.' [SEP] 'Description' [SEP] 'Features' [SEP] 'Reviews' [SEP] 'Buy Now'"
+        },
+        {
+          "source_id": "source:9:reflection",
+          "quote": "The task is nearly complete, but confirmation of product details is needed before purchasing."
+        },
+        {
+          "source_id": "source:9:plan",
+          "quote": "This action directly achieves the task goal without further verification steps, as the product attributes are already confirmed."
+        }
+      ],
+      "criteria": {
+        "supported": "Original evidence identifies an unsupported claim or failed verification about this product's required attributes/medium selection, traces its first evidenced source (not merely a later repetition), and demonstrates that a later decision actually relied on it without an effective correction. Report whether evidence instead points to step 9's independent disregard of its own verification warning; distinguish supported price/title facts from unknown material, care, fit, and selected-size state.",
+        "refuted": "Original product details or selection feedback support the relevant claim, or the alleged earlier premise is not shown to drive the later decision because step 9 independently re-evaluates/corrects it; reject that causal accusation and assess any different source-supported mechanism rather than treating a search miss as refutation.",
+        "unknown": "The original evidence does not settle attribute truth, default/selected size, source of the claim, effective correction, or actual reliance. Missing page text, parser gaps, or no literal search hit are unknown, not proof of a false claim or a correct one; identify the missing causal link."
+      }
+    }
+  ],
+  "decision_rules": [
+    {
+      "rule_id": "unsupported_origin_and_dependence",
+      "conditions": [
+        {
+          "agent_id": "product_claim_trace",
+          "outcome": "supported",
+          "finding": "Original evidence traces an unsupported required-attribute or size-selection premise to an evidenced source and shows that step 9's buy decision relied on it without effective verification or correction."
+        }
+      ],
+      "conclusion": "Compare the evidenced originating memory/reflection/plan decision with step 9's proximate decision: attribute the stronger causal role to the source actually shown to introduce and propagate the unsupported premise, while treating step 9 as a possible independent failure if its own verification warning was knowingly bypassed.",
+      "caveat": "A listed medium option is not proof of selection, but missing selection evidence is not proof of nonselection; unresolved product details are not proven false. If the worker instead finds support, an independent decision, or another mechanism, do not force this upstream account—assess that candidate on its own evidence. Partial trajectory evidence cannot establish a globally unique root."
+    },
+    {
+      "rule_id": "premise_refuted_or_independent_cause",
+      "conditions": [
+        {
+          "agent_id": "product_claim_trace",
+          "outcome": "refuted",
+          "finding": "Original product/selection evidence supports the disputed premise, or the evidence shows no downstream reliance on it because step 9 independently corrected/reassessed it."
+        }
+      ],
+      "conclusion": "Reject the proposed unsupported-premise propagation as a root explanation; compare any independently evidenced step-9 planning/action failure or other retrieved mechanism without inferring a different fault from missing records.",
+      "caveat": "A query miss or absent typed state is not refutation. If step 9's own plan conflicts with its reflection but premise support remains unresolved, evaluate that contradiction separately and do not claim verified product truth or a purchase outcome."
+    },
+    {
+      "rule_id": "causal_link_unknown",
+      "conditions": [
+        {
+          "agent_id": "product_claim_trace",
+          "outcome": "unknown",
+          "finding": "Available original evidence cannot establish the disputed claim's support, its origin, or causal reliance/correction."
+        }
+      ],
+      "conclusion": "Return an unresolved causal comparison; do not rank c1 or c2 from chronology, parser omissions, or availability alone.",
+      "caveat": "The supplied step-9 reflection/plan conflict and buy action remain evidence of stated reasoning/action, not proof of actual purchase effect or globally unique root. Reassess any alternative only if independently supported."
+    }
+  ],
+  "uncertainty": "All action/observation timeline text is supplied, but non-anchor memory/reflection/plan sources are not. The worker has one query and can return at most one original step, so origin and dependence may remain incomplete. Steps 7–9 have unresolved item-page parsing; options and a price range are visible, while product description details, actual medium selection, and final post-buy feedback are not established by that alone.",
+  "plan_digest": "401422af618c8e57456e6b82d3ba6e6b46f1910ca013a0708a011df77d1a8fc9",
+  "source_coverage": {
+    "step_range": [
+      1,
+      9
+    ],
+    "action_observation_timeline_complete": true,
+    "all_memory_reflection_plan_supplied": false,
+    "other_modules": "ROUTE anchor steps only",
+    "observation_timing": "observation(t) precedes action(t); observation(t+1) is its feedback; no final feedback"
+  }
+}

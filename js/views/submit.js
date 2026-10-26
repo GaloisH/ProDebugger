@@ -1,7 +1,7 @@
 // SUBMIT calls: one tool-less answer that must choose among the existing TRACE candidates
 // (direct_submit, policy window-candidates-submit/v5-manager-forced-choice).
-import {esc, raw} from "../util.js?v=d7ea551f31";
-import {candidateCard, candidateIndex} from "./trace.js?v=d7ea551f31";
+import {esc, raw} from "../util.js?v=edc30cc901";
+import {candidateCard, candidateIndex} from "./trace.js?v=edc30cc901";
 
 const S = t => `S${String(t).padStart(2, "0")}`;
 

@@ -166,6 +166,10 @@ body.page-query .app { padding: 0; }
 .qg-error { max-width: 36rem; margin: 6rem auto; }
 .qg-error code { font-family: var(--mono); color: var(--qg-focus); }
 
+@media (max-width: 1400px) {
+  .qg-inspect { width: 24rem; }
+  .qg-legend { width: 17rem; }
+}
 @media (max-width: 1100px) {
   .qg-legend { display: none; }
   .qg-phases span { display: none; }

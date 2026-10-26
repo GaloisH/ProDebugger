@@ -157,6 +157,28 @@ export function chainOf({clusters, byId}, id) {
   return chain;
 }
 
+// The chain a click lights, made readable: when several queries fed one window, only the one
+// that gave it most clues stays on the chain (the clicked one, if it is among them) and the rest
+// are listed as extra; `all` keeps them. Its edges come numbered from the record up to the root.
+export function chainPath(model, id, all = false) {
+  const {clusters, byId} = model;
+  const chain = chainOf(model, id), extra = new Map();
+  if (!all) for (const c of clusters) {
+    if (c.kind !== "window" || !chain.has(c.id)) continue;
+    const feeds = c.links.filter(l => chain.has(l.from) && byId.get(l.from)?.kind === "query");
+    if (feeds.length < 2) continue;
+    const keep = feeds.find(l => l.from === id) || feeds.reduce((a, b) => b.weight > a.weight ? b : a);
+    const drop = feeds.filter(l => l !== keep).map(l => l.from);
+    drop.forEach(q => chain.delete(q));
+    extra.set(c.id, drop);
+  }
+  const edges = [];
+  for (const c of clusters) if (chain.has(c.id)) for (const l of c.links) if (chain.has(l.from)) edges.push({from: l.from, to: c.id, link: l});
+  const at = e => byId.get(e.to);
+  edges.sort((a, b) => at(a).tier - at(b).tier || at(a).event - at(b).event || a.from.localeCompare(b.from));
+  return {id, chain, edges, extra, all};
+}
+
 const countBy = (list, key) => {
   const m = new Map();
   for (const x of list) m.set(key(x), (m.get(key(x)) || 0) + 1);

@@ -953,7 +953,13 @@ export function createStage(canvas, scene, model, layout) {
       if (journey && !hot) continue;
       if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubLabels(c, fade);
       const outside = frame.chain && !frame.chain.has(c.id);
-      if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
+      // The hovered cloud answers the pointer: a faint disc in its phase colour, brackets pushed out.
+      if (hot) {
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = phaseColor(c);
+        ctx.beginPath(); ctx.arc(pc.x, pc.y, sr + 6, 0, Math.PI * 2); ctx.fill();
+        brackets(pc.x, pc.y, sr + 7, phaseColor(c), 1);
+      } else if (focus || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
       if (outside && !hot) continue;
       const lead = frame.labelAll && !frame.chain && backbone.has(c.id);
       const quietAll = frame.labelAll && !frame.chain && backbone.size;

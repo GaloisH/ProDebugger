@@ -126,6 +126,7 @@ body.page-query .app { padding: 0; }
 .qg-tip b { color: var(--text-hi); font-family: var(--mono); font-size: .88rem; font-weight: 500; word-break: break-word; }
 .qg-tip span { color: var(--qg-label-dim); font-family: var(--mono); font-size: .81rem; }
 .qg-tip em { color: var(--qg-label); font-style: normal; }
+.qg-tip .qg-tip-act { color: var(--qg-focus); font-style: normal; font-family: var(--mono); font-size: .78rem; }
 .qg-card { display: grid; grid-template-columns: 5.4rem 1fr; gap: .2rem .55rem; margin: .35rem 0 0; padding-top: .35rem; border-top: 1px solid var(--qg-line); }
 .qg-card dt { color: var(--qg-label-dim); font-family: var(--mono); font-size: .78rem; }
 .qg-card dd { margin: 0; color: var(--qg-label); font-size: .88rem; line-height: 1.4; }

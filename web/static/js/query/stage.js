@@ -299,7 +299,12 @@ export function createStage(canvas, scene, model, layout) {
     ctx.globalAlpha = alpha;
     c.structure.hubs.slice(0, 4).forEach((h, j) => {
       const s = hubs[j].cur && project(hubs[j].cur);
-      if (s) ctx.fillText(h.key, s.x + 6, s.y - 4);
+      if (!s) return;
+      // A hub's name gives way to any name or badge already there.
+      const bx = [s.x + 6, s.y - 15, ctx.measureText(h.key).width, 14];
+      if (clash(bx, 1)) return;
+      placed.push(bx);
+      ctx.fillText(h.key, s.x + 6, s.y - 4);
     });
   }
 
@@ -315,15 +320,24 @@ export function createStage(canvas, scene, model, layout) {
 
   // How much of the canvas the HUD covers on each side: header, footer, the open panels, and
   // the phase ruler (left when upright, along the bottom when on its side).
+  // Only where the tower keeps at least 640px beside it; a narrower canvas gives the room back.
+  const reserve = (page, left) => {
+    const card = page.querySelector(".qg-hovercard");
+    const w = card ? parseFloat(getComputedStyle(card).width) + 32 : 0;
+    return W - left - w >= 640 ? w : 0;
+  };
   function hudInsets() {
     const box = canvas.getBoundingClientRect(), page = canvas.closest(".qg");
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
     const panel = rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)");
     const head = rect(".qg > header"), foot = rect(".qg-foot");
     const ruler = rot ? 0 : 130;
+    const left = Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0);
     return {
-      left: Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0),
-      right: Math.max(16, panel ? box.right - panel.left + 12 : 0),
+      left,
+      // The overview keeps the details panel's width free even while it is folded, so neither the
+      // panel nor an edge's card (laid over its place) covers the verdict end of the tower.
+      right: Math.max(16, panel ? box.right - panel.left + 12 : page?.classList.contains("is-overview") ? reserve(page, left) : 0),
       top: head ? Math.max(0, head.bottom - box.top) : 0,
       bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot ? 36 : 0),
     };
@@ -346,7 +360,33 @@ export function createStage(canvas, scene, model, layout) {
     const frame = camFrame(g);
     // Moving the target against a screen direction moves the picture along it.
     const shift = add(scale(screenRight(frame), -ox), scale(screenDown(frame), -oy));
-    return {...g, dist, target: add([0, (layout.top + layout.bottom) / 2 + 0.6, 0], shift)};
+    return perspectiveFit({...g, dist, target: add([0, (layout.top + layout.bottom) / 2 + 0.6, 0], shift)}, {left, right, top, bottom});
+  }
+  // The estimate above is orthographic; in perspective the near end of the cone draws larger and
+  // can leave the free area. Project the plates' rims through the goal camera and correct the
+  // distance and the centre from what they really cover, twice.
+  function perspectiveFit(g, {left, right, top, bottom}) {
+    const keep = {...cam, target: [...cam.target]}, keepB = B;
+    const rims = TIERS.flatMap(t => Array.from({length: 24}, (_, i) => {
+      const a = i / 24 * Math.PI * 2;
+      return [t.plate * Math.cos(a), t.y, t.plate * Math.sin(a)];
+    }));
+    const freeW = Math.max(240, W - left - right), freeH = Math.max(200, H - top - bottom);
+    for (let pass = 0; pass < 2; pass++) {
+      Object.assign(cam, g, {target: [...g.target]});
+      B = basis();
+      const ps = rims.map(project).filter(Boolean);
+      if (!ps.length) break;
+      const xs = ps.map(q => q.x), ys = ps.map(q => q.y);
+      const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+      const k = 1.04 * Math.max((x1 - x0) / freeW, (y1 - y0) / freeH);
+      const px = g.dist / B.focal, frame = camFrame(g);
+      const dx = (x0 + x1) / 2 - (left + W - right) / 2, dy = (y0 + y1) / 2 - (top + H - bottom) / 2;
+      g = {...g, dist: g.dist * k, target: add(g.target, add(scale(screenRight(frame), dx * px), scale(screenDown(frame), dy * px)))};
+    }
+    Object.assign(cam, keep);
+    B = keepB;
+    return g;
   }
 
   // A journey is framed from the angle the overview (or tour) camera has: all its stops fit the
@@ -658,90 +698,65 @@ export function createStage(canvas, scene, model, layout) {
     }
     ctx.stroke();
   }
-  // A cloud's name, led out away from the tower's axis so names on the two sides never cross it;
-  // a fixed side (+1 right, -1 left) overrides that.
-  // A hovered cloud's tag adds a third line in the accent colour: what a click will do there.
+  // Boxes already drawn on the HUD this frame (badges, clouds, names): later names keep clear.
+  let placed = [];
+  const clash = (bx, m = 3) => placed.some(q => bx[0] < q[0] + q[2] + m && q[0] < bx[0] + bx[2] + m && bx[1] < q[1] + q[3] + m && q[1] < bx[1] + bx[3] + m);
+  const offCanvas = bx => bx[0] < 4 || bx[1] < 4 || bx[0] + bx[2] > W - 4 || bx[1] + bx[3] > H - 4;
+  // A cloud's name, led out from a bracket corner on a short diagonal. Upright, it prefers the
+  // side away from the tower's axis and the upper corner; on its side, the right and the side of
+  // the axis it is on. A fixed side (+1 right / -1 left upright, +1 down / -1 up on its side)
+  // goes first. The first corner whose text box is clear of everything placed and inside the
+  // canvas wins. A hovered cloud adds a line in the accent colour: what a
+  // click will do there.
   function tag(x, y, r, title, detail, color, alpha = 1, side = 0, act = null) {
-    if (rot) return tagAcross(x, y, r, title, detail, color, alpha, -side, act);
     const axis = project([0, cam.target[1], 0]);
-    const s = side || (axis && x < axis.x - 4 ? -1 : 1);
-    // Leader: a short diagonal from the bracket corner, then the text.
-    const x0 = x + s * r, y0 = y - r, x1 = x0 + s * 10, y1 = y0 - 10;
+    const lines = [[title, "500 14px", color], ...(detail ? [[detail, "12px", colors["label-dim"]]] : []), ...(act ? [[act, "12px", colors.focus]] : [])];
+    const w = Math.max(...lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; }));
+    const h = 16 * lines.length;
+    let cands;
+    if (rot) {
+      const v = -side || (axis && y < axis.y - 4 ? -1 : 1);
+      cands = [[1, v], [1, -v], [-1, v], [-1, -v]];
+    } else {
+      const u = side || (axis && x < axis.x - 4 ? -1 : 1);
+      cands = [[u, -1], [-u, -1], [u, 1], [-u, 1]];
+    }
+    const layoutAt = ([sx, sy]) => {
+      const x0 = x + sx * r, y0 = y + sy * r, x1 = x0 + sx * 10, y1 = y0 + sy * 10, tx = x1 + sx * 10;
+      // On its side, above the axis the block grows upward from the leader; else it hangs from it.
+      const by = sy < 0 && rot ? y1 + 5 - 16 * (lines.length - 1) : y1 + 5;
+      return {sx, x0, y0, x1, y1, tx, by, box: [sx > 0 ? tx : tx - w, by - 13, w, h]};
+    };
+    const all = cands.map(layoutAt);
+    // Clear and on the canvas; else the on-canvas corner that overlaps least (a slight overlap
+    // reads, a cut-off name does not).
+    const overlap = bx => placed.reduce((n, q) => n + Math.max(0, Math.min(bx[0] + bx[2], q[0] + q[2]) - Math.max(bx[0], q[0])) * Math.max(0, Math.min(bx[1] + bx[3], q[1] + q[3]) - Math.max(bx[1], q[1])), 0);
+    const inside = all.filter(o => !offCanvas(o.box));
+    const pick = inside.find(o => !clash(o.box)) || [...inside].sort((p, q) => overlap(p.box) - overlap(q.box))[0] || all[0];
+    placed.push(pick.box);
+    const {sx, x0, y0, x1, y1, tx, by} = pick;
     stroke(color, alpha * 0.8, 1);
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + s * 6, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + sx * 6, y1); ctx.stroke();
     ctx.globalAlpha = alpha;
-    ctx.textAlign = s > 0 ? "left" : "right";
-    ctx.fillStyle = color;
-    ctx.font = "500 14px 'IBM Plex Mono', monospace";
-    ctx.fillText(title, x1 + s * 10, y1 + 5);
-    if (detail) {
-      ctx.fillStyle = colors["label-dim"];
-      ctx.font = "12px 'IBM Plex Mono', monospace";
-      ctx.fillText(detail, x1 + s * 10, y1 + 21);
-    }
-    if (act) {
-      ctx.fillStyle = colors.focus;
-      ctx.font = "12px 'IBM Plex Mono', monospace";
-      ctx.fillText(act, x1 + s * 10, y1 + (detail ? 37 : 21));
-    }
+    ctx.textAlign = sx > 0 ? "left" : "right";
+    lines.forEach(([t, f, c], i) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; ctx.fillStyle = c; ctx.fillText(t, tx, by + 16 * i); });
   }
-  // On its side the axis runs across, so a name leads up (above the axis) or down (below it);
-  // a fixed side is -1 up, +1 down.
-  function tagAcross(x, y, r, title, detail, color, alpha, side, act = null) {
-    const axis = project([0, cam.target[1], 0]);
-    const s = side || (axis && y < axis.y - 4 ? -1 : 1);
-    const x0 = x + r, y0 = y + s * r, x1 = x0 + 10, y1 = y0 + s * 10;
-    stroke(color, alpha * 0.8, 1);
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + 6, y1); ctx.stroke();
-    ctx.globalAlpha = alpha;
-    ctx.textAlign = "left";
-    ctx.fillStyle = color;
-    ctx.font = "500 14px 'IBM Plex Mono', monospace";
-    const ty = s < 0 ? y1 + 5 - 16 * ((detail ? 1 : 0) + (act ? 1 : 0)) : y1 + 5;
-    ctx.fillText(title, x1 + 10, ty);
-    if (detail) {
-      ctx.fillStyle = colors["label-dim"];
-      ctx.font = "12px 'IBM Plex Mono', monospace";
-      ctx.fillText(detail, x1 + 10, ty + 16);
-    }
-    if (act) {
-      ctx.fillStyle = colors.focus;
-      ctx.font = "12px 'IBM Plex Mono', monospace";
-      ctx.fillText(act, x1 + 10, ty + (detail ? 32 : 16));
-    }
-  }
-  // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
-  // over points. It sits 40% of the way from the source, so edges converging on one cloud keep
-  // their labels apart, and it is a hover target for the full card.
+  // An edge that has something to say carries a small square at its middle instead of a text
+  // plate over the line: the square is the hover target, and its card shows over the details
+  // panel's place (the tour's caption says the same in words).
   function edgeLabel({a, b, link, cluster, color, hot}) {
     const pa = project(a), pb = project(b);
     if (!pa || !pb) return;
-    const x = pa.x + (pb.x - pa.x) * 0.4, y = pa.y + (pb.y - pa.y) * 0.4;
-    ctx.font = "500 12px 'IBM Plex Mono', monospace";
-    const w1 = ctx.measureText(link.title).width;
-    ctx.font = "12px 'IBM Plex Mono', monospace";
-    const w2 = link.detail ? ctx.measureText(link.detail).width : 0;
-    const w = Math.max(w1, w2) + 16, h = link.detail ? 36 : 20;
-    const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
+    const x = Math.round(pa.x + (pb.x - pa.x) * 0.5), y = Math.round(pa.y + (pb.y - pa.y) * 0.5);
     ctx.setLineDash([]);
-    ctx.globalAlpha = 0.94;
-    ctx.fillStyle = colors.void;
-    ctx.fillRect(x0, y0, w, h);
-    stroke(color, hot ? 1 : 0.65, 1);
-    ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
-    ctx.fillStyle = color;
-    ctx.fillRect(x0, y0, 2, h);
     ctx.globalAlpha = 1;
-    ctx.textAlign = "left";
-    ctx.fillStyle = color;
-    ctx.font = "500 12px 'IBM Plex Mono', monospace";
-    ctx.fillText(link.title, x0 + 9, y0 + 14);
-    if (link.detail) {
-      ctx.fillStyle = colors.label;
-      ctx.font = "12px 'IBM Plex Mono', monospace";
-      ctx.fillText(link.detail, x0 + 9, y0 + 30);
-    }
-    targets.push({kind: "edge", link, cluster, x, y, rect: [x0, y0, w, h]});
+    ctx.fillStyle = hot ? color : colors.void;
+    ctx.fillRect(x - 5, y - 5, 10, 10);
+    stroke(color, 1, 1);
+    ctx.strokeRect(x - 4.5, y - 4.5, 9, 9);
+    if (!hot) { ctx.fillStyle = color; ctx.fillRect(x - 1.5, y - 1.5, 3, 3); }
+    placed.push([x - 6, y - 6, 12, 12]);
+    targets.push({kind: "edge", link, cluster, x, y, rect: [x - 9, y - 9, 18, 18]});
   }
   // A lit chain's edges, numbered from the record up: a small square at each edge's middle, its
   // number matching the panel's list; hovering either side lights the other.
@@ -763,6 +778,7 @@ export function createStage(canvas, scene, model, layout) {
       ctx.font = "600 12px 'IBM Plex Mono', monospace";
       ctx.textAlign = "center";
       ctx.fillText(String(k + 1), x, y + 4);
+      placed.push([x - 10, y - 10, 20, 20]);
       targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 11, y - 11, 22, 22]});
     });
   }
@@ -849,7 +865,8 @@ export function createStage(canvas, scene, model, layout) {
       else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
       const edgeHot = hover?.kind === "edge" && hover.link === l;
-      if (!frame.chain && (hot || hovered || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
+      // The overview's main chain keeps its badges, so the pointer can reach them from anywhere.
+      if (!frame.chain && (hot || hovered || edgeHot || main) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
     }
 
     // Points.
@@ -957,8 +974,16 @@ export function createStage(canvas, scene, model, layout) {
       });
     }
 
-    // HUD: brackets and tags for the clouds that matter right now.
-    for (const {c, pc, sr, focus, alpha, isOpen} of labelled) {
+    // HUD. Badges go down first and every cloud's core is an obstacle, then names are placed in
+    // order of importance (open, hovered, selected, focused, main chain, verdicts), each keeping
+    // clear of what is already there; hub names come last and give way.
+    placed = labelled.map(({pc, sr}) => { const k = Math.min(sr, 14); return [pc.x - k, pc.y - k, 2 * k, 2 * k]; });
+    for (const e of edgeLabels) edgeLabel(e);
+    if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
+    const rank = ({c, focus, isOpen}) => isOpen ? 0 : hover?.kind === "cluster" && hover.cluster === c ? 1 : view.selected === c.id ? 2 : focus ? 3
+      : backbone.has(c.id) ? 4 : c.kind === "root" || c.kind === "candidate" ? 5 : 6;
+    const hubsLater = [];
+    for (const {c, pc, sr, focus, alpha, isOpen} of [...labelled].sort((p, q) => rank(p) - rank(q))) {
       const hot = hover?.kind === "cluster" && hover.cluster === c;
       if (isOpen) {
         const r = layout.radius.get(c.id) * pc.s + 6;
@@ -968,7 +993,7 @@ export function createStage(canvas, scene, model, layout) {
       }
       const selected = view.selected === c.id;
       if (journey && !hot) continue;
-      if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubLabels(c, fade);
+      if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubsLater.push(c);
       const outside = frame.chain && !frame.chain.has(c.id);
       // The hovered cloud answers the pointer: a faint disc in its phase colour, brackets pushed out.
       if (hot) {
@@ -992,11 +1017,13 @@ export function createStage(canvas, scene, model, layout) {
         ctx.fillStyle = colors["label-dim"];
         ctx.font = "12px 'IBM Plex Mono', monospace";
         ctx.textAlign = "center";
-        ctx.fillText(callTag(c), pc.x, pc.y + sr + 15);
+        const t = callTag(c), tw = ctx.measureText(t).width, bx = [pc.x - tw / 2, pc.y + sr + 4, tw, 14];
+        if (clash(bx, 1)) continue;
+        placed.push(bx);
+        ctx.fillText(t, pc.x, pc.y + sr + 15);
       }
     }
-    for (const e of edgeLabels) edgeLabel(e);
-    if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
+    for (const c of hubsLater) hubLabels(c, fade);
     if (journey) drawJourney();
     ruler(shown, current);
     ctx.globalAlpha = 1;

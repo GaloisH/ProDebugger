@@ -322,6 +322,10 @@ export function createStage(canvas, scene, model, layout) {
       for (const it of row) {
         it.box = wide ? [it.a, side < 0 ? minY - 30 - out - it.h : maxY + 30 + out, it.w, it.h]
                       : [side < 0 ? minX - 34 - out - it.w : maxX + 34 + out, it.a, it.w, it.h];
+        // Never past the canvas edge or under a panel: on a narrow canvas a label may cover the
+        // line rather than leave the screen.
+        it.box[0] = Math.max(ins.left + 4, Math.min(W - ins.right - 4 - it.w, it.box[0]));
+        it.box[1] = Math.max(ins.top + 4, Math.min(H - ins.bottom - 4 - it.h, it.box[1]));
         it.box = it.box.map(Math.round);
       }
     }

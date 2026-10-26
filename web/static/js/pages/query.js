@@ -4,6 +4,7 @@
 import {esc, short, loader} from "../util.js";
 import {caseHref, queryHref} from "../routes.js";
 import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js";
+import {agentWords} from "../query/narrate.js";
 import {buildClusters, chainOf, factLabel, journeyOf, roleFacts} from "../query/clusters.js";
 import {layoutClusters, TIERS} from "../query/layout.js";
 import {createStage, clusterTitle} from "../query/stage.js";
@@ -342,27 +343,35 @@ function bindUi(root, scene, model, stage, roles) {
       <ul class="qg-rows">${seen.map(o => `<li><button data-open="${esc(o.id)}"><span>${esc(clusterTitle(o))}</span><em>T${o.tier}</em></button></li>`).join("")}</ul>`;
   }
 
-  // The journey panel: the role's facts (how far each got), then the chosen fact's stops as a
-  // numbered storyboard matching the badges on the stage; a card focuses its stop.
+  // The journey panel, in plain English for readers new to the project: the role's facts (the
+  // agent's own words, how far each got), then the chosen fact's stops as numbered story cards
+  // matching the badges on the stage. Each card's structured record folds into its Details.
   function renderJourney(j) {
     const role = journeyRole;
     const fids = roles.byRole.get(role) || [];
     const f = j.fact, last = j.stops.length - 1;
     const stopTitle = s => s.kind === "core" ? "DSL record" : clusterTitle(model.byId.get(s.id));
+    // Re-rendering on every focus change keeps the Details the reader opened.
+    const opened = new Set([...panelBody.querySelectorAll("details[open][data-k]")].map(d => d.dataset.k));
+    const fold = (k, rows) => `<details data-k="${k}"${opened.has(String(k)) ? " open" : ""}><summary>Details</summary><dl>${rows.map(([dt, dd]) => `<dt>${dt}</dt><dd>${esc(dd)}</dd>`).join("")}</dl></details>`;
     inspect.hidden = false;
     panelBody.innerHTML = `
       <p class="qg-kind">evidence journey · <button class="qg-link" data-end-journey>close</button></p>
       <div class="qg-seg qg-roles" role="group" aria-label="Role">${ROLE_ROWS.map(r => `<button data-journey-role="${r.role}" aria-pressed="${r.role === role}"${roles.byRole.get(r.role).length ? "" : " disabled"}>${r.tab} <small>${roles.byRole.get(r.role).length}</small></button>`).join("")}</div>
-      <ul class="qg-rows qg-jfacts">${fids.map(fid => { const x = scene.factById.get(fid); return `<li><button data-journey-fact="${fid}" data-role="${role}"${fid === f.fid ? ` aria-current="true"` : ""}><span>f${fid} ${esc(`${x.rel}(${x.args.join(", ")})`)} @S${x.t}</span><em data-reach="${roles.reach(fid)}">→ ${REACH[roles.reach(fid)]}</em></button></li>`; }).join("")}</ul>
-      <h3>f${f.fid} ${esc(`${f.rel}(${f.args.join(", ")})`)}</h3>
-      <p class="qg-muted">= ${esc(short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 120))} · S${f.t} ${SLOT_LABEL[f.slot]}</p>
+      <ul class="qg-rows qg-jfacts">${fids.map(fid => { const x = scene.factById.get(fid), w = agentWords(x); return `<li><button data-journey-fact="${fid}" data-role="${role}" title="${esc(`f${fid} ${x.rel}(${x.args.join(", ")})`)}"${fid === f.fid ? ` aria-current="true"` : ""}><span><i>step ${x.t} ${SLOT_LABEL[x.slot]}</i>${w ? ` “${esc(w)}”` : ""}</span><em data-reach="${roles.reach(fid)}">→ ${REACH[roles.reach(fid)]}</em></button></li>`; }).join("")}</ul>
+      <div class="qg-jhead">
+        <h3>${esc(j.name)}</h3>
+        ${j.words ? `<blockquote>“${esc(j.words)}”</blockquote>` : ""}
+        ${fold("fact", [["fact", `f${f.fid} ${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 90)}`], ["recorded", `S${f.t} · ${SLOT_LABEL[f.slot]}`]])}
+      </div>
       <ol class="qg-story">${j.stops.map((s, k) => `
-        ${k === 1 && j.start ? `<li class="qg-note">↳ ${esc(j.start)}</li>` : ""}
-        <li data-phase="${esc(s.phase)}"${j.focus === k ? ` class="on"` : ""}><button data-stop="${k}">
-          <b>${k + 1}</b><span class="qg-chip" data-phase="${esc(s.phase)}">${esc(s.phase)}</span>
-          <strong>${esc(stopTitle(s))}</strong>${s.kind === "core" ? "" : `<em>call ${String(s.event).padStart(2, "0")}</em>`}
-          <p>${esc(s.outcome)}</p></button></li>
-        ${k === last && j.end ? `<li class="qg-note qg-end">⊣ stops here: ${esc(j.end)}</li>` : ""}`).join("")}
+        ${k === 1 && j.startSay ? `<li class="qg-note" title="${esc(j.start)}">↳ ${esc(j.startSay)}</li>` : ""}
+        <li data-phase="${esc(s.phase)}"${j.focus === k ? ` class="on"` : ""}>
+          <button data-stop="${k}"><b>${k + 1}</b><span class="qg-chip" data-phase="${esc(s.phase)}">${esc(s.phase)}</span>
+            <p>${esc(s.say)}</p>${s.quote ? `<blockquote>“${esc(s.quote)}”</blockquote>` : ""}</button>
+          ${fold(k, [["where", stopTitle(s)], ...(s.kind === "core" ? [] : [["call", String(s.event).padStart(2, "0")]]), ["result", s.outcome]])}
+        </li>
+        ${k === last && j.endSay ? `<li class="qg-note qg-end" title="${esc(j.end)}">⊣ ${esc(j.endSay)}</li>` : ""}`).join("")}
       </ol>
       <p class="qg-hint">Click a card or a numbered badge to fly to that stop; ← → step along the way, Esc steps back.</p>`;
     panelBody.querySelector(".qg-story li.on")?.scrollIntoView({block: "nearest"});

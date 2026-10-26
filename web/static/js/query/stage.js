@@ -643,6 +643,11 @@ export function createStage(canvas, scene, model, layout) {
     ctx.globalAlpha = 1;
   }
 
+  // What a click on a cloud does, as its hovered tag says it.
+  function clickSays(c) {
+    if (journey) return journey.stops.some(s => s.id === c.id) ? "click to fly to this stop" : "click to leave the journey";
+    return view.selected === c.id ? "click again to open by entity" : c.kind === "core" ? "click to select, again to open" : "click to light its causal chain";
+  }
   function brackets(x, y, r, color, alpha = 1) {
     const L = Math.max(5, Math.min(10, r * 0.4));
     stroke(color, alpha, 1);
@@ -655,8 +660,9 @@ export function createStage(canvas, scene, model, layout) {
   }
   // A cloud's name, led out away from the tower's axis so names on the two sides never cross it;
   // a fixed side (+1 right, -1 left) overrides that.
-  function tag(x, y, r, title, detail, color, alpha = 1, side = 0) {
-    if (rot) return tagAcross(x, y, r, title, detail, color, alpha, -side);
+  // A hovered cloud's tag adds a third line in the accent colour: what a click will do there.
+  function tag(x, y, r, title, detail, color, alpha = 1, side = 0, act = null) {
+    if (rot) return tagAcross(x, y, r, title, detail, color, alpha, -side, act);
     const axis = project([0, cam.target[1], 0]);
     const s = side || (axis && x < axis.x - 4 ? -1 : 1);
     // Leader: a short diagonal from the bracket corner, then the text.
@@ -673,10 +679,15 @@ export function createStage(canvas, scene, model, layout) {
       ctx.font = "12px 'IBM Plex Mono', monospace";
       ctx.fillText(detail, x1 + s * 10, y1 + 21);
     }
+    if (act) {
+      ctx.fillStyle = colors.focus;
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.fillText(act, x1 + s * 10, y1 + (detail ? 37 : 21));
+    }
   }
   // On its side the axis runs across, so a name leads up (above the axis) or down (below it);
   // a fixed side is -1 up, +1 down.
-  function tagAcross(x, y, r, title, detail, color, alpha, side) {
+  function tagAcross(x, y, r, title, detail, color, alpha, side, act = null) {
     const axis = project([0, cam.target[1], 0]);
     const s = side || (axis && y < axis.y - 4 ? -1 : 1);
     const x0 = x + r, y0 = y + s * r, x1 = x0 + 10, y1 = y0 + s * 10;
@@ -686,12 +697,17 @@ export function createStage(canvas, scene, model, layout) {
     ctx.textAlign = "left";
     ctx.fillStyle = color;
     ctx.font = "500 14px 'IBM Plex Mono', monospace";
-    const ty = s < 0 && detail ? y1 - 12 : y1 + 5;
+    const ty = s < 0 ? y1 + 5 - 16 * ((detail ? 1 : 0) + (act ? 1 : 0)) : y1 + 5;
     ctx.fillText(title, x1 + 10, ty);
     if (detail) {
       ctx.fillStyle = colors["label-dim"];
       ctx.font = "12px 'IBM Plex Mono', monospace";
       ctx.fillText(detail, x1 + 10, ty + 16);
+    }
+    if (act) {
+      ctx.fillStyle = colors.focus;
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.fillText(act, x1 + 10, ty + (detail ? 32 : 16));
     }
   }
   // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
@@ -932,6 +948,7 @@ export function createStage(canvas, scene, model, layout) {
           ctx.fillStyle = colors["label-dim"];
           ctx.font = "11.5px 'IBM Plex Mono', monospace";
           ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 13);
+          if (hot) { ctx.fillStyle = colors.focus; ctx.fillText("click to list its facts", p.x + r + 5, p.y + 28); }
         } else if (g.fids.length > MAX_FACTS) {
           const q = project(factSlot(open, gi, MAX_FACTS, g.fids.length));
           if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
@@ -968,7 +985,7 @@ export function createStage(canvas, scene, model, layout) {
       if (named) {
         // In the overview the main chain reads down the right; its tier-mates take the left.
         const side = !frame.labelAll || frame.chain ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
-        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || c.kind === "root" ? phaseColor(c) : colors.label, fade * Math.min(1, alpha / 0.6), side);
+        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || c.kind === "root" ? phaseColor(c) : colors.label, hot ? 1 : fade * Math.min(1, alpha / 0.6), side, hot ? clickSays(c) : null);
       } else {
         // Unnamed queries keep only their call tag under the cloud; hover names them.
         ctx.globalAlpha = 0.9 * fade * alpha;
@@ -1090,6 +1107,8 @@ export function createStage(canvas, scene, model, layout) {
     follow() { if (journey) setJourney(null); view.fact = null; view.selected = null; setView(null); emit("select", null); },
     // Hand the camera back to whoever drives it (tour or overview presets) without folding.
     release() { manual = false; emit("manual", false); },
+    // The tour moves the camera under a still pointer; drop what it was over until it moves.
+    clearHover() { if (hover) { hover = null; canvas.style.cursor = "grab"; emit("hover", null); } },
     open,
     select,
     back,

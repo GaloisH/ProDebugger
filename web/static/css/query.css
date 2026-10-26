@@ -167,13 +167,13 @@ body.page-query .app { padding: 0; }
 .qg-error code { font-family: var(--mono); color: var(--qg-focus); }
 
 @media (max-width: 1400px) {
-  .qg-inspect { width: 24rem; }
+  .qg-inspect, .qg-hovercard { width: 24rem; }
   .qg-legend { width: 17rem; }
 }
 @media (max-width: 1100px) {
   .qg-legend { display: none; }
   .qg-phases span { display: none; }
-  .qg-inspect { width: 23rem; }
+  .qg-inspect, .qg-hovercard { width: 23rem; }
 }
 
 /* Mode switch and overview camera presets */
@@ -281,3 +281,15 @@ body.page-query .app { padding: 0; }
 /* Overview drops the caption box and keeps only its Follow button. */
 .qg.is-overview .qg-caption { width: auto; padding: 0; border: 0; background: none; }
 .qg.is-overview .qg-caption > :not(.qg-cta) { display: none; }
+
+/* An edge's card while the pointer is on it, laid over the details panel's place. */
+.qg-hovercard {
+  position: absolute; z-index: 3; right: 1.2rem; top: 9.4rem; width: 27.5rem; max-height: calc(100% - 9.4rem - var(--qg-foot-h, 9rem) - 1.8rem); overflow: hidden;
+  padding: .8rem .95rem; border: 1px solid var(--qg-focus); border-radius: 2px; background: var(--qg-panel); pointer-events: none; font-size: .96rem; line-height: 1.45;
+}
+.qg-hovercard .qg-kind { margin-bottom: .2rem !important; }
+.qg-hovercard h3 { margin: .2rem 0 .15rem; font-family: var(--mono); font-size: 1.05rem; font-weight: 500; color: var(--text-hi); word-break: break-word; }
+.qg-hovercard .qg-muted { margin: .2rem 0 0; }
+.qg-hovercard[hidden] { display: none; }
+@media (max-width: 1400px) { .qg-hovercard { width: 24rem; } }
+@media (max-width: 1100px) { .qg-hovercard { width: 23rem; } }

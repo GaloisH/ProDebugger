@@ -62,7 +62,7 @@ export function mountQuery(app, route) {
       if (!overview && state.playing) {
         state.p += dt * state.speed / eventDuration(scene.events[state.i]);
         if (state.p >= 1) {
-          if (state.i < last) { state.i++; state.p = 0; ui.setEvent(state.i); }
+          if (state.i < last) { state.i++; state.p = 0; stage.clearHover(); ui.setEvent(state.i); }
           else { state.p = 1; setPlaying(false); }
         }
       }
@@ -85,7 +85,7 @@ export function mountQuery(app, route) {
     };
 
     const setPlaying = on => { state.playing = on; ui.setPlaying(on); };
-    const go = (i, p = 0) => { state.i = Math.max(0, Math.min(scene.events.length - 1, i)); state.p = p; ui.setEvent(state.i); };
+    const go = (i, p = 0) => { stage.clearHover(); state.i = Math.max(0, Math.min(scene.events.length - 1, i)); state.p = p; ui.setEvent(state.i); };
     const toggle = () => {
       if (!state.playing && state.i === scene.events.length - 1 && state.p >= 1) go(0);
       if (!state.playing && stage.view.cluster) stage.follow();
@@ -246,6 +246,7 @@ function template(scene, model, ref, roles) {
       <div class="qg-inspect-body"></div>
     </aside>
     <div class="qg-tip" hidden></div>
+    <div class="qg-hovercard" hidden></div>
     <footer class="qg-foot">
       <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p><p class="qg-cap-next"></p></div>
         ${cta ? `<button class="qg-cta" data-act="cta" title="Draw this fact's way from the record to the verdict">▶ Follow the ${esc(cta.name)}</button>` : ""}</div>
@@ -516,19 +517,29 @@ function bindUi(root, scene, model, stage, roles) {
       setPane("inspect", true);
       renderJourney(j);
     },
+    // Hover help never floats over the stage's lines: a cloud's or entity's own tag says what a
+    // click does, an edge's card lies over the details panel's place (folded or not, so the
+    // stage does not reframe), and only facts and journey stops keep a small tip by the pointer.
     hover(h) {
       panelBody.querySelectorAll(".qg-chain li.hi").forEach(li => li.classList.remove("hi"));
       if (h?.kind === "edge" && h.k != null) panelBody.querySelector(`[data-chain-edge="${h.k}"]`)?.classList.add("hi");
-      if (!h) { tip.hidden = true; return; }
+      const card = $(".qg-hovercard");
+      if (h?.kind === "edge") {
+        if (card.dataset.link !== h.link.title + h.link.detail) {
+          card.dataset.link = h.link.title + h.link.detail;
+          card.innerHTML = `<p class="qg-kind">hovered edge</p><h3>${esc(h.link.title)}</h3>${h.link.detail ? `<p class="qg-muted">${esc(h.link.detail)}</p>` : ""}
+            <dl class="qg-card">${h.link.card.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(short(v, 360))}</dd>`).join("")}</dl>`;
+        }
+        card.hidden = false;
+      } else if (!card.hidden) {
+        card.hidden = true;
+        card.dataset.link = "";
+      }
       let html = "";
-      // Each tip ends with what a click does here, in the accent colour.
       const act = t => `<i class="qg-tip-act">${t}</i>`;
-      if (h.kind === "cluster") html = `<b>${esc(clusterTitle(h.cluster))}</b><span>${esc(h.cluster.detail)}</span>${act(stage.view.selected === h.cluster.id ? "click again to open by entity" : h.cluster.kind === "core" ? "click to select, again to open" : "click to light its causal chain")}`;
-      else if (h.kind === "group") { const g = h.cluster.groups[h.gi]; html = `<b>${esc(g.key)}</b><span>${g.fids.length} facts</span>${act("click to list its facts")}`; }
-      else if (h.kind === "edge") html = `<b>${esc(h.link.title)}</b>${h.link.detail ? `<span>${esc(h.link.detail)}</span>` : ""}
-        <dl class="qg-card">${h.link.card.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(short(v, 260))}</dd>`).join("")}</dl>`;
-      else if (h.kind === "stop") html = `<b>${h.k + 1} · ${esc(h.stop.kind === "core" ? "DSL record" : clusterTitle(model.byId.get(h.stop.id)))}</b><span>${esc(h.stop.outcome)}</span>${act("click to fly there")}`;
-      else if (h.kind === "fact") { const f = scene.factById.get(h.fid); html = `<b>fact ${f.fid} · S${f.t} ${SLOT_LABEL[f.slot]}</b><em>${esc(short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 160))}</em>`; }
+      if (h?.kind === "stop") html = `<b>${h.k + 1} · ${esc(h.stop.kind === "core" ? "DSL record" : clusterTitle(model.byId.get(h.stop.id)))}</b><span>${esc(h.stop.outcome)}</span>${act("click to fly there")}`;
+      else if (h?.kind === "fact") { const f = scene.factById.get(h.fid); html = `<b>fact ${f.fid} · S${f.t} ${SLOT_LABEL[f.slot]}</b><em>${esc(short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 160))}</em>`; }
+      if (!html) { tip.hidden = true; return; }
       tip.hidden = false;
       tip.innerHTML = html;
       tip.style.left = `${Math.min(h.x + 16, root.clientWidth - 320)}px`;

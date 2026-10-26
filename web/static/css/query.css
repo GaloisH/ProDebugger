@@ -277,3 +277,7 @@ body.page-query .app { padding: 0; }
 .qg-coach-bar .qg-coach-go { border-color: var(--qg-focus); background: var(--qg-focus); color: var(--on-accent); font-weight: 600; }
 .qg-coach-bar .qg-coach-go:hover { color: var(--on-accent); background: color-mix(in srgb, var(--qg-focus) 85%, var(--qg-ink-hi)); }
 .qg-coach-target { outline: 2px solid var(--qg-focus); outline-offset: 3px; }
+
+/* Overview drops the caption box and keeps only its Follow button. */
+.qg.is-overview .qg-caption { width: auto; padding: 0; border: 0; background: none; }
+.qg.is-overview .qg-caption > :not(.qg-cta) { display: none; }

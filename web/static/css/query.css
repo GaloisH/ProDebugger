@@ -172,10 +172,42 @@ body.page-query .app { padding: 0; }
 
 /* Room on the left for the phase ruler the canvas draws */
 .qg-legend { left: 6.4rem; top: 9.4rem; }
-.qg-legend li[data-filter-phase], .qg-legend li[data-filter-role] { cursor: pointer; }
-.qg-legend li[data-filter-phase]:hover, .qg-legend li[data-filter-role]:hover { color: var(--text-hi); }
+.qg-legend li[data-filter-phase], .qg-legend li[data-journey-role] { cursor: pointer; }
+.qg-legend li[data-filter-phase]:hover, .qg-legend li[data-journey-role]:hover { color: var(--text-hi); }
+.qg-legend li[data-journey-role] em { margin-left: auto; font-style: normal; font-family: var(--mono); font-size: .68rem; color: var(--qg-label-dim); }
+.qg-legend li[data-journey-role].none { cursor: default; opacity: .45; }
+.qg-legend li[data-journey-role].only { box-shadow: inset 2px 0 0 var(--qg-focus); padding-left: .3rem; margin-left: -.3rem; }
+.qg-hint-role { margin-top: .45rem; }
 .qg-legend li.off { opacity: .35; text-decoration: line-through var(--qg-line-hi); }
 .qg-legend li.only { color: var(--text-hi); }
 
 .qg-open { margin: .45rem 0 .2rem; padding: .3rem .6rem; border: 1px solid var(--qg-line-hi); border-radius: 2px; background: none; color: var(--qg-label); font-family: var(--mono); font-size: .68rem; cursor: pointer; }
 .qg-open:hover { border-color: var(--qg-focus); color: var(--qg-focus); }
+
+/* Evidence journey: role tabs, the role's facts, then the chosen fact's stops as a storyboard
+   whose numbers match the badges on the stage. */
+.qg-roles { margin: .55rem 0 .5rem; }
+.qg-roles button { flex: 1; }
+.qg-roles button small { color: var(--qg-label-dim); font-size: .64rem; }
+.qg-roles button:disabled { opacity: .35; cursor: default; }
+.qg-jfacts button[aria-current="true"] { color: var(--text-hi); box-shadow: inset 2px 0 0 var(--qg-focus); }
+.qg-jfacts em[data-reach="root"] { color: var(--qg-focus); }
+.qg-jfacts em[data-reach="candidate"] { color: var(--qg-cand); }
+.qg-jfacts em[data-reach="issue"] { color: var(--qg-issue); }
+.qg-jfacts + h3 { margin-top: .9rem; }
+.qg-story { position: relative; margin: .6rem 0 0; padding: 0; list-style: none; }
+.qg-story::before { content: ""; position: absolute; left: .62rem; top: .6rem; bottom: .6rem; width: 1px; background: var(--qg-line-hi); }
+.qg-story li { position: relative; }
+.qg-story button {
+  display: grid; grid-template-columns: 1.3rem auto 1fr auto; align-items: baseline; gap: .1rem .45rem; width: 100%;
+  padding: .35rem .3rem .35rem 0; border: 0; background: none; color: var(--qg-label); text-align: left; cursor: pointer;
+}
+.qg-story button:hover { background: var(--tint-hover); }
+.qg-story b { z-index: 1; display: grid; place-items: center; width: 1.25rem; height: 1.25rem; border: 1px solid var(--ph); background: var(--qg-void); font-family: var(--mono); font-size: .66rem; font-weight: 600; color: var(--text-hi); }
+.qg-story strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: .72rem; font-weight: 500; color: var(--ph); }
+.qg-story em { font-style: normal; font-family: var(--mono); font-size: .62rem; color: var(--qg-label-dim); }
+.qg-story button p { grid-column: 3 / -1; margin: 0; font-size: .74rem; color: var(--qg-label); }
+.qg-story li.on button { background: var(--tint-hover); box-shadow: inset 0 0 0 1px var(--ph); }
+.qg-story li.on b { background: var(--ph); color: var(--qg-void); }
+.qg-note { margin: .1rem 0 .2rem 1.75rem; padding: .25rem .5rem; border: 1px dashed var(--qg-line-hi); font-family: var(--mono); font-size: .68rem; color: var(--qg-label); }
+.qg-end { border-style: solid; color: var(--text-hi); }

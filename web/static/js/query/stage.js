@@ -105,21 +105,18 @@ export function createStage(canvas, scene, model, layout) {
   // Expanded layout: entity groups on a ring in the camera plane around the cloud, the open
   // group's facts as a column beside it.
   const groupRing = c => layout.radius.get(c.id) + 1.6 + 0.12 * c.groups.length;
-  // Inside an open cloud each entity is a hub with its facts on rings around it, in step order,
-  // evenly spaced: the first ring holds RING0 facts, each next ring RING_STEP more.
-  const RING0 = 8, RING_STEP = 6, RING_R0 = 0.32, RING_GAP = 0.2;
-  function ringSlot(k) {
-    let j = 0, start = 0;
-    while (k >= start + RING0 + RING_STEP * j) { start += RING0 + RING_STEP * j; j++; }
-    return {j, i: k - start, cap: RING0 + RING_STEP * j};
-  }
-  const radialExtent = n => n ? RING_R0 + RING_GAP * ringSlot(n - 1).j : 0;
-  function radialPoint(c, gi, k, n) {
-    const {j, i, cap} = ringSlot(k);
-    const count = Math.min(cap, n - (k - i));             // facts on this ring
-    const a = -Math.PI / 2 + (i + 0.5 * (j % 2)) / count * Math.PI * 2;
-    const {r, u} = view.basis, R = RING_R0 + RING_GAP * j;
-    return add(groupCenter(c, gi), add(scale(r, R * Math.cos(a)), scale(u, -R * Math.sin(a))));
+  // Inside an open cloud each entity is a hub with its facts on spokes around it, in step order,
+  // laid out like a loose sunflower: golden-angle turns, spokes growing with the square root of
+  // the order, each angle and length nudged by a hash of the fact, so a star reads as one
+  // entity's facts without looking stamped.
+  const SPOKE_R0 = 0.3, SPOKE_GROW = 0.13;
+  const radialExtent = n => n ? SPOKE_R0 + SPOKE_GROW * Math.sqrt(n - 1) * 1.15 + 0.05 : 0;
+  function radialPoint(c, gi, k, n, fid) {
+    const h1 = hash01(fid * 7 + 3), h2 = hash01(fid * 13 + 11), tilt = hash01(gi * 31 + c.groups.length) * Math.PI * 2;
+    const a = tilt + k * 2.39996 + (h1 - 0.5) * 0.5;
+    const R = (SPOKE_R0 + SPOKE_GROW * Math.sqrt(k)) * (0.85 + 0.3 * h2);
+    const {r, u} = view.basis;
+    return add(groupCenter(c, gi), add(scale(r, R * Math.cos(a)), scale(u, R * Math.sin(a))));
   }
   // Ties between two entity groups of a cloud: how many of one group's facts also name the
   // other's entity. Drawn as one line per pair instead of a line per fact.
@@ -140,9 +137,50 @@ export function createStage(canvas, scene, model, layout) {
     return list;
   }
   function groupCenter(c, gi) {
-    const center = layout.pos.get(c.id), R = groupRing(c), a = Math.PI / 2 - gi / c.groups.length * Math.PI * 2;
-    const {r, u} = view.basis;
-    return add(center, add(scale(r, R * Math.cos(a)), scale(u, R * Math.sin(a))));
+    const [x, y] = groupPlan(c)[gi], {r, u} = view.basis;
+    return add(layout.pos.get(c.id), add(scale(r, x), scale(u, y)));
+  }
+  // Where an open cloud's entity groups sit in the camera plane: seeded on a ring, then a short
+  // deterministic force pass, as the DSL Graph's entity view does: groups that share facts pull
+  // together, every pair keeps room for its star and name, and none falls into the cloud's
+  // centre. Computed once per cloud.
+  const groupPlans = new Map();
+  function groupPlan(c) {
+    if (groupPlans.has(c.id)) return groupPlans.get(c.id);
+    const n = c.groups.length, R = groupRing(c), inner = layout.radius.get(c.id) + 0.6;
+    const pts = c.groups.map((g, gi) => {
+      const a = Math.PI / 2 - gi / n * Math.PI * 2 + (hash01(gi + 5) - 0.5) * 0.35;
+      const d = R * (0.9 + 0.2 * hash01(gi + 17));
+      return [d * Math.cos(a), d * Math.sin(a)];
+    });
+    const ext = c.groups.map(g => radialExtent(g.fids.length));
+    const ties = tiesOf(c), most = Math.max(1, ...ties.map(t => t[2]));
+    for (let it = 0; it < 260; it++) {
+      const step = 0.5 * (1 - it / 260) + 0.05;
+      const f = pts.map(() => [0, 0]);
+      for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+        const dx = pts[b][0] - pts[a][0], dy = pts[b][1] - pts[a][1], d = Math.hypot(dx, dy) || 0.01;
+        const room = ext[a] + ext[b] + 1.1;
+        const push = d < room ? (room - d) * 0.5 : 0.04 / (d * d);
+        f[a][0] -= dx / d * push; f[a][1] -= dy / d * push; f[b][0] += dx / d * push; f[b][1] += dy / d * push;
+      }
+      for (const [a, b, k] of ties) {
+        const dx = pts[b][0] - pts[a][0], dy = pts[b][1] - pts[a][1], d = Math.hypot(dx, dy) || 0.01;
+        const pull = Math.max(0, d - (ext[a] + ext[b] + 1.3)) * 0.04 * (0.4 + k / most);
+        f[a][0] += dx / d * pull; f[a][1] += dy / d * pull; f[b][0] -= dx / d * pull; f[b][1] -= dy / d * pull;
+      }
+      pts.forEach((p, i) => {
+        const d = Math.hypot(...p) || 0.01;
+        // A soft spring to the seed ring keeps the whole open cloud round-ish.
+        const spring = (R - d) * 0.03;
+        p[0] += (f[i][0] + p[0] / d * spring) * step;
+        p[1] += (f[i][1] + p[1] / d * spring) * step;
+        const e = Math.hypot(...p) || 0.01, min = inner + ext[i];
+        if (e < min) { p[0] *= min / e; p[1] *= min / e; }
+      });
+    }
+    groupPlans.set(c.id, pts);
+    return pts;
   }
   function factSlot(c, gi, k, n) {
     const gc = groupCenter(c, gi), right = screenRight(view.basis), down = screenDown(view.basis);
@@ -163,7 +201,7 @@ export function createStage(canvas, scene, model, layout) {
     const gi = groupOf.get(c.id).get(p.fid), g = c.groups[gi];
     const k = g.fids.indexOf(p.fid);
     if (view.group === gi && k < MAX_FACTS) return factSlot(c, gi, k, g.fids.length);
-    return radialPoint(c, gi, k, g.fids.length);
+    return radialPoint(c, gi, k, g.fids.length, p.fid);
   }
   function hubTarget(c, j) {
     const gi = hubGroup.get(c.id)[j];
@@ -1027,6 +1065,7 @@ const clip = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t;
 const stopTitle = c => c.kind === "core" ? "DSL record" : clusterTitle(c);
 const camFrame = g => ({r: [Math.cos(g.yaw), 0, -Math.sin(g.yaw)],
                         u: [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)]});
+const hash01 = n => { let x = Math.imul((n | 0) ^ 0x9e3779b9, 0x85ebca6b); x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35); x ^= x >>> 16; return (x >>> 0) / 4294967296; };
 export const callTag = c => `${c.phase === "MAP" ? "M" : "Q"}${String(c.event).padStart(2, "0")}`;
 export const clusterTitle = c => c.kind === "query" ? `${callTag(c)} ${shortSpec(c.error ? c.label : c.intent || c.label)}` : c.label;
 const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 34 ? t.slice(0, 33) + "…" : t; };

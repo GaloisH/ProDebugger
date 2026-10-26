@@ -11,11 +11,15 @@ import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
 
 const GROUP = "evidence-query-claims-n30-20261013";
-// Cases the page is tuned on: one window/lane, two windows/lanes, and a large WebShop record.
+// Cases the page is tuned on (one window/lane, two windows/lanes, a large WebShop record), then
+// the other examples the project site carries; every one of them runs the MANAGER phase.
 const CASES = [
   {ref: [GROUP, "GPT-4o_013_alfworld_task_013"], label: "ALFWorld 013 · 1 lane"},
   {ref: [GROUP, "GPT-4o_024_alfworld_task_024"], label: "ALFWorld 024 · 2 lanes"},
   {ref: [GROUP, "GPT-4o_003_chat_b000_t00_e02-1e119842"], label: "WebShop 003 · 3 candidates"},
+  {ref: [GROUP, "GPT-4o_019_alfworld_task_019"], label: "ALFWorld 019 · 2 lanes"},
+  {ref: [GROUP, "Qwen3-8B_017_chat_b000_t00_e17-fbe4c42d"], label: "WebShop Qwen3-8B 017 · 2 windows"},
+  {ref: [GROUP, "Llama3.3-70B-Turbo_017_webshop_task_017"], label: "WebShop Llama 017 · 921 facts"},
 ];
 export const DEFAULT_CASE = CASES[0].ref;
 const PHASES = ["PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"];

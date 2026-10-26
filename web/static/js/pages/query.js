@@ -112,6 +112,7 @@ export function mountQuery(app, route) {
     // The legend row toggles; the panel's role tabs only switch.
     ui.on("journeyRole", (role, tab) => !tab && stage.journey && ui.journeyRole === role ? stage.setJourney(null) : follow(role));
     ui.on("journeyFact", (fid, role) => follow(role || roles.reach(fid), fid));
+    ui.on("cta", () => follow(ctaOf(roles).role));
     stage.on("journey", j => ui.journey(j));
     ui.on("speed", s => { state.speed = s; });
     ui.on("follow", () => { stage.follow(); stage.release(); });
@@ -171,7 +172,12 @@ const ROLE_ROWS = [
 ];
 const REACH = {issue: "clue only", candidate: "blamed", root: "ROOT"};
 
+// The footer's call to action: the furthest role that has facts.
+const ctaOf = roles => [{role: "root", name: "root cause"}, {role: "candidate", name: "blamed step"}, {role: "issue", name: "clues"}]
+  .find(r => roles.byRole.get(r.role).length);
+
 function template(scene, model, ref, roles) {
+  const cta = ctaOf(roles);
   const n = k => model.clusters.filter(c => c.kind === k).length;
   const ticks = scene.events.map((e, i) => `<button class="qg-tick" data-i="${i}" data-phase="${e.phase}" style="flex-grow:${eventDuration(e)}" title="${esc(`${e.phase} · ${e.title}`)}"${e.error ? " data-error" : ""}></button>`).join("");
   const rels = Object.keys(scene.meta.relations).length;
@@ -222,7 +228,8 @@ function template(scene, model, ref, roles) {
     </aside>
     <div class="qg-tip" hidden></div>
     <footer class="qg-foot">
-      <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p></div></div>
+      <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p><p class="qg-cap-next"></p></div>
+        ${cta ? `<button class="qg-cta" data-act="cta" title="Draw this fact's way from the record to the verdict">▶ Follow the ${esc(cta.name)}</button>` : ""}</div>
       <div class="qg-bar">
         <button class="qg-btn" data-act="prev" title="Previous call (←)" aria-label="Previous call">‹</button>
         <button class="qg-btn qg-play" data-act="play" title="Play / pause (space)" aria-label="Play or pause">❚❚</button>
@@ -433,6 +440,10 @@ function bindUi(root, scene, model, stage, roles) {
       chip.dataset.phase = ev.phase;
       $(".qg-cap-title").textContent = ev.title || "";
       $(".qg-cap-text").textContent = ev.caption || "";
+      const next = scene.events[i + 1];
+      $(".qg-cap-next").textContent = next ? `Next · ${next.phase} · ${next.title || ""}` : "End of the tour · switch to Overview to explore every cloud";
+      $(".qg-caption").dataset.phase = ev.phase;
+      root.classList.toggle("at-end", !next);
       $(".qg-count").textContent = `${String(i + 1).padStart(2, "0")} / ${scene.events.length}`;
       if (!stage.view.cluster) showEvent(i);
     },
@@ -459,6 +470,8 @@ function bindUi(root, scene, model, stage, roles) {
         chip.dataset.phase = "SUBMIT";
         $(".qg-cap-title").textContent = `${scene.events.length} calls · ${model.clusters.length} clouds`;
         $(".qg-cap-text").textContent = "Every access at once. Click a cloud to light the chain it belongs to, click it again to open it; the timeline and phase bar pick clouds too.";
+        $(".qg-cap-next").textContent = "";
+        $(".qg-caption").dataset.phase = "SUBMIT";
         $(".qg-count").textContent = `${scene.events.length} calls`;
         showCluster(model.byId.get("root") || model.byId.get("core"));
       } else this.setEvent(current);

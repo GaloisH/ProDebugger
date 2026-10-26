@@ -18,6 +18,8 @@ const MAX_FACTS = 26;     // facts listed when a group opens; the inspector has 
 const FACT_GAP = 0.5;     // world units between fact rows
 const POINT_DIM = 0.32;   // brightness of plain points in a cloud nobody is looking at
 const POINT_LIFT = 0.65;  // ... in the focused or selected cloud
+const SIDE_SCALE = 0.45;  // size of a cloud off the main chain while nobody looks at it
+const CORE_POINTS = 140;  // points the folded record cloud keeps (plus every role point)
 const LABEL_ROOM = 240;   // px kept free each side of an upright journey for its stop labels
 const LABEL_ROW = 90;     // px kept free above and below a journey lying across
 
@@ -113,8 +115,16 @@ export function createStage(canvas, scene, model, layout) {
     const top = (Math.min(n, MAX_FACTS) - 1) / 2 * FACT_GAP;
     return add(gc, add(scale(right, cloudRadius(n) * 0.7 + 0.8), scale(down, k * FACT_GAP - top)));
   }
+  // A cloud off the main chain shrinks to a small knot until it is focused, selected, hovered,
+  // on the lit chain or on the journey; the main chain keeps its size so the eye follows it.
+  function sizeOf(c) {
+    if (c.kind === "core" || c.kind === "candidate" || c.kind === "root" || !backbone.size) return 1;
+    const looked = backbone.has(c.id) || frame.focus.has(c.id) || view.selected === c.id || view.cluster === c.id
+      || hover?.cluster?.id === c.id || frame.chain?.has(c.id) || journey?.stops.some(st => st.id === c.id);
+    return looked ? 1 : SIDE_SCALE;
+  }
   function targetOf(c, p) {
-    const center = layout.pos.get(c.id), R = layout.radius.get(c.id), shape = layout.shape.get(c.id);
+    const center = layout.pos.get(c.id), R = layout.radius.get(c.id) * sizeOf(c), shape = layout.shape.get(c.id);
     if (view.cluster !== c.id) return add(center, scale(shape ? shape.fact.get(p.fid) : ballPoint(p.k), R));
     const gi = groupOf.get(c.id).get(p.fid), g = c.groups[gi];
     const k = g.fids.indexOf(p.fid);
@@ -124,7 +134,7 @@ export function createStage(canvas, scene, model, layout) {
   function hubTarget(c, j) {
     const gi = hubGroup.get(c.id)[j];
     if (view.cluster === c.id && gi >= 0) return groupCenter(c, gi);
-    return add(layout.pos.get(c.id), scale(layout.shape.get(c.id).hub[j], layout.radius.get(c.id)));
+    return add(layout.pos.get(c.id), scale(layout.shape.get(c.id).hub[j], layout.radius.get(c.id) * sizeOf(c)));
   }
 
   // The DSL inside a cloud: hairline spokes from each fact to the entities it names, threads in
@@ -431,7 +441,7 @@ export function createStage(canvas, scene, model, layout) {
       ctx.fill();
     }
     for (const near of [false, true]) {
-      stroke(color, (near ? (active ? 0.75 : 0.38) : (active ? 0.3 : 0.1)) * alpha, 1);
+      stroke(color, (near ? (active ? 0.6 : 0.18) : (active ? 0.2 : 0.05)) * alpha, 1);
       ctx.beginPath();
       for (let i = 1; i <= N; i++) {
         const a = pts[i - 1], b = pts[i];
@@ -636,13 +646,13 @@ export function createStage(canvas, scene, model, layout) {
     // The axis in segments, each floor's phase colour up to the next floor.
     floors.forEach((t, k) => {
       const next = floors[k + 1];
-      stroke(colors.phase[t.phase], 0.55 * fade, 1);
+      stroke(colors.phase[t.phase], 0.3 * fade, 1);
       line3([0, t.y, 0], [0, next ? next.y : t.y + 1.2, 0]);
     });
     // The cone's outline: the two silhouette edges between neighbouring plates, taken along the
     // camera's horizontal right vector so they hug the rims from any angle.
     const side = norm([B.r[0], 0, B.r[2]]);
-    stroke(colors["line-hi"], 0.45 * fade, 1, [3, 5]);
+    stroke(colors["line-hi"], 0.2 * fade, 1, [3, 5]);
     for (let k = 1; k < floors.length; k++) {
       const a = floors[k - 1], b = floors[k];
       for (const s of [-1, 1]) line3([s * side[0] * a.plate, a.y, s * side[2] * a.plate], [s * side[0] * b.plate, b.y, s * side[2] * b.plate]);
@@ -654,7 +664,7 @@ export function createStage(canvas, scene, model, layout) {
       const members = shown.filter(c => c.tier === t.tier);
       const active = current === t.tier;
       plate([0, t.y, 0], t.plate, colors.phase[t.phase], fade, active);
-      stroke(colors.line, (active ? 0.9 : 0.45) * fade, 1, [2, 5]);
+      stroke(colors.line, (active ? 0.6 : 0.2) * fade, 1, [2, 5]);
       if (t.rise) helix3(t, members.length);
       else if (members.length > 1) ring3([0, t.y, 0], t.ring);
     }
@@ -667,7 +677,7 @@ export function createStage(canvas, scene, model, layout) {
       if (!frame.visible.has(l.from)) continue;
       if (hiddenPhase?.has(byId.get(l.from)?.phaseKey)) continue;
       // Under a journey the links only hint at the tower; the journey line carries the story.
-      if (journey) { stroke(colors["line-hi"], 0.14, 1, l.from === "core" ? [1, 4] : null); line3(layout.pos.get(l.from), layout.pos.get(c.id)); continue; }
+      if (journey) { if (l.from !== "core") { stroke(colors["line-hi"], 0.14, 1); line3(layout.pos.get(l.from), layout.pos.get(c.id)); } continue; }
       const inChain = frame.chain && frame.chain.has(c.id) && frame.chain.has(l.from);
       const hot = inChain || (!frame.chain && frame.focus.has(c.id)) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
       const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
@@ -675,6 +685,7 @@ export function createStage(canvas, scene, model, layout) {
       const color = phaseColor(c);
       const quiet = frame.chain && !inChain ? 0.25 : 1;
       const main = frame.labelAll && !frame.chain && !open && backbone.has(c.id) && backbone.has(l.from);
+      if (spoke && !(main || hot || hovered || view.selected === c.id || (!backbone.size && !frame.labelAll))) continue;
       if (main) stroke(color, 0.9, 1.6);
       else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
@@ -706,10 +717,17 @@ export function createStage(canvas, scene, model, layout) {
           for (let i = 0; i < 3; i++) p.cur[i] += (t[i] - p.cur[i]) * m;
         }
         // Plain points (and the ties between them) sit low by default so the clouds read as
-        // shapes, not noise; a focused or selected cloud lifts a little, an open one fully.
-        const plain = isOpen ? 1 : focus || view.selected === c.id ? POINT_LIFT : POINT_DIM;
-        if (!journey || isOpen) drawStructure(c, alpha * plain, isOpen, m);
+        // shapes, not noise; a focused, selected or main-chain cloud lifts a little, an open one fully.
+        const plain = isOpen ? 1 : focus || view.selected === c.id || lead ? POINT_LIFT : POINT_DIM;
+        const sparse = c.kind === "core" && !isOpen && !focus ? Math.max(1, Math.ceil(c.fids.length / CORE_POINTS)) : 1;
+        if ((!journey || isOpen) && sparse === 1) drawStructure(c, alpha * plain, isOpen, m);
+        if (sparse > 1 && pc) {
+          stroke(colors["line-hi"], 0.35 * fade, 1, [2, 4]);
+          ctx.beginPath(); ctx.arc(pc.x, pc.y, R * pc.s * 1.05, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+        }
         for (const p of inst.get(c.id)) {
+          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid) continue;
           const s = project(p.cur);
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
@@ -738,7 +756,7 @@ export function createStage(canvas, scene, model, layout) {
         ctx.setLineDash([]);
       }
       if (!pc) continue;
-      const sr = Math.max(7, R * pc.s * 1.08);
+      const sr = Math.max(7, R * sizeOf(c) * pc.s * 1.08);
       if (c.kind === "candidate" || c.kind === "root") {
         ctx.globalAlpha = alpha;
         ctx.fillStyle = colors.focus;
@@ -795,7 +813,9 @@ export function createStage(canvas, scene, model, layout) {
       if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
       if (outside && !hot) continue;
       const lead = frame.labelAll && !frame.chain && backbone.has(c.id);
-      const named = c.kind !== "query" || focus || hot || selected || lead || (frame.chain && frame.chain.has(c.id));
+      const quietAll = frame.labelAll && !frame.chain && backbone.size;
+      const named = quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || (frame.chain && frame.chain.has(c.id));
+      if (!named && quietAll) continue;
       if (named) {
         // In the overview the main chain reads down the right; its tier-mates take the left.
         const side = !frame.labelAll || frame.chain ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;

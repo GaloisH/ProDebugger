@@ -104,7 +104,41 @@ export function createStage(canvas, scene, model, layout) {
 
   // Expanded layout: entity groups on a ring in the camera plane around the cloud, the open
   // group's facts as a column beside it.
-  const groupRing = c => layout.radius.get(c.id) + 1.3 + 0.07 * c.groups.length;
+  const groupRing = c => layout.radius.get(c.id) + 1.6 + 0.12 * c.groups.length;
+  // Inside an open cloud each entity is a hub with its facts on rings around it, in step order,
+  // evenly spaced: the first ring holds RING0 facts, each next ring RING_STEP more.
+  const RING0 = 8, RING_STEP = 6, RING_R0 = 0.32, RING_GAP = 0.2;
+  function ringSlot(k) {
+    let j = 0, start = 0;
+    while (k >= start + RING0 + RING_STEP * j) { start += RING0 + RING_STEP * j; j++; }
+    return {j, i: k - start, cap: RING0 + RING_STEP * j};
+  }
+  const radialExtent = n => n ? RING_R0 + RING_GAP * ringSlot(n - 1).j : 0;
+  function radialPoint(c, gi, k, n) {
+    const {j, i, cap} = ringSlot(k);
+    const count = Math.min(cap, n - (k - i));             // facts on this ring
+    const a = -Math.PI / 2 + (i + 0.5 * (j % 2)) / count * Math.PI * 2;
+    const {r, u} = view.basis, R = RING_R0 + RING_GAP * j;
+    return add(groupCenter(c, gi), add(scale(r, R * Math.cos(a)), scale(u, -R * Math.sin(a))));
+  }
+  // Ties between two entity groups of a cloud: how many of one group's facts also name the
+  // other's entity. Drawn as one line per pair instead of a line per fact.
+  const groupTies = new Map();
+  function tiesOf(c) {
+    if (groupTies.has(c.id)) return groupTies.get(c.id);
+    const own = groupOf.get(c.id), hubs = hubGroup.get(c.id), other = c.groups.findIndex(g => g.other);
+    const pairs = new Map();
+    for (const [fid, j] of c.structure.spokes) {
+      const a = own.get(fid), b = hubs[j];
+      if (a == null || b == null || b < 0 || a === b || a === other || b === other) continue;
+      const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+      if (!pairs.has(key)) pairs.set(key, new Set());
+      pairs.get(key).add(fid);
+    }
+    const list = [...pairs].map(([key, set]) => [...key.split(":").map(Number), set.size]);
+    groupTies.set(c.id, list);
+    return list;
+  }
   function groupCenter(c, gi) {
     const center = layout.pos.get(c.id), R = groupRing(c), a = Math.PI / 2 - gi / c.groups.length * Math.PI * 2;
     const {r, u} = view.basis;
@@ -129,7 +163,7 @@ export function createStage(canvas, scene, model, layout) {
     const gi = groupOf.get(c.id).get(p.fid), g = c.groups[gi];
     const k = g.fids.indexOf(p.fid);
     if (view.group === gi && k < MAX_FACTS) return factSlot(c, gi, k, g.fids.length);
-    return add(groupCenter(c, gi), scale(ballPoint(k), cloudRadius(g.fids.length) * 0.7));
+    return radialPoint(c, gi, k, g.fids.length);
   }
   function hubTarget(c, j) {
     const gi = hubGroup.get(c.id)[j];
@@ -148,6 +182,7 @@ export function createStage(canvas, scene, model, layout) {
       if (!q.cur) q.cur = c.kind === "core" ? t : [...layout.pos.get("core")];
       for (let i = 0; i < 3; i++) q.cur[i] += (t[i] - q.cur[i]) * m;
     });
+    if (isOpen) return drawRadial(c, alpha);
     const cur = new Map(inst.get(c.id).map(p => [p.fid, p.cur]));
     const lit = isOpen && view.group != null ? new Set(c.groups[view.group].fids) : null;
     const path = (pairs, color, a) => {
@@ -180,6 +215,42 @@ export function createStage(canvas, scene, model, layout) {
       stroke(colors.label, alpha * (agent ? 0.9 : 0.7), 1);
       ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(2, Math.min(agent ? 5 : 3.5, s.s * (agent ? 0.14 : 0.09))), 0, Math.PI * 2); ctx.stroke();
     });
+  }
+  // An open cloud: every fact on a straight spoke from its own entity's hub (the column of the
+  // open entity fans out from it the same way), and one line per pair of entities that share
+  // facts, thicker for more, with the count at its middle. No per-fact lines cross the ring.
+  function drawRadial(c, alpha) {
+    const own = groupOf.get(c.id), color = phaseColor(c);
+    const centers = c.groups.map((g, gi) => groupCenter(c, gi));
+    const ties = tiesOf(c), most = Math.max(1, ...ties.map(t => t[2]));
+    ctx.setLineDash([]);
+    for (const [a, b, n] of ties) {
+      const lit = view.group == null || view.group === a || view.group === b;
+      const pa = project(centers[a]), pb = project(centers[b]);
+      if (!pa || !pb) continue;
+      stroke(colors["line-hi"], alpha * (lit ? 0.55 : 0.12), 1 + 3 * n / most);
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+      if (!lit) continue;
+      const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2, t = String(n);
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      const w = ctx.measureText(t).width + 8;
+      ctx.globalAlpha = 0.9 * alpha;
+      ctx.fillStyle = colors.void;
+      ctx.fillRect(mx - w / 2, my - 7, w, 14);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = colors.label;
+      ctx.textAlign = "center";
+      ctx.fillText(t, mx, my + 3.5);
+    }
+    for (const p of inst.get(c.id)) {
+      const gi = own.get(p.fid);
+      if (gi == null || !p.cur) continue;
+      const lit = view.group == null || view.group === gi;
+      const pa = project(centers[gi]), pb = project(p.cur);
+      if (!pa || !pb) continue;
+      stroke(lit ? color : colors["line-hi"], alpha * (lit ? 0.6 : 0.15), 1);
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    }
   }
   // A selected, folded cloud names its biggest hubs.
   function hubLabels(c, alpha) {
@@ -777,7 +848,7 @@ export function createStage(canvas, scene, model, layout) {
       open.groups.forEach((g, gi) => {
         const p = project(groupCenter(open, gi));
         if (!p) return;
-        const r = Math.max(6, cloudRadius(g.fids.length) * 0.7 * p.s + 3);
+        const r = Math.max(6, (radialExtent(g.fids.length) + 0.12) * p.s + 3);
         const on = view.group === gi, hot = hover?.kind === "group" && hover.gi === gi;
         brackets(p.x, p.y, r, on || hot ? phaseColor(open) : colors["line-hi"], 1);
         if (!on) {

@@ -16,6 +16,8 @@ const readColors = () => {
 };
 const MAX_FACTS = 26;     // facts listed when a group opens; the inspector has the rest
 const FACT_GAP = 0.5;     // world units between fact rows
+const POINT_DIM = 0.32;   // brightness of plain points in a cloud nobody is looking at
+const POINT_LIFT = 0.65;  // ... in the focused or selected cloud
 const LABEL_ROOM = 240;   // px kept free each side of an upright journey for its stop labels
 const LABEL_ROW = 90;     // px kept free above and below a journey lying across
 
@@ -703,7 +705,10 @@ export function createStage(canvas, scene, model, layout) {
           if (!p.cur) p.cur = c.kind === "core" ? t : [...layout.pos.get("core")];
           for (let i = 0; i < 3; i++) p.cur[i] += (t[i] - p.cur[i]) * m;
         }
-        if (!journey || isOpen) drawStructure(c, alpha, isOpen, m);
+        // Plain points (and the ties between them) sit low by default so the clouds read as
+        // shapes, not noise; a focused or selected cloud lifts a little, an open one fully.
+        const plain = isOpen ? 1 : focus || view.selected === c.id ? POINT_LIFT : POINT_DIM;
+        if (!journey || isOpen) drawStructure(c, alpha * plain, isOpen, m);
         for (const p of inst.get(c.id)) {
           const s = project(p.cur);
           if (!s) continue;
@@ -712,7 +717,7 @@ export function createStage(canvas, scene, model, layout) {
           // The travelling fact stands out in every cloud it passes; other role facts step back.
           const traveller = journey?.fid === p.fid;
           const size = traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
-          ctx.globalAlpha = isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha;
+          ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role ? 1 : plain);
           if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, (journey ? 0.5 : 0.95) * appear);
           if (traveller) ctx.globalAlpha = 1;
           ctx.fillStyle = role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;

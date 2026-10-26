@@ -3,6 +3,7 @@
 // candidate and root markers. A cloud expands into entity groups, a group into its facts.
 import {short} from "../util.js";
 import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js";
+import {agentWords, factName, sayEnd, sayStop, START_SAY} from "./narrate.js";
 
 const MAX_GROUPS = 12;
 
@@ -242,18 +243,19 @@ export function roleFacts(clusters) {
 
 // One fact's way from the record to its verdict: every cloud that returned it, climbing the
 // tiers in call order, each stop saying what that step made of the fact. Where the way stops
-// short of the root, or starts above ROUTE, a note says why.
+// short of the root, or starts above ROUTE, a note says why. Each stop and note also comes in
+// plain English (narrate.js) for readers who do not know the DSL.
 export function journeyOf(scene, {clusters, byId}, fid) {
   const f = scene.factById.get(fid);
   const at = c => c.kind === "lane" ? c.fill : c.event;
   const clouds = clusters.filter(c => c.kind !== "core" && c.fids.includes(fid)).sort((a, b) => at(a) - at(b) || a.tier - b.tier);
-  const stops = [{id: "core", kind: "core", event: 0, phase: "PARSE", outcome: `compiled from S${f.t} ${SLOT_LABEL[f.slot]}`}];
+  const stops = [{id: "core", kind: "core", event: 0, phase: "PARSE", outcome: `compiled from S${f.t} ${SLOT_LABEL[f.slot]}`, ...sayStop("core", {f})}];
   let seen = 0;
   for (const c of clouds) {
     const ev = scene.events[at(c)];
-    let outcome;
+    let outcome, verdict;
+    const plain = sayStop(c.kind, {f, c, ev, seen, verdict: verdict = (ev.calls || []).find(e => e.call?.arguments?.fid === fid && e.verdict)?.verdict});
     if (c.kind === "query") {
-      const verdict = (ev.calls || []).find(e => e.call?.arguments?.fid === fid && e.verdict)?.verdict;
       outcome = `${seen++ ? "returned again" : "first returned"}${verdict ? ` · check → ${verdict}` : ""}`;
     } else if (c.kind === "window") outcome = `clue of suspect window ${c.ref.caseId} at S${c.ref.step}`;
     else if (c.kind === "lane") {
@@ -261,7 +263,7 @@ export function journeyOf(scene, {clusters, byId}, fid) {
       outcome = own ? `SQL returned its row (S${f.t} ${SLOT_LABEL[f.slot]})` : c.ref.rows.some(r => r.step === f.t) ? `SQL returned step S${f.t}` : "SQL returned it";
     } else if (c.kind === "candidate") outcome = `blamed: S${c.ref.step} ${c.ref.module} · ${c.ref.status}${c.ref.faultClass ? ` · ${c.ref.faultClass}` : ""}`;
     else if (c.kind === "root") outcome = `chosen as root cause${c.ref.rule?.id ? ` by rule ${c.ref.rule.id}` : ""}`;
-    stops.push({id: c.id, kind: c.kind, event: at(c), phase: c.phaseKey, outcome});
+    stops.push({id: c.id, kind: c.kind, event: at(c), phase: c.phaseKey, outcome, ...plain});
   }
 
   // Why it stops: judged at the highest tier it reached; in parallel lanes, by all of them.
@@ -270,21 +272,27 @@ export function journeyOf(scene, {clusters, byId}, fid) {
     : first.kind === "window" ? "put in a window without a ROUTE view returning it"
     : first.kind === "lane" ? "found by TRACE's SQL directly, not via ROUTE"
     : first.kind === "candidate" ? "named by TRACE's assess directly" : "named by SUBMIT directly";
-  let end = null;
-  if (!last) end = "no debugger call returned it";
-  else if (last.kind === "query") end = "ROUTE read it but put it in no suspect window";
+  let end = null, why = null;
+  if (!last) { end = "no debugger call returned it"; why = {kind: "unread"}; }
+  else if (last.kind === "query") { end = "ROUTE read it but put it in no suspect window"; why = {kind: "read"}; }
   else if (last.kind === "window") {
     const lanes = clusters.filter(c => c.kind === "lane" && (c.ref.anchor === last.ref.caseId || c.ref.cases.includes(last.ref.caseId)));
     end = lanes.length ? `the SQL of ${lanes.map(l => l.ref.agent).join(", ")} did not return it` : `window ${last.ref.caseId} got no TRACE lane`;
+    why = lanes.length ? {kind: "missed"} : {kind: "unassigned", step: last.ref.step};
   } else if (last.kind === "lane") {
     const lanes = new Set(clouds.filter(c => c.kind === "lane").map(c => c.id));
-    const blamed = [...new Set(clusters.filter(c => c.kind === "candidate" && lanes.has(c.ref.lane)).map(c => `S${c.ref.step} ${c.ref.module}`))];
-    end = blamed.length ? `TRACE blamed ${blamed.join(", ")} instead` : `TRACE blamed no step in ${last.ref.agent}`;
+    const seenBlame = new Set();
+    const blamed = clusters.filter(c => c.kind === "candidate" && lanes.has(c.ref.lane)).map(c => c.ref)
+      .filter(r => !seenBlame.has(`${r.step} ${r.module}`) && seenBlame.add(`${r.step} ${r.module}`));
+    end = blamed.length ? `TRACE blamed ${blamed.map(r => `S${r.step} ${r.module}`).join(", ")} instead` : `TRACE blamed no step in ${last.ref.agent}`;
+    why = blamed.length ? {kind: "blamedOther", blamed} : {kind: "noBlame"};
   } else if (last.kind === "candidate") {
     const root = byId.get("root")?.ref;
     end = root ? `SUBMIT chose S${root.step} ${root.module} instead` : "SUBMIT named no root";
+    why = root ? {kind: "otherRoot", root} : {kind: "noRoot"};
   }
-  return {fid, fact: f, stops, start, end};
+  return {fid, fact: f, stops, start, end, name: factName(f), words: agentWords(f),
+          startSay: first ? START_SAY[first.kind] || null : null, endSay: why ? sayEnd(why) : null};
 }
 
 export const factLabel = f => `${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 46)}  @S${f.t}`;

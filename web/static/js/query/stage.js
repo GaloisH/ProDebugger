@@ -1032,6 +1032,9 @@ export function createStage(canvas, scene, model, layout) {
   function select(id) {
     view.selected = id;
     if (view.cluster && view.cluster !== id) setView(null);
+    // Picking a cloud hands the camera back, so it can frame the chain the pick lights, even
+    // after the reader has dragged or zoomed.
+    if (id && manual) { manual = false; emit("manual", false); }
     emit("select", id ? {kind: "cluster", cluster: byId.get(id), opened: false} : null);
   }
   function open(id, group = null) {

@@ -5,7 +5,7 @@ import {esc, short, loader} from "../util.js";
 import {caseHref, queryHref} from "../routes.js";
 import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js";
 import {agentWords} from "../query/narrate.js";
-import {buildClusters, chainOf, factLabel, journeyOf, roleFacts} from "../query/clusters.js";
+import {buildClusters, chainPath, factLabel, journeyOf, roleFacts} from "../query/clusters.js";
 import {layoutClusters, TIERS} from "../query/layout.js";
 import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
@@ -63,7 +63,7 @@ export function mountQuery(app, route) {
       }
       if (!overview) ui.setProgress(state.i, state.p);
       const out = overview ? frameAt(last, 1) : frameAt(state.i, state.p);
-      Object.assign(out.frame, {chain: state.chain, filter: state.filter, labelAll: overview});
+      Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, filter: state.filter, labelAll: overview});
       if (overview) { out.frame.focus = new Set(); out.camera = OVERVIEW_CAM[state.view]; }
       return out;
     });
@@ -114,8 +114,19 @@ export function mountQuery(app, route) {
     ui.on("jump", i => { stage.follow(); go(i, 0.5); setPlaying(false); });
     stage.on("select", sel => {
       if (sel) setPlaying(false);
-      state.chain = sel?.cluster && sel.cluster.id !== "core" ? chainOf(model, sel.cluster.id) : null;
+      const id = sel?.cluster && sel.cluster.id !== "core" ? sel.cluster.id : null;
+      if (id !== state.chain?.id) state.chainAll = false;
+      state.chain = id ? chainPath(model, id, state.chainAll) : null;
+      ui.setChain(state.chain);
       ui.inspect(sel);
+    });
+    // "show all" on the chain list puts the parallel queries back on the chain, and folds them.
+    ui.on("chainAll", () => {
+      if (!state.chain) return;
+      state.chainAll = !state.chainAll;
+      state.chain = chainPath(model, state.chain.id, state.chainAll);
+      ui.setChain(state.chain);
+      ui.inspect({kind: "cluster", cluster: model.byId.get(state.chain.id), opened: false});
     });
     stage.on("manual", () => ui.syncFollow());
     stage.on("view", () => ui.syncFollow());
@@ -225,7 +236,7 @@ function bindUi(root, scene, model, stage, roles) {
   const ticks = [...root.querySelectorAll(".qg-tick")];
   const handlers = {};
   const inspect = $(".qg-inspect"), panelBody = $(".qg-inspect-body"), tip = $(".qg-tip");
-  let current = 0, journeyRole = null;
+  let current = 0, journeyRole = null, chain = null;
   // Both side panels start folded to a tab; the details panel also opens when the user picks
   // something on the stage and folds again when the pick is cleared.
   const setPane = (name, open) => {
@@ -235,6 +246,8 @@ function bindUi(root, scene, model, stage, roles) {
   };
 
   $(".qg-case")?.addEventListener("change", e => { if (e.target.value.startsWith("#/")) location.hash = e.target.value; });
+  panelBody.addEventListener("mouseover", e => stage.highlightChainEdge(e.target.closest("[data-chain-edge]") ? Number(e.target.closest("[data-chain-edge]").dataset.chainEdge) : null));
+  panelBody.addEventListener("mouseleave", () => stage.highlightChainEdge(null));
   root.addEventListener("click", e => {
     const act = e.target.closest("[data-act]")?.dataset.act;
     if (act === "speed") {
@@ -257,6 +270,7 @@ function bindUi(root, scene, model, stage, roles) {
     const stop = e.target.closest("[data-stop]");
     if (stop) { const k = Number(stop.dataset.stop); stage.focusStop(stage.journey?.focus === k ? null : k); }
     if (e.target.closest("[data-end-journey]")) stage.setJourney(null);
+    if (e.target.closest("[data-chain-all]")) handlers.chainAll?.();
     const tick = e.target.closest(".qg-tick");
     if (tick) handlers.seek?.(Number(tick.dataset.i));
     const ph = e.target.closest(".qg-phases [data-phase]");
@@ -312,7 +326,26 @@ function bindUi(root, scene, model, stage, roles) {
     panelBody.innerHTML = `${crumbs(c)}
       <p class="qg-kind"><span class="qg-chip" data-phase="${esc(phase)}">${esc(phase)}</span>${esc(c.kind)}${opened ? ` · <button class="qg-link" data-fold>fold</button>` : ""}</p>
       <h3>${esc(c.label)}</h3><p class="qg-muted">${esc(c.detail)}</p>
-      ${!opened && c.groups.length ? `<button class="qg-open" data-open="${esc(c.id)}">Open by entity ›</button>` : ""}${body}${groups}${sharedHtml}`;
+      ${!opened && c.groups.length ? `<button class="qg-open" data-open="${esc(c.id)}">Open by entity ›</button>` : ""}${!opened ? chainList(c) : ""}${body}${groups}${sharedHtml}`;
+  }
+
+  // The lit chain as a numbered list matching the badges on the stage: each step's two clouds,
+  // what was asked along it and what came back. Parallel queries set aside are counted under
+  // the step into their window, with a switch to show them all.
+  function chainList(c) {
+    if (!chain || chain.id !== c.id || !chain.edges.length) return "";
+    const name = id => id === "core" ? "DSL record" : clusterTitle(model.byId.get(id));
+    const extraNote = id => {
+      const n = chain.extra.get(id)?.length;
+      return n ? `<li class="qg-note">+${n} more quer${n === 1 ? "y" : "ies"} also returned these clues · <button class="qg-link" data-chain-all>show all</button></li>` : "";
+    };
+    return `<h4>Causal chain <small>${chain.edges.length} steps</small></h4>
+      <ol class="qg-chain">${chain.edges.map((e, k) => `
+        <li data-chain-edge="${k}" data-phase="${esc(model.byId.get(e.to).phaseKey)}"><b>${k + 1}</b><div>
+          <strong>${esc(name(e.from))} → ${esc(name(e.to))}</strong>
+          ${e.link.title ? `<span>${esc(e.link.title)}</span>` : ""}${e.link.detail ? `<em>${esc(e.link.detail)}</em>` : ""}</div></li>
+        ${extraNote(e.to)}`).join("")}
+      </ol>${chain.all ? `<p class="qg-muted">Showing every query that fed a window · <button class="qg-link" data-chain-all>fold</button></p>` : ""}`;
   }
 
   function showGroup(c, gi) {
@@ -428,6 +461,7 @@ function bindUi(root, scene, model, stage, roles) {
       root.querySelectorAll("[data-filter-phase]").forEach(li => li.classList.toggle("off", filter.phases.has(li.dataset.filterPhase)));
     },
     get journeyRole() { return journeyRole; },
+    setChain(path) { chain = path; },
     showJourney(role) {
       journeyRole = role;
       this.journey(stage.journey);
@@ -443,6 +477,8 @@ function bindUi(root, scene, model, stage, roles) {
       renderJourney(j);
     },
     hover(h) {
+      panelBody.querySelectorAll(".qg-chain li.hi").forEach(li => li.classList.remove("hi"));
+      if (h?.kind === "edge" && h.k != null) panelBody.querySelector(`[data-chain-edge="${h.k}"]`)?.classList.add("hi");
       if (!h) { tip.hidden = true; return; }
       let html = "";
       if (h.kind === "cluster") html = `<b>${esc(clusterTitle(h.cluster))}</b><span>${esc(h.cluster.detail)} · click to open</span>`;

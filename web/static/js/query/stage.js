@@ -358,20 +358,31 @@ export function createStage(canvas, scene, model, layout) {
       const s = journey.stops[journey.focus];
       return {...g, target: journeyPoint(s), dist: Math.max(14, (layout.radius.get(s.id) || 1) * 7)};
     }
-    const pts = journey.stops.map(journeyPoint), frame = camFrame(g);
-    const R = screenRight(frame), D = screenDown(frame);
+    return fitPoints(g, journey.stops.map(journeyPoint), wide => wide ? [60, 2 * LABEL_ROW] : [2 * LABEL_ROOM, 60]);
+  }
+  // A lit chain is framed the same way: its clouds fill the free canvas, room left for names.
+  function chainGoal() {
+    const base = tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+    const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
+    // Cloud names lead out to the right, so the right side keeps more room.
+    return fitPoints(g, [...frame.chain].map(id => layout.pos.get(id)).filter(Boolean), wide => wide ? [60, 120] : [120, 60], 3, 180);
+  }
+  // The camera that fits a set of world points into the canvas the HUD leaves free, seen from
+  // the angle g; room(wide) says how many pixels to keep for labels across and down.
+  function fitPoints(g, pts, room, pad = 2, rightRoom = 0) {
+    const frame = camFrame(g), R = screenRight(frame), D = screenDown(frame);
     const xs = pts.map(p => dot(p, R)), ys = pts.map(p => dot(p, D));
     const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     const {left, right, top, bottom} = hudInsets();
-    const wide = x1 - x0 >= y1 - y0;
-    const freeW = Math.max(200, W - left - right - (wide ? 60 : 2 * LABEL_ROOM)), freeH = Math.max(160, H - top - bottom - (wide ? 2 * LABEL_ROW : 60));
+    const [rw, rh] = room(x1 - x0 >= y1 - y0);
+    const freeW = Math.max(200, W - left - right - rw - rightRoom), freeH = Math.max(160, H - top - bottom - rh);
     const focal = H / (2 * Math.tan(cam.fov / 2));
-    const dist = Math.max(16, 1.2 * focal * Math.max((x1 - x0 + 2) / freeW, (y1 - y0 + 2) / freeH));
+    const dist = Math.max(16, 1.2 * focal * Math.max((x1 - x0 + pad) / freeW, (y1 - y0 + pad) / freeH));
     const px = dist / focal;
-    // Centre the stops in the free area; the label rows (or columns) flank them.
+    // Centre the points in the free area; the labels flank them.
     const mid = scale(pts.reduce(add, [0, 0, 0]), 1 / pts.length);
     const at = add(mid, add(scale(R, (x0 + x1) / 2 - dot(mid, R)), scale(D, (y0 + y1) / 2 - dot(mid, D))));
-    const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
+    const ox = (left - right - rightRoom) / 2 * px, oy = (top - bottom) / 2 * px;
     return {...g, dist, target: add(at, add(scale(R, -ox), scale(D, -oy)))};
   }
   function journeyPoint(s) {
@@ -716,6 +727,29 @@ export function createStage(canvas, scene, model, layout) {
     }
     targets.push({kind: "edge", link, cluster, x, y, rect: [x0, y0, w, h]});
   }
+  // A lit chain's edges, numbered from the record up: a small square at each edge's middle, its
+  // number matching the panel's list; hovering either side lights the other.
+  let chainHi = null;
+  function chainBadges(edges) {
+    edges.forEach((e, k) => {
+      const pa = project(layout.pos.get(e.from)), pb = project(layout.pos.get(e.to));
+      if (!pa || !pb) return;
+      const c = byId.get(e.to), color = phaseColor(c), hi = chainHi === k || (hover?.kind === "edge" && hover.link === e.link);
+      const x = pa.x + (pb.x - pa.x) * 0.5, y = pa.y + (pb.y - pa.y) * 0.5;
+      if (hi) { stroke(color, 1, 2.5); ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke(); }
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = hi ? color : colors.void;
+      ctx.fillRect(x - 8, y - 8, 16, 16);
+      stroke(color, 1, 1);
+      ctx.strokeRect(x - 7.5, y - 7.5, 15, 15);
+      ctx.fillStyle = hi ? colors.void : colors["ink-hi"];
+      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(String(k + 1), x, y + 3.5);
+      targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 9, y - 9, 18, 18]});
+    });
+  }
   function diamond(x, y, r, fill) {
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
     fill ? ctx.fill() : ctx.stroke();
@@ -730,7 +764,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     B = basis();
     if (!manual) {
-      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
       const k = 1 - Math.exp(-dt * 2.4);
       if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
       if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;
@@ -799,7 +833,7 @@ export function createStage(canvas, scene, model, layout) {
       else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
       const edgeHot = hover?.kind === "edge" && hover.link === l;
-      if ((hot || hovered || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
+      if (!frame.chain && (hot || hovered || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
     }
 
     // Points.
@@ -939,6 +973,7 @@ export function createStage(canvas, scene, model, layout) {
       }
     }
     for (const e of edgeLabels) edgeLabel(e);
+    if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
     if (journey) drawJourney();
     ruler(shown, current);
     ctx.globalAlpha = 1;
@@ -1051,6 +1086,7 @@ export function createStage(canvas, scene, model, layout) {
     back,
     setJourney,
     focusStop,
+    highlightChainEdge(k) { chainHi = k; },
     get journey() { return journey; },
     selectFact(fid) { view.fact = fid; },
     get view() { return view; },

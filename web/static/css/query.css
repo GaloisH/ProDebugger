@@ -217,3 +217,15 @@ body.page-query .app { padding: 0; }
 .qg-jfacts button span i { font-style: normal; color: var(--qg-label-dim); }
 .qg-note { margin: .1rem 0 .3rem 1.8rem; padding: .3rem .55rem; border: 1px dashed var(--qg-line-hi); font-size: .76rem; line-height: 1.4; color: var(--qg-label); }
 .qg-end { border-style: solid; color: var(--text-hi); }
+
+/* A lit chain's steps, numbered like the stage's edge badges */
+.qg-chain { margin: 0; padding: 0; list-style: none; }
+.qg-chain li[data-chain-edge] { display: grid; grid-template-columns: 1.3rem 1fr; gap: .5rem; padding: .35rem .2rem; border-bottom: 1px solid var(--qg-line); cursor: default; }
+.qg-chain li.hi { background: var(--tint-hover); box-shadow: inset 2px 0 0 var(--ph); }
+.qg-chain b { display: grid; place-items: center; width: 1.25rem; height: 1.25rem; border: 1px solid var(--ph); font-family: var(--mono); font-size: .66rem; color: var(--text-hi); }
+.qg-chain li.hi b { background: var(--ph); color: var(--qg-void); }
+.qg-chain div { display: grid; gap: .1rem; min-width: 0; }
+.qg-chain strong { font-family: var(--mono); font-size: .68rem; font-weight: 500; color: var(--ph); word-break: break-word; }
+.qg-chain span { font-size: .74rem; color: var(--text-hi); }
+.qg-chain em { font-style: normal; font-family: var(--mono); font-size: .66rem; color: var(--qg-label-dim); word-break: break-word; }
+.qg-chain .qg-note { margin: .3rem 0 .3rem 1.8rem; }

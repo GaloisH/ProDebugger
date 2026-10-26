@@ -9,6 +9,7 @@ import {buildClusters, chainPath, factLabel, journeyOf, roleFacts} from "../quer
 import {layoutClusters, TIERS} from "../query/layout.js";
 import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
+import {coachSeen, runCoach} from "../query/coach.js";
 
 const GROUP = "evidence-query-claims-n30-20261013";
 // Cases the page is tuned on (one window/lane, two windows/lanes, a large WebShop record), then
@@ -149,6 +150,23 @@ export function mountQuery(app, route) {
     };
     document.addEventListener("keydown", keyHandler);
     if (route.query?.get("mode") === "overview") setMode("overview");
+
+    // The guide: once per browser, again from the header's Guide button; playback waits for it.
+    const pick1 = (...sel) => sel.map(q => root.querySelector(q)).find(el => el?.getClientRects().length);
+    const guide = () => {
+      const was = state.playing;
+      setPlaying(false);
+      runCoach(root, [
+        {title: "Pick a run", target: () => root.querySelector(".qg-case"),
+         text: "Each case is one failed agent run. The debugger compiles its log into a DSL record, queries it, and names the step that caused the failure."},
+        {title: "Every cloud is a query",
+         text: "Floors rise PARSE → ROUTE → TRACE → SUBMIT. <b>Click</b> a cloud to light its causal chain, <b>click it again</b> to open it by entity. Drag to turn the tower, scroll to zoom."},
+        {title: "Follow a fact", before: () => ui.openPane("legend"), target: () => pick1(".qg-follows", ".qg-cta"), side: "right",
+         text: "These buttons trace one fact from the record to the verdict, stop by stop. Start with the root cause."},
+      ], () => { if (was && state.mode === "tour") setPlaying(true); });
+    };
+    ui.on("guide", guide);
+    if (!coachSeen()) guide();
   }).catch(error => {
     if (destroyed) return;
     root.innerHTML = `<div class="qg-error"><h2>Could not build the query graph</h2><p>${esc(error.message)}</p>
@@ -191,6 +209,7 @@ function template(scene, model, ref, roles) {
           <a href="${caseHref(ref)}" title="Open in the workbench">${esc(scene.meta.tid)}</a></p>
       </div>
       <div class="qg-modes">
+        <div class="qg-seg"><button data-act="guide" title="Show the guide again">Guide</button></div>
         <div class="qg-seg" role="group" aria-label="Mode"><button data-mode="tour" aria-pressed="true">Tour</button><button data-mode="overview" aria-pressed="false">Overview</button></div>
         <div class="qg-seg qg-views" role="group" aria-label="Camera" hidden><button data-view="front">Front</button><button data-view="top">Top</button><button data-view="side">Side</button></div>
       </div>
@@ -481,6 +500,7 @@ function bindUi(root, scene, model, stage, roles) {
       root.querySelectorAll("[data-filter-phase]").forEach(li => li.classList.toggle("off", filter.phases.has(li.dataset.filterPhase)));
     },
     get journeyRole() { return journeyRole; },
+    openPane(name) { setPane(name, true); },
     setChain(path) { chain = path; },
     showJourney(role) {
       journeyRole = role;

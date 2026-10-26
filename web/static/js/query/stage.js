@@ -16,6 +16,8 @@ const readColors = () => {
 };
 const MAX_FACTS = 26;     // facts listed when a group opens; the inspector has the rest
 const FACT_GAP = 0.5;     // world units between fact rows
+const LABEL_ROOM = 240;   // px kept free each side of an upright journey for its stop labels
+const LABEL_ROW = 90;     // px kept free above and below a journey lying across
 
 export function createStage(canvas, scene, model, layout) {
   const ctx = canvas.getContext("2d");
@@ -28,9 +30,12 @@ export function createStage(canvas, scene, model, layout) {
   const view = {cluster: null, group: null, basis: null, fact: null, selected: null};
   let hover = null;
   let targets = [];
+  // A fact's journey (journeyOf) drawn as one numbered line through the clouds that returned
+  // it; focus is the stop the camera is on, or null for the whole line.
+  let journey = null;
   let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
-  const listeners = {hover: [], select: [], manual: [], view: []};
+  const listeners = {hover: [], select: [], manual: [], view: [], journey: []};
   const emit = (k, v) => listeners[k].forEach(fn => fn(v));
 
   // Point instances per cloud; a cloud's points start at the core and travel out to it.
@@ -217,11 +222,147 @@ export function createStage(canvas, scene, model, layout) {
     const dist = 1.08 * focal * Math.max(needW / freeW, needH / freeH);
     const px = dist / focal;                    // world units per screen pixel at the target
     const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
-    const frame = {r: [Math.cos(g.yaw), 0, -Math.sin(g.yaw)],
-                   u: [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)]};
+    const frame = camFrame(g);
     // Moving the target against a screen direction moves the picture along it.
     const shift = add(scale(screenRight(frame), -ox), scale(screenDown(frame), -oy));
     return {...g, dist, target: add([0, (layout.top + layout.bottom) / 2 + 0.6, 0], shift)};
+  }
+
+  // A journey is framed from the angle the overview (or tour) camera has: all its stops fit the
+  // free canvas with room for their labels on the right; a focused stop is seen up close.
+  function journeyGoal() {
+    const base = tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+    const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
+    if (journey.focus != null) {
+      const s = journey.stops[journey.focus];
+      return {...g, target: journeyPoint(s), dist: Math.max(14, (layout.radius.get(s.id) || 1) * 7)};
+    }
+    const pts = journey.stops.map(journeyPoint), frame = camFrame(g);
+    const R = screenRight(frame), D = screenDown(frame);
+    const xs = pts.map(p => dot(p, R)), ys = pts.map(p => dot(p, D));
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const {left, right, top, bottom} = hudInsets();
+    const wide = x1 - x0 >= y1 - y0;
+    const freeW = Math.max(200, W - left - right - (wide ? 60 : 2 * LABEL_ROOM)), freeH = Math.max(160, H - top - bottom - (wide ? 2 * LABEL_ROW : 60));
+    const focal = H / (2 * Math.tan(cam.fov / 2));
+    const dist = Math.max(16, 1.2 * focal * Math.max((x1 - x0 + 2) / freeW, (y1 - y0 + 2) / freeH));
+    const px = dist / focal;
+    // Centre the stops in the free area; the label rows (or columns) flank them.
+    const mid = scale(pts.reduce(add, [0, 0, 0]), 1 / pts.length);
+    const at = add(mid, add(scale(R, (x0 + x1) / 2 - dot(mid, R)), scale(D, (y0 + y1) / 2 - dot(mid, D))));
+    const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
+    return {...g, dist, target: add(at, add(scale(R, -ox), scale(D, -oy)))};
+  }
+  function journeyPoint(s) {
+    return inst.get(s.id)?.find(q => q.fid === journey.fid)?.cur || layout.pos.get(s.id);
+  }
+
+  // The journey: segments in the phase colour of the stop they reach, a chevron on each, the
+  // first one dashed when the fact enters above ROUTE; a numbered badge per stop with a callout
+  // saying what that step concluded; a bar where the journey stops.
+  function drawJourney() {
+    const J = journey, pts = J.stops.map(s => project(journeyPoint(s)));
+    const lit = k => J.focus == null || J.focus === k;
+    for (let k = 1; k < pts.length; k++) {
+      const a = pts[k - 1], b = pts[k];
+      if (!a || !b) continue;
+      const color = colors.phase[J.stops[k].phase] || colors.focus;
+      const on = J.focus == null || J.focus === k || J.focus === k - 1;
+      stroke(color, on ? 0.95 : 0.35, 1.6, k === 1 && J.start ? [5, 4] : null);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      if (len > 40) {
+        const ux = (b.x - a.x) / len, uy = (b.y - a.y) / len, mx = a.x + (b.x - a.x) * 0.55, my = a.y + (b.y - a.y) * 0.55;
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(mx - 6 * ux - 4 * uy, my - 6 * uy + 4 * ux); ctx.lineTo(mx, my); ctx.lineTo(mx - 6 * ux + 4 * uy, my - 6 * uy - 4 * ux); ctx.stroke();
+      }
+    }
+    const last = pts.length - 1, end = pts[last], prev = pts[last - 1];
+    if (J.end && end && prev) {
+      const len = Math.hypot(end.x - prev.x, end.y - prev.y) || 1, ux = (end.x - prev.x) / len, uy = (end.y - prev.y) / len;
+      const bx = end.x + ux * 14, by = end.y + uy * 14;
+      stroke(colors.label, 0.9, 1.6);
+      ctx.beginPath(); ctx.moveTo(end.x + ux * 8, end.y + uy * 8); ctx.lineTo(bx, by);
+      ctx.moveTo(bx - uy * 7, by + ux * 7); ctx.lineTo(bx + uy * 7, by - ux * 7); ctx.stroke();
+    }
+
+    // Labels as callouts, subway-map style: along a line that runs across, two rows above and
+    // below it; along a line that runs up, two columns beside it. Stops alternate between the
+    // two in their order along the line, each row is swept so no two labels overlap, and a
+    // leader ties every label to its numbered badge.
+    const shown = pts.map((p, k) => p && {k, p}).filter(Boolean);
+    if (!shown.length) return;
+    const bx = shown.map(i => i.p.x), by = shown.map(i => i.p.y);
+    const [minX, maxX, minY, maxY] = [Math.min(...bx), Math.max(...bx), Math.min(...by), Math.max(...by)];
+    const wide = maxX - minX >= maxY - minY;
+    for (const it of shown) {
+      const s = J.stops[it.k], on = lit(it.k);
+      it.color = colors.phase[s.phase] || colors.focus;
+      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 11px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "10px", on ? colors.label : colors["label-dim"]]];
+      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "10px", colors.label]);
+      if (it.k === last && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 10px", colors["ink-hi"]]);
+      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 14;
+      it.h = it.lines.length * 13 + 6;
+    }
+    const order = [...shown].sort((a, b) => wide ? a.p.x - b.p.x : a.p.y - b.p.y);
+    const ins = hudInsets(), GAP = wide ? 10 : 6;
+    const lo = wide ? ins.left + 8 : ins.top + 8, hi = wide ? W - ins.right - 8 : H - ins.bottom - 8;
+    const size = it => wide ? it.w : it.h;
+    // A long journey whose labels outgrow one row per side stacks further rows outward.
+    const levels = Math.max(1, Math.ceil(order.reduce((n, it) => n + size(it) + GAP, 0) / 2 / Math.max(1, hi - lo)));
+    order.forEach((it, i) => { it.side = i % 2 ? 1 : -1; it.level = Math.floor(i / 2) % levels; });
+    const depth = Math.max(...order.map(it => wide ? it.h : it.w)) + 6;
+    for (const side of [-1, 1]) for (let level = 0; level < levels; level++) {
+      const row = order.filter(it => it.side === side && it.level === level);
+      let end = lo - GAP;
+      for (const it of row) { it.a = Math.max(wide ? it.p.x - 12 : it.p.y - it.h / 2, end + GAP); end = it.a + size(it); }
+      let limit = hi + GAP;
+      for (const it of [...row].reverse()) { it.a = Math.min(it.a, limit - GAP - size(it)); limit = it.a; }
+      const out = level * depth;
+      for (const it of row) {
+        it.box = wide ? [it.a, side < 0 ? minY - 30 - out - it.h : maxY + 30 + out, it.w, it.h]
+                      : [side < 0 ? minX - 34 - out - it.w : maxX + 34 + out, it.a, it.w, it.h];
+        it.box = it.box.map(Math.round);
+      }
+    }
+    for (const it of shown) {
+      const [x, y, w, h] = it.box, on = lit(it.k), {p} = it;
+      const [lx, ly] = wide ? [Math.max(x + 6, Math.min(x + w - 6, p.x)), it.side < 0 ? y + h : y]
+                            : [it.side < 0 ? x + w : x, Math.max(y + 6, Math.min(y + h - 6, p.y))];
+      stroke(it.color, on ? 0.6 : 0.25, 1);
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(lx, ly); ctx.stroke();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = colors.void;
+      ctx.fillRect(x, y, w, h);
+      stroke(it.color, on ? (J.focus === it.k ? 0.9 : 0.35) : 0.15, 1);
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      ctx.globalAlpha = on ? 1 : 0.6;
+      ctx.fillStyle = it.color;
+      ctx.fillRect(x, y, 2, h);
+      ctx.textAlign = "left";
+      it.lines.forEach(([t, f, col], i) => {
+        ctx.font = `${f} 'IBM Plex Mono', monospace`;
+        ctx.fillStyle = col;
+        ctx.fillText(t, x + 8, y + 14 + i * 13);
+      });
+      targets.push({kind: "stop", k: it.k, stop: J.stops[it.k], x: x + w / 2, y: y + h / 2, r: 0, rect: [x, y, w, h]});
+    }
+    // Badges last, on top of every leader.
+    for (const {k, p, color} of shown) {
+      const on = lit(k);
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = J.focus === k ? color : colors.void;
+      ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+      stroke(color, on ? 1 : 0.5, 1);
+      ctx.strokeRect(p.x - 7.5, p.y - 7.5, 15, 15);
+      ctx.fillStyle = J.focus === k ? colors.void : on ? colors["ink-hi"] : colors["label-dim"];
+      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(String(k + 1), p.x, p.y + 3.5);
+      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 10});
+    }
+    ctx.globalAlpha = 1;
   }
 
   function setView(cluster, group = null) {
@@ -464,7 +605,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     B = basis();
     if (!manual) {
-      goal = view.cluster ? expansionGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
       const k = 1 - Math.exp(-dt * 2.4);
       if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
       if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;
@@ -502,7 +643,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     // The current floor: the selected cloud's, else the hovered one's, else the tour's focus.
     const tierOf = id => id ? byId.get(id)?.tier : undefined;
-    const current = tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
+    const current = (journey?.focus != null ? tierOf(journey.stops[journey.focus].id) : null) ?? tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
     for (const t of floors) {
       const members = shown.filter(c => c.tier === t.tier);
       const active = current === t.tier;
@@ -519,6 +660,8 @@ export function createStage(canvas, scene, model, layout) {
     for (const c of shown) for (const l of c.links) {
       if (!frame.visible.has(l.from)) continue;
       if (hiddenPhase?.has(byId.get(l.from)?.phaseKey)) continue;
+      // Under a journey the links only hint at the tower; the journey line carries the story.
+      if (journey) { stroke(colors["line-hi"], 0.14, 1, l.from === "core" ? [1, 4] : null); line3(layout.pos.get(l.from), layout.pos.get(c.id)); continue; }
       const inChain = frame.chain && frame.chain.has(c.id) && frame.chain.has(l.from);
       const hot = inChain || (!frame.chain && frame.focus.has(c.id)) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
       const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
@@ -544,7 +687,8 @@ export function createStage(canvas, scene, model, layout) {
       const isOpen = open?.id === c.id;
       const outside = frame.chain && !frame.chain.has(c.id);
       const lead = frame.labelAll && !frame.chain && backbone.has(c.id) && c.kind !== "core";
-      const alpha = (open && !isOpen ? 0.07 : outside ? 0.13 : focus || isOpen || frame.chain || lead ? 1 : c.kind === "core" ? 0.5 : 0.6)
+      const onWay = journey && journey.stops.some(s => s.id === c.id);
+      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead ? 1 : c.kind === "core" ? 0.5 : 0.6)
         * appear * (pc && !isOpen ? fog(pc.z) : 1);
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
@@ -555,16 +699,18 @@ export function createStage(canvas, scene, model, layout) {
           if (!p.cur) p.cur = c.kind === "core" ? t : [...layout.pos.get("core")];
           for (let i = 0; i < 3; i++) p.cur[i] += (t[i] - p.cur[i]) * m;
         }
-        if (!(frame.filter?.role && !isOpen)) drawStructure(c, alpha, isOpen, m);
+        if (!journey || isOpen) drawStructure(c, alpha, isOpen, m);
         for (const p of inst.get(c.id)) {
           const s = project(p.cur);
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
           const role = roleOf(p.fid);
-          if (frame.filter?.role && role !== frame.filter.role && !isOpen) continue;
-          const size = Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
+          // The travelling fact stands out in every cloud it passes; other role facts step back.
+          const traveller = journey?.fid === p.fid;
+          const size = traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
           ctx.globalAlpha = isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha;
-          if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * appear);
+          if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, (journey ? 0.5 : 0.95) * appear);
+          if (traveller) ctx.globalAlpha = 1;
           ctx.fillStyle = role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
           ctx.fillRect(s.x - size / 2, s.y - size / 2, size, size);
           if (inGroup && c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS) {
@@ -634,6 +780,7 @@ export function createStage(canvas, scene, model, layout) {
         continue;
       }
       const selected = view.selected === c.id;
+      if (journey && !hot) continue;
       if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubLabels(c, fade);
       const outside = frame.chain && !frame.chain.has(c.id);
       if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
@@ -654,6 +801,7 @@ export function createStage(canvas, scene, model, layout) {
       }
     }
     for (const e of edgeLabels) edgeLabel(e);
+    if (journey) drawJourney();
     ruler(shown, current);
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(draw);
@@ -664,9 +812,9 @@ export function createStage(canvas, scene, model, layout) {
     for (const t of targets) {
       const d = Math.hypot(t.x - x, t.y - y);
       // A fact's label sits to the right of its point and is clickable too; edge labels are boxes.
-      const hit = t.kind === "edge" ? x >= t.rect[0] && x <= t.rect[0] + t.rect[2] && y >= t.rect[1] && y <= t.rect[1] + t.rect[3]
+      const hit = t.kind === "edge" || t.rect ? x >= t.rect[0] && x <= t.rect[0] + t.rect[2] && y >= t.rect[1] && y <= t.rect[1] + t.rect[3]
         : t.kind === "fact" ? d < t.r || (x > t.x && x < t.x + 380 && Math.abs(y - t.y) < 7) : d < t.r;
-      const score = t.kind === "edge" ? -2000 : t.kind === "fact" ? Math.abs(y - t.y) - 1000 : t.kind === "group" ? d - 500 : d;
+      const score = t.kind === "stop" ? d - 3000 : t.kind === "edge" ? -2000 : t.kind === "fact" ? Math.abs(y - t.y) - 1000 : t.kind === "group" ? d - 500 : d;
       if (hit && score < bd) { best = t; bd = score; }
     }
     return best;
@@ -696,7 +844,11 @@ export function createStage(canvas, scene, model, layout) {
     if (drag && !drag.moved) {
       const r = canvas.getBoundingClientRect();
       const t = pick(e.clientX - r.left, e.clientY - r.top);
-      if (!t) back();
+      // Under a journey a badge or a cloud on the way focuses that stop; another cloud ends it.
+      const stopAt = t && journey ? (t.kind === "stop" ? t.k : t.kind === "cluster" ? journey.stops.findIndex(s => s.id === t.cluster.id) : -1) : -1;
+      if (stopAt >= 0) focusStop(journey.focus === stopAt ? null : stopAt);
+      else if (!t) back();
+      else if (journey && t.kind === "cluster") { setJourney(null); select(t.cluster.id); }
       else if (t.kind === "cluster" || t.kind === "edge") view.selected === t.cluster.id ? open(t.cluster.id) : select(t.cluster.id);
       else if (t.kind === "group") open(t.cluster.id, view.group === t.gi ? null : t.gi);
       else if (t.kind === "fact") { view.fact = t.fid; emit("select", {kind: "fact", cluster: t.cluster, gi: view.group, fid: t.fid}); }
@@ -716,7 +868,21 @@ export function createStage(canvas, scene, model, layout) {
     const c = byId.get(id);
     emit("select", group == null ? {kind: "cluster", cluster: c, opened: true} : {kind: "group", cluster: c, gi: group});
   }
+  function setJourney(j) {
+    journey = j ? {...j, focus: null} : null;
+    view.selected = null; view.fact = null;
+    if (view.cluster) setView(null);
+    manual = false; emit("manual", false);
+    emit("journey", journey);
+  }
+  function focusStop(k) {
+    if (!journey) return;
+    journey.focus = k;
+    manual = false; emit("manual", false);
+    emit("journey", journey);
+  }
   function back() {
+    if (journey && !view.cluster) { journey.focus != null ? focusStop(null) : setJourney(null); return; }
     if (view.fact != null) { view.fact = null; emit("select", {kind: "group", cluster: byId.get(view.cluster), gi: view.group}); }
     else if (view.group != null) open(view.cluster);
     else if (view.cluster) { setView(null); emit("select", {kind: "cluster", cluster: byId.get(view.selected), opened: false}); }
@@ -739,12 +905,15 @@ export function createStage(canvas, scene, model, layout) {
   return {
     start(fn) { onFrame = fn; raf = requestAnimationFrame(draw); },
     // Fold everything and hand the camera back to the tour.
-    follow() { view.fact = null; view.selected = null; setView(null); emit("select", null); },
+    follow() { if (journey) setJourney(null); view.fact = null; view.selected = null; setView(null); emit("select", null); },
     // Hand the camera back to whoever drives it (tour or overview presets) without folding.
     release() { manual = false; emit("manual", false); },
     open,
     select,
     back,
+    setJourney,
+    focusStop,
+    get journey() { return journey; },
     selectFact(fid) { view.fact = fid; },
     get view() { return view; },
     get manual() { return manual; },
@@ -754,6 +923,10 @@ export function createStage(canvas, scene, model, layout) {
   };
 }
 
+const clip = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t;
+const stopTitle = c => c.kind === "core" ? "DSL record" : clusterTitle(c);
+const camFrame = g => ({r: [Math.cos(g.yaw), 0, -Math.sin(g.yaw)],
+                        u: [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)]});
 export const callTag = c => `${c.phase === "MAP" ? "M" : "Q"}${String(c.event).padStart(2, "0")}`;
 export const clusterTitle = c => c.kind === "query" ? `${callTag(c)} ${shortSpec(c.error ? c.label : c.intent || c.label)}` : c.label;
 const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 34 ? t.slice(0, 33) + "…" : t; };

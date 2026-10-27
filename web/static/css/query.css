@@ -198,8 +198,6 @@ body.page-query .app { padding: 0; }
 
 /* Room on the left for the phase ruler the canvas draws */
 .qg-legend { left: 6.4rem; top: 9.4rem; }
-.qg-legend li[data-filter-phase] { cursor: pointer; }
-.qg-legend li[data-filter-phase]:hover { color: var(--text-hi); }
 /* The three ways into a fact's journey, drawn as buttons so they read as actions. */
 .qg-sub { margin: .55rem 0 .4rem; color: var(--qg-label); font-size: .82rem; line-height: 1.4; }
 .qg-follows { display: grid; gap: .35rem; }
@@ -219,7 +217,19 @@ body.page-query .app { padding: 0; }
 .qg-follows button.only { border-color: var(--qg-focus); box-shadow: inset 3px 0 0 var(--qg-focus); }
 .qg-follows button:disabled { opacity: .4; cursor: default; border-style: dashed; background: none; }
 .qg-follows button:disabled b { visibility: hidden; }
-.qg-legend li.off { opacity: .35; text-decoration: line-through var(--qg-line-hi); }
+/* Phase toggles: a pill per phase, its swatch filled while the phase's clouds show and hollow
+   once they are hidden, with the number of clouds it holds. */
+.qg-phase-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
+.qg-phase-toggles button {
+  display: flex; align-items: center; gap: .5rem; padding: .4rem .5rem; border: 1px solid var(--qg-line-hi); border-radius: 2px;
+  background: var(--tint-hover); color: var(--text-hi); font-family: var(--mono); font-size: .82rem; text-align: left; cursor: pointer;
+}
+.qg-phase-toggles i { flex: none; width: .7rem; height: .7rem; border: 1px solid var(--ph); background: var(--ph); }
+.qg-phase-toggles span { flex: 1; }
+.qg-phase-toggles em { font-style: normal; font-size: .76rem; color: var(--qg-label); }
+.qg-phase-toggles button:hover { border-color: var(--ph); background: color-mix(in srgb, var(--ph) 12%, transparent); }
+.qg-phase-toggles button[aria-pressed="false"] { border-style: dashed; background: none; color: var(--qg-label-dim); }
+.qg-phase-toggles button[aria-pressed="false"] i { background: none; }
 
 .qg-open { margin: .45rem 0 .2rem; padding: .3rem .6rem; border: 1px solid var(--qg-line-hi); border-radius: 2px; background: none; color: var(--qg-label); font-family: var(--mono); font-size: .83rem; cursor: pointer; }
 .qg-open:hover { border-color: var(--qg-focus); color: var(--qg-focus); }

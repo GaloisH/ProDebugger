@@ -232,13 +232,14 @@ function template(scene, model, ref, roles) {
       <ul class="qg-key qg-ties">
         <li><i class="k-hub"></i>entity a fact names</li>
         <li><i class="k-thread"></i>same state, next step</li>
-      </ul>
-      <h2>Clouds by phase</h2>
-      <ul class="qg-key">
-        ${["PARSE", "MAP", "ROUTE", "TRACE", "SUBMIT"].filter(ph => model.clusters.some(c => c.phaseKey === ph)).map(ph => `<li data-phase="${ph}" data-filter-phase="${ph}" title="${esc(`${PHASE_NOTE[ph]} · click to hide or show`)}"><i class="k-cloud"></i>${ph.toLowerCase()}</li>`).join("")}
         <li><i class="k-dot"></i>pulled from the record</li>
         <li><i class="k-line"></i>leads to</li>
       </ul>
+      <h2>Show clouds by phase</h2>
+      <p class="qg-sub">Click a phase to hide or show its clouds:</p>
+      <div class="qg-phase-toggles">
+        ${["PARSE", "MAP", "ROUTE", "TRACE", "SUBMIT"].map(ph => [ph, model.clusters.filter(c => c.phaseKey === ph).length]).filter(([, n]) => n).map(([ph, n]) => `<button data-phase="${ph}" data-filter-phase="${ph}" aria-pressed="true" title="${esc(`${PHASE_NOTE[ph]} · click to hide or show`)}"><i></i><span>${ph.toLowerCase()}</span><em>${n}</em></button>`).join("")}
+      </div>
       </div>
     </aside>
     <aside class="qg-inspect is-collapsed" hidden>
@@ -507,7 +508,7 @@ function bindUi(root, scene, model, stage, roles) {
       this.syncFollow();
     },
     setFilter(filter) {
-      root.querySelectorAll("[data-filter-phase]").forEach(li => li.classList.toggle("off", filter.phases.has(li.dataset.filterPhase)));
+      root.querySelectorAll("[data-filter-phase]").forEach(b => b.setAttribute("aria-pressed", String(!filter.phases.has(b.dataset.filterPhase))));
     },
     get journeyRole() { return journeyRole; },
     openPane(name) { setPane(name, true); },

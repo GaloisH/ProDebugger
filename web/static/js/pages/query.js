@@ -5,7 +5,7 @@ import {esc, short, loader} from "../util.js";
 import {caseHref, queryHref} from "../routes.js";
 import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js";
 import {agentWords} from "../query/narrate.js";
-import {buildClusters, chainPath, factLabel, journeyOf, roleFacts} from "../query/clusters.js";
+import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} from "../query/clusters.js";
 import {layoutClusters, TIERS} from "../query/layout.js";
 import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
@@ -52,7 +52,7 @@ export function mountQuery(app, route) {
     const frameAt = createTour(scene, model, layout);
     const last = scene.events.length - 1;
     // Tour plays the calls in order; Overview shows every cloud at once for free exploration.
-    const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null,
+    const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
                    filter: {phases: new Set()}};
     const ui = bindUi(root, scene, model, stage, roles);
     ui.setEvent(state.i);
@@ -68,7 +68,7 @@ export function mountQuery(app, route) {
       }
       if (!overview) ui.setProgress(state.i, state.p);
       const out = overview ? frameAt(last, 1) : frameAt(state.i, state.p);
-      Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, filter: state.filter, labelAll: overview});
+      Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: state.phase, filter: state.filter, labelAll: overview});
       if (overview) { out.frame.focus = new Set(); out.camera = OVERVIEW_CAM[state.view]; }
       return out;
     });
@@ -79,6 +79,7 @@ export function mountQuery(app, route) {
       stage.follow();
       stage.release();
       state.chain = null;
+      setPhase(null);
       ui.setMode(mode, state.view);
       if (mode === "overview") setPlaying(false);
       else { go(0); setPlaying(true); }
@@ -96,10 +97,25 @@ export function mountQuery(app, route) {
     // In Overview the timeline and the phase bar pick a cloud instead of moving the playhead.
     const pick = i => stage.select(scene.events[i].cluster || "core");
     ui.on("seek", i => state.mode === "overview" ? pick(i) : go(i, 0.5));
+    // In Overview a phase button focuses that phase's clouds instead; a second click lets go.
+    const setPhase = ph => {
+      state.phase = ph ? phaseFocus(model, ph) : null;
+      ui.setPhase(state.phase);
+    };
     ui.on("phase", ph => {
+      if (state.mode === "overview") {
+        const again = state.phase?.phase === ph;
+        stage.setJourney(null);
+        stage.select(null);
+        stage.release();
+        setPhase(again ? null : ph);
+        return;
+      }
       const i = scene.events.findIndex(e => e.phase === ph);
-      if (i >= 0) state.mode === "overview" ? pick(i) : go(i);
+      if (i >= 0) go(i);
     });
+    ui.on("endPhase", () => setPhase(null));
+    stage.on("back", () => state.phase && setPhase(null));
     ui.on("mode", setMode);
     ui.on("view", v => { state.view = v; stage.release(); ui.setMode(state.mode, v); });
     ui.on("filterPhase", ph => { state.filter.phases.has(ph) ? state.filter.phases.delete(ph) : state.filter.phases.add(ph); ui.setFilter(state.filter); });
@@ -107,6 +123,7 @@ export function mountQuery(app, route) {
     // needs every cloud on screen, so the tour gives way to the overview first.
     const follow = (role, fid) => {
       if (state.mode !== "overview") setMode("overview");
+      setPhase(null);
       stage.setJourney(journeyOf(scene, model, fid ?? roles.byRole.get(role)[0]));
       ui.showJourney(role);
     };
@@ -119,7 +136,7 @@ export function mountQuery(app, route) {
     ui.on("follow", () => { stage.follow(); stage.release(); });
     ui.on("jump", i => { stage.follow(); go(i, 0.5); setPlaying(false); });
     stage.on("select", sel => {
-      if (sel) setPlaying(false);
+      if (sel) { setPlaying(false); if (state.phase) { state.phase = null; ui.setPhase(null, true); } }
       const id = sel?.cluster && sel.cluster.id !== "core" ? sel.cluster.id : null;
       if (id !== state.chain?.id) state.chainAll = false;
       state.chain = id ? chainPath(model, id, state.chainAll) : null;
@@ -312,6 +329,9 @@ function bindUi(root, scene, model, stage, roles) {
     const stop = e.target.closest("[data-stop]");
     if (stop) { const k = Number(stop.dataset.stop); stage.focusStop(stage.journey?.focus === k ? null : k); }
     if (e.target.closest("[data-end-journey]")) stage.setJourney(null);
+    if (e.target.closest("[data-end-phase]")) handlers.endPhase?.();
+    const pick = e.target.closest("[data-select]");
+    if (pick) stage.select(pick.dataset.select);
     if (e.target.closest("[data-chain-all]")) handlers.chainAll?.();
     const tick = e.target.closest(".qg-tick");
     if (tick) handlers.seek?.(Number(tick.dataset.i));
@@ -388,6 +408,17 @@ function bindUi(root, scene, model, stage, roles) {
           ${e.link.title ? `<span>${esc(e.link.title)}</span>` : ""}${e.link.detail ? `<em>${esc(e.link.detail)}</em>` : ""}</div></li>
         ${extraNote(e.to)}`).join("")}
       </ol>${chain.all ? `<p class="qg-muted">Showing every query that fed a window · <button class="qg-link" data-chain-all>fold</button></p>` : ""}`;
+  }
+
+  function showPhase(focus) {
+    const ph = focus.phase, list = [...focus.members].map(id => model.byId.get(id));
+    inspect.hidden = false;
+    setPane("inspect", true);
+    panelBody.innerHTML = `
+      <p class="qg-kind"><span class="qg-chip" data-phase="${esc(ph)}">${esc(ph)}</span>phase · <button class="qg-link" data-end-phase>close</button></p>
+      <h3>${esc(PHASE_NOTE[ph])}</h3><p class="qg-muted">${list.length} cloud${list.length === 1 ? "" : "s"} · ${focus.edges.length} links in or out</p>
+      <ul class="qg-rows">${list.map(c => `<li><button data-select="${esc(c.id)}"><span>${esc(clusterTitle(c))}</span><em>${esc(c.detail)}</em></button></li>`).join("")}</ul>
+      <p class="qg-hint">Click a cloud to light its whole chain; Esc or the phase button again lets go.</p>`;
   }
 
   function showGroup(c, gi) {
@@ -513,6 +544,14 @@ function bindUi(root, scene, model, stage, roles) {
     get journeyRole() { return journeyRole; },
     openPane(name) { setPane(name, true); },
     setChain(path) { chain = path; },
+    // The phase in focus: its button pressed, and its clouds listed in the panel (quiet keeps the
+    // panel as it is, for a pick that replaces it anyway).
+    setPhase(focus, quiet = false) {
+      root.querySelectorAll(".qg-phases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.phase === focus?.phase)));
+      if (quiet) return;
+      if (focus) showPhase(focus);
+      else this.inspect(null);
+    },
     showJourney(role) {
       journeyRole = role;
       this.journey(stage.journey);

@@ -40,7 +40,7 @@ export function createStage(canvas, scene, model, layout) {
   let journey = null;
   let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
-  const listeners = {hover: [], select: [], manual: [], view: [], journey: []};
+  const listeners = {hover: [], select: [], manual: [], view: [], journey: [], back: []};
   const emit = (k, v) => listeners[k].forEach(fn => fn(v));
 
   // Point instances per cloud; a cloud's points start at the core and travel out to it.
@@ -193,7 +193,7 @@ export function createStage(canvas, scene, model, layout) {
   function sizeOf(c) {
     if (c.kind === "core" || c.kind === "candidate" || c.kind === "root" || !backbone.size) return 1;
     const looked = backbone.has(c.id) || frame.focus.has(c.id) || view.selected === c.id || view.cluster === c.id
-      || hover?.cluster?.id === c.id || frame.chain?.has(c.id) || journey?.stops.some(st => st.id === c.id);
+      || hover?.cluster?.id === c.id || frame.chain?.has(c.id) || frame.phase?.near.has(c.id) || journey?.stops.some(st => st.id === c.id);
     return looked ? 1 : SIDE_SCALE;
   }
   function targetOf(c, p) {
@@ -407,6 +407,12 @@ export function createStage(canvas, scene, model, layout) {
     const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
     // Cloud names lead out to the right, so the right side keeps more room.
     return fitPoints(g, [...frame.chain].map(id => layout.pos.get(id)).filter(Boolean), wide => wide ? [60, 120] : [120, 60], 3, 180);
+  }
+  // A phase in focus frames only its own clouds; the clouds one link away may run off the edge.
+  function phaseGoal() {
+    const base = tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+    const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
+    return fitPoints(g, [...frame.phase.members].map(id => layout.pos.get(id)).filter(Boolean), wide => wide ? [60, 120] : [120, 60], 3, 180);
   }
   // The camera that fits a set of world points into the canvas the HUD leaves free, seen from
   // the angle g; room(wide) says how many pixels to keep for labels across and down.
@@ -801,7 +807,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     B = basis();
     if (!manual) {
-      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourShot(tourGoal);
+      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.phase?.members.size ? phaseGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourShot(tourGoal);
       const k = 1 - Math.exp(-dt * 2.4);
       if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
       if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;
@@ -839,7 +845,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     // The current floor: the selected cloud's, else the hovered one's, else the tour's focus.
     const tierOf = id => id ? byId.get(id)?.tier : undefined;
-    const current = (journey?.focus != null ? tierOf(journey.stops[journey.focus].id) : null) ?? tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
+    const current = (journey?.focus != null ? tierOf(journey.stops[journey.focus].id) : null) ?? tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.phase?.members.size ? tierOf([...frame.phase.members][0]) : null) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
     for (const t of floors) {
       const members = shown.filter(c => c.tier === t.tier);
       const active = current === t.tier;
@@ -858,6 +864,15 @@ export function createStage(canvas, scene, model, layout) {
       if (hiddenPhase?.has(byId.get(l.from)?.phaseKey)) continue;
       // Under a journey the links only hint at the tower; the journey line carries the story.
       if (journey) { if (l.from !== "core") { stroke(colors["line-hi"], 0.14, 1); line3(layout.pos.get(l.from), layout.pos.get(c.id)); } continue; }
+      // A phase in focus keeps only the links into or out of its clouds, each in full colour.
+      if (frame.phase) {
+        const ph = frame.phase, on = ph.members.has(c.id) || ph.members.has(l.from), over = hoverId === c.id || hoverId === l.from;
+        if (!on || (l.minor && !over)) continue;
+        stroke(phaseColor(c), l.from === "core" ? 0.5 : 0.85, 1.2, l.from === "core" ? [1, 4] : l.minor ? [3, 4] : null);
+        line3(layout.pos.get(l.from), layout.pos.get(c.id));
+        if ((over || hover?.kind === "edge" && hover.link === l) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color: phaseColor(c), hot: hover?.link === l});
+        continue;
+      }
       const inChain = frame.chain && frame.chain.has(c.id) && frame.chain.has(l.from);
       const hot = inChain || (!frame.chain && frame.focus.has(c.id)) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
       const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
@@ -884,10 +899,11 @@ export function createStage(canvas, scene, model, layout) {
       const R = layout.radius.get(c.id);
       const focus = frame.focus.has(c.id);
       const isOpen = open?.id === c.id;
-      const outside = frame.chain && !frame.chain.has(c.id);
-      const lead = frame.labelAll && !frame.chain && backbone.has(c.id) && c.kind !== "core";
+      const outside = (frame.chain && !frame.chain.has(c.id)) || (frame.phase && !frame.phase.near.has(c.id));
+      const inPhase = frame.phase?.members.has(c.id);
+      const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id) && c.kind !== "core";
       const onWay = journey && journey.stops.some(s => s.id === c.id);
-      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead ? 1 : c.kind === "core" ? 0.5 : 0.6)
+      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead || inPhase ? 1 : c.kind === "core" ? 0.5 : 0.6)
         * appear * (pc && !isOpen ? fog(pc.z) : 1);
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
@@ -1000,7 +1016,8 @@ export function createStage(canvas, scene, model, layout) {
       const selected = view.selected === c.id;
       if (journey && !hot) continue;
       if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubsLater.push(c);
-      const outside = frame.chain && !frame.chain.has(c.id);
+      const outside = (frame.chain && !frame.chain.has(c.id)) || (frame.phase && !frame.phase.near.has(c.id));
+      const inPhase = frame.phase?.members.has(c.id);
       // The hovered cloud answers the pointer: a faint disc in its phase colour, brackets pushed out.
       if (hot) {
         ctx.globalAlpha = 0.12;
@@ -1009,14 +1026,14 @@ export function createStage(canvas, scene, model, layout) {
         brackets(pc.x, pc.y, sr + 7, phaseColor(c), 1);
       } else if (focus || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
       if (outside && !hot) continue;
-      const lead = frame.labelAll && !frame.chain && backbone.has(c.id);
-      const quietAll = frame.labelAll && !frame.chain && backbone.size;
-      const named = quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || (frame.chain && frame.chain.has(c.id));
+      const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id);
+      const quietAll = frame.labelAll && !frame.chain && !frame.phase && backbone.size;
+      const named = quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
       if (!named && quietAll) continue;
       if (named) {
         // In the overview the main chain reads down the right; its tier-mates take the left.
-        const side = !frame.labelAll || frame.chain ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
-        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || c.kind === "root" ? phaseColor(c) : colors.label, hot ? 1 : fade * Math.min(1, alpha / 0.6), side, hot ? clickSays(c) : null);
+        const side = !frame.labelAll || frame.chain || frame.phase ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
+        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || inPhase || c.kind === "root" ? phaseColor(c) : colors.label, hot ? 1 : fade * Math.min(1, alpha / 0.6), side, hot ? clickSays(c) : null);
       } else {
         // Unnamed queries keep only their call tag under the cloud; hover names them.
         ctx.globalAlpha = 0.9 * fade * alpha;
@@ -1119,6 +1136,7 @@ export function createStage(canvas, scene, model, layout) {
     else if (view.group != null) open(view.cluster);
     else if (view.cluster) { setView(null); emit("select", {kind: "cluster", cluster: byId.get(view.selected), opened: false}); }
     else if (view.selected) { view.selected = null; emit("select", null); }
+    else emit("back");
   }
   const onWheel = e => { e.preventDefault(); takeOver(); cam.dist = Math.max(5, Math.min(110, cam.dist * Math.exp(e.deltaY * 0.001))); };
   const onLeave = () => { hover = null; emit("hover", null); };

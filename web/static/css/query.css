@@ -36,6 +36,7 @@ body.page-query .app { padding: 0; }
 .qg-phases button.done { color: var(--qg-label); }
 .qg-phases button.done { color: color-mix(in srgb, var(--ph) 60%, var(--qg-label-dim)); }
 .qg-phases button.now { color: var(--ph); border-bottom-color: var(--ph); }
+.qg-phases button[aria-pressed="true"] { color: var(--qg-void); background: var(--ph); border-bottom-color: var(--ph); }
 
 [data-phase="PARSE"] { --ph: var(--parse); } [data-phase="MAP"] { --ph: var(--map); } [data-phase="ROUTE"] { --ph: var(--route); }
 [data-phase="MANAGER"] { --ph: var(--manager); } [data-phase="TRACE"] { --ph: var(--trace); } [data-phase="SUBMIT"] { --ph: var(--submit); }

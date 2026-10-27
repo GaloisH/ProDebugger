@@ -186,6 +186,19 @@ export function chainPath(model, id, all = false) {
   return {id, chain, edges, extra, all};
 }
 
+// A phase in focus: the clouds it made (for MANAGER, the lanes it assigned), the clouds one
+// link away, and the links into or out of its clouds, minor feeds left out.
+export function phaseFocus({clusters}, phase) {
+  const members = new Set(clusters.filter(c => phase === "MANAGER" ? c.kind === "lane" : c.phaseKey === phase).map(c => c.id));
+  const near = new Set(members), edges = [];
+  for (const c of clusters) for (const l of c.links) {
+    if (l.minor || !(members.has(c.id) || members.has(l.from))) continue;
+    edges.push({from: l.from, to: c.id, link: l});
+    near.add(l.from); near.add(c.id);
+  }
+  return {phase, members, near, edges};
+}
+
 const countBy = (list, key) => {
   const m = new Map();
   for (const x of list) m.set(key(x), (m.get(key(x)) || 0) + 1);

@@ -101,6 +101,13 @@ export function buildClusters(scene) {
       });
     }
   }
+  // A window fed by several queries keeps the one that gave it most clues as its source; the
+  // others are minor feeds, drawn only while the window or that query is pointed at or picked.
+  for (const c of clusters) if (c.kind === "window") {
+    const feeds = c.links.filter(l => byId.get(l.from)?.kind === "query");
+    const keep = feeds.reduce((a, b) => b.weight > a.weight ? b : a, feeds[0]);
+    feeds.forEach(l => { l.minor = l !== keep; });
+  }
   const PHASE = {core: "PARSE", window: "ROUTE", lane: "TRACE", candidate: "TRACE", root: "SUBMIT"};
   for (const c of clusters) c.phaseKey = c.kind === "query" ? c.phase : PHASE[c.kind];
 

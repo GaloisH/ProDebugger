@@ -861,13 +861,14 @@ export function createStage(canvas, scene, model, layout) {
       const inChain = frame.chain && frame.chain.has(c.id) && frame.chain.has(l.from);
       const hot = inChain || (!frame.chain && frame.focus.has(c.id)) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
       const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
+      if (l.minor && !hot && !hovered && view.selected !== c.id && view.selected !== l.from) continue;
       const spoke = l.from === "core";
       const color = phaseColor(c);
       const quiet = frame.chain && !inChain ? 0.25 : 1;
       const main = frame.labelAll && !frame.chain && !open && backbone.has(c.id) && backbone.has(l.from);
       if (spoke && !(main || hot || hovered || view.selected === c.id || (!backbone.size && !frame.labelAll))) continue;
       if (main) stroke(color, 0.9, 1.6);
-      else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : null);
+      else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : l.minor ? [3, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
       const edgeHot = hover?.kind === "edge" && hover.link === l;
       // The overview's main chain keeps its badges, so the pointer can reach them from anywhere.

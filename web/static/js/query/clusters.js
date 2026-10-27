@@ -287,6 +287,7 @@ export function journeyOf(scene, {clusters, byId}, fid) {
     else if (c.kind === "root") outcome = `chosen as root cause${c.ref.rule?.id ? ` by rule ${c.ref.rule.id}` : ""}`;
     stops.push({id: c.id, kind: c.kind, event: at(c), phase: c.phaseKey, outcome, ...plain});
   }
+  const way = branchStops(stops, byId);
 
   // Why it stops: judged at the highest tier it reached; in parallel lanes, by all of them.
   const first = clouds[0], top = Math.max(-1, ...clouds.map(c => c.tier)), last = clouds.findLast(c => c.tier === top);
@@ -313,8 +314,50 @@ export function journeyOf(scene, {clusters, byId}, fid) {
     end = root ? `SUBMIT chose S${root.step} ${root.module} instead` : "SUBMIT named no root";
     why = root ? {kind: "otherRoot", root} : {kind: "noRoot"};
   }
-  return {fid, fact: f, stops, start, end, name: factName(f), words: agentWords(f),
+  return {fid, fact: f, stops: way, start, end, endAt: last ? way.findIndex(s => s.id === last.id) : 0, name: factName(f), words: agentWords(f),
           startSay: first ? START_SAY[first.kind] || null : null, endSay: why ? sayEnd(why) : null};
+}
+
+// TRACE runs its lanes side by side, so a journey forks there instead of zigzagging between
+// tiers in call order: every lane leaves the window it was assigned (else the last stop before
+// TRACE), each lane's candidates follow that lane, and the root follows the candidate it chose
+// (else every branch's end). The other stops follow one another in call order. Stops come back
+// branch by branch, each with the stops it follows (`from`, by index), its number (4a, 5a, …)
+// and whether nothing follows it (`deadEnd`).
+function branchStops(stops, byId) {
+  const isTrace = s => s.kind === "lane" || s.kind === "candidate";
+  const t0 = Math.min(Infinity, ...stops.filter(isTrace).map(s => s.event));
+  const before = stops.filter(s => !isTrace(s) && s.event < t0), after = stops.filter(s => !isTrace(s) && s.event >= t0);
+  const branches = new Map();
+  for (const s of stops.filter(isTrace)) {
+    const key = s.kind === "lane" ? s.id : byId.get(s.id).ref.lane;
+    if (!branches.has(key)) branches.set(key, []);
+    branches.get(key).push(s);
+  }
+  const out = [], index = new Map();
+  const put = (s, from, num, branch = null) => { index.set(s.id, out.length); out.push({...s, from, num, branch}); };
+  before.forEach((s, k) => put(s, k ? [k - 1] : [], String(k + 1)));
+  const fork = before.length - 1, letters = branches.size > 1, tails = [];
+  let depth = before.length;
+  [...branches.values()].forEach((list, b) => {
+    const tag = letters ? String.fromCharCode(97 + b) : "";
+    const lane = list.find(s => s.kind === "lane"), cands = list.filter(s => s.kind === "candidate");
+    let n = before.length + 1;
+    if (lane) put(lane, [index.get(`w:${byId.get(lane.id).ref.anchor}`) ?? fork], `${n++}${tag}`, tag || null);
+    const at = lane ? [index.get(lane.id)] : [fork];
+    cands.forEach((s, i) => put(s, at, `${n}${tag}${cands.length > 1 ? `.${i + 1}` : ""}`, tag || null));
+    if (cands.length) n++;
+    depth = Math.max(depth, n - 1);
+    tails.push(...(cands.length ? cands : [lane]).map(s => index.get(s.id)));
+  });
+  after.forEach((s, k) => {
+    const prev = k ? [out.length - 1] : s.kind === "root" && index.has(byId.get("root").ref.candidate)
+      ? [index.get(byId.get("root").ref.candidate)] : tails.length ? tails : [out.length - 1];
+    put(s, prev, String(depth + k + 1));
+  });
+  const fed = new Set(out.flatMap(s => s.from));
+  out.forEach((s, k) => { s.deadEnd = k > 0 && !fed.has(k) && s.kind !== "root"; });
+  return out;
 }
 
 export const factLabel = f => `${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 46)}  @S${f.t}`;

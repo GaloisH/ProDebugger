@@ -248,7 +248,7 @@ function template(scene, model, ref, roles) {
     <div class="qg-tip" hidden></div>
     <div class="qg-hovercard" hidden></div>
     <footer class="qg-foot">
-      <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p><p class="qg-cap-next"></p></div>
+      <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p><p class="qg-cap-next"></p></div><p class="qg-cap-full"></p>
         ${cta ? `<button class="qg-cta" data-act="cta" title="Draw this fact's way from the record to the verdict">▶ Follow the ${esc(cta.name)}</button>` : ""}</div>
       <div class="qg-bar">
         <button class="qg-btn" data-act="prev" title="Previous call (←)" aria-label="Previous call">‹</button>
@@ -278,7 +278,14 @@ function bindUi(root, scene, model, stage, roles) {
 
   // The side panels stop above the footer, whose height changes with the caption's length.
   const foot = $(".qg-foot");
-  new ResizeObserver(() => root.style.setProperty("--qg-foot-h", `${foot.offsetHeight}px`)).observe(foot);
+  new ResizeObserver(() => { root.style.setProperty("--qg-foot-h", `${foot.offsetHeight}px`); clampCaption(); }).observe(foot);
+  // The caption text stops at two lines; when it is cut, hovering the caption shows the whole
+  // text in a card above it, so the footer (and the stage framed against it) keeps its height.
+  function clampCaption() {
+    const text = $(".qg-cap-text");
+    $(".qg-cap-full").textContent = text.textContent;
+    $(".qg-caption").classList.toggle("is-clamped", text.scrollHeight > text.clientHeight + 1);
+  }
   $(".qg-case")?.addEventListener("change", e => { if (e.target.value.startsWith("#/")) location.hash = e.target.value; });
   panelBody.addEventListener("mouseover", e => stage.highlightChainEdge(e.target.closest("[data-chain-edge]") ? Number(e.target.closest("[data-chain-edge]").dataset.chainEdge) : null));
   panelBody.addEventListener("mouseleave", () => stage.highlightChainEdge(null));
@@ -463,6 +470,7 @@ function bindUi(root, scene, model, stage, roles) {
       const next = scene.events[i + 1];
       $(".qg-cap-next").textContent = next ? `Next · ${next.phase} · ${next.title || ""}` : "End of the tour · switch to Overview to explore every cloud";
       $(".qg-caption").dataset.phase = ev.phase;
+      clampCaption();
       root.classList.toggle("at-end", !next);
       $(".qg-count").textContent = `${String(i + 1).padStart(2, "0")} / ${scene.events.length}`;
       if (!stage.view.cluster) showEvent(i);
@@ -492,6 +500,7 @@ function bindUi(root, scene, model, stage, roles) {
         $(".qg-cap-text").textContent = "Every access at once. Click a cloud to light the chain it belongs to, click it again to open it; the timeline and phase bar pick clouds too.";
         $(".qg-cap-next").textContent = "";
         $(".qg-caption").dataset.phase = "SUBMIT";
+        clampCaption();
         $(".qg-count").textContent = `${scene.events.length} calls`;
         showCluster(model.byId.get("root") || model.byId.get("core"));
       } else this.setEvent(current);

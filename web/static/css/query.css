@@ -148,6 +148,14 @@ body.page-query .app { padding: 0; }
 .qg-caption .qg-chip { margin-top: .1rem; }
 .qg-caption strong { display: block; font-family: var(--mono); font-size: .95rem; font-weight: 500; color: var(--text-hi); word-break: break-word; }
 .qg-caption p { margin: .2rem 0 0; font-size: 1.12rem; line-height: 1.45; }
+.qg-caption { position: relative; }
+.qg-cap-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.qg-caption .qg-cap-full {
+  display: none; position: absolute; left: -3px; right: 0; bottom: calc(100% + .4rem); margin: 0; padding: .65rem 1rem;
+  border-left: 3px solid var(--ph, var(--qg-line-hi)); background: var(--qg-panel); color: var(--text); pointer-events: none;
+}
+.qg-caption.is-clamped:hover .qg-cap-full { display: block; }
+.qg-caption.is-clamped .qg-cap-text { cursor: help; }
 .qg-bar { display: flex; align-items: center; gap: .4rem; width: 100%; padding: .35rem .5rem; }
 .qg-btn { flex: none; min-width: 2.2rem; height: 2.2rem; padding: 0 .5rem; border: 1px solid var(--qg-line); border-radius: 2px; background: none; color: var(--qg-label); font-size: .98rem; cursor: pointer; }
 .qg-btn:hover { border-color: var(--qg-line-hi); color: var(--text-hi); }

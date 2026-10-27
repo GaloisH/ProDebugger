@@ -19,6 +19,7 @@ const FACT_GAP = 0.5;     // world units between fact rows
 const POINT_DIM = 0.32;   // brightness of plain points in a cloud nobody is looking at
 const POINT_LIFT = 0.65;  // ... in the focused or selected cloud
 const SIDE_SCALE = 0.45;  // size of a cloud off the main chain while nobody looks at it
+const TOUR_NEAR = 20;     // closest a tour shot comes when it fits the clouds shown so far
 const CORE_POINTS = 140;  // points the folded record cloud keeps (plus every role point)
 const LABEL_ROOM = 300;   // px kept free each side of an upright journey for its stop labels
 const LABEL_ROW = 110;    // px kept free above and below a journey lying across
@@ -320,12 +321,6 @@ export function createStage(canvas, scene, model, layout) {
 
   // How much of the canvas the HUD covers on each side: header, footer, the open panels, and
   // the phase ruler (left when upright, along the bottom when on its side).
-  // Only where the tower keeps at least 640px beside it; a narrower canvas gives the room back.
-  const reserve = (page, left) => {
-    const card = page.querySelector(".qg-hovercard");
-    const w = card ? parseFloat(getComputedStyle(card).width) + 32 : 0;
-    return W - left - w >= 640 ? w : 0;
-  };
   function hudInsets() {
     const box = canvas.getBoundingClientRect(), page = canvas.closest(".qg");
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
@@ -335,44 +330,50 @@ export function createStage(canvas, scene, model, layout) {
     const left = Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0);
     return {
       left,
-      // The overview keeps the details panel's width free even while it is folded, so neither the
-      // panel nor an edge's card (laid over its place) covers the verdict end of the tower.
-      right: Math.max(16, panel ? box.right - panel.left + 12 : page?.classList.contains("is-overview") ? reserve(page, left) : 0),
+      // Only an open details panel takes room; folded, the tower spreads under where it was.
+      right: Math.max(16, panel ? box.right - panel.left + 12 : 0),
       top: head ? Math.max(0, head.bottom - box.top) : 0,
       bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot ? 36 : 0),
     };
   }
-  // A preset marked fit frames the whole cone in the canvas area the HUD leaves free: the
-  // distance fits the cone's length and width to that area in either orientation, and the
-  // target slides so the cone centres in it.
+  // A preset marked fit frames the clouds on screen (not the plates under them, which are much
+  // wider) in the canvas area the HUD leaves free, so a wide window fills with the tower.
   function fitGoal(g) {
     // Lying down, a low camera sees the cone from the side instead of down its length.
     if (rot && g.pitch < 0.6) g = {...g, pitch: g.pitch * 0.35};
-    const cp = Math.cos(g.pitch), sp = Math.abs(Math.sin(g.pitch));
-    const R = TIERS[0].plate, along = (layout.top + 2.5 - layout.bottom) * cp + 2 * R * sp, across = 2 * R;
-    const {left, right, top, bottom} = hudInsets();
-    const freeW = Math.max(240, W - left - right), freeH = Math.max(200, H - top - bottom);
-    const [needW, needH] = rot ? [along, across] : [across, along];
-    const focal = H / (2 * Math.tan(cam.fov / 2));
-    const dist = 1.08 * focal * Math.max(needW / freeW, needH / freeH);
-    const px = dist / focal;                    // world units per screen pixel at the target
-    const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
-    const frame = camFrame(g);
-    // Moving the target against a screen direction moves the picture along it.
-    const shift = add(scale(screenRight(frame), -ox), scale(screenDown(frame), -oy));
-    return perspectiveFit({...g, dist, target: add([0, (layout.top + layout.bottom) / 2 + 0.6, 0], shift)}, {left, right, top, bottom});
+    return fitClouds(g, clusters.filter(c => frame.visible.has(c.id)));
   }
-  // The estimate above is orthographic; in perspective the near end of the cone draws larger and
-  // can leave the free area. Project the plates' rims through the goal camera and correct the
-  // distance and the centre from what they really cover, twice.
-  function perspectiveFit(g, {left, right, top, bottom}) {
+  // A tour shot keeps its angle; where the clouds shown so far fit closer than its preset
+  // distance (a wide window, a folded panel), the camera comes in and centres them in the free
+  // area, but never closer than TOUR_NEAR so a lone cloud does not swell to fill the screen.
+  function tourShot(g) {
+    const fit = fitClouds({...g, yaw: g.yaw ?? cam.yaw}, clusters.filter(c => frame.visible.has(c.id)));
+    if (fit.dist >= g.dist) return g;
+    return {...g, dist: Math.max(fit.dist, Math.min(g.dist, TOUR_NEAR)), target: fit.target};
+  }
+  // Clouds fit by their rims across and down the screen, with room kept for their names (which
+  // lead out to the right) and the plates allowed to run past the edge.
+  function fitClouds(g, shown) {
+    if (!shown.length) return g;
+    const rims = f => {
+      const R = screenRight(f), D = screenDown(f);
+      return shown.flatMap(c => {
+        const p = layout.pos.get(c.id), r = layout.radius.get(c.id) * sizeOf(c);
+        return p ? [add(p, scale(R, r)), add(p, scale(R, -r)), add(p, scale(D, r)), add(p, scale(D, -r))] : [];
+      });
+    };
+    const ins = hudInsets();
+    const room = {left: ins.left + 40, right: ins.right + 120, top: ins.top + 28, bottom: ins.bottom + 28};
+    return perspectiveFit(fitPoints(g, rims(camFrame(g)), () => [160, 56]), room, rims);
+  }
+  // The first estimate is orthographic; in perspective the near clouds draw larger and can leave
+  // the free area. Project their rims through the goal camera and correct the distance and the
+  // centre from what they really cover, three times.
+  function perspectiveFit(g, {left, right, top, bottom}, rimsOf) {
     const keep = {...cam, target: [...cam.target]}, keepB = B;
-    const rims = TIERS.flatMap(t => Array.from({length: 24}, (_, i) => {
-      const a = i / 24 * Math.PI * 2;
-      return [t.plate * Math.cos(a), t.y, t.plate * Math.sin(a)];
-    }));
+    const rims = rimsOf(camFrame(g));
     const freeW = Math.max(240, W - left - right), freeH = Math.max(200, H - top - bottom);
-    for (let pass = 0; pass < 2; pass++) {
+    for (let pass = 0; pass < 3; pass++) {
       Object.assign(cam, g, {target: [...g.target]});
       B = basis();
       const ps = rims.map(project).filter(Boolean);
@@ -796,7 +797,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     B = basis();
     if (!manual) {
-      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourShot(tourGoal);
       const k = 1 - Math.exp(-dt * 2.4);
       if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
       if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;

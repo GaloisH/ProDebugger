@@ -423,7 +423,7 @@ function bindUi(root, scene, model, stage, roles) {
   function renderJourney(j) {
     const role = journeyRole;
     const fids = roles.byRole.get(role) || [];
-    const f = j.fact, last = j.stops.length - 1;
+    const f = j.fact;
     const stopTitle = s => s.kind === "core" ? "DSL record" : clusterTitle(model.byId.get(s.id));
     // Re-rendering on every focus change keeps the Details the reader opened.
     const opened = new Set([...panelBody.querySelectorAll("details[open][data-k]")].map(d => d.dataset.k));
@@ -440,12 +440,12 @@ function bindUi(root, scene, model, stage, roles) {
       </div>
       <ol class="qg-story">${j.stops.map((s, k) => `
         ${k === 1 && j.startSay ? `<li class="qg-note" title="${esc(j.start)}">↳ ${esc(j.startSay)}</li>` : ""}
-        <li data-phase="${esc(s.phase)}"${j.focus === k ? ` class="on"` : ""}>
-          <button data-stop="${k}"><b>${k + 1}</b><span class="qg-chip" data-phase="${esc(s.phase)}">${esc(s.phase)}</span>
+        <li data-phase="${esc(s.phase)}"${s.branch ? ` data-branch="${s.branch}"` : ""}${j.focus === k ? ` class="on"` : ""}>
+          <button data-stop="${k}"><b>${esc(s.num)}</b><span class="qg-chip" data-phase="${esc(s.phase)}">${esc(s.phase)}</span>
             <p>${esc(s.say)}</p>${s.quote ? `<blockquote>“${esc(s.quote)}”</blockquote>` : ""}</button>
           ${fold(k, [["where", stopTitle(s)], ...(s.kind === "core" ? [] : [["call", String(s.event).padStart(2, "0")]]), ["result", s.outcome]])}
         </li>
-        ${k === last && j.endSay ? `<li class="qg-note qg-end" title="${esc(j.end)}">⊣ ${esc(j.endSay)}</li>` : ""}`).join("")}
+        ${k === j.endAt && j.endSay ? `<li class="qg-note qg-end" title="${esc(j.end)}">⊣ ${esc(j.endSay)}</li>` : ""}`).join("")}
       </ol>
       <p class="qg-hint">Click a card or a numbered badge to fly to that stop; ← → step along the way, Esc steps back.</p>`;
     panelBody.querySelector(".qg-story li.on")?.scrollIntoView({block: "nearest"});

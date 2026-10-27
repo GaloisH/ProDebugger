@@ -1,6 +1,6 @@
 // Display helpers for DSL objects and debugger events.
-import {entityId} from "./model.js?v=edc30cc901";
-import {esc, short} from "../util.js?v=edc30cc901";
+import {entityId} from "./model.js?v=27bf1baa85";
+import {esc, short} from "../util.js?v=27bf1baa85";
 
 export function factText(f) {
   if (!f) return "";

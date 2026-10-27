@@ -1,8 +1,8 @@
 // Tool calls in the side panel: one summary line per call (what was asked → what came back),
 // expanding into the readable fields, with the raw arguments and result folded at the end.
 // Field names follow the debugger tools (span/check/state/view/…, route_cases, plan_trace, query_logs, assess).
-import {factChip} from "../case/format.js?v=edc30cc901";
-import {esc, raw, short} from "../util.js?v=edc30cc901";
+import {factChip} from "../case/format.js?v=27bf1baa85";
+import {esc, raw, short} from "../util.js?v=27bf1baa85";
 
 const S = t => `S${String(t).padStart(2, "0")}`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;

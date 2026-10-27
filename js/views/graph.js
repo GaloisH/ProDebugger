@@ -1,17 +1,17 @@
 // DSL Graph tab: a switcher of graph subviews, each with its own canvas, toolbar and inspector.
-import {createCanvas} from "../graph/engine.js?v=edc30cc901";
-import {esc} from "../util.js?v=edc30cc901";
+import {createCanvas} from "../graph/engine.js?v=27bf1baa85";
+import {esc} from "../util.js?v=27bf1baa85";
 
 const SUBVIEWS = [
-  {id: "facts", label: "Fact dependencies", hint: "Facts by step and side; edges follow basis.", load: () => import("../graph/facts.js?v=edc30cc901"),
+  {id: "facts", label: "Fact dependencies", hint: "Facts by step and side; edges follow basis.", load: () => import("../graph/facts.js?v=27bf1baa85"),
    count: m => m.dsl?.facts.length},
-  {id: "entities", label: "Entities & relations", hint: "World state at a chosen step.", load: () => import("../graph/entities.js?v=edc30cc901"),
+  {id: "entities", label: "Entities & relations", hint: "World state at a chosen step.", load: () => import("../graph/entities.js?v=27bf1baa85"),
    count: m => Object.keys(m.dsl?.entities || {}).length},
-  {id: "schema", label: "Schema", hint: "Kind hierarchy and relation signatures.", load: () => import("../graph/schema.js?v=edc30cc901"),
+  {id: "schema", label: "Schema", hint: "Kind hierarchy and relation signatures.", load: () => import("../graph/schema.js?v=27bf1baa85"),
    count: m => Object.keys(m.dsl?.kinds || {}).length},
-  {id: "goals", label: "Goals & requirements", hint: "Task → requirement → constraint → evidence.", load: () => import("../graph/goals.js?v=edc30cc901"),
+  {id: "goals", label: "Goals & requirements", hint: "Task → requirement → constraint → evidence.", load: () => import("../graph/goals.js?v=27bf1baa85"),
    count: m => m.dsl?.goals.length},
-  {id: "rules", label: "Rules → evidence → facts", hint: "Abstract rule evaluations and the facts they cite.", load: () => import("../graph/rules.js?v=edc30cc901"),
+  {id: "rules", label: "Rules → evidence → facts", hint: "Abstract rule evaluations and the facts they cite.", load: () => import("../graph/rules.js?v=27bf1baa85"),
    count: m => m.evaluations.length},
 ];
 

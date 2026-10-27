@@ -1,8 +1,8 @@
 // Shared inspector panels for graph subviews.
-import {entityId} from "../case/model.js?v=edc30cc901";
-import {EVAL_CLASS, factChip, factText, SIDE_CLASS} from "../case/format.js?v=edc30cc901";
-import {esc, pretty, short} from "../util.js?v=edc30cc901";
-import {callTitle} from "../views/process.js?v=edc30cc901";
+import {entityId} from "../case/model.js?v=27bf1baa85";
+import {EVAL_CLASS, factChip, factText, SIDE_CLASS} from "../case/format.js?v=27bf1baa85";
+import {esc, pretty, short} from "../util.js?v=27bf1baa85";
+import {callTitle} from "../views/process.js?v=27bf1baa85";
 
 export const entityChip = id => `<button class="entity-chip" data-entity="${esc(id)}">${esc(id)}</button>`;
 

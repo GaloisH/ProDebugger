@@ -1,13 +1,13 @@
 // Hash router: #/ is the home page; #/runs lists runs; #/case/<source>/<group>/<trajectory>/<tab>
 // opens the workbench; #/chat[/<group>/<trajectory>] opens the chat page.
-import {esc} from "./util.js?v=edc30cc901";
-import {parseRoute, runsHref} from "./routes.js?v=edc30cc901";
-import {mountHome} from "./pages/home.js?v=edc30cc901";
-import {mountRuns} from "./pages/runs.js?v=edc30cc901";
-import {mountChat} from "./pages/chat.js?v=edc30cc901";
-import {mountWorkbench} from "./pages/workbench.js?v=edc30cc901";
-import {mountQuery} from "./pages/query.js?v=edc30cc901";
-import {initTheme, setThemePage} from "./theme.js?v=edc30cc901";
+import {esc} from "./util.js?v=27bf1baa85";
+import {parseRoute, runsHref} from "./routes.js?v=27bf1baa85";
+import {mountHome} from "./pages/home.js?v=27bf1baa85";
+import {mountRuns} from "./pages/runs.js?v=27bf1baa85";
+import {mountChat} from "./pages/chat.js?v=27bf1baa85";
+import {mountWorkbench} from "./pages/workbench.js?v=27bf1baa85";
+import {mountQuery} from "./pages/query.js?v=27bf1baa85";
+import {initTheme, setThemePage} from "./theme.js?v=27bf1baa85";
 
 const app = document.getElementById("app");
 const crumbs = document.getElementById("crumbs");

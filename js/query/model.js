@@ -1,8 +1,8 @@
 // Builds the Query Graph scene from one run directory: the DSL record (facts, entities,
 // goals, rule evidence) plus the debugger's tool calls replayed as an event timeline.
 // Every event says which DSL nodes it touched, so the renderer only has to light them.
-import {getJSON, JsonlFollower} from "../api.js?v=edc30cc901";
-import {short} from "../util.js?v=edc30cc901";
+import {getJSON, JsonlFollower} from "../api.js?v=27bf1baa85";
+import {short} from "../util.js?v=27bf1baa85";
 
 export const SLOTS = ["obs", "mem", "refl", "plan", "act", "chk"];
 export const SLOT_LABEL = {obs: "observation", mem: "memory", refl: "reflection", plan: "plan", act: "action", chk: "check"};

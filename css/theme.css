@@ -67,7 +67,7 @@
   --manager: #d48fb6; --parse: #8d9aa8;
   /* Query graph (dark only): monochrome points and hairlines, one amber focus */
   --qg-void: #06080b; --qg-ink: #aab4be; --qg-ink-hi: #eef2f6; --qg-ink-dim: #56616c; --qg-line: #222c36; --qg-line-hi: #46535f;
-  --qg-focus: #e0b867; --qg-label: #b9c3cc; --qg-label-dim: #66737f; --qg-panel: #0a0e13;
+  --qg-focus: #e0b867; --qg-label: #c6cfd7; --qg-label-dim: #8592a0; --qg-panel: #0a0e13;
   --qg-issue: #4fc1bb; --qg-cand: #f0a35e;
   --sans: 'IBM Plex Sans', 'Segoe UI', 'Microsoft YaHei UI', Arial, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace;

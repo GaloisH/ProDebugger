@@ -1,6 +1,6 @@
 // Minimal SVG graph canvas: pan, wheel zoom, fit and focus.
 // Views hand it a positioned scene; it never computes layout itself.
-import {esc} from "../util.js?v=edc30cc901";
+import {esc} from "../util.js?v=27bf1baa85";
 
 const NS = "http://www.w3.org/2000/svg";
 

@@ -1,14 +1,15 @@
 // #/query[/<group>/<trajectory>]: the Query Graph. The DSL record is one dense core; every
 // debugger access (a ROUTE view, a window, a TRACE lane's SQL) is a point cloud on a tier
 // above it, ending in the root. Click a cloud to open it by entity, an entity to read its facts.
-import {esc, short, loader} from "../util.js?v=edc30cc901";
-import {caseHref, queryHref} from "../routes.js?v=edc30cc901";
-import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js?v=edc30cc901";
-import {agentWords} from "../query/narrate.js?v=edc30cc901";
-import {buildClusters, chainPath, factLabel, journeyOf, roleFacts} from "../query/clusters.js?v=edc30cc901";
-import {layoutClusters, TIERS} from "../query/layout.js?v=edc30cc901";
-import {createStage, clusterTitle} from "../query/stage.js?v=edc30cc901";
-import {createTour, eventDuration} from "../query/tour.js?v=edc30cc901";
+import {esc, short, loader} from "../util.js?v=27bf1baa85";
+import {caseHref, queryHref} from "../routes.js?v=27bf1baa85";
+import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js?v=27bf1baa85";
+import {agentWords} from "../query/narrate.js?v=27bf1baa85";
+import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} from "../query/clusters.js?v=27bf1baa85";
+import {layoutClusters, TIERS} from "../query/layout.js?v=27bf1baa85";
+import {createStage, clusterTitle} from "../query/stage.js?v=27bf1baa85";
+import {createTour, eventDuration} from "../query/tour.js?v=27bf1baa85";
+import {coachSeen, runCoach} from "../query/coach.js?v=27bf1baa85";
 
 const GROUP = "evidence-query-claims-n30-20261013";
 // Cases the page is tuned on (one window/lane, two windows/lanes, a large WebShop record), then
@@ -51,7 +52,7 @@ export function mountQuery(app, route) {
     const frameAt = createTour(scene, model, layout);
     const last = scene.events.length - 1;
     // Tour plays the calls in order; Overview shows every cloud at once for free exploration.
-    const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null,
+    const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
                    filter: {phases: new Set()}};
     const ui = bindUi(root, scene, model, stage, roles);
     ui.setEvent(state.i);
@@ -61,13 +62,13 @@ export function mountQuery(app, route) {
       if (!overview && state.playing) {
         state.p += dt * state.speed / eventDuration(scene.events[state.i]);
         if (state.p >= 1) {
-          if (state.i < last) { state.i++; state.p = 0; ui.setEvent(state.i); }
+          if (state.i < last) { state.i++; state.p = 0; stage.clearHover(); ui.setEvent(state.i); }
           else { state.p = 1; setPlaying(false); }
         }
       }
       if (!overview) ui.setProgress(state.i, state.p);
       const out = overview ? frameAt(last, 1) : frameAt(state.i, state.p);
-      Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, filter: state.filter, labelAll: overview});
+      Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: state.phase, filter: state.filter, labelAll: overview});
       if (overview) { out.frame.focus = new Set(); out.camera = OVERVIEW_CAM[state.view]; }
       return out;
     });
@@ -78,13 +79,14 @@ export function mountQuery(app, route) {
       stage.follow();
       stage.release();
       state.chain = null;
+      setPhase(null);
       ui.setMode(mode, state.view);
       if (mode === "overview") setPlaying(false);
       else { go(0); setPlaying(true); }
     };
 
     const setPlaying = on => { state.playing = on; ui.setPlaying(on); };
-    const go = (i, p = 0) => { state.i = Math.max(0, Math.min(scene.events.length - 1, i)); state.p = p; ui.setEvent(state.i); };
+    const go = (i, p = 0) => { stage.clearHover(); state.i = Math.max(0, Math.min(scene.events.length - 1, i)); state.p = p; ui.setEvent(state.i); };
     const toggle = () => {
       if (!state.playing && state.i === scene.events.length - 1 && state.p >= 1) go(0);
       if (!state.playing && stage.view.cluster) stage.follow();
@@ -95,10 +97,25 @@ export function mountQuery(app, route) {
     // In Overview the timeline and the phase bar pick a cloud instead of moving the playhead.
     const pick = i => stage.select(scene.events[i].cluster || "core");
     ui.on("seek", i => state.mode === "overview" ? pick(i) : go(i, 0.5));
+    // In Overview a phase button focuses that phase's clouds instead; a second click lets go.
+    const setPhase = ph => {
+      state.phase = ph ? phaseFocus(model, ph) : null;
+      ui.setPhase(state.phase);
+    };
     ui.on("phase", ph => {
+      if (state.mode === "overview") {
+        const again = state.phase?.phase === ph;
+        stage.setJourney(null);
+        stage.select(null);
+        stage.release();
+        setPhase(again ? null : ph);
+        return;
+      }
       const i = scene.events.findIndex(e => e.phase === ph);
-      if (i >= 0) state.mode === "overview" ? pick(i) : go(i);
+      if (i >= 0) go(i);
     });
+    ui.on("endPhase", () => setPhase(null));
+    stage.on("back", () => state.phase && setPhase(null));
     ui.on("mode", setMode);
     ui.on("view", v => { state.view = v; stage.release(); ui.setMode(state.mode, v); });
     ui.on("filterPhase", ph => { state.filter.phases.has(ph) ? state.filter.phases.delete(ph) : state.filter.phases.add(ph); ui.setFilter(state.filter); });
@@ -106,18 +123,20 @@ export function mountQuery(app, route) {
     // needs every cloud on screen, so the tour gives way to the overview first.
     const follow = (role, fid) => {
       if (state.mode !== "overview") setMode("overview");
+      setPhase(null);
       stage.setJourney(journeyOf(scene, model, fid ?? roles.byRole.get(role)[0]));
       ui.showJourney(role);
     };
     // The legend row toggles; the panel's role tabs only switch.
     ui.on("journeyRole", (role, tab) => !tab && stage.journey && ui.journeyRole === role ? stage.setJourney(null) : follow(role));
     ui.on("journeyFact", (fid, role) => follow(role || roles.reach(fid), fid));
+    ui.on("cta", () => follow(ctaOf(roles).role));
     stage.on("journey", j => ui.journey(j));
     ui.on("speed", s => { state.speed = s; });
     ui.on("follow", () => { stage.follow(); stage.release(); });
     ui.on("jump", i => { stage.follow(); go(i, 0.5); setPlaying(false); });
     stage.on("select", sel => {
-      if (sel) setPlaying(false);
+      if (sel) { setPlaying(false); if (state.phase) { state.phase = null; ui.setPhase(null, true); } }
       const id = sel?.cluster && sel.cluster.id !== "core" ? sel.cluster.id : null;
       if (id !== state.chain?.id) state.chainAll = false;
       state.chain = id ? chainPath(model, id, state.chainAll) : null;
@@ -148,6 +167,23 @@ export function mountQuery(app, route) {
     };
     document.addEventListener("keydown", keyHandler);
     if (route.query?.get("mode") === "overview") setMode("overview");
+
+    // The guide: once per browser, again from the header's Guide button; playback waits for it.
+    const pick1 = (...sel) => sel.map(q => root.querySelector(q)).find(el => el?.getClientRects().length);
+    const guide = () => {
+      const was = state.playing;
+      setPlaying(false);
+      runCoach(root, [
+        {title: "Pick a run", target: () => root.querySelector(".qg-case"),
+         text: "Each case is one failed agent run. The debugger compiles its log into a DSL record, queries it, and names the step that caused the failure."},
+        {title: "Every cloud is a query",
+         text: "Floors rise PARSE → ROUTE → TRACE → SUBMIT. <b>Click</b> a cloud to light its causal chain, <b>click it again</b> to open it by entity. Drag to turn the tower, scroll to zoom."},
+        {title: "Follow a fact", before: () => ui.openPane("legend"), target: () => pick1(".qg-follows", ".qg-cta"), side: "right",
+         text: "These buttons trace one fact from the record to the verdict, stop by stop. Start with the root cause."},
+      ], () => { if (was && state.mode === "tour") setPlaying(true); });
+    };
+    ui.on("guide", guide);
+    if (!coachSeen()) guide();
   }).catch(error => {
     if (destroyed) return;
     root.innerHTML = `<div class="qg-error"><h2>Could not build the query graph</h2><p>${esc(error.message)}</p>
@@ -171,7 +207,12 @@ const ROLE_ROWS = [
 ];
 const REACH = {issue: "clue only", candidate: "blamed", root: "ROOT"};
 
+// The footer's call to action: the furthest role that has facts.
+const ctaOf = roles => [{role: "root", name: "root cause"}, {role: "candidate", name: "blamed step"}, {role: "issue", name: "clues"}]
+  .find(r => roles.byRole.get(r.role).length);
+
 function template(scene, model, ref, roles) {
+  const cta = ctaOf(roles);
   const n = k => model.clusters.filter(c => c.kind === k).length;
   const ticks = scene.events.map((e, i) => `<button class="qg-tick" data-i="${i}" data-phase="${e.phase}" style="flex-grow:${eventDuration(e)}" title="${esc(`${e.phase} · ${e.title}`)}"${e.error ? " data-error" : ""}></button>`).join("");
   const rels = Object.keys(scene.meta.relations).length;
@@ -185,6 +226,7 @@ function template(scene, model, ref, roles) {
           <a href="${caseHref(ref)}" title="Open in the workbench">${esc(scene.meta.tid)}</a></p>
       </div>
       <div class="qg-modes">
+        <div class="qg-seg"><button data-act="guide" title="Show the guide again">Guide</button></div>
         <div class="qg-seg" role="group" aria-label="Mode"><button data-mode="tour" aria-pressed="true">Tour</button><button data-mode="overview" aria-pressed="false">Overview</button></div>
         <div class="qg-seg qg-views" role="group" aria-label="Camera" hidden><button data-view="front">Front</button><button data-view="top">Top</button><button data-view="side">Side</button></div>
       </div>
@@ -192,37 +234,40 @@ function template(scene, model, ref, roles) {
     </header>
     <aside class="qg-legend is-collapsed" aria-label="Legend">
       <button class="qg-pane-tab" data-pane="legend" aria-expanded="false" title="Show or hide the legend"><span>Legend</span><i>›</i></button>
+      <div class="qg-legend-body">
+      <h2>A fact becomes evidence</h2>
+      <ul class="qg-key">
+        <li><i class="k-pt"></i>fact the debugger read</li>
+      </ul>
+      <p class="qg-sub">Follow a fact from the record to the verdict:</p>
+      <div class="qg-follows">
+        ${ROLE_ROWS.map(r => { const n = roles.byRole.get(r.role).length; return `<button data-journey-role="${r.role}"${n ? ` title="Follow these facts from the record to the verdict"` : " disabled"}><i class="k-pt" data-role="${r.role}"></i><span>${r.label}</span><em>${n}</em><b>Follow ›</b></button>`; }).join("")}
+      </div>
       <h2>DSL record</h2>
-      <dl class="qg-stats">
-        <dt>facts</dt><dd>${scene.facts.length}</dd><dt>entities</dt><dd>${scene.entities.length}</dd>
-        <dt>relations</dt><dd>${rels}</dd><dt>goals</dt><dd>${scene.goals.length}</dd><dt>steps</dt><dd>${scene.meta.steps}</dd>
-      </dl>
+      <dl class="qg-stats">${[["facts", scene.facts.length], ["entities", scene.entities.length], ["relations", rels], ["steps", scene.meta.steps]].map(([k, v]) => `<div><dd>${v}</dd><dt>${k}</dt></div>`).join("")}</dl>
       <p class="qg-formula">Fact ≔ rel(args) = value @t</p>
       <ul class="qg-key qg-ties">
         <li><i class="k-hub"></i>entity a fact names</li>
         <li><i class="k-thread"></i>same state, next step</li>
-      </ul>
-      <h2>A fact becomes evidence</h2>
-      <ul class="qg-key">
-        <li><i class="k-pt"></i>fact the debugger read</li>
-        ${ROLE_ROWS.map(r => { const n = roles.byRole.get(r.role).length; return `<li data-journey-role="${r.role}"${n ? ` title="Follow these facts from the record to the verdict"` : " class=\"none\""}><i class="k-pt" data-role="${r.role}"></i>${r.label}<em>${n}</em></li>`; }).join("")}
-      </ul>
-      <p class="qg-hint qg-hint-role">Click a row to follow its facts from the record to the verdict.</p>
-      <h2>Clouds by phase</h2>
-      <ul class="qg-key">
-        ${["PARSE", "MAP", "ROUTE", "TRACE", "SUBMIT"].filter(ph => model.clusters.some(c => c.phaseKey === ph)).map(ph => `<li data-phase="${ph}" data-filter-phase="${ph}" title="Hide or show this phase"><i class="k-cloud"></i>${ph.toLowerCase()} · ${PHASE_NOTE[ph]}</li>`).join("")}
         <li><i class="k-dot"></i>pulled from the record</li>
         <li><i class="k-line"></i>leads to</li>
       </ul>
-      <p class="qg-hint">Click a cloud to light its causal chain, click it again to open it by entity, then an entity to read its facts. Esc steps back. Legend rows filter.</p>
+      <h2>Show clouds by phase</h2>
+      <p class="qg-sub">Click a phase to hide or show its clouds:</p>
+      <div class="qg-phase-toggles">
+        ${["PARSE", "MAP", "ROUTE", "TRACE", "SUBMIT"].map(ph => [ph, model.clusters.filter(c => c.phaseKey === ph).length]).filter(([, n]) => n).map(([ph, n]) => `<button data-phase="${ph}" data-filter-phase="${ph}" aria-pressed="true" title="${esc(`${PHASE_NOTE[ph]} · click to hide or show`)}"><i></i><span>${ph.toLowerCase()}</span><em>${n}</em></button>`).join("")}
+      </div>
+      </div>
     </aside>
     <aside class="qg-inspect is-collapsed" hidden>
       <button class="qg-pane-tab" data-pane="inspect" aria-expanded="false" title="Show or hide the details"><i>‹</i><span>Details</span></button>
       <div class="qg-inspect-body"></div>
     </aside>
     <div class="qg-tip" hidden></div>
+    <div class="qg-hovercard" hidden></div>
     <footer class="qg-foot">
-      <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p></div></div>
+      <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p><p class="qg-cap-next"></p></div><p class="qg-cap-full"></p>
+        ${cta ? `<button class="qg-cta" data-act="cta" title="Draw this fact's way from the record to the verdict">▶ Follow the ${esc(cta.name)}</button>` : ""}</div>
       <div class="qg-bar">
         <button class="qg-btn" data-act="prev" title="Previous call (←)" aria-label="Previous call">‹</button>
         <button class="qg-btn qg-play" data-act="play" title="Play / pause (space)" aria-label="Play or pause">❚❚</button>
@@ -249,6 +294,16 @@ function bindUi(root, scene, model, stage, roles) {
     pane.querySelector(".qg-pane-tab").setAttribute("aria-expanded", String(open));
   };
 
+  // The side panels stop above the footer, whose height changes with the caption's length.
+  const foot = $(".qg-foot");
+  new ResizeObserver(() => { root.style.setProperty("--qg-foot-h", `${foot.offsetHeight}px`); clampCaption(); }).observe(foot);
+  // The caption text stops at two lines; when it is cut, hovering the caption shows the whole
+  // text in a card above it, so the footer (and the stage framed against it) keeps its height.
+  function clampCaption() {
+    const text = $(".qg-cap-text");
+    $(".qg-cap-full").textContent = text.textContent;
+    $(".qg-caption").classList.toggle("is-clamped", text.scrollHeight > text.clientHeight + 1);
+  }
   $(".qg-case")?.addEventListener("change", e => { if (e.target.value.startsWith("#/")) location.hash = e.target.value; });
   panelBody.addEventListener("mouseover", e => stage.highlightChainEdge(e.target.closest("[data-chain-edge]") ? Number(e.target.closest("[data-chain-edge]").dataset.chainEdge) : null));
   panelBody.addEventListener("mouseleave", () => stage.highlightChainEdge(null));
@@ -267,13 +322,16 @@ function bindUi(root, scene, model, stage, roles) {
     if (cam) handlers.view?.(cam.dataset.view);
     const fp = e.target.closest("[data-filter-phase]");
     if (fp) handlers.filterPhase?.(fp.dataset.filterPhase);
-    const jr = e.target.closest("[data-journey-role]:not(.none)");
+    const jr = e.target.closest("[data-journey-role]:not(:disabled)");
     if (jr) handlers.journeyRole?.(jr.dataset.journeyRole, !!jr.closest(".qg-roles"));
     const jf = e.target.closest("[data-journey-fact]");
     if (jf) handlers.journeyFact?.(Number(jf.dataset.journeyFact), jf.dataset.role);
     const stop = e.target.closest("[data-stop]");
     if (stop) { const k = Number(stop.dataset.stop); stage.focusStop(stage.journey?.focus === k ? null : k); }
     if (e.target.closest("[data-end-journey]")) stage.setJourney(null);
+    if (e.target.closest("[data-end-phase]")) handlers.endPhase?.();
+    const pick = e.target.closest("[data-select]");
+    if (pick) stage.select(pick.dataset.select);
     if (e.target.closest("[data-chain-all]")) handlers.chainAll?.();
     const tick = e.target.closest(".qg-tick");
     if (tick) handlers.seek?.(Number(tick.dataset.i));
@@ -352,6 +410,17 @@ function bindUi(root, scene, model, stage, roles) {
       </ol>${chain.all ? `<p class="qg-muted">Showing every query that fed a window · <button class="qg-link" data-chain-all>fold</button></p>` : ""}`;
   }
 
+  function showPhase(focus) {
+    const ph = focus.phase, list = [...focus.members].map(id => model.byId.get(id));
+    inspect.hidden = false;
+    setPane("inspect", true);
+    panelBody.innerHTML = `
+      <p class="qg-kind"><span class="qg-chip" data-phase="${esc(ph)}">${esc(ph)}</span>phase · <button class="qg-link" data-end-phase>close</button></p>
+      <h3>${esc(PHASE_NOTE[ph])}</h3><p class="qg-muted">${list.length} cloud${list.length === 1 ? "" : "s"} · ${focus.edges.length} links in or out</p>
+      <ul class="qg-rows">${list.map(c => `<li><button data-select="${esc(c.id)}"><span>${esc(clusterTitle(c))}</span><em>${esc(c.detail)}</em></button></li>`).join("")}</ul>
+      <p class="qg-hint">Click a cloud to light its whole chain; Esc or the phase button again lets go.</p>`;
+  }
+
   function showGroup(c, gi) {
     const g = c.groups[gi];
     const ent = scene.entities.find(e => e.key === g.key);
@@ -386,7 +455,7 @@ function bindUi(root, scene, model, stage, roles) {
   function renderJourney(j) {
     const role = journeyRole;
     const fids = roles.byRole.get(role) || [];
-    const f = j.fact, last = j.stops.length - 1;
+    const f = j.fact;
     const stopTitle = s => s.kind === "core" ? "DSL record" : clusterTitle(model.byId.get(s.id));
     // Re-rendering on every focus change keeps the Details the reader opened.
     const opened = new Set([...panelBody.querySelectorAll("details[open][data-k]")].map(d => d.dataset.k));
@@ -403,12 +472,12 @@ function bindUi(root, scene, model, stage, roles) {
       </div>
       <ol class="qg-story">${j.stops.map((s, k) => `
         ${k === 1 && j.startSay ? `<li class="qg-note" title="${esc(j.start)}">↳ ${esc(j.startSay)}</li>` : ""}
-        <li data-phase="${esc(s.phase)}"${j.focus === k ? ` class="on"` : ""}>
-          <button data-stop="${k}"><b>${k + 1}</b><span class="qg-chip" data-phase="${esc(s.phase)}">${esc(s.phase)}</span>
+        <li data-phase="${esc(s.phase)}"${s.branch ? ` data-branch="${s.branch}"` : ""}${j.focus === k ? ` class="on"` : ""}>
+          <button data-stop="${k}"><b>${esc(s.num)}</b><span class="qg-chip" data-phase="${esc(s.phase)}">${esc(s.phase)}</span>
             <p>${esc(s.say)}</p>${s.quote ? `<blockquote>“${esc(s.quote)}”</blockquote>` : ""}</button>
           ${fold(k, [["where", stopTitle(s)], ...(s.kind === "core" ? [] : [["call", String(s.event).padStart(2, "0")]]), ["result", s.outcome]])}
         </li>
-        ${k === last && j.endSay ? `<li class="qg-note qg-end" title="${esc(j.end)}">⊣ ${esc(j.endSay)}</li>` : ""}`).join("")}
+        ${k === j.endAt && j.endSay ? `<li class="qg-note qg-end" title="${esc(j.end)}">⊣ ${esc(j.endSay)}</li>` : ""}`).join("")}
       </ol>
       <p class="qg-hint">Click a card or a numbered badge to fly to that stop; ← → step along the way, Esc steps back.</p>`;
     panelBody.querySelector(".qg-story li.on")?.scrollIntoView({block: "nearest"});
@@ -430,6 +499,11 @@ function bindUi(root, scene, model, stage, roles) {
       chip.dataset.phase = ev.phase;
       $(".qg-cap-title").textContent = ev.title || "";
       $(".qg-cap-text").textContent = ev.caption || "";
+      const next = scene.events[i + 1];
+      $(".qg-cap-next").textContent = next ? `Next · ${next.phase} · ${next.title || ""}` : "End of the tour · switch to Overview to explore every cloud";
+      $(".qg-caption").dataset.phase = ev.phase;
+      clampCaption();
+      root.classList.toggle("at-end", !next);
       $(".qg-count").textContent = `${String(i + 1).padStart(2, "0")} / ${scene.events.length}`;
       if (!stage.view.cluster) showEvent(i);
     },
@@ -456,16 +530,28 @@ function bindUi(root, scene, model, stage, roles) {
         chip.dataset.phase = "SUBMIT";
         $(".qg-cap-title").textContent = `${scene.events.length} calls · ${model.clusters.length} clouds`;
         $(".qg-cap-text").textContent = "Every access at once. Click a cloud to light the chain it belongs to, click it again to open it; the timeline and phase bar pick clouds too.";
+        $(".qg-cap-next").textContent = "";
+        $(".qg-caption").dataset.phase = "SUBMIT";
+        clampCaption();
         $(".qg-count").textContent = `${scene.events.length} calls`;
         showCluster(model.byId.get("root") || model.byId.get("core"));
       } else this.setEvent(current);
       this.syncFollow();
     },
     setFilter(filter) {
-      root.querySelectorAll("[data-filter-phase]").forEach(li => li.classList.toggle("off", filter.phases.has(li.dataset.filterPhase)));
+      root.querySelectorAll("[data-filter-phase]").forEach(b => b.setAttribute("aria-pressed", String(!filter.phases.has(b.dataset.filterPhase))));
     },
     get journeyRole() { return journeyRole; },
+    openPane(name) { setPane(name, true); },
     setChain(path) { chain = path; },
+    // The phase in focus: its button pressed, and its clouds listed in the panel (quiet keeps the
+    // panel as it is, for a pick that replaces it anyway).
+    setPhase(focus, quiet = false) {
+      root.querySelectorAll(".qg-phases button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.phase === focus?.phase)));
+      if (quiet) return;
+      if (focus) showPhase(focus);
+      else this.inspect(null);
+    },
     showJourney(role) {
       journeyRole = role;
       this.journey(stage.journey);
@@ -480,17 +566,29 @@ function bindUi(root, scene, model, stage, roles) {
       setPane("inspect", true);
       renderJourney(j);
     },
+    // Hover help never floats over the stage's lines: a cloud's or entity's own tag says what a
+    // click does, an edge's card lies over the details panel's place (folded or not, so the
+    // stage does not reframe), and only facts and journey stops keep a small tip by the pointer.
     hover(h) {
       panelBody.querySelectorAll(".qg-chain li.hi").forEach(li => li.classList.remove("hi"));
       if (h?.kind === "edge" && h.k != null) panelBody.querySelector(`[data-chain-edge="${h.k}"]`)?.classList.add("hi");
-      if (!h) { tip.hidden = true; return; }
+      const card = $(".qg-hovercard");
+      if (h?.kind === "edge") {
+        if (card.dataset.link !== h.link.title + h.link.detail) {
+          card.dataset.link = h.link.title + h.link.detail;
+          card.innerHTML = `<p class="qg-kind">hovered edge</p><h3>${esc(h.link.title)}</h3>${h.link.detail ? `<p class="qg-muted">${esc(h.link.detail)}</p>` : ""}
+            <dl class="qg-card">${h.link.card.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(short(v, 360))}</dd>`).join("")}</dl>`;
+        }
+        card.hidden = false;
+      } else if (!card.hidden) {
+        card.hidden = true;
+        card.dataset.link = "";
+      }
       let html = "";
-      if (h.kind === "cluster") html = `<b>${esc(clusterTitle(h.cluster))}</b><span>${esc(h.cluster.detail)} · click to open</span>`;
-      else if (h.kind === "group") { const g = h.cluster.groups[h.gi]; html = `<b>${esc(g.key)}</b><span>${g.fids.length} facts · click to list</span>`; }
-      else if (h.kind === "edge") html = `<b>${esc(h.link.title)}</b>${h.link.detail ? `<span>${esc(h.link.detail)}</span>` : ""}
-        <dl class="qg-card">${h.link.card.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(short(v, 260))}</dd>`).join("")}</dl>`;
-      else if (h.kind === "stop") html = `<b>${h.k + 1} · ${esc(h.stop.kind === "core" ? "DSL record" : clusterTitle(model.byId.get(h.stop.id)))}</b><span>${esc(h.stop.outcome)} · click to fly there</span>`;
-      else if (h.kind === "fact") { const f = scene.factById.get(h.fid); html = `<b>fact ${f.fid} · S${f.t} ${SLOT_LABEL[f.slot]}</b><em>${esc(short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 160))}</em>`; }
+      const act = t => `<i class="qg-tip-act">${t}</i>`;
+      if (h?.kind === "stop") html = `<b>${h.k + 1} · ${esc(h.stop.kind === "core" ? "DSL record" : clusterTitle(model.byId.get(h.stop.id)))}</b><span>${esc(h.stop.outcome)}</span>${act("click to fly there")}`;
+      else if (h?.kind === "fact") { const f = scene.factById.get(h.fid); html = `<b>fact ${f.fid} · S${f.t} ${SLOT_LABEL[f.slot]}</b><em>${esc(short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 160))}</em>`; }
+      if (!html) { tip.hidden = true; return; }
       tip.hidden = false;
       tip.innerHTML = html;
       tip.style.left = `${Math.min(h.x + 16, root.clientWidth - 320)}px`;

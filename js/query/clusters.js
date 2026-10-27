@@ -1,9 +1,9 @@
 // Groups the scene into point clouds: the whole DSL record as one core, then one cloud per
 // debugger access (a ROUTE view, a suspect window, a TRACE lane's SQL result), plus the
 // candidate and root markers. A cloud expands into entity groups, a group into its facts.
-import {short} from "../util.js?v=edc30cc901";
-import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=edc30cc901";
-import {agentWords, factName, sayEnd, sayStop, START_SAY} from "./narrate.js?v=edc30cc901";
+import {short} from "../util.js?v=27bf1baa85";
+import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=27bf1baa85";
+import {agentWords, factName, sayEnd, sayStop, START_SAY} from "./narrate.js?v=27bf1baa85";
 
 const MAX_GROUPS = 12;
 
@@ -101,6 +101,13 @@ export function buildClusters(scene) {
       });
     }
   }
+  // A window fed by several queries keeps the one that gave it most clues as its source; the
+  // others are minor feeds, drawn only while the window or that query is pointed at or picked.
+  for (const c of clusters) if (c.kind === "window") {
+    const feeds = c.links.filter(l => byId.get(l.from)?.kind === "query");
+    const keep = feeds.reduce((a, b) => b.weight > a.weight ? b : a, feeds[0]);
+    feeds.forEach(l => { l.minor = l !== keep; });
+  }
   const PHASE = {core: "PARSE", window: "ROUTE", lane: "TRACE", candidate: "TRACE", root: "SUBMIT"};
   for (const c of clusters) c.phaseKey = c.kind === "query" ? c.phase : PHASE[c.kind];
 
@@ -177,6 +184,19 @@ export function chainPath(model, id, all = false) {
   const at = e => byId.get(e.to);
   edges.sort((a, b) => at(a).tier - at(b).tier || at(a).event - at(b).event || a.from.localeCompare(b.from));
   return {id, chain, edges, extra, all};
+}
+
+// A phase in focus: the clouds it made (for MANAGER, the lanes it assigned), the clouds one
+// link away, and the links into or out of its clouds, minor feeds left out.
+export function phaseFocus({clusters}, phase) {
+  const members = new Set(clusters.filter(c => phase === "MANAGER" ? c.kind === "lane" : c.phaseKey === phase).map(c => c.id));
+  const near = new Set(members), edges = [];
+  for (const c of clusters) for (const l of c.links) {
+    if (l.minor || !(members.has(c.id) || members.has(l.from))) continue;
+    edges.push({from: l.from, to: c.id, link: l});
+    near.add(l.from); near.add(c.id);
+  }
+  return {phase, members, near, edges};
 }
 
 const countBy = (list, key) => {
@@ -287,6 +307,7 @@ export function journeyOf(scene, {clusters, byId}, fid) {
     else if (c.kind === "root") outcome = `chosen as root cause${c.ref.rule?.id ? ` by rule ${c.ref.rule.id}` : ""}`;
     stops.push({id: c.id, kind: c.kind, event: at(c), phase: c.phaseKey, outcome, ...plain});
   }
+  const way = branchStops(stops, byId);
 
   // Why it stops: judged at the highest tier it reached; in parallel lanes, by all of them.
   const first = clouds[0], top = Math.max(-1, ...clouds.map(c => c.tier)), last = clouds.findLast(c => c.tier === top);
@@ -313,8 +334,50 @@ export function journeyOf(scene, {clusters, byId}, fid) {
     end = root ? `SUBMIT chose S${root.step} ${root.module} instead` : "SUBMIT named no root";
     why = root ? {kind: "otherRoot", root} : {kind: "noRoot"};
   }
-  return {fid, fact: f, stops, start, end, name: factName(f), words: agentWords(f),
+  return {fid, fact: f, stops: way, start, end, endAt: last ? way.findIndex(s => s.id === last.id) : 0, name: factName(f), words: agentWords(f),
           startSay: first ? START_SAY[first.kind] || null : null, endSay: why ? sayEnd(why) : null};
+}
+
+// TRACE runs its lanes side by side, so a journey forks there instead of zigzagging between
+// tiers in call order: every lane leaves the window it was assigned (else the last stop before
+// TRACE), each lane's candidates follow that lane, and the root follows the candidate it chose
+// (else every branch's end). The other stops follow one another in call order. Stops come back
+// branch by branch, each with the stops it follows (`from`, by index), its number (4a, 5a, …)
+// and whether nothing follows it (`deadEnd`).
+function branchStops(stops, byId) {
+  const isTrace = s => s.kind === "lane" || s.kind === "candidate";
+  const t0 = Math.min(Infinity, ...stops.filter(isTrace).map(s => s.event));
+  const before = stops.filter(s => !isTrace(s) && s.event < t0), after = stops.filter(s => !isTrace(s) && s.event >= t0);
+  const branches = new Map();
+  for (const s of stops.filter(isTrace)) {
+    const key = s.kind === "lane" ? s.id : byId.get(s.id).ref.lane;
+    if (!branches.has(key)) branches.set(key, []);
+    branches.get(key).push(s);
+  }
+  const out = [], index = new Map();
+  const put = (s, from, num, branch = null) => { index.set(s.id, out.length); out.push({...s, from, num, branch}); };
+  before.forEach((s, k) => put(s, k ? [k - 1] : [], String(k + 1)));
+  const fork = before.length - 1, letters = branches.size > 1, tails = [];
+  let depth = before.length;
+  [...branches.values()].forEach((list, b) => {
+    const tag = letters ? String.fromCharCode(97 + b) : "";
+    const lane = list.find(s => s.kind === "lane"), cands = list.filter(s => s.kind === "candidate");
+    let n = before.length + 1;
+    if (lane) put(lane, [index.get(`w:${byId.get(lane.id).ref.anchor}`) ?? fork], `${n++}${tag}`, tag || null);
+    const at = lane ? [index.get(lane.id)] : [fork];
+    cands.forEach((s, i) => put(s, at, `${n}${tag}${cands.length > 1 ? `.${i + 1}` : ""}`, tag || null));
+    if (cands.length) n++;
+    depth = Math.max(depth, n - 1);
+    tails.push(...(cands.length ? cands : [lane]).map(s => index.get(s.id)));
+  });
+  after.forEach((s, k) => {
+    const prev = k ? [out.length - 1] : s.kind === "root" && index.has(byId.get("root").ref.candidate)
+      ? [index.get(byId.get("root").ref.candidate)] : tails.length ? tails : [out.length - 1];
+    put(s, prev, String(depth + k + 1));
+  });
+  const fed = new Set(out.flatMap(s => s.from));
+  out.forEach((s, k) => { s.deadEnd = k > 0 && !fed.has(k) && s.kind !== "root"; });
+  return out;
 }
 
 export const factLabel = f => `${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 46)}  @S${f.t}`;

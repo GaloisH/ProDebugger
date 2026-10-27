@@ -1,8 +1,8 @@
 // Zero-dependency 3D stage for the cluster tower: a perspective orbit camera over a 2D canvas.
 // Flat square points, 1px lines and HUD brackets; the only motion is camera easing and points
 // moving to their place when a cloud appears, expands or folds.
-import {ballPoint, cloudRadius, PITCH, TIERS} from "./layout.js?v=edc30cc901";
-import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js?v=edc30cc901";
+import {ballPoint, cloudRadius, PITCH, TIERS} from "./layout.js?v=27bf1baa85";
+import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js?v=27bf1baa85";
 
 const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim", "issue", "cand"];
 const PHASE_TOKENS = {PARSE: "parse", MAP: "map", ROUTE: "route", MANAGER: "manager", TRACE: "trace", SUBMIT: "submit"};
@@ -19,9 +19,10 @@ const FACT_GAP = 0.5;     // world units between fact rows
 const POINT_DIM = 0.32;   // brightness of plain points in a cloud nobody is looking at
 const POINT_LIFT = 0.65;  // ... in the focused or selected cloud
 const SIDE_SCALE = 0.45;  // size of a cloud off the main chain while nobody looks at it
+const TOUR_NEAR = 20;     // closest a tour shot comes when it fits the clouds shown so far
 const CORE_POINTS = 140;  // points the folded record cloud keeps (plus every role point)
-const LABEL_ROOM = 240;   // px kept free each side of an upright journey for its stop labels
-const LABEL_ROW = 90;     // px kept free above and below a journey lying across
+const LABEL_ROOM = 300;   // px kept free each side of an upright journey for its stop labels
+const LABEL_ROW = 110;    // px kept free above and below a journey lying across
 
 export function createStage(canvas, scene, model, layout) {
   const ctx = canvas.getContext("2d");
@@ -39,7 +40,7 @@ export function createStage(canvas, scene, model, layout) {
   let journey = null;
   let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
-  const listeners = {hover: [], select: [], manual: [], view: [], journey: []};
+  const listeners = {hover: [], select: [], manual: [], view: [], journey: [], back: []};
   const emit = (k, v) => listeners[k].forEach(fn => fn(v));
 
   // Point instances per cloud; a cloud's points start at the core and travel out to it.
@@ -192,7 +193,7 @@ export function createStage(canvas, scene, model, layout) {
   function sizeOf(c) {
     if (c.kind === "core" || c.kind === "candidate" || c.kind === "root" || !backbone.size) return 1;
     const looked = backbone.has(c.id) || frame.focus.has(c.id) || view.selected === c.id || view.cluster === c.id
-      || hover?.cluster?.id === c.id || frame.chain?.has(c.id) || journey?.stops.some(st => st.id === c.id);
+      || hover?.cluster?.id === c.id || frame.chain?.has(c.id) || frame.phase?.near.has(c.id) || journey?.stops.some(st => st.id === c.id);
     return looked ? 1 : SIDE_SCALE;
   }
   function targetOf(c, p) {
@@ -270,15 +271,15 @@ export function createStage(canvas, scene, model, layout) {
       ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
       if (!lit) continue;
       const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2, t = String(n);
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      const w = ctx.measureText(t).width + 8;
+      ctx.font = "12px 'IBM Plex Mono', monospace";
+      const w = ctx.measureText(t).width + 10;
       ctx.globalAlpha = 0.9 * alpha;
       ctx.fillStyle = colors.void;
-      ctx.fillRect(mx - w / 2, my - 7, w, 14);
+      ctx.fillRect(mx - w / 2, my - 8, w, 16);
       ctx.globalAlpha = alpha;
       ctx.fillStyle = colors.label;
       ctx.textAlign = "center";
-      ctx.fillText(t, mx, my + 3.5);
+      ctx.fillText(t, mx, my + 4);
     }
     for (const p of inst.get(c.id)) {
       const gi = own.get(p.fid);
@@ -294,12 +295,17 @@ export function createStage(canvas, scene, model, layout) {
   function hubLabels(c, alpha) {
     const hubs = hubInst.get(c.id);
     ctx.textAlign = "left";
-    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.font = "12px 'IBM Plex Mono', monospace";
     ctx.fillStyle = colors["label-dim"];
     ctx.globalAlpha = alpha;
     c.structure.hubs.slice(0, 4).forEach((h, j) => {
       const s = hubs[j].cur && project(hubs[j].cur);
-      if (s) ctx.fillText(h.key, s.x + 6, s.y - 4);
+      if (!s) return;
+      // A hub's name gives way to any name or badge already there.
+      const bx = [s.x + 6, s.y - 15, ctx.measureText(h.key).width, 14];
+      if (clash(bx, 1)) return;
+      placed.push(bx);
+      ctx.fillText(h.key, s.x + 6, s.y - 4);
     });
   }
 
@@ -321,32 +327,67 @@ export function createStage(canvas, scene, model, layout) {
     const panel = rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)");
     const head = rect(".qg > header"), foot = rect(".qg-foot");
     const ruler = rot ? 0 : 130;
+    const left = Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0);
     return {
-      left: Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0),
+      left,
+      // Only an open details panel takes room; folded, the tower spreads under where it was.
       right: Math.max(16, panel ? box.right - panel.left + 12 : 0),
       top: head ? Math.max(0, head.bottom - box.top) : 0,
       bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot ? 36 : 0),
     };
   }
-  // A preset marked fit frames the whole cone in the canvas area the HUD leaves free: the
-  // distance fits the cone's length and width to that area in either orientation, and the
-  // target slides so the cone centres in it.
+  // A preset marked fit frames the clouds on screen (not the plates under them, which are much
+  // wider) in the canvas area the HUD leaves free, so a wide window fills with the tower.
   function fitGoal(g) {
     // Lying down, a low camera sees the cone from the side instead of down its length.
     if (rot && g.pitch < 0.6) g = {...g, pitch: g.pitch * 0.35};
-    const cp = Math.cos(g.pitch), sp = Math.abs(Math.sin(g.pitch));
-    const R = TIERS[0].plate, along = (layout.top + 2.5 - layout.bottom) * cp + 2 * R * sp, across = 2 * R;
-    const {left, right, top, bottom} = hudInsets();
+    return fitClouds(g, clusters.filter(c => frame.visible.has(c.id)));
+  }
+  // A tour shot keeps its angle; where the clouds shown so far fit closer than its preset
+  // distance (a wide window, a folded panel), the camera comes in and centres them in the free
+  // area, but never closer than TOUR_NEAR so a lone cloud does not swell to fill the screen.
+  function tourShot(g) {
+    const fit = fitClouds({...g, yaw: g.yaw ?? cam.yaw}, clusters.filter(c => frame.visible.has(c.id)));
+    if (fit.dist >= g.dist) return g;
+    return {...g, dist: Math.max(fit.dist, Math.min(g.dist, TOUR_NEAR)), target: fit.target};
+  }
+  // Clouds fit by their rims across and down the screen, with room kept for their names (which
+  // lead out to the right) and the plates allowed to run past the edge.
+  function fitClouds(g, shown) {
+    if (!shown.length) return g;
+    const rims = f => {
+      const R = screenRight(f), D = screenDown(f);
+      return shown.flatMap(c => {
+        const p = layout.pos.get(c.id), r = layout.radius.get(c.id) * sizeOf(c);
+        return p ? [add(p, scale(R, r)), add(p, scale(R, -r)), add(p, scale(D, r)), add(p, scale(D, -r))] : [];
+      });
+    };
+    const ins = hudInsets();
+    const room = {left: ins.left + 40, right: ins.right + 120, top: ins.top + 28, bottom: ins.bottom + 28};
+    return perspectiveFit(fitPoints(g, rims(camFrame(g)), () => [160, 56]), room, rims);
+  }
+  // The first estimate is orthographic; in perspective the near clouds draw larger and can leave
+  // the free area. Project their rims through the goal camera and correct the distance and the
+  // centre from what they really cover, three times.
+  function perspectiveFit(g, {left, right, top, bottom}, rimsOf) {
+    const keep = {...cam, target: [...cam.target]}, keepB = B;
+    const rims = rimsOf(camFrame(g));
     const freeW = Math.max(240, W - left - right), freeH = Math.max(200, H - top - bottom);
-    const [needW, needH] = rot ? [along, across] : [across, along];
-    const focal = H / (2 * Math.tan(cam.fov / 2));
-    const dist = 1.08 * focal * Math.max(needW / freeW, needH / freeH);
-    const px = dist / focal;                    // world units per screen pixel at the target
-    const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
-    const frame = camFrame(g);
-    // Moving the target against a screen direction moves the picture along it.
-    const shift = add(scale(screenRight(frame), -ox), scale(screenDown(frame), -oy));
-    return {...g, dist, target: add([0, (layout.top + layout.bottom) / 2 + 0.6, 0], shift)};
+    for (let pass = 0; pass < 3; pass++) {
+      Object.assign(cam, g, {target: [...g.target]});
+      B = basis();
+      const ps = rims.map(project).filter(Boolean);
+      if (!ps.length) break;
+      const xs = ps.map(q => q.x), ys = ps.map(q => q.y);
+      const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+      const k = 1.04 * Math.max((x1 - x0) / freeW, (y1 - y0) / freeH);
+      const px = g.dist / B.focal, frame = camFrame(g);
+      const dx = (x0 + x1) / 2 - (left + W - right) / 2, dy = (y0 + y1) / 2 - (top + H - bottom) / 2;
+      g = {...g, dist: g.dist * k, target: add(g.target, add(scale(screenRight(frame), dx * px), scale(screenDown(frame), dy * px)))};
+    }
+    Object.assign(cam, keep);
+    B = keepB;
+    return g;
   }
 
   // A journey is framed from the angle the overview (or tour) camera has: all its stops fit the
@@ -366,6 +407,12 @@ export function createStage(canvas, scene, model, layout) {
     const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
     // Cloud names lead out to the right, so the right side keeps more room.
     return fitPoints(g, [...frame.chain].map(id => layout.pos.get(id)).filter(Boolean), wide => wide ? [60, 120] : [120, 60], 3, 180);
+  }
+  // A phase in focus frames only its own clouds; the clouds one link away may run off the edge.
+  function phaseGoal() {
+    const base = tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+    const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
+    return fitPoints(g, [...frame.phase.members].map(id => layout.pos.get(id)).filter(Boolean), wide => wide ? [60, 120] : [120, 60], 3, 180);
   }
   // The camera that fits a set of world points into the canvas the HUD leaves free, seen from
   // the angle g; room(wide) says how many pixels to keep for labels across and down.
@@ -395,12 +442,13 @@ export function createStage(canvas, scene, model, layout) {
   function drawJourney() {
     const J = journey, pts = J.stops.map(s => project(journeyPoint(s)));
     const lit = k => J.focus == null || J.focus === k;
-    for (let k = 1; k < pts.length; k++) {
-      const a = pts[k - 1], b = pts[k];
+    const edges = J.stops.flatMap((s, k) => s.from.map(j => [j, k]));
+    for (const [j, k] of edges) {
+      const a = pts[j], b = pts[k];
       if (!a || !b) continue;
       const color = colors.phase[J.stops[k].phase] || colors.focus;
-      const on = J.focus == null || J.focus === k || J.focus === k - 1;
-      stroke(color, on ? 0.95 : 0.35, 1.6, k === 1 && J.start ? [5, 4] : null);
+      const on = J.focus == null || J.focus === k || J.focus === j;
+      stroke(color, on ? 0.95 : 0.35, 1.6, j === 0 && J.start ? [5, 4] : null);
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       const len = Math.hypot(b.x - a.x, b.y - a.y);
       if (len > 40) {
@@ -409,14 +457,16 @@ export function createStage(canvas, scene, model, layout) {
         ctx.beginPath(); ctx.moveTo(mx - 6 * ux - 4 * uy, my - 6 * uy + 4 * ux); ctx.lineTo(mx, my); ctx.lineTo(mx - 6 * ux + 4 * uy, my - 6 * uy - 4 * ux); ctx.stroke();
       }
     }
-    const last = pts.length - 1, end = pts[last], prev = pts[last - 1];
-    if (J.end && end && prev) {
+    // A bar past every stop the way does not go on from: each dead branch, and where it ends.
+    J.stops.forEach((s, k) => {
+      const end = pts[k], prev = pts[s.from[0]];
+      if (!s.deadEnd || !end || !prev) return;
       const len = Math.hypot(end.x - prev.x, end.y - prev.y) || 1, ux = (end.x - prev.x) / len, uy = (end.y - prev.y) / len;
       const bx = end.x + ux * 14, by = end.y + uy * 14;
-      stroke(colors.label, 0.9, 1.6);
+      stroke(colors.label, lit(k) ? 0.9 : 0.4, 1.6);
       ctx.beginPath(); ctx.moveTo(end.x + ux * 8, end.y + uy * 8); ctx.lineTo(bx, by);
       ctx.moveTo(bx - uy * 7, by + ux * 7); ctx.lineTo(bx + uy * 7, by - ux * 7); ctx.stroke();
-    }
+    });
 
     // Labels as callouts, subway-map style: along a line that runs across, two rows above and
     // below it; along a line that runs up, two columns beside it. Stops alternate between the
@@ -430,11 +480,11 @@ export function createStage(canvas, scene, model, layout) {
     for (const it of shown) {
       const s = J.stops[it.k], on = lit(it.k);
       it.color = colors.phase[s.phase] || colors.focus;
-      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 11px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "10px", on ? colors.label : colors["label-dim"]]];
-      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "10px", colors.label]);
-      if (it.k === last && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 10px", colors["ink-hi"]]);
-      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 14;
-      it.h = it.lines.length * 13 + 6;
+      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 13px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "12px", on ? colors.label : colors["label-dim"]]];
+      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "12px", colors.label]);
+      if (it.k === J.endAt && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 12px", colors["ink-hi"]]);
+      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 16;
+      it.h = it.lines.length * 16 + 7;
     }
     const order = [...shown].sort((a, b) => wide ? a.p.x - b.p.x : a.p.y - b.p.y);
     const ins = hudInsets(), GAP = wide ? 10 : 6;
@@ -479,24 +529,25 @@ export function createStage(canvas, scene, model, layout) {
       it.lines.forEach(([t, f, col], i) => {
         ctx.font = `${f} 'IBM Plex Mono', monospace`;
         ctx.fillStyle = col;
-        ctx.fillText(t, x + 8, y + 14 + i * 13);
+        ctx.fillText(t, x + 9, y + 16 + i * 16);
       });
       targets.push({kind: "stop", k: it.k, stop: J.stops[it.k], x: x + w / 2, y: y + h / 2, r: 0, rect: [x, y, w, h]});
     }
     // Badges last, on top of every leader.
     for (const {k, p, color} of shown) {
-      const on = lit(k);
+      const on = lit(k), num = J.stops[k].num;
+      ctx.font = "600 12px 'IBM Plex Mono', monospace";
+      const w = Math.max(20, Math.ceil(ctx.measureText(num).width) + 8);
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
       ctx.fillStyle = J.focus === k ? color : colors.void;
-      ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+      ctx.fillRect(p.x - w / 2, p.y - 10, w, 20);
       stroke(color, on ? 1 : 0.5, 1);
-      ctx.strokeRect(p.x - 7.5, p.y - 7.5, 15, 15);
+      ctx.strokeRect(p.x - w / 2 + 0.5, p.y - 9.5, w - 1, 19);
       ctx.fillStyle = J.focus === k ? colors.void : on ? colors["ink-hi"] : colors["label-dim"];
-      ctx.font = "600 10px 'IBM Plex Mono', monospace";
       ctx.textAlign = "center";
-      ctx.fillText(String(k + 1), p.x, p.y + 3.5);
-      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 10});
+      ctx.fillText(num, p.x, p.y + 4);
+      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 12});
     }
     ctx.globalAlpha = 1;
   }
@@ -582,7 +633,7 @@ export function createStage(canvas, scene, model, layout) {
       .map(r => ({...r, y: Math.max(top, Math.min(bottom, r.y))}));
     if (!tiers.length) return;
     // Clamped ticks keep at least a label's height between them, pushing upward.
-    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 28);
+    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 34);
     stroke(colors.line, 1, 1);
     ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
     tiers.forEach((r, k) => {
@@ -599,11 +650,11 @@ export function createStage(canvas, scene, model, layout) {
       ctx.textAlign = "left";
       ctx.globalAlpha = on ? 1 : 0.75;
       ctx.fillStyle = color;
-      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
-      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, x + 10, r.y - 2);
+      ctx.font = `${on ? 600 : 500} 12px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, x + 10, r.y - 3);
       ctx.fillStyle = colors["label-dim"];
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 10);
+      ctx.font = "11px 'IBM Plex Mono', monospace";
+      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 12);
     });
     ctx.globalAlpha = 1;
   }
@@ -613,10 +664,10 @@ export function createStage(canvas, scene, model, layout) {
     const y = H - bottom + 22, x0 = left + 8, x1 = W - right - 8;
     const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
       .map(t => ({t, x: project([0, t.y, 0])?.x})).filter(r => r.x != null)
-      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 90, r.x))}));
+      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 104, r.x))}));
     if (!tiers.length) return;
     // Clamped ticks keep at least a label's width between them, pushing right.
-    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 96);
+    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 112);
     stroke(colors.line, 1, 1);
     ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
     tiers.forEach((r, k) => {
@@ -631,18 +682,23 @@ export function createStage(canvas, scene, model, layout) {
       ctx.textAlign = "left";
       ctx.globalAlpha = on ? 1 : 0.75;
       ctx.fillStyle = color;
-      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
-      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, r.x + 4, y - 18);
+      ctx.font = `${on ? 600 : 500} 12px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, r.x + 4, y - 21);
       // The floor's name only where the next tick leaves room for it.
-      if (!next || next.x - r.x > 150) {
+      if (!next || next.x - r.x > 170) {
         ctx.fillStyle = colors["label-dim"];
-        ctx.font = "10px 'IBM Plex Mono', monospace";
+        ctx.font = "11px 'IBM Plex Mono', monospace";
         ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, r.x + 4, y - 7);
       }
     });
     ctx.globalAlpha = 1;
   }
 
+  // What a click on a cloud does, as its hovered tag says it.
+  function clickSays(c) {
+    if (journey) return journey.stops.some(s => s.id === c.id) ? "click to fly to this stop" : "click to leave the journey";
+    return view.selected === c.id ? "click again to open by entity" : c.kind === "core" ? "click to select, again to open" : "click to light its causal chain";
+  }
   function brackets(x, y, r, color, alpha = 1) {
     const L = Math.max(5, Math.min(10, r * 0.4));
     stroke(color, alpha, 1);
@@ -653,79 +709,65 @@ export function createStage(canvas, scene, model, layout) {
     }
     ctx.stroke();
   }
-  // A cloud's name, led out away from the tower's axis so names on the two sides never cross it;
-  // a fixed side (+1 right, -1 left) overrides that.
-  function tag(x, y, r, title, detail, color, alpha = 1, side = 0) {
-    if (rot) return tagAcross(x, y, r, title, detail, color, alpha, -side);
+  // Boxes already drawn on the HUD this frame (badges, clouds, names): later names keep clear.
+  let placed = [];
+  const clash = (bx, m = 3) => placed.some(q => bx[0] < q[0] + q[2] + m && q[0] < bx[0] + bx[2] + m && bx[1] < q[1] + q[3] + m && q[1] < bx[1] + bx[3] + m);
+  const offCanvas = bx => bx[0] < 4 || bx[1] < 4 || bx[0] + bx[2] > W - 4 || bx[1] + bx[3] > H - 4;
+  // A cloud's name, led out from a bracket corner on a short diagonal. Upright, it prefers the
+  // side away from the tower's axis and the upper corner; on its side, the right and the side of
+  // the axis it is on. A fixed side (+1 right / -1 left upright, +1 down / -1 up on its side)
+  // goes first. The first corner whose text box is clear of everything placed and inside the
+  // canvas wins. A hovered cloud adds a line in the accent colour: what a
+  // click will do there.
+  function tag(x, y, r, title, detail, color, alpha = 1, side = 0, act = null) {
     const axis = project([0, cam.target[1], 0]);
-    const s = side || (axis && x < axis.x - 4 ? -1 : 1);
-    // Leader: a short diagonal from the bracket corner, then the text.
-    const x0 = x + s * r, y0 = y - r, x1 = x0 + s * 10, y1 = y0 - 10;
-    stroke(color, alpha * 0.8, 1);
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + s * 6, y1); ctx.stroke();
-    ctx.globalAlpha = alpha;
-    ctx.textAlign = s > 0 ? "left" : "right";
-    ctx.fillStyle = color;
-    ctx.font = "500 11px 'IBM Plex Mono', monospace";
-    ctx.fillText(title, x1 + s * 10, y1 + 4);
-    if (detail) {
-      ctx.fillStyle = colors["label-dim"];
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(detail, x1 + s * 10, y1 + 17);
+    const lines = [[title, "500 14px", color], ...(detail ? [[detail, "12px", colors["label-dim"]]] : []), ...(act ? [[act, "12px", colors.focus]] : [])];
+    const w = Math.max(...lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; }));
+    const h = 16 * lines.length;
+    let cands;
+    if (rot) {
+      const v = -side || (axis && y < axis.y - 4 ? -1 : 1);
+      cands = [[1, v], [1, -v], [-1, v], [-1, -v]];
+    } else {
+      const u = side || (axis && x < axis.x - 4 ? -1 : 1);
+      cands = [[u, -1], [-u, -1], [u, 1], [-u, 1]];
     }
-  }
-  // On its side the axis runs across, so a name leads up (above the axis) or down (below it);
-  // a fixed side is -1 up, +1 down.
-  function tagAcross(x, y, r, title, detail, color, alpha, side) {
-    const axis = project([0, cam.target[1], 0]);
-    const s = side || (axis && y < axis.y - 4 ? -1 : 1);
-    const x0 = x + r, y0 = y + s * r, x1 = x0 + 10, y1 = y0 + s * 10;
+    const layoutAt = ([sx, sy]) => {
+      const x0 = x + sx * r, y0 = y + sy * r, x1 = x0 + sx * 10, y1 = y0 + sy * 10, tx = x1 + sx * 10;
+      // On its side, above the axis the block grows upward from the leader; else it hangs from it.
+      const by = sy < 0 && rot ? y1 + 5 - 16 * (lines.length - 1) : y1 + 5;
+      return {sx, x0, y0, x1, y1, tx, by, box: [sx > 0 ? tx : tx - w, by - 13, w, h]};
+    };
+    const all = cands.map(layoutAt);
+    // Clear and on the canvas; else the on-canvas corner that overlaps least (a slight overlap
+    // reads, a cut-off name does not).
+    const overlap = bx => placed.reduce((n, q) => n + Math.max(0, Math.min(bx[0] + bx[2], q[0] + q[2]) - Math.max(bx[0], q[0])) * Math.max(0, Math.min(bx[1] + bx[3], q[1] + q[3]) - Math.max(bx[1], q[1])), 0);
+    const inside = all.filter(o => !offCanvas(o.box));
+    const pick = inside.find(o => !clash(o.box)) || [...inside].sort((p, q) => overlap(p.box) - overlap(q.box))[0] || all[0];
+    placed.push(pick.box);
+    const {sx, x0, y0, x1, y1, tx, by} = pick;
     stroke(color, alpha * 0.8, 1);
-    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + 6, y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + sx * 6, y1); ctx.stroke();
     ctx.globalAlpha = alpha;
-    ctx.textAlign = "left";
-    ctx.fillStyle = color;
-    ctx.font = "500 11px 'IBM Plex Mono', monospace";
-    const ty = s < 0 && detail ? y1 - 9 : y1 + 4;
-    ctx.fillText(title, x1 + 10, ty);
-    if (detail) {
-      ctx.fillStyle = colors["label-dim"];
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(detail, x1 + 10, ty + 13);
-    }
+    ctx.textAlign = sx > 0 ? "left" : "right";
+    lines.forEach(([t, f, c], i) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; ctx.fillStyle = c; ctx.fillText(t, tx, by + 16 * i); });
   }
-  // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
-  // over points. It sits 40% of the way from the source, so edges converging on one cloud keep
-  // their labels apart, and it is a hover target for the full card.
+  // An edge that has something to say carries a small square at its middle instead of a text
+  // plate over the line: the square is the hover target, and its card shows over the details
+  // panel's place (the tour's caption says the same in words).
   function edgeLabel({a, b, link, cluster, color, hot}) {
     const pa = project(a), pb = project(b);
     if (!pa || !pb) return;
-    const x = pa.x + (pb.x - pa.x) * 0.4, y = pa.y + (pb.y - pa.y) * 0.4;
-    ctx.font = "500 10px 'IBM Plex Mono', monospace";
-    const w1 = ctx.measureText(link.title).width;
-    ctx.font = "10px 'IBM Plex Mono', monospace";
-    const w2 = link.detail ? ctx.measureText(link.detail).width : 0;
-    const w = Math.max(w1, w2) + 14, h = link.detail ? 30 : 17;
-    const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
+    const x = Math.round(pa.x + (pb.x - pa.x) * 0.5), y = Math.round(pa.y + (pb.y - pa.y) * 0.5);
     ctx.setLineDash([]);
-    ctx.globalAlpha = 0.94;
-    ctx.fillStyle = colors.void;
-    ctx.fillRect(x0, y0, w, h);
-    stroke(color, hot ? 1 : 0.65, 1);
-    ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
-    ctx.fillStyle = color;
-    ctx.fillRect(x0, y0, 2, h);
     ctx.globalAlpha = 1;
-    ctx.textAlign = "left";
-    ctx.fillStyle = color;
-    ctx.font = "500 10px 'IBM Plex Mono', monospace";
-    ctx.fillText(link.title, x0 + 8, y0 + 12);
-    if (link.detail) {
-      ctx.fillStyle = colors.label;
-      ctx.font = "10px 'IBM Plex Mono', monospace";
-      ctx.fillText(link.detail, x0 + 8, y0 + 25);
-    }
-    targets.push({kind: "edge", link, cluster, x, y, rect: [x0, y0, w, h]});
+    ctx.fillStyle = hot ? color : colors.void;
+    ctx.fillRect(x - 5, y - 5, 10, 10);
+    stroke(color, 1, 1);
+    ctx.strokeRect(x - 4.5, y - 4.5, 9, 9);
+    if (!hot) { ctx.fillStyle = color; ctx.fillRect(x - 1.5, y - 1.5, 3, 3); }
+    placed.push([x - 6, y - 6, 12, 12]);
+    targets.push({kind: "edge", link, cluster, x, y, rect: [x - 9, y - 9, 18, 18]});
   }
   // A lit chain's edges, numbered from the record up: a small square at each edge's middle, its
   // number matching the panel's list; hovering either side lights the other.
@@ -740,14 +782,15 @@ export function createStage(canvas, scene, model, layout) {
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
       ctx.fillStyle = hi ? color : colors.void;
-      ctx.fillRect(x - 8, y - 8, 16, 16);
+      ctx.fillRect(x - 10, y - 10, 20, 20);
       stroke(color, 1, 1);
-      ctx.strokeRect(x - 7.5, y - 7.5, 15, 15);
+      ctx.strokeRect(x - 9.5, y - 9.5, 19, 19);
       ctx.fillStyle = hi ? colors.void : colors["ink-hi"];
-      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      ctx.font = "600 12px 'IBM Plex Mono', monospace";
       ctx.textAlign = "center";
-      ctx.fillText(String(k + 1), x, y + 3.5);
-      targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 9, y - 9, 18, 18]});
+      ctx.fillText(String(k + 1), x, y + 4);
+      placed.push([x - 10, y - 10, 20, 20]);
+      targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 11, y - 11, 22, 22]});
     });
   }
   function diamond(x, y, r, fill) {
@@ -764,7 +807,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     B = basis();
     if (!manual) {
-      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.phase?.members.size ? phaseGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourShot(tourGoal);
       const k = 1 - Math.exp(-dt * 2.4);
       if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
       if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;
@@ -802,7 +845,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     // The current floor: the selected cloud's, else the hovered one's, else the tour's focus.
     const tierOf = id => id ? byId.get(id)?.tier : undefined;
-    const current = (journey?.focus != null ? tierOf(journey.stops[journey.focus].id) : null) ?? tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
+    const current = (journey?.focus != null ? tierOf(journey.stops[journey.focus].id) : null) ?? tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.phase?.members.size ? tierOf([...frame.phase.members][0]) : null) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
     for (const t of floors) {
       const members = shown.filter(c => c.tier === t.tier);
       const active = current === t.tier;
@@ -821,19 +864,30 @@ export function createStage(canvas, scene, model, layout) {
       if (hiddenPhase?.has(byId.get(l.from)?.phaseKey)) continue;
       // Under a journey the links only hint at the tower; the journey line carries the story.
       if (journey) { if (l.from !== "core") { stroke(colors["line-hi"], 0.14, 1); line3(layout.pos.get(l.from), layout.pos.get(c.id)); } continue; }
+      // A phase in focus keeps only the links into or out of its clouds, each in full colour.
+      if (frame.phase) {
+        const ph = frame.phase, on = ph.members.has(c.id) || ph.members.has(l.from), over = hoverId === c.id || hoverId === l.from;
+        if (!on || (l.minor && !over)) continue;
+        stroke(phaseColor(c), l.from === "core" ? 0.5 : 0.85, 1.2, l.from === "core" ? [1, 4] : l.minor ? [3, 4] : null);
+        line3(layout.pos.get(l.from), layout.pos.get(c.id));
+        if ((over || hover?.kind === "edge" && hover.link === l) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color: phaseColor(c), hot: hover?.link === l});
+        continue;
+      }
       const inChain = frame.chain && frame.chain.has(c.id) && frame.chain.has(l.from);
       const hot = inChain || (!frame.chain && frame.focus.has(c.id)) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
       const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
+      if (l.minor && !hot && !hovered && view.selected !== c.id && view.selected !== l.from) continue;
       const spoke = l.from === "core";
       const color = phaseColor(c);
       const quiet = frame.chain && !inChain ? 0.25 : 1;
       const main = frame.labelAll && !frame.chain && !open && backbone.has(c.id) && backbone.has(l.from);
       if (spoke && !(main || hot || hovered || view.selected === c.id || (!backbone.size && !frame.labelAll))) continue;
       if (main) stroke(color, 0.9, 1.6);
-      else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : null);
+      else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : l.minor ? [3, 4] : null);
       line3(layout.pos.get(l.from), layout.pos.get(c.id));
       const edgeHot = hover?.kind === "edge" && hover.link === l;
-      if (!frame.chain && (hot || hovered || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
+      // The overview's main chain keeps its badges, so the pointer can reach them from anywhere.
+      if (!frame.chain && (hot || hovered || edgeHot || main) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
     }
 
     // Points.
@@ -845,10 +899,11 @@ export function createStage(canvas, scene, model, layout) {
       const R = layout.radius.get(c.id);
       const focus = frame.focus.has(c.id);
       const isOpen = open?.id === c.id;
-      const outside = frame.chain && !frame.chain.has(c.id);
-      const lead = frame.labelAll && !frame.chain && backbone.has(c.id) && c.kind !== "core";
+      const outside = (frame.chain && !frame.chain.has(c.id)) || (frame.phase && !frame.phase.near.has(c.id));
+      const inPhase = frame.phase?.members.has(c.id);
+      const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id) && c.kind !== "core";
       const onWay = journey && journey.stops.some(s => s.id === c.id);
-      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead ? 1 : c.kind === "core" ? 0.5 : 0.6)
+      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead || inPhase ? 1 : c.kind === "core" ? 0.5 : 0.6)
         * appear * (pc && !isOpen ? fog(pc.z) : 1);
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
@@ -887,7 +942,7 @@ export function createStage(canvas, scene, model, layout) {
             targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
             ctx.globalAlpha = 1;
             ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid ? colors["ink-hi"] : colors.label;
-            ctx.font = "11px 'IBM Plex Mono', monospace";
+            ctx.font = "12.5px 'IBM Plex Mono', monospace";
             ctx.textAlign = "left";
             ctx.fillText(factLabel(scene.factById.get(p.fid)), s.x + 9, s.y + 4);
           }
@@ -927,21 +982,30 @@ export function createStage(canvas, scene, model, layout) {
           ctx.globalAlpha = view.group != null ? 0.5 : 1;
           ctx.textAlign = "left";
           ctx.fillStyle = hot ? phaseColor(open) : colors.label;
-          ctx.font = "11px 'IBM Plex Mono', monospace";
+          ctx.font = "13px 'IBM Plex Mono', monospace";
           ctx.fillText(g.key, p.x + r + 5, p.y - 1);
           ctx.fillStyle = colors["label-dim"];
-          ctx.font = "10px 'IBM Plex Mono', monospace";
-          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 11);
+          ctx.font = "11.5px 'IBM Plex Mono', monospace";
+          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 13);
+          if (hot) { ctx.fillStyle = colors.focus; ctx.fillText("click to list its facts", p.x + r + 5, p.y + 28); }
         } else if (g.fids.length > MAX_FACTS) {
           const q = project(factSlot(open, gi, MAX_FACTS, g.fids.length));
-          if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = "10px 'IBM Plex Mono', monospace"; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
+          if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
         }
         targets.push({kind: "group", cluster: open, gi, x: p.x, y: p.y, r: r + 4});
       });
     }
 
-    // HUD: brackets and tags for the clouds that matter right now.
-    for (const {c, pc, sr, focus, alpha, isOpen} of labelled) {
+    // HUD. Badges go down first and every cloud's core is an obstacle, then names are placed in
+    // order of importance (open, hovered, selected, focused, main chain, verdicts), each keeping
+    // clear of what is already there; hub names come last and give way.
+    placed = labelled.map(({pc, sr}) => { const k = Math.min(sr, 14); return [pc.x - k, pc.y - k, 2 * k, 2 * k]; });
+    for (const e of edgeLabels) edgeLabel(e);
+    if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
+    const rank = ({c, focus, isOpen}) => isOpen ? 0 : hover?.kind === "cluster" && hover.cluster === c ? 1 : view.selected === c.id ? 2 : focus ? 3
+      : backbone.has(c.id) ? 4 : c.kind === "root" || c.kind === "candidate" ? 5 : 6;
+    const hubsLater = [];
+    for (const {c, pc, sr, focus, alpha, isOpen} of [...labelled].sort((p, q) => rank(p) - rank(q))) {
       const hot = hover?.kind === "cluster" && hover.cluster === c;
       if (isOpen) {
         const r = layout.radius.get(c.id) * pc.s + 6;
@@ -951,29 +1015,38 @@ export function createStage(canvas, scene, model, layout) {
       }
       const selected = view.selected === c.id;
       if (journey && !hot) continue;
-      if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubLabels(c, fade);
-      const outside = frame.chain && !frame.chain.has(c.id);
-      if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
+      if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubsLater.push(c);
+      const outside = (frame.chain && !frame.chain.has(c.id)) || (frame.phase && !frame.phase.near.has(c.id));
+      const inPhase = frame.phase?.members.has(c.id);
+      // The hovered cloud answers the pointer: a faint disc in its phase colour, brackets pushed out.
+      if (hot) {
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = phaseColor(c);
+        ctx.beginPath(); ctx.arc(pc.x, pc.y, sr + 6, 0, Math.PI * 2); ctx.fill();
+        brackets(pc.x, pc.y, sr + 7, phaseColor(c), 1);
+      } else if (focus || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
       if (outside && !hot) continue;
-      const lead = frame.labelAll && !frame.chain && backbone.has(c.id);
-      const quietAll = frame.labelAll && !frame.chain && backbone.size;
-      const named = quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || (frame.chain && frame.chain.has(c.id));
+      const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id);
+      const quietAll = frame.labelAll && !frame.chain && !frame.phase && backbone.size;
+      const named = quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
       if (!named && quietAll) continue;
       if (named) {
         // In the overview the main chain reads down the right; its tier-mates take the left.
-        const side = !frame.labelAll || frame.chain ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
-        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || c.kind === "root" ? phaseColor(c) : colors.label, fade * Math.min(1, alpha / 0.6), side);
+        const side = !frame.labelAll || frame.chain || frame.phase ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
+        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || inPhase || c.kind === "root" ? phaseColor(c) : colors.label, hot ? 1 : fade * Math.min(1, alpha / 0.6), side, hot ? clickSays(c) : null);
       } else {
         // Unnamed queries keep only their call tag under the cloud; hover names them.
         ctx.globalAlpha = 0.9 * fade * alpha;
         ctx.fillStyle = colors["label-dim"];
-        ctx.font = "10px 'IBM Plex Mono', monospace";
+        ctx.font = "12px 'IBM Plex Mono', monospace";
         ctx.textAlign = "center";
-        ctx.fillText(callTag(c), pc.x, pc.y + sr + 12);
+        const t = callTag(c), tw = ctx.measureText(t).width, bx = [pc.x - tw / 2, pc.y + sr + 4, tw, 14];
+        if (clash(bx, 1)) continue;
+        placed.push(bx);
+        ctx.fillText(t, pc.x, pc.y + sr + 15);
       }
     }
-    for (const e of edgeLabels) edgeLabel(e);
-    if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
+    for (const c of hubsLater) hubLabels(c, fade);
     if (journey) drawJourney();
     ruler(shown, current);
     ctx.globalAlpha = 1;
@@ -1063,6 +1136,7 @@ export function createStage(canvas, scene, model, layout) {
     else if (view.group != null) open(view.cluster);
     else if (view.cluster) { setView(null); emit("select", {kind: "cluster", cluster: byId.get(view.selected), opened: false}); }
     else if (view.selected) { view.selected = null; emit("select", null); }
+    else emit("back");
   }
   const onWheel = e => { e.preventDefault(); takeOver(); cam.dist = Math.max(5, Math.min(110, cam.dist * Math.exp(e.deltaY * 0.001))); };
   const onLeave = () => { hover = null; emit("hover", null); };
@@ -1084,6 +1158,8 @@ export function createStage(canvas, scene, model, layout) {
     follow() { if (journey) setJourney(null); view.fact = null; view.selected = null; setView(null); emit("select", null); },
     // Hand the camera back to whoever drives it (tour or overview presets) without folding.
     release() { manual = false; emit("manual", false); },
+    // The tour moves the camera under a still pointer; drop what it was over until it moves.
+    clearHover() { if (hover) { hover = null; canvas.style.cursor = "grab"; emit("hover", null); } },
     open,
     select,
     back,

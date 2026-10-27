@@ -1,9 +1,9 @@
 // Lazily mounted case views (Trajectory / DSL Graph / Result) kept in sync with a CaseStore.
 // Shared by the workbench and the read-only demo on the home page.
 export const TABS = [
-  {id: "trajectory", label: "Trajectory", load: () => import("../views/trajectory.js?v=edc30cc901")},
-  {id: "graph", label: "DSL Graph", load: () => import("../views/graph.js?v=edc30cc901")},
-  {id: "result", label: "Result", load: () => import("../views/result.js?v=edc30cc901"), runOnly: true},
+  {id: "trajectory", label: "Trajectory", load: () => import("../views/trajectory.js?v=27bf1baa85")},
+  {id: "graph", label: "DSL Graph", load: () => import("../views/graph.js?v=27bf1baa85")},
+  {id: "result", label: "Result", load: () => import("../views/result.js?v=27bf1baa85"), runOnly: true},
 ];
 
 // ctx: {store, ref, navigate(tab, ...extra), embedded?} is handed to every view.

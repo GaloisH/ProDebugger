@@ -1,5 +1,5 @@
 // Normalises raw run/session files into one case model. Depends only on file formats.
-import {buildCalls} from "./calls.js?v=edc30cc901";
+import {buildCalls} from "./calls.js?v=27bf1baa85";
 
 export const entityId = e => e ? `${e.kind}:${e.index}` : "";
 

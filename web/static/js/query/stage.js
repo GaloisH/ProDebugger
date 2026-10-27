@@ -436,12 +436,13 @@ export function createStage(canvas, scene, model, layout) {
   function drawJourney() {
     const J = journey, pts = J.stops.map(s => project(journeyPoint(s)));
     const lit = k => J.focus == null || J.focus === k;
-    for (let k = 1; k < pts.length; k++) {
-      const a = pts[k - 1], b = pts[k];
+    const edges = J.stops.flatMap((s, k) => s.from.map(j => [j, k]));
+    for (const [j, k] of edges) {
+      const a = pts[j], b = pts[k];
       if (!a || !b) continue;
       const color = colors.phase[J.stops[k].phase] || colors.focus;
-      const on = J.focus == null || J.focus === k || J.focus === k - 1;
-      stroke(color, on ? 0.95 : 0.35, 1.6, k === 1 && J.start ? [5, 4] : null);
+      const on = J.focus == null || J.focus === k || J.focus === j;
+      stroke(color, on ? 0.95 : 0.35, 1.6, j === 0 && J.start ? [5, 4] : null);
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       const len = Math.hypot(b.x - a.x, b.y - a.y);
       if (len > 40) {
@@ -450,14 +451,16 @@ export function createStage(canvas, scene, model, layout) {
         ctx.beginPath(); ctx.moveTo(mx - 6 * ux - 4 * uy, my - 6 * uy + 4 * ux); ctx.lineTo(mx, my); ctx.lineTo(mx - 6 * ux + 4 * uy, my - 6 * uy - 4 * ux); ctx.stroke();
       }
     }
-    const last = pts.length - 1, end = pts[last], prev = pts[last - 1];
-    if (J.end && end && prev) {
+    // A bar past every stop the way does not go on from: each dead branch, and where it ends.
+    J.stops.forEach((s, k) => {
+      const end = pts[k], prev = pts[s.from[0]];
+      if (!s.deadEnd || !end || !prev) return;
       const len = Math.hypot(end.x - prev.x, end.y - prev.y) || 1, ux = (end.x - prev.x) / len, uy = (end.y - prev.y) / len;
       const bx = end.x + ux * 14, by = end.y + uy * 14;
-      stroke(colors.label, 0.9, 1.6);
+      stroke(colors.label, lit(k) ? 0.9 : 0.4, 1.6);
       ctx.beginPath(); ctx.moveTo(end.x + ux * 8, end.y + uy * 8); ctx.lineTo(bx, by);
       ctx.moveTo(bx - uy * 7, by + ux * 7); ctx.lineTo(bx + uy * 7, by - ux * 7); ctx.stroke();
-    }
+    });
 
     // Labels as callouts, subway-map style: along a line that runs across, two rows above and
     // below it; along a line that runs up, two columns beside it. Stops alternate between the
@@ -473,7 +476,7 @@ export function createStage(canvas, scene, model, layout) {
       it.color = colors.phase[s.phase] || colors.focus;
       it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 13px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "12px", on ? colors.label : colors["label-dim"]]];
       if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "12px", colors.label]);
-      if (it.k === last && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 12px", colors["ink-hi"]]);
+      if (it.k === J.endAt && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 12px", colors["ink-hi"]]);
       it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 16;
       it.h = it.lines.length * 16 + 7;
     }
@@ -526,17 +529,18 @@ export function createStage(canvas, scene, model, layout) {
     }
     // Badges last, on top of every leader.
     for (const {k, p, color} of shown) {
-      const on = lit(k);
+      const on = lit(k), num = J.stops[k].num;
+      ctx.font = "600 12px 'IBM Plex Mono', monospace";
+      const w = Math.max(20, Math.ceil(ctx.measureText(num).width) + 8);
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
       ctx.fillStyle = J.focus === k ? color : colors.void;
-      ctx.fillRect(p.x - 10, p.y - 10, 20, 20);
+      ctx.fillRect(p.x - w / 2, p.y - 10, w, 20);
       stroke(color, on ? 1 : 0.5, 1);
-      ctx.strokeRect(p.x - 9.5, p.y - 9.5, 19, 19);
+      ctx.strokeRect(p.x - w / 2 + 0.5, p.y - 9.5, w - 1, 19);
       ctx.fillStyle = J.focus === k ? colors.void : on ? colors["ink-hi"] : colors["label-dim"];
-      ctx.font = "600 12px 'IBM Plex Mono', monospace";
       ctx.textAlign = "center";
-      ctx.fillText(String(k + 1), p.x, p.y + 4);
+      ctx.fillText(num, p.x, p.y + 4);
       targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 12});
     }
     ctx.globalAlpha = 1;

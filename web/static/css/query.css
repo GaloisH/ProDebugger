@@ -331,6 +331,12 @@ body.page-query .app { padding: 0; }
 .br-dot { fill: var(--qg-sig-goal); }
 .br-trace { fill: none; stroke: var(--qg-sig-goal); stroke-width: 1.6; stroke-dasharray: 6 4; }
 .br-brackets { fill: none; stroke: var(--qg-focus); stroke-width: 1.2; }
+.br-badge rect { fill: var(--qg-void); stroke-width: 1.4; }
+.br-badge text { font-family: var(--mono); font-size: 12px; font-weight: 600; text-anchor: middle; }
+.br-badge.is-env rect { stroke: var(--qg-th-env); } .br-badge.is-env text { fill: var(--qg-th-env); }
+.br-badge.is-agent rect { stroke: var(--qg-th-agent); } .br-badge.is-agent text { fill: var(--qg-th-agent); }
+.br-badge.is-root rect { stroke: var(--qg-focus); } .br-badge.is-root text { fill: var(--qg-focus); }
+.br-badge.is-goal rect { stroke: var(--qg-sig-goal); } .br-badge.is-goal text { fill: var(--qg-sig-goal); }
 .qg-error code { font-family: var(--mono); color: var(--qg-focus); }
 
 @media (max-width: 1400px) {

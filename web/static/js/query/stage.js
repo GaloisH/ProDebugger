@@ -44,6 +44,9 @@ export function createStage(canvas, scene, model, layout) {
   // A fact's journey (journeyOf) drawn as one numbered line through the clouds that returned
   // it; focus is the stop the camera is on, or null for the whole line.
   let journey = null;
+  // Facts the Story board is talking about: each mark recolours its points wherever they are
+  // drawn and puts its number once, beside the copy in a focused cloud if there is one.
+  let markOf = new Map(), marks = [], badgeAt = [];
   let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
   const listeners = {hover: [], select: [], manual: [], view: [], journey: [], back: []};
@@ -805,6 +808,30 @@ export function createStage(canvas, scene, model, layout) {
       targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 13, y - 13, 26, 26]});
     });
   }
+  // One numbered square per mark, beside a point of it: in a focused cloud first, else the nearest.
+  function markBadges() {
+    for (const mk of marks) {
+      if (!mk.label) continue;
+      const at = badgeAt.filter(b => b.mk === mk).sort((a, b) => (b.focus - a.focus) || a.z - b.z)[0];
+      if (!at) continue;
+      // The first corner whose square is clear of the badges and names already placed.
+      const [dx, dy] = [[1, -1], [-1, -1], [1, 1], [-1, 1], [2, -1], [-2, -1]].find(([u, v]) => !clash([at.x + 13 * u - 11, at.y + 13 * v - 11, 22, 22], 2)) || [1, -1];
+      const x = at.x + 13 * dx, y = at.y + 13 * dy;
+      stroke(mk.color, 0.9, 1);
+      ctx.beginPath(); ctx.moveTo(at.x + 3 * Math.sign(dx), at.y + 3 * dy); ctx.lineTo(x - 9 * Math.sign(dx), y - 9 * dy); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = colors.void;
+      ctx.fillRect(x - 10, y - 10, 20, 20);
+      stroke(mk.color, 1, 1.5);
+      ctx.strokeRect(x - 9.5, y - 9.5, 19, 19);
+      ctx.fillStyle = mk.color;
+      ctx.font = `600 13px ${MONO}`;
+      ctx.textAlign = "center";
+      ctx.fillText(mk.label, x, y + 4.5);
+      placed.push([x - 11, y - 11, 22, 22]);
+    }
+    badgeAt = [];
+  }
   function diamond(x, y, r, fill) {
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
     fill ? ctx.fill() : ctx.stroke();
@@ -937,18 +964,20 @@ export function createStage(canvas, scene, model, layout) {
           ctx.setLineDash([]);
         }
         for (const p of inst.get(c.id)) {
-          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid) continue;
+          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid && !markOf.has(p.fid)) continue;
           const s = project(p.cur);
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
           const role = roleOf(p.fid);
           // The travelling fact stands out in every cloud it passes; other role facts step back.
           const traveller = journey?.fid === p.fid;
-          const size = traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
-          ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role ? 1 : plain);
+          const mk = markOf.get(p.fid);
+          const size = mk ? 5 : traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
+          ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role || mk ? 1 : plain);
+          if (mk) { ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * appear); if (!open) badgeAt.push({mk, x: s.x, y: s.y, z: s.z, focus}); }
           if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, (journey ? 0.5 : 0.95) * appear);
           if (traveller) ctx.globalAlpha = 1;
-          ctx.fillStyle = role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
+          ctx.fillStyle = mk ? mk.color : role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
           ctx.fillRect(s.x - size / 2, s.y - size / 2, size, size);
           if (inGroup && c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS) {
             targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
@@ -1013,6 +1042,7 @@ export function createStage(canvas, scene, model, layout) {
     // clear of what is already there; hub names come last and give way.
     placed = labelled.map(({pc, sr}) => { const k = Math.min(sr, 14); return [pc.x - k, pc.y - k, 2 * k, 2 * k]; });
     ruler(shown, current);
+    markBadges();
     for (const e of edgeLabels) edgeLabel(e);
     if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
     const rank = ({c, focus, isOpen}) => isOpen ? 0 : hover?.kind === "cluster" && hover.cluster === c ? 1 : view.selected === c.id ? 2 : focus ? 3
@@ -1170,6 +1200,8 @@ export function createStage(canvas, scene, model, layout) {
     highlightChainEdge(k) { chainHi = k; },
     get journey() { return journey; },
     selectFact(fid) { view.fact = fid; },
+    // [{fids, color, label}]: later marks win where they share a fact.
+    markFacts(list) { marks = list || []; markOf = new Map(marks.flatMap(m => m.fids.map(fid => [fid, m]))); },
     get view() { return view; },
     get manual() { return manual; },
     colors: () => colors,

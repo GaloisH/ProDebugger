@@ -75,7 +75,8 @@ export function mountQuery(app, route) {
       if (state.mode === "story") {
         const row = story.rows[state.row];
         const out = frameAt(row.event, 1);
-        Object.assign(out.frame, {focus: new Set(row.focus), chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: null, filter: state.filter, labelAll: false});
+        const beatSpec = row.bridge?.tower?.[state.beat - 1];
+        Object.assign(out.frame, {focus: new Set(beatSpec?.focus.length ? beatSpec.focus : row.focus), chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: null, filter: state.filter, labelAll: false});
         out.camera = STORY_CAM;
         return out;
       }
@@ -193,8 +194,26 @@ export function mountQuery(app, route) {
     };
     document.addEventListener("keydown", keyHandler);
     const beats = k => story.rows[k]?.bridge?.beats || null;
+    // Mark colours come from the theme, so the tower's points match the board's strokes.
+    const css = getComputedStyle(root);
+    const MARK = {env: css.getPropertyValue("--qg-th-env").trim(), agent: css.getPropertyValue("--qg-th-agent").trim(),
+                  root: css.getPropertyValue("--qg-focus").trim(), goal: css.getPropertyValue("--qg-sig-goal").trim()};
+    // The root fact's way through the clouds the story has shown so far (later stops dropped).
+    const journeyUpTo = (fid, upto) => {
+      const J = journeyOf(scene, model, fid);
+      const keep = J.stops.map((st, i) => [st, i]).filter(([st]) => st.kind === "core" || (model.byId.get(st.id)?.event ?? Infinity) <= upto);
+      const at = new Map(keep.map(([, i], k) => [i, k]));
+      return {...J, stops: keep.map(([st]) => ({...st, from: st.from.filter(j => at.has(j)).map(j => at.get(j)), deadEnd: false})), start: null, end: null, endAt: -1};
+    };
+    const towerBeat = () => {
+      const spec = story.rows[state.row]?.bridge?.tower?.[state.beat - 1];
+      stage.markFacts(spec ? spec.marks.map(m => ({fids: m.fids, color: MARK[m.kind], label: m.label})) : []);
+      if (spec?.journey != null) stage.setJourney(journeyUpTo(spec.journey, spec.upto));
+      else if (stage.journey) stage.setJourney(null);
+    };
     const showBeat = () => {
       const b = beats(state.row);
+      towerBeat();
       if (!b) return;
       ui.setBeat(state.beat, b[state.beat - 1]);
       $count().textContent = `${state.row + 1} / ${story.rows.length} · beat ${state.beat}/${b.length}`;
@@ -505,6 +524,8 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     const sq = (x, y, r, cls) => `<rect class="${cls}" x="${x - r}" y="${y - r}" width="${2 * r}" height="${2 * r}"/>`;
     const brackets = (x0, y0, x1, y1, cls) => `<path class="${cls}" d="M${x0} ${y0 + 6}V${y0}H${x0 + 6}M${x1 - 6} ${y0}H${x1}V${y0 + 6}M${x1} ${y1 - 6}V${y1}H${x1 - 6}M${x0 + 6} ${y1}H${x0}V${y1 - 6}"/>`;
     const tip = t => `<title>${esc(t)}</title>`;
+    // The numbered squares the tower repeats beside the same facts.
+    const badge = (x, y, n, kind) => `<g class="br-badge is-${kind}"><rect x="${x - 9}" y="${y - 9}" width="18" height="18"/><text x="${x}" y="${y + 4}">${n}</text></g>`;
     const parts = [];
     // Columns: the suspect step and the failing step tinted; the step ruler along the bottom.
     for (const [s, cls] of [[br.anchor, "is-anchor"], [br.fail, "is-fail"]]) if (s != null && X.has(s)) { const [l, w] = colOf(s); parts.push(`<rect class="br-col ${cls}" x="${l}" y="0" width="${w}" height="${H - 22}"/>`); }
@@ -513,7 +534,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     // Beat 1 · the goal's rail.  Beat 2 · the world's rail and what happened to the object.
     parts.push(`<g data-beat="1"><line class="br-rail is-need" x1="0" y1="${yTop}" x2="${end}" y2="${yTop}"/></g>`);
     const w0 = br.world[0]?.step ?? br.anchor;
-    parts.push(`<g data-beat="2"><line class="br-rail is-got" x1="${Math.max(0, X.get(w0) - 40)}" y1="${yBot}" x2="${end}" y2="${yBot}"/>${br.world.map((w, i) => `<g>${tip(w.full || w.label)}${sq(X.get(w.step), yBot, i ? 4 : 5, "br-pt is-got")}<text class="br-note is-got" x="${X.get(w.step)}" y="${yBot + 20}">${esc(w.label)}</text></g>`).join("")}</g>`);
+    parts.push(`<g data-beat="2"><line class="br-rail is-got" x1="${Math.max(0, X.get(w0) - 40)}" y1="${yBot}" x2="${end}" y2="${yBot}"/>${br.world.map((w, i) => `<g>${tip(w.full || w.label)}${sq(X.get(w.step), yBot, i ? 4 : 5, "br-pt is-got")}<text class="br-note is-got" x="${X.get(w.step)}" y="${yBot + 20}">${esc(w.label)}</text></g>`).join("")}${br.world.length ? badge(X.get(br.world[0].step) - 22, yBot - 16, 1, "env") : ""}</g>`);
     // Beats 3–5 · the agent's links: a guess, the commitment, the repeats; the failed check.
     const sameStep = s => br.bridges.filter(b => b.step === s).length > 1;
     const xOf = b => X.get(b.step) + (sameStep(b.step) ? (b.role === "guess" ? -26 : 26) : 0);
@@ -524,11 +545,13 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       const label = b.role === "guess" ? `<text class="br-label is-guess" x="${x - 14}" y="${yMid - 4}" text-anchor="end">${esc(b.label)}</text><text class="br-kicker" x="${x - 14}" y="${yMid + 14}" text-anchor="end">GUESS · S${b.step}</text>`
         : b.role === "root" ? `<text class="br-label is-root" x="${x + 14}" y="${yMid - 4}">${esc(b.label)}</text><text class="br-kicker is-root" x="${x + 14}" y="${yMid + 14}">COMMITS · S${b.step}</text>`
         : b === lastRepeat ? `<text class="br-label is-repeat" x="${x + 12}" y="${yMid - 4}">${esc(b.label)}</text><text class="br-kicker" x="${x + 12}" y="${yMid + 14}">REPEATS · S${b.step}</text>` : "";
-      parts.push(`<g data-beat="${beatNo}">${tip(`step ${b.step} · ${b.quotes.join("\n")}`)}<line class="br-link is-${b.role}" x1="${x}" y1="${yTop + 5}" x2="${x}" y2="${yBot - 5}"/>${sq(x, yTop, 3, `br-pt is-${b.role}`)}${sq(x, yBot, 3, `br-pt is-${b.role}`)}${b.role === "guess" ? `<circle class="br-q" cx="${x}" cy="${yTop + (yMid - yTop) * 0.45}" r="8"/><text class="br-qmark" x="${x}" y="${yTop + (yMid - yTop) * 0.45 + 4}">?</text>` : ""}${label}</g>`);
+      const num = b.role === "guess" ? 2 : b.role === "root" ? 3 : b === lastRepeat ? 4 : 0;
+      const numAt = b.role === "guess" ? badge(x - 14, yTop + 18, 2, "agent") : num ? badge(x + 14, yTop + 42, num, b.role === "root" ? "root" : "agent") : "";
+      parts.push(`<g data-beat="${beatNo}">${numAt}${tip(`step ${b.step} · ${b.quotes.join("\n")}`)}<line class="br-link is-${b.role}" x1="${x}" y1="${yTop + 5}" x2="${x}" y2="${yBot - 5}"/>${sq(x, yTop, 3, `br-pt is-${b.role}`)}${sq(x, yBot, 3, `br-pt is-${b.role}`)}${b.role === "guess" ? `<circle class="br-q" cx="${x}" cy="${yTop + (yMid - yTop) * 0.45}" r="8"/><text class="br-qmark" x="${x}" y="${yTop + (yMid - yTop) * 0.45 + 4}">?</text>` : ""}${label}</g>`);
     }
     if (br.fail != null && X.has(br.fail)) {
       const x = X.get(br.fail);
-      parts.push(`<g data-beat="5"><path class="br-x" d="M${x - 6} ${yTop - 6}L${x + 6} ${yTop + 6}M${x + 6} ${yTop - 6}L${x - 6} ${yTop + 6}"/><text class="br-kicker is-fail" x="${x + 12}" y="${yTop - 10}">CHECK FAILS · S${br.fail}</text></g>`);
+      parts.push(`<g data-beat="5">${badge(x - 18, yTop - 14, 5, "goal")}<path class="br-x" d="M${x - 6} ${yTop - 6}L${x + 6} ${yTop + 6}M${x + 6} ${yTop - 6}L${x - 6} ${yTop + 6}"/><text class="br-kicker is-fail" x="${x + 12}" y="${yTop - 10}">CHECK FAILS · S${br.fail}</text></g>`);
       // Beat 6 · the trace back to the first commitment, which gets its brackets.
       if (root) {
         const rx = xOf(root), ty = yTop + 20;

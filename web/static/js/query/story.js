@@ -154,8 +154,8 @@ function buildBridge(scene, thread, w) {
   const bridges = [];
   for (const l of links.sort((a, b) => a.step - b.step)) {
     const kind = kindOf(l), b = bridges.find(x => x.step === l.step && x.kind === kind);
-    if (b) { b.quotes.push(`${l.module}: ${l.quote}`); continue; }
-    bridges.push({step: l.step, kind, module: l.module, topic: l.topic, quotes: [`${l.module}: ${l.quote}`], detail: l.detail, subject: l.subject});
+    if (b) { b.quotes.push(`${l.module}: ${l.quote}`); if (!b.modules.includes(l.module)) b.modules.push(l.module); continue; }
+    bridges.push({step: l.step, kind, module: l.module, modules: [l.module], topic: l.topic, quotes: [`${l.module}: ${l.quote}`], detail: l.detail, subject: l.subject});
   }
   const rootStep = scene.root?.step;
   const firstCommit = bridges.find(b => b.kind === "commit" && (rootStep == null || b.step === rootStep)) || bridges.find(b => b.kind === "commit");
@@ -184,6 +184,40 @@ function buildBridge(scene, thread, w) {
       `Tracing back from the failure, the first commitment is step ${root.step}'s ${root.module}: the root cause.`,
     ],
   };
+}
+
+
+// What the tower shows at each beat of the bridge: which clouds are in focus, which facts are
+// marked (the same colour and number as on the board), and at the trace back, the root fact's
+// way through the clouds shown so far.
+const SLOT_OF = {memory: "mem", reflection: "refl", plan: "plan", action: "act", observation: "obs"};
+function bridgeTower(scene, model, br, thread, w, upto, mapCluster) {
+  const cell = (step, module, prefer) => {
+    const all = scene.facts.filter(f => f.t === step && f.slot === SLOT_OF[module]).map(f => f.fid);
+    const own = all.filter(f => prefer.includes(f));
+    return own.length ? own : all;
+  };
+  const shown = c => !c.error && c.event <= upto && (c.kind === "query" || c.kind === "window");
+  const holding = fids => model.clusters.filter(c => shown(c) && c.fids.some(f => fids.includes(f))).map(c => c.id).slice(0, 4);
+  const of = role => br.bridges.filter(b => b.role === role);
+  const world = thread.nodes.filter(n => n.lane === "env").flatMap(n => n.fids);
+  const guess = of("guess").flatMap(b => b.modules.flatMap(m => cell(b.step, m, w.fids)));
+  const rootB = of("root")[0];
+  const root = scene.root?.fid != null && scene.root.step === rootB.step ? [scene.root.fid] : cell(rootB.step, rootB.module, w.fids);
+  const repeat = of("repeat").flatMap(b => b.modules.flatMap(m => cell(b.step, m, [])));
+  const fail = thread.nodes.filter(n => n.lane === "goal").flatMap(n => n.fids);
+  const M = [{fids: world, kind: "env", label: "1"}, {fids: guess, kind: "agent", label: "2"}, {fids: root, kind: "root", label: "3"},
+             {fids: repeat, kind: "agent", label: "4"}, {fids: fail, kind: "goal", label: "5"}].filter(m => m.fids.length);
+  const upTo = n => M.filter(m => Number(m.label) <= n);
+  return [
+    {focus: mapCluster ? [mapCluster] : [], marks: []},
+    {focus: holding(world), marks: upTo(1)},
+    {focus: [w.id], marks: upTo(2)},
+    {focus: [w.id], marks: upTo(3)},
+    {focus: holding([...repeat, ...fail]), marks: upTo(5)},
+    // The journey numbers its own stops, so the root keeps its colour here but not its number.
+    {focus: [w.id], marks: M.filter(m => m.kind === "root").map(m => ({...m, label: ""})), journey: root[0], upto},
+  ];
 }
 
 export function buildStory(scene, model) {
@@ -272,6 +306,7 @@ export function buildStory(scene, model) {
       thread, bridge: buildBridge(scene, thread, rootWindow),
     });
     const row = rows[rows.length - 1], br = row.bridge;
+    if (br) br.tower = bridgeTower(scene, model, br, thread, rootWindow, row.event, rows[0].focus[0]);
     if (br) row.marks = [
       ...br.world.map(w => ({type: "bworld", step: w.step})),
       ...br.bridges.map(b => ({type: "blink", step: b.step, role: b.role, shift: br.bridges.filter(x => x.step === b.step).length > 1 ? (b.role === "guess" ? -1 : 1) : 0})),

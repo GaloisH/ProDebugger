@@ -109,7 +109,9 @@ export function buildStory(scene, model) {
     answer: scene.windows.length ? cap(`${symptom.length ? `Back from the failure at ${stepList(symptom.slice(0, 2))} to ` : ""}${[...scene.windows].sort((a, b) => a.step - b.step).map(w => `step ${w.step}, ${w.fids.length} clue${w.fids.length === 1 ? "" : "s"} (${[...new Set(w.fids.map(f => SLOT_LABEL[scene.factById.get(f)?.slot]).filter(Boolean))].join(", ")})`).join("; ")}.`) : "ROUTE opened no suspect window.",
     event: routeAt >= 0 ? routeAt : rows[rows.length - 1].event, focus: scene.windows.map(w => w.id),
     marks: [...scene.windows.flatMap(w => symptom.filter(s => s > w.step).slice(0, 1).map(s => ({type: "arrow", from: s, to: w.step}))),
-            ...scene.windows.map(w => ({type: "anchor", step: w.step, label: `suspect: step ${w.step}`}))],
+            // One note for all anchors, by the leftmost: two notes a few steps apart would collide.
+            ...[...scene.windows].sort((x, y) => x.step - y.step).map((w, i, all) => ({type: "anchor", step: w.step,
+              label: i ? "" : all.length > 1 ? `suspects: ${stepList(all.map(x => x.step))}` : `suspect: step ${w.step}`}))],
   });
   const w0 = scene.windows[0];
   if (w0) {
@@ -124,7 +126,7 @@ export function buildStory(scene, model) {
   const planAt = ev.findIndex(e => e.name === "plan_trace");
   const lanes = scene.lanes;
   rows.push({
-    key: "manager", phase: "MANAGER", question: "What must the check answer, and how will it be judged?",
+    key: "manager", phase: "MANAGER", question: "What will the check ask, and how is it judged?",
     answer: lanes.length ? `${lanes.length === 1 ? `“${question(lanes[0], 120)}”` : `${lanes.length} questions, for ${stepList(lanes.map(l => l.step))}.`}${scene.rules.length ? ` ${scene.rules.length} rules are fixed before the search.` : ""}` : "No investigation was planned.",
     event: planAt >= 0 ? planAt : rows[rows.length - 1].event, focus: lanes.map(l => l.id),
     marks: lanes.map(l => ({type: "question", step: l.step})),
@@ -159,7 +161,9 @@ export function buildStory(scene, model) {
     key: "verdict", phase: "SUBMIT", question: "Which step is the root cause?",
     answer: root ? `Step ${root.step}'s ${root.module}${rule ? `, by the rule for a ${rule.outcome} finding` : ""}${rivals.length ? `; ${rivals.map(r => `step ${r.step}'s ${r.module}`).join(" and ")} weighed and set aside` : ""}.` : "SUBMIT named no root cause.",
     event: submitAt >= 0 ? submitAt : ev.length - 1, focus: root ? ["root"] : [],
-    marks: [...rivals.map(r => ({type: "rival", step: r.step, label: `step ${r.step} ${r.module}`})), ...(root ? [{type: "root", step: root.step, label: `root: step ${root.step} ${root.module}`}] : [])],
+    // A rival on the root's own step is named in the root's note, not as a second mark on top of it.
+    marks: [...rivals.filter(r => r.step !== root?.step).map(r => ({type: "rival", step: r.step, label: `step ${r.step} ${r.module}`})),
+            ...(root ? [{type: "root", step: root.step, label: `root: step ${root.step} ${root.module}${rivals.some(r => r.step === root.step) ? `, not the ${rivals.filter(r => r.step === root.step).map(r => r.module).join(" or ")}` : ""}`}] : [])],
   });
   if (root) cards.push({row: "verdict", phase: "SUBMIT", title: `Root cause: step ${root.step} ${root.module}`, lines: [
     ...(root.faultClass ? [{text: cap(faultText(root.faultClass)), strong: true}] : []),

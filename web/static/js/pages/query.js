@@ -9,6 +9,7 @@ import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} f
 import {layoutClusters, TIERS} from "../query/layout.js";
 import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
+import {buildStory} from "../query/story.js";
 import {coachSeen, runCoach} from "../query/coach.js";
 
 const GROUP = "evidence-query-claims-n30-20261013";
@@ -31,6 +32,8 @@ const OVERVIEW_CAM = {
   top: {fit: true, target: [0, 7, 0], yaw: 0.55, pitch: 1.42, dist: 56},
   side: {fit: true, target: [0, 7, 0], yaw: 0.55 + Math.PI / 2, pitch: 0.08, dist: 56},
 };
+// The Story mode frames every cloud revealed so far from the overview's front angle.
+const STORY_CAM = {fit: true, target: [0, 7, 0], yaw: 0.55, pitch: 0.32, dist: 56};
 const PHASE_NOTE = {
   PARSE: "compile the log into the DSL record", MAP: "read the task goal", ROUTE: "query the record, open suspect windows",
   MANAGER: "turn each suspicion into a question", TRACE: "search the logs to test each suspicion", SUBMIT: "name the root cause",
@@ -47,7 +50,8 @@ export function mountQuery(app, route) {
     const model = buildClusters(scene);
     const layout = layoutClusters(model);
     const roles = roleFacts(model.clusters);
-    root.innerHTML = template(scene, model, ref, roles);
+    const story = buildStory(scene, model);
+    root.innerHTML = template(scene, model, ref, roles, story);
     stage = createStage(root.querySelector(".qg-canvas"), scene, model, layout);
     const frameAt = createTour(scene, model, layout);
     const last = scene.events.length - 1;
@@ -62,11 +66,19 @@ export function mountQuery(app, route) {
     const lastPlay = plays[plays.length - 1];
     // Tour plays the calls in order; Overview shows every cloud at once for free exploration.
     const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
-                   filter: {phases: new Set()}};
-    const ui = bindUi(root, scene, model, stage, roles, ref);
+                   filter: {phases: new Set()}, row: story.rows.length - 1};
+    const ui = bindUi(root, scene, model, stage, roles, ref, story);
     ui.setEvent(state.i);
 
     stage.start(dt => {
+      // Story: the tower stands where the current board row's call left it, that row's clouds in focus.
+      if (state.mode === "story") {
+        const row = story.rows[state.row];
+        const out = frameAt(row.event, 1);
+        Object.assign(out.frame, {focus: new Set(row.focus), chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: null, filter: state.filter, labelAll: false});
+        out.camera = STORY_CAM;
+        return out;
+      }
       const overview = state.mode === "overview";
       if (!overview && state.playing) {
         state.p += dt * state.speed / eventDuration(scene.events[state.i]);
@@ -84,14 +96,15 @@ export function mountQuery(app, route) {
 
     const setMode = mode => {
       state.mode = mode;
-      history.replaceState(null, "", location.hash.split("?")[0] + (mode === "overview" ? "?mode=overview" : ""));
+      history.replaceState(null, "", location.hash.split("?")[0] + (mode === "tour" ? "" : `?mode=${mode}`));
       stage.follow();
       stage.release();
       state.chain = null;
       setPhase(null);
       ui.setMode(mode, state.view);
-      if (mode === "overview") setPlaying(false);
+      if (mode !== "tour") setPlaying(false);
       else { go(0); setPlaying(true); }
+      if (mode === "story") setRow(0);
     };
 
     const setPlaying = on => { state.playing = on; ui.setPlaying(on); };
@@ -166,7 +179,10 @@ export function mountQuery(app, route) {
     keyHandler = e => {
       if (e.target.closest("input, textarea, select")) return;
       const j = stage.journey;
-      if (j && !stage.view.cluster && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+      if (state.mode === "story" && !stage.view.cluster && [" ", "ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) {
+        e.preventDefault();
+        setRow(e.key === "Home" ? 0 : e.key === "End" ? story.rows.length - 1 : state.row + (e.key === "ArrowLeft" ? -1 : 1));
+      } else if (j && !stage.view.cluster && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
         const k = j.focus == null ? (e.key === "ArrowRight" ? 0 : j.stops.length - 1) : j.focus + (e.key === "ArrowRight" ? 1 : -1);
         stage.focusStop(k < 0 || k >= j.stops.length ? null : k);
       } else if (e.key === " ") { e.preventDefault(); toggle(); }
@@ -175,7 +191,17 @@ export function mountQuery(app, route) {
       else if (e.key === "Escape") stage.back();
     };
     document.addEventListener("keydown", keyHandler);
-    if (route.query?.get("mode") === "overview") setMode("overview");
+    const setRow = k => {
+      state.row = Math.max(0, Math.min(story.rows.length - 1, k));
+      stage.clearHover();
+      stage.select(null);
+      stage.release();
+      state.chain = null;
+      ui.setRow(state.row);
+    };
+    ui.on("row", setRow);
+    const asked = route.query?.get("mode");
+    if (asked === "overview" || asked === "story") setMode(asked);
 
     // The guide: once per browser, again from the header's Guide button; playback waits for it.
     const pick1 = (...sel) => sel.map(q => root.querySelector(q)).find(el => el?.getClientRects().length);
@@ -220,7 +246,63 @@ const REACH = {issue: "clue only", candidate: "blamed", root: "ROOT"};
 const ctaOf = roles => [{role: "root", name: "root cause"}, {role: "candidate", name: "blamed step"}, {role: "issue", name: "clues"}]
   .find(r => roles.byRole.get(r.role).length);
 
-function template(scene, model, ref, roles) {
+// Where a step sits on the board's axis: the middle of its column.
+const stepX = (step, n) => `${((step - 0.5) / n * 100).toFixed(2)}%`;
+
+// One row's marks on the step axis. Range bars stack in lanes; notes lead out to the right.
+function storyMarks(row, n) {
+  const at = s => stepX(s, n);
+  // Anchor and root notes sit to the left of their mark (the arrow runs right); near the axis's
+  // start there is no room, so they ride above the mark's right shoulder instead.
+  const side = s => (s - 0.5) / n > 0.22 ? "is-left" : "is-raised";
+  const note = (s, t, cls = "") => `<em class="sb-note ${cls}${/is-(anchor|root)/.test(cls) ? ` ${side(s)}` : ""}" style="left:${at(s)}">${esc(t)}</em>`;
+  let lane = 0;
+  return row.marks.map(m => {
+    switch (m.type) {
+      case "x": return `<i class="sb-x" style="left:${at(m.step)}">✕</i>${note(m.step, m.label, "is-bad")}`;
+      case "signal": return `<i class="sb-sig" data-kind="${m.kind}" style="left:${at(m.step)}" title="step ${m.step}: ${m.kind === "goal" ? "touches the goal" : m.kind === "invalid" ? "action with no effect" : "routine noise"}"></i>`;
+      case "range": {
+        const style = `left:${((m.a - 1) / n * 100).toFixed(2)}%;width:${((m.b - m.a + 1) / n * 100).toFixed(2)}%`;
+        return m.tone === "all" ? `<i class="sb-range" data-tone="all" style="${style}"></i>`
+          : `<i class="sb-range" data-tone="${m.tone}" style="${style};top:${8 + lane++ * 5}px" title="${esc(m.label || "")}"></i>`;
+      }
+      case "arrow": return `<i class="sb-arrow" style="left:${at(m.to)};width:${((m.from - m.to) / n * 100).toFixed(2)}%"></i><i class="sb-sym" style="left:${at(m.from)}"></i>`;
+      case "anchor": return `<i class="sb-anchor" style="left:${at(m.step)}"></i>${m.label ? note(m.step, m.label, "is-anchor") : ""}`;
+      case "question": return `<i class="sb-q" style="left:${at(m.step)}">?</i>`;
+      case "hit": return `<i class="sb-hit" style="left:${at(m.step)}"></i>`;
+      case "blamed": return `<i class="sb-dia" data-kind="cand" style="left:${at(m.step)}"></i>`;
+      case "rival": return `<i class="sb-dia" data-kind="rival" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-struck")}`;
+      case "root": return `<i class="sb-dia" data-kind="root" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-root")}`;
+      default: return "";
+    }
+  }).join("");
+}
+
+function storyBoard(story) {
+  const n = story.steps;
+  const marked = new Set(story.rows.flatMap(r => r.marks.filter(m => ["x", "anchor", "root"].includes(m.type)).map(m => m.step)));
+  const axis = Array.from({length: n}, (_, i) => i + 1).filter(s => n <= 40 || s === 1 || s % 5 === 0 || marked.has(s))
+    .map(s => `<span${marked.has(s) ? ` class="is-marked"` : ""} style="left:${stepX(s, n)}">${s}</span>`).join("");
+  const lanes = r => r.marks.filter(m => m.type === "range" && m.tone !== "all").length;
+  return `
+    <section class="qg-board" aria-label="Case board" style="--n:${n}">
+      <div class="qg-sb-axis"><span class="qg-sb-lab">Agent step</span><span class="qg-sb-track">${axis}</span></div>
+      ${story.rows.map((r, k) => `
+      <button class="qg-sb-row" data-row="${k}" data-phase="${r.phase}"${lanes(r) ? ` style="--lanes:${lanes(r)}"` : ""} title="${esc(r.answer)}">
+        <span class="qg-sb-lab"><i class="qg-chip" data-phase="${r.phase}">${r.phase}</i><b>${esc(r.question)}</b></span>
+        <span class="qg-sb-track">${storyMarks(r, n)}</span>
+      </button>`).join("")}
+    </section>
+    <aside class="qg-cards" aria-label="Evidence">
+      <div class="qg-sb-say"><p class="qg-sb-head"><span class="qg-chip"></span><span class="qg-sb-count"></span></p><strong></strong><p class="qg-sb-answer"></p></div>${story.cards.map(c => `
+      <article class="qg-card-ev" data-row="${story.rows.findIndex(r => r.key === c.row)}" data-phase="${c.phase}">
+        <h3>${esc(c.title)}</h3>
+        ${c.lines.map(l => `<p class="${[l.strong && "is-strong", l.quote && "is-quote", l.quiet && "is-quiet", l.tone === "bad" && "is-bad"].filter(Boolean).join(" ")}"${l.rule ? ` title="${esc(l.rule)}"` : ""}>${l.label ? `<b>${esc(l.label)}</b> ` : ""}${esc(l.text)}</p>`).join("")}
+      </article>`).join("")}
+    </aside>`;
+}
+
+function template(scene, model, ref, roles, story) {
   const cta = ctaOf(roles);
   const n = k => model.clusters.filter(c => c.kind === k).length;
   const ticks = scene.events.map((e, i) => `<button class="qg-tick" data-i="${i}" data-phase="${e.phase}" style="flex-grow:${eventDuration(e)}" title="${esc(`${e.phase} · ${e.title}`)}"${e.error ? " data-error" : ""}></button>`).join("");
@@ -235,11 +317,12 @@ function template(scene, model, ref, roles) {
       </div>
       <div class="qg-modes">
         <div class="qg-seg"><button data-act="guide" title="Show the guide again">Guide</button></div>
-        <div class="qg-seg" role="group" aria-label="Mode"><button data-mode="tour" aria-pressed="true">Tour</button><button data-mode="overview" aria-pressed="false">Overview</button></div>
+        <div class="qg-seg" role="group" aria-label="Mode"><button data-mode="story" aria-pressed="false">Story</button><button data-mode="tour" aria-pressed="true">Tour</button><button data-mode="overview" aria-pressed="false">Overview</button></div>
         <div class="qg-seg qg-views" role="group" aria-label="Camera" hidden><button data-view="front">Front</button><button data-view="top">Top</button><button data-view="side">Side</button></div>
       </div>
       <ol class="qg-phases">${PHASES.filter(ph => scene.events.some(e => e.phase === ph)).map((ph, k) => `<li><button data-phase="${ph}" title="${esc(PHASE_NOTE[ph])}"><span>${String(k + 1).padStart(2, "0")}</span><b>${ph}</b></button></li>`).join("")}</ol>
     </header>
+    ${storyBoard(story)}
     <aside class="qg-legend is-collapsed" aria-label="Legend">
       <button class="qg-pane-tab" data-pane="legend" aria-expanded="false" title="Show or hide the legend"><span>Legend</span><i>›</i></button>
       <div class="qg-legend-body">
@@ -288,8 +371,16 @@ function template(scene, model, ref, roles) {
     </footer>`;
 }
 
-function bindUi(root, scene, model, stage, roles, ref) {
+function bindUi(root, scene, model, stage, roles, ref, story) {
   const $ = s => root.querySelector(s);
+  // Story mode: the board sits under the header and the tower under the board; both edges are
+  // measured, so a two-line title or a wrapped answer moves the tower down instead of under.
+  function placeStory() {
+    const head = $(".qg-head"), board = $(".qg-board");
+    root.style.setProperty("--qg-story-top", `${head.offsetTop + head.offsetHeight + 10}px`);
+    root.style.setProperty("--qg-tower-top", `${board.offsetTop + board.offsetHeight + 8}px`);
+  }
+  new ResizeObserver(() => root.classList.contains("is-story") && placeStory()).observe($(".qg-board"));
   const ticks = [...root.querySelectorAll(".qg-tick")];
   const handlers = {};
   const inspect = $(".qg-inspect"), panelBody = $(".qg-inspect-body"), tip = $(".qg-tip");
@@ -341,6 +432,8 @@ function bindUi(root, scene, model, stage, roles, ref) {
     const pick = e.target.closest("[data-select]");
     if (pick) stage.select(pick.dataset.select);
     if (e.target.closest("[data-chain-all]")) handlers.chainAll?.();
+    const row = e.target.closest(".qg-sb-row, .qg-card-ev");
+    if (row) handlers.row?.(Number(row.dataset.row));
     const tick = e.target.closest(".qg-tick");
     if (tick) handlers.seek?.(Number(tick.dataset.i));
     const ph = e.target.closest(".qg-phases [data-phase]");
@@ -530,10 +623,12 @@ function bindUi(root, scene, model, stage, roles, ref) {
     },
     setMode(mode, view) {
       root.classList.toggle("is-overview", mode === "overview");
+      root.classList.toggle("is-story", mode === "story");
       root.querySelectorAll("[data-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
       $(".qg-views").hidden = mode !== "overview";
       root.querySelectorAll("[data-view]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
-      if (mode === "overview") {
+      if (mode === "story") placeStory();
+      else if (mode === "overview") {
         ticks.forEach(t => { t.classList.add("done"); t.classList.remove("now"); });
         root.querySelectorAll(".qg-phases button").forEach(b => { b.classList.add("done"); b.classList.remove("now"); });
         const chip = $(".qg-caption .qg-chip");
@@ -551,6 +646,23 @@ function bindUi(root, scene, model, stage, roles, ref) {
     },
     setFilter(filter) {
       root.querySelectorAll("[data-filter-phase]").forEach(b => b.setAttribute("aria-pressed", String(!filter.phases.has(b.dataset.filterPhase))));
+    },
+    setRow(k) {
+      root.querySelectorAll(".qg-sb-row").forEach((el, i) => {
+        el.classList.toggle("is-hidden", i > k); el.classList.toggle("is-now", i === k);
+        el.setAttribute("aria-current", String(i === k));
+      });
+      root.querySelectorAll(".qg-card-ev").forEach(el => {
+        const i = Number(el.dataset.row);
+        el.classList.toggle("is-hidden", i > k); el.classList.toggle("is-now", i === k);
+      });
+      const row = story.rows[k], say = $(".qg-sb-say");
+      say.dataset.phase = row.phase;
+      say.querySelector(".qg-chip").textContent = row.phase;
+      say.querySelector("strong").textContent = row.question;
+      say.querySelector(".qg-sb-answer").textContent = row.answer;
+      $(".qg-sb-count").textContent = k < story.rows.length - 1 ? `${k + 1} / ${story.rows.length} · → next` : `${k + 1} / ${story.rows.length}`;
+      root.querySelector(".qg-card-ev.is-now")?.scrollIntoView({block: "nearest"});
     },
     get journeyRole() { return journeyRole; },
     openPane(name) { setPane(name, true); },

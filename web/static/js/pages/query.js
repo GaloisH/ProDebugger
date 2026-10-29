@@ -270,12 +270,50 @@ function storyMarks(row, n) {
       case "anchor": return `<i class="sb-anchor" style="left:${at(m.step)}"></i>${m.label ? note(m.step, m.label, "is-anchor") : ""}`;
       case "question": return `<i class="sb-q" style="left:${at(m.step)}">?</i>`;
       case "hit": return `<i class="sb-hit" style="left:${at(m.step)}"></i>`;
+      case "tnode": return `<i class="sb-tn" data-lane="${m.lane}" style="left:${at(m.step)}"></i>`;
       case "blamed": return `<i class="sb-dia" data-kind="cand" style="left:${at(m.step)}"></i>`;
       case "rival": return `<i class="sb-dia" data-kind="rival" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-struck")}`;
       case "root": return `<i class="sb-dia" data-kind="root" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-root")}`;
       default: return "";
     }
   }).join("");
+}
+
+// The evidence thread, zoomed: the steps around the anchor (the anchor's column wider), one
+// lane each for the goal check, the environment and the agent, chips at their step, and a
+// trace lane underneath. Links are drawn after layout (drawThread), from the chips' boxes.
+const LANE_TOP = {goal: 22, env: 56, agent: 90};
+const LANE_NAME = [["goal", "Goal check"], ["env", "Environment shows"], ["agent", "Agent believes or does"]];
+function threadPanel(th) {
+  const steps = Array.from({length: th.to - th.from + 1}, (_, i) => th.from + i);
+  const weight = s => s === th.anchor ? 3.4 : 1, total = steps.reduce((n, s) => n + weight(s), 0);
+  let acc = 0;
+  // Columns fill 88% of the track, so a chip centred on the last step still has room to its right.
+  const FILL = 88;
+  const x = new Map(steps.map(s => { const c = (acc + weight(s) / 2) / total * FILL; acc += weight(s); return [s, c]; }));
+  const span = s => { let a = 0; for (const t of steps) { if (t === s) return [a / total * FILL, weight(t) / total * FILL]; a += weight(t); } return [0, 0]; };
+  const stack = new Map();
+  const chips = th.nodes.map(n => {
+    const k = n.lane === "agent" ? (stack.get(n.step) || 0) : 0;
+    if (n.lane === "agent") stack.set(n.step, k + 1);
+    const tip = `step ${n.step} · ${n.lane === "env" ? "observation" : n.slot === "chk" ? "goal check" : n.slot}\n${n.full || n.label}`;
+    return `<span class="th-node" data-id="${n.id}" data-lane="${n.lane}" style="left:${x.get(n.step).toFixed(2)}%;top:${LANE_TOP[n.lane] + k * 30}px" title="${esc(tip)}">${esc(n.label)}${n.sub ? ` <small>${esc(n.sub)}</small>` : ""}</span>`;
+  });
+  const deepest = Math.max(1, ...stack.values());
+  const traceTop = LANE_TOP.agent + deepest * 30 + 4;
+  const col = (s, cls) => { const [l, w] = span(s); return `<i class="th-col ${cls}" style="left:${l.toFixed(2)}%;width:${w.toFixed(2)}%"></i>`; };
+  const failAt = th.trace?.from;
+  return `
+    <div class="qg-thread" data-links="${esc(JSON.stringify(th.links))}" data-trace="${th.trace ? `${x.get(th.trace.from)},${x.get(th.trace.to)}` : ""}" style="--trace-top:${traceTop}px">
+      <span class="th-lanes">${LANE_NAME.map(([k, t]) => `<b style="top:${LANE_TOP[k]}px">${t}</b>`).join("")}${th.trace ? `<b class="is-trace" style="top:${traceTop}px">Debugger traces back</b>` : ""}</span>
+      <span class="th-track">
+        ${col(th.anchor, "is-anchor")}${failAt ? col(failAt, "is-fail") : ""}
+        ${steps.map(s => `<em class="th-step${s === th.anchor || s === failAt ? " is-marked" : ""}" style="left:${x.get(s).toFixed(2)}%">${s}</em>`).join("")}
+        <svg class="th-links" aria-hidden="true"></svg>
+        ${chips.join("")}
+        ${th.trace ? `<em class="th-trace-label" style="left:${((x.get(th.trace.from) + x.get(th.trace.to)) / 2).toFixed(2)}%;top:${traceTop + 14}px">${esc(th.trace.label)}</em>` : ""}
+      </span>
+    </div>`;
 }
 
 function storyBoard(story) {
@@ -292,6 +330,7 @@ function storyBoard(story) {
         <span class="qg-sb-lab"><i class="qg-chip" data-phase="${r.phase}">${r.phase}</i><b>${esc(r.question)}</b></span>
         <span class="qg-sb-track">${storyMarks(r, n)}</span>
       </button>`).join("")}
+      ${story.rows.filter(r => r.thread).map(r => threadPanel(r.thread)).join("")}
     </section>
     <aside class="qg-cards" aria-label="Evidence">
       <div class="qg-sb-say"><p class="qg-sb-head"><span class="qg-chip"></span><span class="qg-sb-count"></span></p><strong></strong><p class="qg-sb-answer"></p></div>${story.cards.map(c => `
@@ -381,6 +420,40 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     root.style.setProperty("--qg-tower-top", `${board.offsetTop + board.offsetHeight + 8}px`);
   }
   new ResizeObserver(() => root.classList.contains("is-story") && placeStory()).observe($(".qg-board"));
+  // The thread's links: each joins two chips in time order, leaving the earlier chip's side (or
+  // bottom, when they share a step) and entering the later one from above or below, a little off
+  // its centre so links that meet at one chip do not share a segment.
+  function drawThread() {
+    const panel = $(".qg-thread"), board = $(".qg-board");
+    if (!panel || !board.classList.contains("is-zoomed")) return;
+    const track = panel.querySelector(".th-track"), svg = panel.querySelector(".th-links"), base = track.getBoundingClientRect();
+    // Chips in one lane row that overlap: the wider one narrows (it is centred, so by twice the
+    // overlap) until there is a gap; its full text stays in the tooltip.
+    const chips = [...panel.querySelectorAll(".th-node")];
+    chips.forEach(c => { c.style.maxWidth = ""; });
+    for (let pass = 0; pass < 3; pass++) for (const a of chips) for (const b of chips) {
+      if (a === b) continue;
+      const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      if (ra.bottom <= rb.top || rb.bottom <= ra.top || ra.right + 8 <= rb.left || rb.right + 8 <= ra.left || ra.width < rb.width) continue;
+      const over = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left) + 8;
+      a.style.maxWidth = `${Math.max(80, ra.width - 2 * over)}px`;
+    }
+    const box = id => { const r = panel.querySelector(`[data-id="${id}"]`).getBoundingClientRect(); return {l: r.left - base.left, r: r.right - base.left, t: r.top - base.top, b: r.bottom - base.top, cx: (r.left + r.right) / 2 - base.left, cy: (r.top + r.bottom) / 2 - base.top}; };
+    const paths = JSON.parse(panel.dataset.links).map(([from, to]) => {
+      const a = box(from), b = box(to);
+      if (Math.abs(a.cx - b.cx) < 4) return b.t > a.b ? `M${a.cx} ${a.b} V${b.t - 2}` : `M${a.cx} ${a.t} V${b.b + 2}`;
+      const right = b.cx > a.cx, tx = b.cx + (right ? -16 : 16);
+      const sx = right ? a.r : a.l;
+      return b.t > a.cy ? `M${sx} ${a.cy} H${tx} V${b.t - 2}` : `M${sx} ${a.cy} H${tx} V${b.b + 2}`;
+    });
+    const [from, to] = (panel.dataset.trace || "").split(",").map(Number);
+    const y = parseFloat(panel.style.getPropertyValue("--trace-top")) + 8, W = base.width;
+    svg.setAttribute("viewBox", `0 0 ${W} ${base.height}`);
+    svg.innerHTML = `<defs><marker id="th-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6"/></marker></defs>`
+      + paths.map(d => `<path class="th-link" d="${d}" marker-end="url(#th-arrow)"/>`).join("")
+      + (Number.isFinite(from) ? `<circle class="th-trace-dot" cx="${from / 100 * W}" cy="${y}" r="5"/><path class="th-trace" d="M${from / 100 * W} ${y} H${to / 100 * W + 10}" marker-end="url(#th-arrow)"/>` : "");
+  }
+  new ResizeObserver(drawThread).observe($(".qg-board"));
   const ticks = [...root.querySelectorAll(".qg-tick")];
   const handlers = {};
   const inspect = $(".qg-inspect"), panelBody = $(".qg-inspect-body"), tip = $(".qg-tip");
@@ -657,6 +730,8 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
         el.classList.toggle("is-hidden", i > k); el.classList.toggle("is-now", i === k);
       });
       const row = story.rows[k], say = $(".qg-sb-say");
+      $(".qg-board").classList.toggle("is-zoomed", !!row.thread);
+      if (row.thread) requestAnimationFrame(drawThread);
       say.dataset.phase = row.phase;
       say.querySelector(".qg-chip").textContent = row.phase;
       say.querySelector("strong").textContent = row.question;

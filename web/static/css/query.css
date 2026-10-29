@@ -242,6 +242,33 @@ body.page-query .app { padding: 0; }
 .qg-card-ev .is-quote { font-family: var(--mono); font-size: .86rem; color: var(--text-hi); }
 .qg-card-ev .is-quiet { color: var(--qg-label-dim); }
 .qg-card-ev .is-bad { color: var(--qg-sig-goal); }
+.sb-tn { top: 50%; width: 7px; height: 7px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--qg-th-agent); }
+.sb-tn[data-lane="env"] { top: 28%; background: var(--qg-th-env); }
+.sb-tn[data-lane="goal"] { top: 72%; background: var(--qg-sig-goal); }
+/* The zoomed evidence thread lies over the rows (which keep their height, so the tower stays). */
+.qg-board { position: relative; }
+.qg-thread { display: none; }
+.qg-board.is-zoomed .qg-sb-row { visibility: hidden; }
+.qg-board.is-zoomed .qg-thread { display: grid; position: absolute; left: 0; right: 0; top: 0; bottom: 0; grid-template-columns: 27.5rem minmax(0, 1fr); gap: 1rem; background: var(--qg-void); }
+.qg-board.is-zoomed .qg-sb-axis { visibility: hidden; }
+.th-lanes, .th-track { position: relative; }
+.th-lanes b { position: absolute; left: .4rem; transform: translateY(.2rem); font-weight: 500; font-size: .95rem; color: var(--qg-label); }
+.th-lanes b.is-trace { color: var(--qg-sig-goal); }
+.th-track > * { position: absolute; font-style: normal; }
+.th-col { top: 0; bottom: 0; background: color-mix(in srgb, var(--qg-focus) 7%, transparent); border-left: 1px solid color-mix(in srgb, var(--qg-focus) 30%, transparent); border-right: 1px solid color-mix(in srgb, var(--qg-focus) 30%, transparent); }
+.th-col.is-fail { background: color-mix(in srgb, var(--qg-sig-goal) 7%, transparent); border-color: color-mix(in srgb, var(--qg-sig-goal) 30%, transparent); }
+.th-step { top: 0; transform: translateX(-50%); font-family: var(--mono); font-size: .82rem; color: var(--qg-label-dim); }
+.th-step.is-marked { color: var(--text-hi); font-weight: 500; }
+.th-links { left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.th-link { fill: none; stroke: var(--qg-label-dim); stroke-width: 1.3; }
+.th-trace { fill: none; stroke: var(--qg-sig-goal); stroke-width: 2; stroke-dasharray: 6 4; }
+.th-trace-dot { fill: var(--qg-sig-goal); }
+.th-node { z-index: 1; max-width: 36rem; overflow: hidden; padding: .2rem .55rem; transform: translateX(-50%); border: 1px solid var(--lane); border-radius: 2px; background: color-mix(in srgb, var(--lane) 14%, var(--qg-void)); color: var(--text-hi); font-size: .85rem; line-height: 1.25; white-space: nowrap; text-overflow: ellipsis; cursor: help; }
+.th-node small { font-size: .8rem; color: var(--lane); }
+.th-node[data-lane="env"] { --lane: var(--qg-th-env); }
+.th-node[data-lane="agent"] { --lane: var(--qg-th-agent); }
+.th-node[data-lane="goal"] { --lane: var(--qg-sig-goal); }
+.th-trace-label { transform: translateX(-50%); white-space: nowrap; font-size: .85rem; color: var(--qg-sig-goal); }
 .qg-error code { font-family: var(--mono); color: var(--qg-focus); }
 
 @media (max-width: 1400px) {

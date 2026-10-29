@@ -41,6 +41,82 @@ function stepSignals(scene) {
 const rangeOf = spec => { const m = String(spec || "").match(/\bsteps:(\d+):(\d+)\b/); return m ? [Number(m[1]), Number(m[2])] : null; };
 const span = ([a, b]) => a === b ? `step ${a}` : `steps ${a}–${b}`;
 
+
+// The evidence thread: the object the suspect step acted on, followed fact by fact from the
+// anchor to where the goal check failed. Environment facts say what the world showed, agent
+// facts what the agent believed or did; consecutive facts are linked in time order, and the
+// trace runs back from the failed check to the anchor.
+const SLOT_ORDER = ["obs", "mem", "refl", "plan", "act", "chk"];
+// "portable:soapbottle_1" reads "soapbottle 1"; a bare number keeps its kind: "cabinet 3".
+const nameOf = key => { const [kind, ...rest] = String(key || "").split(":"); const i = rest.join(":").replace(/_/g, " "); return /^\d+$/.test(i) ? `${kind} ${i}` : i || kind; };
+
+// A short piece of the agent's text around its first mention of the object.
+function around(span, name) {
+  const text = String(span || "").replace(/\s+/g, " ").replace(/^.*?(?:history\.|outcome|next step)\s*/i, "").replace(/-\s*Step \d+[^:]*:\s*/g, "");
+  const i = text.toLowerCase().indexOf(name.toLowerCase());
+  if (i < 0) return "";
+  const start = Math.max(0, text.lastIndexOf(" ", Math.max(0, i - 10)));
+  // To the end of the sentence that mentions it, at most ~60 characters past the mention.
+  const rest = text.slice(i + name.length);
+  const stop = rest.search(/[.?!](\s|$)/);
+  const end = i + name.length + (stop >= 0 && stop <= 60 ? stop : Math.min(60, rest.length));
+  const cut = text.slice(start, end).trim().replace(/[\s,;:-]+$/, "");
+  return (start > 0 ? "…" : "") + (end - i - name.length >= 60 && end < text.length ? cut.replace(/\s+\S*$/, "") + "…" : cut);
+}
+
+function buildThread(scene, w, symptom) {
+  const clue = w.fids.map(f => scene.factById.get(f)).filter(Boolean);
+  const act = clue.find(f => f.slot === "act");
+  const objKey = act?.args.find(a => !a.startsWith("agent:")) || clue.flatMap(f => f.args).find(a => !a.startsWith("agent:") && !a.startsWith("req:"));
+  if (!objKey) return null;
+  const obj = nameOf(objKey);
+  const failAt = symptom.find(s => s > w.step);
+  const last = Math.min(scene.meta.steps, (failAt ?? w.step + 3) + 1);
+  const from = Math.max(1, w.step - 1);
+  const nodes = [];
+  const env = new Map();
+  let holding = false, place = null;
+  for (const f of scene.facts.filter(f => f.t >= w.step && f.t <= last).sort((a, b) => a.t - b.t || SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot))) {
+    const about = f.args.includes(objKey);
+    if (f.slot === "obs" && about) {
+      const e = env.get(f.t) || {step: f.t, lane: "env", fids: [], full: f.span, slot: "obs", parts: {}};
+      e.fids.push(f.fid);
+      if (f.rel === "in" && f.value === true) e.parts.place = nameOf(f.args.find(a => a !== objKey));
+      if (f.rel === "holding" && f.value === true) e.parts.holding = true;
+      if (f.rel === "has" && f.value === true && f.args.some(a => a.endsWith("object_type"))) e.parts.type = nameOf(f.args[f.args.length - 1]);
+      env.set(f.t, e);
+    } else if (f.t === w.step && w.fids.includes(f.fid) && f.slot !== "obs" && f.slot !== "chk") {
+      // Only what the agent said about the object; a plan or action counts even without naming it.
+      const words = f.slot === "act" ? String(f.value) : around(f.span, obj) || (f.slot === "plan" ? agentWords(f) : "");
+      if (words) nodes.push({step: f.t, lane: "agent", fids: [f.fid], slot: f.slot, label: `${SLOT_LABEL[f.slot]}: ${words}`, full: f.span});
+    } else if (f.slot === "act" && about && f.t > w.step) {
+      nodes.push({step: f.t, lane: "agent", fids: [f.fid], slot: "act", label: `action: ${f.value}`, full: f.span});
+    } else if (f.slot === "chk" && f.rel === "satisfied" && f.value === false && f.args.some(a => a.startsWith("req:"))) {
+      nodes.push({step: f.t, lane: "goal", fids: [f.fid], slot: "chk", label: "goal check: not met", full: f.span});
+    }
+  }
+  // One environment node per step, worded by what changed for the object.
+  let seen = false;
+  for (const e of [...env.values()].sort((a, b) => a.step - b.step)) {
+    let label;
+    if (!seen && e.parts.place) label = `sees ${obj} in ${e.parts.place}`;
+    else if (e.parts.holding && !holding) label = `picked up ${obj}`;
+    else if (e.parts.place && e.parts.place !== place) label = `${obj} on ${e.parts.place}`;
+    if (e.parts.place) place = e.parts.place;
+    holding = !!e.parts.holding;
+    if (!label) continue;
+    if (!seen && e.parts.type) e.sub = `type: ${e.parts.type}`;
+    seen = true;
+    nodes.push({...e, label});
+  }
+  nodes.sort((a, b) => a.step - b.step || SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot));
+  nodes.forEach((n, i) => { n.id = `t${i}`; });
+  const links = nodes.slice(1).map((n, i) => [nodes[i].id, n.id]);
+  const back = nodes.find(n => n.lane === "goal")?.step ?? failAt;
+  return {obj, objKey, from, to: last, anchor: w.step, nodes, links,
+          trace: back ? {from: back, to: w.step, label: `back along ${obj} to step ${w.step}`} : null};
+}
+
 export function buildStory(scene, model) {
   const n = scene.meta.steps;
   const ev = scene.events;
@@ -113,7 +189,21 @@ export function buildStory(scene, model) {
             ...[...scene.windows].sort((x, y) => x.step - y.step).map((w, i, all) => ({type: "anchor", step: w.step,
               label: i ? "" : all.length > 1 ? `suspects: ${stepList(all.map(x => x.step))}` : `suspect: step ${w.step}`}))],
   });
-  const w0 = scene.windows[0];
+  // 4b · The evidence thread: the suspect step's object, followed to the failed check.
+  const rootWindow = scene.windows.find(w => w.step === scene.root?.step) || scene.windows[0];
+  const thread = rootWindow ? buildThread(scene, rootWindow, decided.length ? decided : goalSteps) : null;
+  // Only a thread the world or the goal check speaks in: agent text alone is not evidence.
+  if (thread && thread.nodes.some(n => n.lane !== "agent")) {
+    const goalNode = thread.nodes.find(n => n.lane === "goal"), acts = thread.nodes.filter(n => n.lane === "agent" && n.step > thread.anchor);
+    rows.push({
+      key: "thread", phase: "ROUTE", question: `How does the failure lead back to step ${thread.anchor}?`,
+      answer: `Follow ${thread.obj}: ${goalNode ? `the goal check fails at step ${goalNode.step}` : "the goal fails"}${acts.length ? ` after the agent ${acts.map(a => `${a.slot === "act" ? "acts on it" : "uses it"} at step ${a.step}`).join(", ")}` : ""}; it entered the run at step ${thread.anchor}, where the agent's ${[...new Set(thread.nodes.filter(n => n.step === thread.anchor && n.lane === "agent").map(n => SLOT_LABEL[n.slot]))].join(", ")} took it up.`,
+      event: routeAt >= 0 ? routeAt : rows[rows.length - 1].event, focus: [rootWindow.id],
+      marks: [...thread.nodes.map(n => ({type: "tnode", step: n.step, lane: n.lane})), ...(thread.trace ? [{type: "arrow", from: thread.trace.from, to: thread.trace.to}] : [])],
+      thread,
+    });
+  }
+  const w0 = rootWindow;
   if (w0) {
     const said = w0.fids.map(f => scene.factById.get(f)).filter(f => f && (f.slot === "plan" || f.slot === "act")).slice(0, 2);
     cards.push({row: "anchor", phase: "ROUTE", title: `Suspect: step ${w0.step}`, lines: [

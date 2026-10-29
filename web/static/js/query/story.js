@@ -14,6 +14,8 @@ const NOISE = new Set(["no_new_task_evidence", "schema_repetition", "near_duplic
 const clip = (t, n) => { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, "") + "…" : t; };
 const firstSentence = t => String(t || "").replace(/\s+/g, " ").split(/(?<=[.?!])\s+/)[0] || "";
 const OUTCOME = {supported: "Supported", refuted: "Refuted", unknown: "Unknown"};
+// What each kind of finding does to the suspect, as the manager's rules decide it.
+const VERDICT_OF = {supported: "counts as the cause", refuted: "drop this suspect", unknown: "no verdict yet"};
 
 // Every per-step signal list anywhere in the tool results (step audits, scans, episodes).
 function stepSignals(scene) {
@@ -269,13 +271,21 @@ export function buildStory(scene, model) {
       marks: [...thread.nodes.map(n => ({type: "tnode", step: n.step, lane: n.lane})), ...(thread.trace ? [{type: "arrow", from: thread.trace.from, to: thread.trace.to}] : [])],
       thread, bridge: buildBridge(scene, thread, rootWindow),
     });
+    const row = rows[rows.length - 1], br = row.bridge;
+    if (br) row.marks = [
+      ...br.world.map(w => ({type: "bworld", step: w.step})),
+      ...br.bridges.map(b => ({type: "blink", step: b.step, role: b.role, shift: br.bridges.filter(x => x.step === b.step).length > 1 ? (b.role === "guess" ? -1 : 1) : 0})),
+      ...(br.fail != null ? [{type: "bfail", step: br.fail}] : []),
+    ];
   }
   const w0 = rootWindow;
   if (w0) {
     const said = w0.fids.map(f => scene.factById.get(f)).filter(f => f && (f.slot === "plan" || f.slot === "act")).slice(0, 2);
+    // Structured points only; the window's hypothesis and the agent's words stay as hover text.
     cards.push({row: "anchor", phase: "ROUTE", title: `Suspect: step ${w0.step}`, lines: [
-      {text: suspicion(w0), quiet: true},
-      ...said.map(f => ({label: cap(SLOT_LABEL[f.slot]), text: `“${agentWords(f)}”`, quote: true})),
+      {label: "Clues", text: [...new Set(w0.fids.map(f => SLOT_LABEL[scene.factById.get(f)?.slot]).filter(Boolean))].join(", "), rule: suspicion(w0)},
+      ...(w0.goals.length ? [{label: "At stake", text: w0.goals.map(goalText).join(", ")}] : []),
+      ...said.slice(0, 1).map(f => ({label: cap(SLOT_LABEL[f.slot]), text: clip(f.slot === "act" ? String(f.value) : agentWords(f), 60), rule: f.span})),
     ]});
   }
 
@@ -289,8 +299,8 @@ export function buildStory(scene, model) {
     marks: lanes.map(l => ({type: "question", step: l.step})),
   });
   if (lanes.length) cards.push({row: "manager", phase: "MANAGER", title: "Judged by rules set in advance", lines: [
-    {text: `“${question(lanes[0], 150)}”`, quiet: true},
-    ...scene.rules.slice(0, 4).map(r => ({label: OUTCOME[r.outcome] || cap(r.outcome), text: clip(firstSentence(r.conclusion), 110), rule: r.id})),
+    {label: "Asks", text: question(lanes[0], 90), rule: lanes[0].question},
+    ...scene.rules.slice(0, 4).map(r => ({label: OUTCOME[r.outcome] || cap(r.outcome), text: VERDICT_OF[r.outcome] || clip(firstSentence(r.conclusion), 60), rule: r.conclusion})),
   ]});
 
   // 6 · TRACE: the steps the log search brought back, and the step it blames.
@@ -323,9 +333,8 @@ export function buildStory(scene, model) {
             ...(root ? [{type: "root", step: root.step, label: `root: step ${root.step} ${root.module}${rivals.some(r => r.step === root.step) ? `, not the ${rivals.filter(r => r.step === root.step).map(r => r.module).join(" or ")}` : ""}`}] : [])],
   });
   if (root) cards.push({row: "verdict", phase: "SUBMIT", title: `Root cause: step ${root.step} ${root.module}`, lines: [
-    ...(root.faultClass ? [{text: cap(faultText(root.faultClass)), strong: true}] : []),
-    ...(root.quote ? [{text: `“${clip(root.quote, 150)}”`, quote: true}] : []),
-    ...(rule ? [{label: "Rule", text: clip(firstSentence(rule.conclusion), 110)}] : []),
+    ...(root.faultClass ? [{text: cap(faultText(root.faultClass)), strong: true, rule: root.quote}] : []),
+    ...(rule ? [{label: "By rule", text: `${OUTCOME[rule.outcome] || cap(rule.outcome)} → ${VERDICT_OF[rule.outcome] || "decided"}`, rule: rule.conclusion}] : []),
     ...rivals.map(r => ({label: "Set aside", text: `step ${r.step}'s ${r.module}`})),
   ]});
 

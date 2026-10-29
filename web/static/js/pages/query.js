@@ -289,6 +289,9 @@ function storyMarks(row, n) {
       case "question": return `<i class="sb-q" style="left:${at(m.step)}">?</i>`;
       case "hit": return `<i class="sb-hit" style="left:${at(m.step)}"></i>`;
       case "tnode": return `<i class="sb-tn" data-lane="${m.lane}" style="left:${at(m.step)}"></i>`;
+      case "bworld": return `<i class="sb-bw" style="left:${at(m.step)}"></i>`;
+      case "blink": return `<i class="sb-bl" data-role="${m.role}" style="left:calc(${at(m.step)} + ${m.shift * 7}px)"></i>`;
+      case "bfail": return `<i class="sb-bx" style="left:${at(m.step)}">✕</i>`;
       case "blamed": return `<i class="sb-dia" data-kind="cand" style="left:${at(m.step)}"></i>`;
       case "rival": return `<i class="sb-dia" data-kind="rival" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-struck")}`;
       case "root": return `<i class="sb-dia" data-kind="root" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-root")}`;

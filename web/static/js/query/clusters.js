@@ -309,7 +309,7 @@ export function journeyOf(scene, {clusters, byId}, fid) {
     else if (c.kind === "lane") {
       const own = c.ref.rows.some(r => r.step === f.t && r.module === SLOT_LABEL[f.slot]);
       outcome = own ? "the log search returned it" : c.ref.rows.some(r => r.step === f.t) ? `the log search returned step ${f.t}` : "the log search returned it";
-    } else if (c.kind === "candidate") outcome = `blamed: step ${c.ref.step} ${c.ref.module} · ${[statusText(c.ref.status), faultText(c.ref.faultClass)].filter(Boolean).join(" · ")}`;
+    } else if (c.kind === "candidate") outcome = `blamed: ${faultText(c.ref.faultClass) || statusText(c.ref.status)}`;
     else if (c.kind === "root") outcome = `chosen as root cause${c.ref.rule?.id ? " by the manager's rule" : ""}`;
     stops.push({id: c.id, kind: c.kind, event: at(c), phase: c.phaseKey, outcome, ...plain});
   }

@@ -32,8 +32,8 @@ const OVERVIEW_CAM = {
   side: {fit: true, target: [0, 7, 0], yaw: 0.55 + Math.PI / 2, pitch: 0.08, dist: 56},
 };
 const PHASE_NOTE = {
-  PARSE: "compile the log into the DSL", MAP: "read the task contract", ROUTE: "query the record, open suspect windows",
-  MANAGER: "assign one question per window", TRACE: "test each window with SQL", SUBMIT: "name the root cause",
+  PARSE: "compile the log into the DSL record", MAP: "read the task goal", ROUTE: "query the record, open suspect windows",
+  MANAGER: "turn each suspicion into a question", TRACE: "search the logs to test each suspicion", SUBMIT: "name the root cause",
 };
 
 export function mountQuery(app, route) {
@@ -375,11 +375,12 @@ function bindUi(root, scene, model, stage, roles) {
     let body = "";
     if (c.error) body = `<p class="qg-bad">${esc(c.error.code || "error")}: ${esc(c.error.message)}</p>`;
     else if (c.kind === "query" && ev.calls) body = `<pre class="qg-code">${esc(ev.calls.slice(0, 24).map(e => `${e.name}(f${e.call.arguments?.fid ?? "?"})${e.verdict ? ` → ${e.verdict}` : ""}${e.error ? " ✕" : ""}`).join("\n"))}${ev.calls.length > 24 ? `\n… ${ev.calls.length - 24} more` : ""}</pre>`;
-    else if (c.kind === "query") body = `<pre class="qg-code">${esc(ev.name)}(${esc(JSON.stringify(ev.spec))})</pre>`;
+    else if (c.kind === "query") body = `<pre class="qg-code">${esc(ev.raw || `${ev.name}(${JSON.stringify(ev.spec)})`)}</pre>`;
     else if (c.kind === "window") body = `<p>${esc(short(c.ref.hypothesis, 320))}</p>`;
     else if (c.kind === "lane") body = `<p>${esc(short(c.ref.question, 300))}</p>${c.fill !== c.event ? `<details><summary>SQL</summary><pre class="qg-code qg-sql">${esc(scene.events[c.fill].sql || "")}</pre></details>` : ""}`;
     else if (c.kind === "candidate" || c.kind === "root") body = `<p>${esc(c.ref.proposition)}</p>${c.ref.quote ? `<blockquote>${esc(c.ref.quote)}</blockquote>` : ""}`;
     else if (c.kind === "core") body = `<p class="qg-muted">The whole compiled trajectory. Every access above draws its facts from here.</p>`;
+    if (c.raw && c.kind !== "query") body += `<pre class="qg-code">${esc(c.raw)}</pre>`;
     const groups = c.groups.length ? `<h4>Entities <small>${c.groups.length}</small></h4>
       <ul class="qg-rows">${c.groups.map((g, gi) => `<li><button data-open="${esc(c.id)}" data-group="${gi}"><span>${esc(g.key)}</span><em>${g.fids.length}</em></button></li>`).join("")}</ul>` : "";
     const shared = c.kind !== "core" ? sharing(c) : [];

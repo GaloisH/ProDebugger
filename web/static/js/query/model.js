@@ -3,6 +3,7 @@
 // Every event says which DSL nodes it touched, so the renderer only has to light them.
 import {getJSON, JsonlFollower} from "../api.js";
 import {short} from "../util.js";
+import {cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js";
 
 export const SLOTS = ["obs", "mem", "refl", "plan", "act", "chk"];
 export const SLOT_LABEL = {obs: "observation", mem: "memory", refl: "reflection", plan: "plan", act: "action", chk: "check"};
@@ -68,9 +69,9 @@ function countSignals(value, out = new Map()) {
 
 // What a view asks, in plain words, with its step range.
 const VIEW_INTENT = {
-  requirements: "read the task contract", episodes: "review episodes", scan: "scan every step", local_audits: "audit each step",
-  changes: "list state changes", steps: "read steps", state: "read world state", module: "read module text",
-  packet: "read the evidence packet", statement_discovery: "find statements", rules: "list rules",
+  requirements: "read the task goal", episodes: "review the phases", scan: "scan every step", local_audits: "audit every step",
+  changes: "list state changes", steps: "read steps", state: "read the world state", module: "read the agent's own text",
+  packet: "read the evidence packet", statement_discovery: "find the agent's statements", rules: "list the rules",
 };
 export function viewIntent(name, spec) {
   if (name === "view_evidence") return "look up rule evidence";
@@ -79,9 +80,9 @@ export function viewIntent(name, spec) {
   const section = mods.find(m => m.startsWith("section:"))?.slice(8).split(",")[0].replace(/_/g, " ");
   let text;
   if (base.startsWith("entity:req:")) text = section ? `check the goal's ${section}` : "check the goal";
-  else if (base.startsWith("entity:")) text = `follow ${base.slice(7)}`;
-  else text = VIEW_INTENT[base.split(":")[0]] || `view ${base}`;
-  if (range) text = text.replace(/ every step| each step|$/, m => m ? ` steps ${range[1]}–${range[2]}` : ` S${range[1]}–${range[2]}`);
+  else if (base.startsWith("entity:")) text = `follow the ${base.split(":").pop().replace(/_/g, " ")}`;
+  else text = VIEW_INTENT[base.split(":")[0]] || VIEW_INTENT[base.split(":").pop()] || `read ${base.replace(/_/g, " ")}`;
+  if (range) text = / every step$/.test(text) ? text.replace(/every step$/, `steps ${range[1]}–${range[2]}`) : `${text} in steps ${range[1]}–${range[2]}`;
   return text;
 }
 
@@ -147,13 +148,14 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
 
   const lanes = new Map();
   const candidates = [];
+  const rules = managerPlan?.decision_rules?.length || 0;
   const events = [];
   const committed = new Map();
   for (const row of toolCalls) if (row.event === "committed") committed.set(row.tool_call_id || row.ordinal, row);
 
   events.push({
-    phase: "PARSE", name: "compile", title: "Compile the trajectory into the DSL record",
-    caption: `${facts.length} facts over ${steps} steps, ${entities.length} entities and ${goals.length} goal${goals.length === 1 ? "" : "s"}: every observation, memory, reflection, plan and action becomes rel(args) = value @ t.`,
+    phase: "PARSE", name: "compile", title: "Compile the log into the DSL record",
+    caption: `${facts.length} facts over ${steps} steps: every observation, memory, reflection, plan and action becomes one fact, saying who did or thought what, and at which step.`,
     reveal: "base", fids: [], eids: [], entities: [], goals: [],
   });
 
@@ -164,8 +166,9 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     const ev = {phase: call.phase, name: call.name, ordinal: call.ordinal, call, error, fids: [], eids: [], goals: [], windows: [], lanes: [], candidates: []};
     if (error) {
       ev.intent = viewIntent(call.name, args.spec);
-      ev.title = `${call.name} rejected`;
-      ev.caption = `${call.phase} asked ${call.name}${args.spec ? `(${args.spec})` : ""}; the tool refused: ${short(error.message, 120)}`;
+      ev.raw = `${call.name}(${args.spec ? JSON.stringify(args.spec) : ""})`;
+      ev.title = `Rejected: ${ev.intent}`;
+      ev.caption = `The tool refused ${call.phase}'s request to ${ev.intent}: ${short(error.message, 120)}`;
       events.push(ev);
       continue;
     }
@@ -184,21 +187,23 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
       ev.signals = [...countSignals(data)].sort((a, b) => b[1] - a[1]);
       ev.goal = goalState(data);
       ev.changes = Array.isArray(data?.changes) ? (data.truncation?.sections?.find(s => s.path === "changes")?.total ?? data.changes.length) : null;
-      ev.title = `${call.name}("${short(spec, 48)}")`;
+      ev.raw = `${call.name}(${JSON.stringify(spec)})`;
+      ev.title = cap(ev.intent);
       const signs = ev.signals.slice(0, 3).map(([k, n]) => `${SIGNAL_LABEL[k]} ×${n}`).join(", ");
       ev.caption = call.phase === "MAP"
-        ? `MAP reads the task contract: ${goals.map(g => g.key).join(", ") || "no structured goal"}${ev.goal ? ` (${ev.goal.state})` : ""}, then hands the goal map to ROUTE.`
-        : `ROUTE asks the record to ${ev.intent} and gets back ${ev.fids.length} fact${ev.fids.length === 1 ? "" : "s"}${signs ? `; trouble signs: ${signs}` : ev.goal ? `; the goal is ${ev.goal.state}` : ""}.`;
+        ? `MAP reads the task's goal${goals.length ? ` (${goals.map(g => goalText(g.key)).join("; ")})` : ""}${ev.goal ? ` and finds it ${ev.goal.state}` : ""}. Every suspicion ROUTE raises later has to name the goal it hurts.`
+        : `ROUTE asks the record to ${ev.intent}: ${ev.fids.length} fact${ev.fids.length === 1 ? " comes" : "s come"} back${signs ? `; trouble signs: ${signs}` : ev.goal ? `; the goal is ${ev.goal.state}` : ""}.`;
     } else if (call.name === "route_cases") {
       const cases = args.candidates || [];
       ev.windows = cases.map(c => `w:${c.candidate_id}`).filter(id => windows.some(w => w.id === id));
       ev.fids = [...ids.fids].filter(fid => factById.has(fid));
-      ev.title = `route_cases → ${cases.map(c => `${c.candidate_id}@S${c.issue_step}`).join(", ")}`;
-      ev.caption = `ROUTE closes its search and opens ${cases.length} suspect window${cases.length === 1 ? "" : "s"}: ${cases.map(c => `${c.candidate_id} at step ${c.issue_step} (${(c.issue_fids || []).length} issue facts)`).join("; ")}.`;
+      ev.raw = `route_cases → ${cases.map(c => `${c.candidate_id}@S${c.issue_step}`).join(", ")}`;
+      ev.title = `Open ${cases.length === 1 ? "a suspect window" : `${cases.length} suspect windows`}: ${stepList(cases.map(c => c.issue_step))}`;
+      ev.caption = `ROUTE ends its search and marks ${cases.length === 1 ? "one place" : `${cases.length} places`} to investigate: ${cases.map(c => `step ${c.issue_step} (${(c.issue_fids || []).length} clue facts)`).join("; ")}. These are suspicions, not verdicts.`;
     } else if (call.name === "plan_trace") {
       ev.phase = "MANAGER";
       for (const a of args.assignments || []) {
-        const lane = {id: `l:${a.agent_id}`, type: "lane", agent: a.agent_id, anchor: a.anchor_case_id,
+        const lane = {id: `l:${a.agent_id}`, type: "lane", agent: a.agent_id, anchor: a.anchor_case_id, step: windowByCase.get(a.anchor_case_id)?.step,
                       cases: a.route_case_ids || [], question: a.question || "", targets: a.search_targets || [],
                       rows: [], steps: [], fids: [], candidates: [], purpose: ""};
         lanes.set(a.agent_id, lane);
@@ -206,8 +211,13 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
         const w = windowByCase.get(a.anchor_case_id);
         if (w) ev.windows.push(w.id);
       }
-      ev.title = `plan_trace → ${ev.lanes.length} lane${ev.lanes.length === 1 ? "" : "s"}`;
-      ev.caption = `The manager turns each window into one investigation question and assigns it to a TRACE lane: ${[...lanes.values()].map(l => `${l.agent} ← ${l.anchor}`).join(", ")}.`;
+      const planned = ev.lanes.map(id => [...lanes.values()].find(l => l.id === id));
+      ev.raw = `plan_trace → ${planned.map(l => `${l.agent} ← ${l.anchor}`).join(", ")}`;
+      ev.title = `Plan the investigation: ${planned.length === 1 ? "one question" : `${planned.length} questions`}`;
+      const fixed = rules ? ` Before any evidence comes in, it fixes ${rules} decision rule${rules === 1 ? "" : "s"} for judging the answer${planned.length === 1 ? "" : "s"}.` : "";
+      ev.caption = planned.length === 1
+        ? `The manager turns the suspicion at step ${planned[0].step} into one question for TRACE: “${question(planned[0], 150)}”${fixed}`
+        : `The manager turns each suspicion into one question for TRACE, for ${stepList(planned.map(l => l.step))}.${fixed}`;
     } else if (call.name === "query_logs") {
       const lane = lanes.get(args.candidate_id || data?.candidate_id);
       const rows = data?.rows || [];
@@ -220,8 +230,10 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
         lane.rows = rows; lane.steps = data?.returned_steps || []; lane.fids = ev.fids;
         lane.purpose = (ev.sql.match(/Purpose:\s*(.+)/) || [])[1]?.trim() || "";
       }
-      ev.title = `query_logs(${lane?.agent || "?"})`;
-      ev.caption = `TRACE writes one SQL query over the logs: ${rows.length} rows on ${(data?.returned_steps || []).length} steps come back as evidence for lane ${lane?.agent || "?"}.`;
+      ev.raw = `query_logs(${lane?.agent || "?"})`;
+      ev.title = `Search the logs for step ${lane?.step ?? "?"}`;
+      const purpose = lane?.purpose ? ` The search sets out to ${short(lane.purpose[0].toLowerCase() + lane.purpose.slice(1), 150)}` : "";
+      ev.caption = `TRACE runs one search over the logs: ${rows.length} rows from ${(data?.returned_steps || []).length} steps come back as evidence.${purpose}`;
     } else if (call.name === "assess") {
       const lane = lanes.get(args.window_id || data?.window_id);
       for (const [i, c] of (args.candidates || data?.candidates || []).entries()) {
@@ -235,16 +247,18 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
       }
       ev.lanes = lane ? [lane.id] : [];
       const cs = ev.candidates.map(id => candidates.find(c => c.id === id));
-      ev.title = `assess(${lane?.agent || "?"})`;
-      ev.caption = `TRACE judges lane ${lane?.agent || "?"} and proposes ${cs.length ? cs.map(c => `S${c.step} ${c.module} (${c.status}${c.faultClass ? `, ${c.faultClass}` : ""})`).join("; ") : "no candidate"}.`;
+      ev.raw = `assess(${lane?.agent || "?"})`;
+      ev.title = `Weigh the evidence for step ${lane?.step ?? "?"}`;
+      ev.caption = `TRACE weighs what the search returned and blames ${cs.length ? cs.map(c => `step ${c.step}'s ${c.module} (${[statusText(c.status), faultText(c.faultClass)].filter(Boolean).join(": ")})`).join("; ") : "no step"}.`;
     } else if (FACT_TOOLS.has(call.name)) {
       // One fact at a time: check(fid) judges it, span(fid) reads its source, and so on.
       ev.fids = [...new Set([args.fid, ...ids.fids])].filter(fid => factById.has(fid));
       ev.verdict = call.name === "check" ? data?.value : null;
     } else {
       ev.fids = [...ids.fids].filter(fid => factById.has(fid));
-      ev.title = call.name;
-      ev.caption = `${call.phase} calls ${call.name}.`;
+      ev.raw = call.name;
+      ev.title = cap(call.name.replace(/_/g, " "));
+      ev.caption = `${call.phase} calls the ${call.name.replace(/_/g, " ")} tool.`;
     }
     events.push(ev);
   }
@@ -275,9 +289,10 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
             accepted: !!result.accepted, status: result.status, rule: decidingRule(result, managerPlan)};
   }
   events.push({
-    phase: "SUBMIT", name: "submit", title: root ? `root = S${root.step} ${root.module}` : "no root",
+    phase: "SUBMIT", name: "submit", title: root ? `Root cause: step ${root.step} ${root.module}` : "No root cause",
+    raw: root ? `root = S${root.step} ${root.module}${root.fid != null ? ` (f${root.fid})` : ""}${root.rule?.id ? ` · rule ${root.rule.id}` : ""}` : "",
     caption: root
-      ? `SUBMIT compares the candidates and names the root cause: step ${root.step} ${root.module}${root.fid != null ? ` (fact ${root.fid})` : ""}, ${root.faultClass || "unclassified"}. ${short(root.proposition, 150)}`
+      ? `SUBMIT weighs the candidates against the manager's rules and names the root cause: step ${root.step}'s ${root.module}${root.faultClass ? `, which ${faultText(root.faultClass)}` : ""}. ${short(root.proposition, 150)}`
       : `SUBMIT stops without a root: ${short(result?.stop_reason || result?.status || "no result", 220)}`,
     fids: root?.fid != null ? [root.fid] : [], eids: [], goals: [], windows: [], lanes: [], candidates: root?.candidate ? [root.candidate] : [],
     root: !!root,
@@ -306,13 +321,13 @@ function inspectEvent(run) {
   const verdicts = tally(run.map(e => e.verdict)).sort((a, b) => VERDICT_ORDER.indexOf(a[0]) - VERDICT_ORDER.indexOf(b[0]));
   const errors = run.filter(e => e.error).length;
   const only = tools.length === 1 ? tools[0][0] : null;
-  const intent = only === "check" ? `check ${fids.length} facts` : only === "span" ? `read the source of ${fids.length} facts` : `inspect ${fids.length} facts`;
+  const intent = !fids.length ? "inspect single facts" : only === "check" ? `check ${fids.length} facts` : only === "span" ? `read the source of ${fids.length} facts` : `inspect ${fids.length} facts`;
   const toolText = tools.map(([t, n]) => `${t} ×${n}`).join(", ");
   return {
     phase: run[0].phase, name: "inspect", ordinal: run[0].ordinal, call: run[0].call, calls: run, fids, eids: [], goals: [],
     windows: [], lanes: [], candidates: [], tools, verdicts, errors, intent, spec: toolText,
-    title: `${intent} (${toolText})`,
-    caption: `${run[0].phase} looks at facts one by one: ${toolText}${verdicts.length ? `; verdicts ${verdicts.map(([v, n]) => `${v} ${n}`).join(", ")}` : ""}.`,
+    title: cap(intent), raw: toolText,
+    caption: !fids.length ? `${run[0].phase} tries ${run.length} single-fact call${run.length === 1 ? "" : "s"}; none returns a fact.` : `${run[0].phase} looks at ${fids.length} facts one by one${verdicts.length ? `: ${verdicts.map(([v, n]) => `${n} ${VERDICT_WORD[v] || v}`).join(", ")}` : ""}.`,
   };
 }
 

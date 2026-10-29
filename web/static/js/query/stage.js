@@ -1034,16 +1034,6 @@ export function createStage(canvas, scene, model, layout) {
         // In the overview the main chain reads down the right; its tier-mates take the left.
         const side = !frame.labelAll || frame.chain || frame.phase ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
         tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || inPhase || c.kind === "root" ? phaseColor(c) : colors.label, hot ? 1 : fade * Math.min(1, alpha / 0.6), side, hot ? clickSays(c) : null);
-      } else {
-        // Unnamed queries keep only their call tag under the cloud; hover names them.
-        ctx.globalAlpha = 0.9 * fade * alpha;
-        ctx.fillStyle = colors["label-dim"];
-        ctx.font = "12px 'IBM Plex Mono', monospace";
-        ctx.textAlign = "center";
-        const t = callTag(c), tw = ctx.measureText(t).width, bx = [pc.x - tw / 2, pc.y + sr + 4, tw, 14];
-        if (clash(bx, 1)) continue;
-        placed.push(bx);
-        ctx.fillText(t, pc.x, pc.y + sr + 15);
       }
     }
     for (const c of hubsLater) hubLabels(c, fade);
@@ -1181,9 +1171,8 @@ const stopTitle = c => c.kind === "core" ? "DSL record" : clusterTitle(c);
 const camFrame = g => ({r: [Math.cos(g.yaw), 0, -Math.sin(g.yaw)],
                         u: [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)]});
 const hash01 = n => { let x = Math.imul((n | 0) ^ 0x9e3779b9, 0x85ebca6b); x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35); x ^= x >>> 16; return (x >>> 0) / 4294967296; };
-export const callTag = c => `${c.phase === "MAP" ? "M" : "Q"}${String(c.event).padStart(2, "0")}`;
-export const clusterTitle = c => c.kind === "query" ? `${callTag(c)} ${shortSpec(c.error ? c.label : c.intent || c.label)}` : c.label;
-const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 34 ? t.slice(0, 33) + "…" : t; };
+export const clusterTitle = c => c.kind === "query" ? shortSpec(c.label) : c.label;
+const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 40 ? t.slice(0, 39) + "…" : t; };
 const angleDelta = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];

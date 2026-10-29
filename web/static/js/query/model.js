@@ -21,16 +21,17 @@ async function readJsonl(ref, name) {
 }
 
 export async function loadQueryScene(ref) {
-  const [record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries] = await Promise.all([
+  const [record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries] = await Promise.all([
     getJSON(ref, "canonical_record.json"),
     getJSON(ref, "evidences.json", {}),
     getJSON(ref, "route_candidates.json", []),
     getJSON(ref, "result.json", null),
     getJSON(ref, "manager_plan.json", null),
+    getJSON(ref, "goal_map.json", null),
     readJsonl(ref, "tool_calls.jsonl"),
     readJsonl(ref, "trace_queries.jsonl"),
   ]);
-  return buildQueryScene({record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries});
+  return buildQueryScene({record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries});
 }
 
 // Collects fact ids (and evidence ids) anywhere inside a tool result.
@@ -93,7 +94,7 @@ function goalState(data) {
   return state ? {state, decided: s?.decision_steps || []} : null;
 }
 
-export function buildQueryScene({record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries}) {
+export function buildQueryScene({record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries}) {
   const facts = (record.facts || []).map(f => ({
     id: `f${f.fid}`, type: "fact", fid: f.fid, t: f.t, slot: f.slot, side: f.side, rel: f.rel,
     args: (f.args || []).map(entityKey), value: f.value, basis: f.basis || [], span: f.span || "",
@@ -285,7 +286,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     const fid = moduleFact(r.step, r.module, r.fid);
     const cand = candidates.find(c => c.step === r.step && (c.module === r.module || c.fid === fid));
     root = {id: "root", type: "root", step: r.step, module: r.module, fid, faultClass: r.fault_class,
-            proposition: r.proposition || "", quote: r.output_quote || "", candidate: cand?.id || null,
+            proposition: r.proposition || "", quote: r.output_quote || "", reasoning: r.reasoning || result.reasoning || "", candidate: cand?.id || null,
             accepted: !!result.accepted, status: result.status, rule: decidingRule(result, managerPlan)};
   }
   events.push({
@@ -308,6 +309,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     meta: {tid: record.trajectory_id, task: record.task, taskType: record.task_type, steps,
            relations: record.relations || {}, kinds},
     facts, factById, entities, goals, evidence, windows, lanes: [...lanes.values()], candidates, root, events,
+    goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, outcome: r.conditions?.[0]?.outcome || "", conclusion: r.conclusion || ""})),
   };
 }
 

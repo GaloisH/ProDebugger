@@ -169,6 +169,7 @@ body.page-query .app { padding: 0; }
 .qg-tick.done { background: color-mix(in srgb, var(--ph) 55%, var(--qg-line)); }
 .qg-tick.now { background: var(--ph); }
 .qg-tick[data-error] { background: none; border: 1px solid var(--qg-line-hi); }
+.qg:not(.is-overview) .qg-tick[data-error] { display: none; }
 .qg-tick:hover { background: var(--qg-label-dim); }
 .qg-head-mark { position: absolute; top: 2px; bottom: 2px; width: 1px; background: var(--text-hi); pointer-events: none; }
 

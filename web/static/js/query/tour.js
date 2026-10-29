@@ -33,11 +33,11 @@ export function createTour(scene, model, layout) {
     }
   }
 
-  return function frameAt(i, p) {
+  return function frameAt(i, p, all = false) {
     const ev = scene.events[i];
     const visible = new Set(), filled = new Set(), appear = new Map();
     for (const c of clusters) {
-      if (c.event > i) continue;
+      if (c.event > i || (c.error && !all)) continue;
       visible.add(c.id);
       if (c.fill <= i) filled.add(c.id);
       if (c.event === i && c.kind !== "core") appear.set(c.id, ramp(p, 0, 0.3));

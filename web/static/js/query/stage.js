@@ -903,7 +903,7 @@ export function createStage(canvas, scene, model, layout) {
       const inPhase = frame.phase?.members.has(c.id);
       const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id) && c.kind !== "core";
       const onWay = journey && journey.stops.some(s => s.id === c.id);
-      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead || inPhase ? 1 : c.kind === "core" ? 0.5 : 0.6)
+      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead || inPhase ? 1 : c.kind === "core" ? 0.5 : c.error ? 0.3 : 0.6)
         * appear * (pc && !isOpen ? fog(pc.z) : 1);
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));

@@ -51,6 +51,15 @@ export function mountQuery(app, route) {
     stage = createStage(root.querySelector(".qg-canvas"), scene, model, layout);
     const frameAt = createTour(scene, model, layout);
     const last = scene.events.length - 1;
+    const plays = scene.events.map((e, i) => i).filter(i => !scene.events[i].error);
+    // The nearest played step from i in direction d (0: i itself, else forward first).
+    const playable = (i, d = 0) => {
+      i = Math.max(0, Math.min(last, i));
+      if (!scene.events[i].error) return i;
+      const after = plays.find(k => k > i), before = plays.findLast(k => k < i);
+      return d < 0 ? before ?? after : after ?? before;
+    };
+    const lastPlay = plays[plays.length - 1];
     // Tour plays the calls in order; Overview shows every cloud at once for free exploration.
     const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
                    filter: {phases: new Set()}};
@@ -62,12 +71,12 @@ export function mountQuery(app, route) {
       if (!overview && state.playing) {
         state.p += dt * state.speed / eventDuration(scene.events[state.i]);
         if (state.p >= 1) {
-          if (state.i < last) { state.i++; state.p = 0; stage.clearHover(); ui.setEvent(state.i); }
+          if (state.i < lastPlay) { state.i = playable(state.i + 1, 1); state.p = 0; stage.clearHover(); ui.setEvent(state.i); }
           else { state.p = 1; setPlaying(false); }
         }
       }
       if (!overview) ui.setProgress(state.i, state.p);
-      const out = overview ? frameAt(last, 1) : frameAt(state.i, state.p);
+      const out = overview ? frameAt(last, 1, true) : frameAt(state.i, state.p);
       Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: state.phase, filter: state.filter, labelAll: overview});
       if (overview) { out.frame.focus = new Set(); out.camera = OVERVIEW_CAM[state.view]; }
       return out;
@@ -86,14 +95,14 @@ export function mountQuery(app, route) {
     };
 
     const setPlaying = on => { state.playing = on; ui.setPlaying(on); };
-    const go = (i, p = 0) => { stage.clearHover(); state.i = Math.max(0, Math.min(scene.events.length - 1, i)); state.p = p; ui.setEvent(state.i); };
+    const go = (i, p = 0, d = 0) => { stage.clearHover(); state.i = playable(i, d); state.p = p; ui.setEvent(state.i); };
     const toggle = () => {
-      if (!state.playing && state.i === scene.events.length - 1 && state.p >= 1) go(0);
+      if (!state.playing && state.i === lastPlay && state.p >= 1) go(0);
       if (!state.playing && stage.view.cluster) stage.follow();
       setPlaying(!state.playing);
     };
     ui.on("play", toggle);
-    ui.on("step", d => go(state.i + d));
+    ui.on("step", d => go(state.i + d, 0, d));
     // In Overview the timeline and the phase bar pick a cloud instead of moving the playhead.
     const pick = i => stage.select(scene.events[i].cluster || "core");
     ui.on("seek", i => state.mode === "overview" ? pick(i) : go(i, 0.5));
@@ -111,7 +120,7 @@ export function mountQuery(app, route) {
         setPhase(again ? null : ph);
         return;
       }
-      const i = scene.events.findIndex(e => e.phase === ph);
+      const i = scene.events.findIndex(e => e.phase === ph && !e.error);
       if (i >= 0) go(i);
     });
     ui.on("endPhase", () => setPhase(null));
@@ -161,8 +170,8 @@ export function mountQuery(app, route) {
         const k = j.focus == null ? (e.key === "ArrowRight" ? 0 : j.stops.length - 1) : j.focus + (e.key === "ArrowRight" ? 1 : -1);
         stage.focusStop(k < 0 || k >= j.stops.length ? null : k);
       } else if (e.key === " ") { e.preventDefault(); toggle(); }
-      else if (e.key === "ArrowRight") go(state.i + 1);
-      else if (e.key === "ArrowLeft") go(state.i - 1);
+      else if (e.key === "ArrowRight") go(state.i + 1, 0, 1);
+      else if (e.key === "ArrowLeft") go(state.i - 1, 0, -1);
       else if (e.key === "Escape") stage.back();
     };
     document.addEventListener("keydown", keyHandler);
@@ -500,12 +509,13 @@ function bindUi(root, scene, model, stage, roles) {
       chip.dataset.phase = ev.phase;
       $(".qg-cap-title").textContent = ev.title || "";
       $(".qg-cap-text").textContent = ev.caption || "";
-      const next = scene.events[i + 1];
+      const next = scene.events.slice(i + 1).find(e => !e.error);
       $(".qg-cap-next").textContent = next ? `Next · ${next.phase} · ${next.title || ""}` : "End of the tour · switch to Overview to explore every cloud";
       $(".qg-caption").dataset.phase = ev.phase;
       clampCaption();
       root.classList.toggle("at-end", !next);
-      $(".qg-count").textContent = `${String(i + 1).padStart(2, "0")} / ${scene.events.length}`;
+      const played = scene.events.filter(e => !e.error);
+      $(".qg-count").textContent = `${String(played.indexOf(ev) + 1).padStart(2, "0")} / ${played.length}`;
       if (!stage.view.cluster) showEvent(i);
     },
     setProgress(i, p) {

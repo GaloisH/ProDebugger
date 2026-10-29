@@ -77,7 +77,7 @@ export function mountQuery(app, route) {
         const out = frameAt(row.event, 1);
         const beatSpec = row.bridge?.tower?.[state.beat - 1];
         const lit = state.peek || (beatSpec?.focus.length ? beatSpec.focus : row.focus);
-        Object.assign(out.frame, {focus: new Set(lit), chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: null, filter: state.filter, labelAll: false});
+        Object.assign(out.frame, {focus: new Set(lit), chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: null, filter: state.filter, labelAll: false, mini: true});
         out.camera = STORY_CAM;
         return out;
       }
@@ -203,22 +203,10 @@ export function mountQuery(app, route) {
     };
     document.addEventListener("keydown", keyHandler);
     const beats = k => story.rows[k]?.bridge?.beats || null;
-    // Mark colours come from the theme, so the tower's points match the board's strokes.
-    const css = getComputedStyle(root);
-    const MARK = {env: css.getPropertyValue("--qg-th-env").trim(), agent: css.getPropertyValue("--qg-th-agent").trim(),
-                  root: css.getPropertyValue("--qg-focus").trim(), goal: css.getPropertyValue("--qg-sig-goal").trim()};
-    // The root fact's way through the clouds the story has shown so far (later stops dropped).
-    const journeyUpTo = (fid, upto) => {
-      const J = journeyOf(scene, model, fid);
-      const keep = J.stops.map((st, i) => [st, i]).filter(([st]) => st.kind === "core" || (model.byId.get(st.id)?.event ?? Infinity) <= upto);
-      const at = new Map(keep.map(([, i], k) => [i, k]));
-      return {...J, stops: keep.map(([st]) => ({...st, from: st.from.filter(j => at.has(j)).map(j => at.get(j)), deadEnd: false})), start: null, end: null, endAt: -1};
-    };
     const towerBeat = () => {
-      const spec = story.rows[state.row]?.bridge?.tower?.[state.beat - 1];
-      stage.markFacts(spec ? spec.marks.map(m => ({fids: m.fids, color: MARK[m.kind], label: m.label})) : []);
-      if (spec?.journey != null) stage.setJourney(journeyUpTo(spec.journey, spec.upto));
-      else if (stage.journey) stage.setJourney(null);
+      // The board carries the one set of numbers; the tower beside it only lights its clouds.
+      stage.markFacts([]);
+      if (stage.journey) stage.setJourney(null);
     };
     const showBeat = () => {
       const b = beats(state.row);
@@ -311,40 +299,49 @@ const REACH = {issue: "clue only", candidate: "blamed", root: "ROOT"};
 const ctaOf = roles => [{role: "root", name: "root cause"}, {role: "candidate", name: "blamed step"}, {role: "issue", name: "clues"}]
   .find(r => roles.byRole.get(r.role).length);
 
-// Where a step sits on the board's axis: the middle of its column.
-const stepX = (step, n) => `${((step - 0.5) / n * 100).toFixed(2)}%`;
-
-// One row's marks on the step axis. Range bars stack in lanes; notes lead out to the right.
-function storyMarks(row, n) {
-  const at = s => stepX(s, n);
-  // Anchor and root notes sit to the left of their mark (the arrow runs right); near the axis's
-  // start there is no room, so they ride above the mark's right shoulder instead.
-  const side = s => (s - 0.5) / n > 0.22 ? "is-left" : "is-raised";
-  const note = (s, t, cls = "") => `<em class="sb-note ${cls}${/is-(anchor|root)/.test(cls) ? ` ${side(s)}` : ""}" style="left:${at(s)}">${esc(t)}</em>`;
-  let lane = 0;
-  return row.marks.map(m => {
+// One row's marks on the fisheye step axis, in three shapes: a dot is something seen at a step,
+// a bar is steps read, a diamond is a judgement on a step. Inside a folded band the dots and
+// bars of one kind collapse into a count.
+const pct = v => `${v.toFixed(2)}%`;
+function storyMarks(row, ax) {
+  const at = s => pct(ax.x(s));
+  // Notes sit to the left of their mark when there is room, else above its right shoulder.
+  const side = s => ax.x(s) > 22 ? "is-left" : "is-raised";
+  const note = (s, t, cls = "") => `<em class="sb-note ${cls} ${side(s)}" style="left:${at(s)}">${esc(t)}</em>`;
+  const dot = (s, tone, extra = "", tip = "") => `<i class="sb-dot" data-tone="${tone}" style="left:${at(s)}${extra}"${tip ? ` title="${esc(tip)}"` : ""}></i>`;
+  const dia = (s, kind) => `<i class="sb-dia" data-kind="${kind}" style="left:${at(s)}"></i>`;
+  const bar = (p, q, cls = "", top = "") => { const [l, w] = ax.span(p, q); return `<i class="sb-bar ${cls}" style="left:${pct(l)};width:${pct(w)}${top}"></i>`; };
+  const SIG = {goal: "touches the goal", invalid: "action with no effect", noise: "routine noise"};
+  // Folded bands: one count per kind.
+  const folds = new Map();
+  const fold = (s, key) => { const band = ax.bands.find(b => b.fold && s >= b.a && s <= b.b); const m = folds.get(band) || new Map(); m.set(key, (m.get(key) || 0) + 1); folds.set(band, m); };
+  let lane = 0, labelled = false;
+  const html = row.marks.map(m => {
+    if ((m.type === "signal" || m.type === "hit") && ax.folded(m.step)) { fold(m.step, m.type === "hit" ? "hit" : m.kind); return ""; }
     switch (m.type) {
-      case "x": return `<i class="sb-x" style="left:${at(m.step)}">✕</i>${note(m.step, m.label, "is-bad")}`;
-      case "signal": return `<i class="sb-sig" data-kind="${m.kind}" style="left:${at(m.step)}" title="step ${m.step}: ${m.kind === "goal" ? "touches the goal" : m.kind === "invalid" ? "action with no effect" : "routine noise"}"></i>`;
+      case "x": return `${dot(m.step, "goal", "", m.label)}${note(m.step, m.label, "is-bad")}`;
+      case "signal": return dot(m.step, m.kind, "", `step ${m.step}: ${SIG[m.kind]}`);
       case "range": {
-        const style = `left:${((m.a - 1) / n * 100).toFixed(2)}%;width:${((m.b - m.a + 1) / n * 100).toFixed(2)}%`;
-        return m.tone === "all" ? `<i class="sb-range" data-tone="all" style="${style}"></i>`
-          : `<i class="sb-range" data-tone="${m.tone}" style="${style};top:${8 + lane++ * 5}px" title="${esc(m.label || "")}"></i>`;
+        if (m.tone === "all") return bar(m.a, m.b, "is-all", ";top:4px");
+        const first = m.tone === "near" && !labelled; if (first) labelled = true;
+        return bar(m.a, m.b, `is-${m.tone}`, `;top:${10 + lane++ * 6}px`) + (first ? `<em class="sb-note is-tag" style="left:${pct(ax.span(m.a, m.b)[0])};top:${10 + (lane - 1) * 6}px">read closely</em>` : "");
       }
-      case "arrow": return `<i class="sb-arrow" style="left:${at(m.to)};width:${((m.from - m.to) / n * 100).toFixed(2)}%"></i><i class="sb-sym" style="left:${at(m.from)}"></i>`;
-      case "anchor": return `<i class="sb-anchor" style="left:${at(m.step)}"></i>${m.label ? note(m.step, m.label, "is-anchor") : ""}`;
-      case "question": return `<i class="sb-q" style="left:${at(m.step)}">?</i>`;
-      case "hit": return `<i class="sb-hit" style="left:${at(m.step)}"></i>`;
-      case "tnode": return `<i class="sb-tn" data-lane="${m.lane}" style="left:${at(m.step)}"></i>`;
-      case "bworld": return `<i class="sb-bw" style="left:${at(m.step)}"></i>`;
-      case "blink": return `<i class="sb-bl" data-role="${m.role}" style="left:calc(${at(m.step)} + ${m.shift * 7}px)"></i>`;
-      case "bfail": return `<i class="sb-bx" style="left:${at(m.step)}">✕</i>`;
-      case "blamed": return `<i class="sb-dia" data-kind="cand" style="left:${at(m.step)}"></i>`;
-      case "rival": return `<i class="sb-dia" data-kind="rival" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-struck")}`;
-      case "root": return `<i class="sb-dia" data-kind="root" style="left:${at(m.step)}"></i>${note(m.step, m.label, "is-root")}`;
+      case "anchor": return `${dia(m.step, "suspect")}${m.label ? note(m.step, m.label, "is-anchor") : ""}`;
+      case "question": return dia(m.step, "pending");
+      case "hit": { const [l, w] = ax.col(m.step); return `<i class="sb-bar is-hit" style="left:${pct(l + w * 0.32)};width:${pct(w * 0.36)}"></i>`; }
+      case "tnode": return dot(m.step, m.lane === "env" ? "env" : m.lane === "goal" ? "goal" : "agent", `;top:${m.lane === "env" ? 72 : m.lane === "goal" ? 28 : 50}%`);
+      case "bworld": return dot(m.step, "env", ";top:72%");
+      case "blink": return dot(m.step, m.role === "root" ? "root" : m.role === "guess" ? "guess" : "agent", `;margin-left:${m.shift * 9}px`);
+      case "bfail": return dot(m.step, "goal", ";top:28%");
+      case "blamed": return dia(m.step, "cand");
+      case "rival": return `${dia(m.step, "rival")}${note(m.step, m.label, "is-struck")}`;
+      case "root": return `${dia(m.step, "root")}${note(m.step, m.label, "is-root")}`;
       default: return "";
     }
   }).join("");
+  const counts = [...folds].map(([band, m]) => { const [l, w] = ax.span(band.a, band.b);
+    return `<span class="sb-fold" style="left:${pct(l)};width:${pct(w)}">${[...m].map(([k, c]) => `<span title="steps ${band.a}–${band.b}: ${c} × ${k === "hit" ? "step read" : SIG[k]}">${k === "hit" ? `<i class="sb-bar is-hit"></i>` : `<i class="sb-dot" data-tone="${k}"></i>`}${c}</span>`).join("")}</span>`; }).join("");
+  return html + counts;
 }
 
 // The evidence thread, zoomed: the steps around the anchor (the anchor's column wider), one
@@ -392,7 +389,7 @@ function bridgePanel(br) {
     <div class="qg-bridge" data-bridge="${esc(JSON.stringify(br))}">
       <span class="br-lanes">
         <span class="br-lane" data-lane="need" data-beat="1"><i>Goal needs</i><b>${esc(br.need)}</b></span>
-        <span class="br-lane" data-lane="link" data-beat="3"><i>Agent links them</i><em><s class="is-guess"></s>guess <s class="is-commit"></s>commits</em></span>
+        <span class="br-lane" data-lane="link" data-beat="3"><i>Agent links them</i></span>
         <span class="br-lane" data-lane="got" data-beat="2"><i>World shows</i><b>${esc(br.got)}</b></span>
       </span>
       <span class="br-track"><svg class="br-svg" aria-hidden="false" role="img"><title>Evidence bridge</title></svg></span>
@@ -400,19 +397,31 @@ function bridgePanel(br) {
 }
 
 function storyBoard(story) {
-  const n = story.steps;
-  const marked = new Set(story.rows.flatMap(r => r.marks.filter(m => ["x", "anchor", "root"].includes(m.type)).map(m => m.step)));
-  const axis = Array.from({length: n}, (_, i) => i + 1).filter(s => n <= 40 || s === 1 || s % 5 === 0 || marked.has(s))
-    .map(s => `<span${marked.has(s) ? ` class="is-marked"` : ""} style="left:${stepX(s, n)}">${s}</span>`).join("");
+  const ax = story.axis;
+  const marked = new Set(story.cols.map(c => c.step));
+  // Each band of the axis: a folded band is one label ("1–12"); the open band labels every step.
+  const axis = ax.bands.map(b => b.fold
+    ? `<span class="is-fold" style="left:${pct(ax.span(b.a, b.b)[0])};width:${pct(ax.span(b.a, b.b)[1])}">${b.a}–${b.b}</span>`
+    : Array.from({length: b.b - b.a + 1}, (_, i) => b.a + i).map(s => `<span${marked.has(s) ? ` class="is-marked"` : ""} style="left:${pct(ax.x(s))}">${s}</span>`).join("")).join("");
+  // Under every row: the open band's column lines, the folded bands' shade, the key columns' tint.
+  const open = ax.bands.find(b => !b.fold);
+  const under = [
+    ...ax.bands.filter(b => b.fold).map(b => { const [l, w] = ax.span(b.a, b.b); return `<i class="is-fold" style="left:${pct(l)};width:${pct(w)}"></i>`; }),
+    ...Array.from({length: open.b - open.a + 2}, (_, i) => `<i class="is-line" style="left:${pct(i <= open.b - open.a ? ax.col(open.a + i)[0] : ax.span(open.a, open.b).reduce((p, q) => p + q))}"></i>`),
+    ...story.cols.map(c => { const [l, w] = ax.col(c.step); return `<i class="is-col" data-tone="${c.tone}" style="left:${pct(l)};width:${pct(w)}"></i>`; }),
+  ].join("");
   const lanes = r => r.marks.filter(m => m.type === "range" && m.tone !== "all").length;
   return `
-    <section class="qg-board" aria-label="Case board" style="--n:${n}">
+    <section class="qg-board" aria-label="Case board">
+      <span class="qg-sb-under" aria-hidden="true">${under}</span>
       <div class="qg-sb-axis"><span class="qg-sb-lab">Agent step</span><span class="qg-sb-track">${axis}</span></div>
       ${story.rows.map((r, k) => `
-      <button class="qg-sb-row" data-row="${k}" data-phase="${r.phase}"${lanes(r) ? ` style="--lanes:${lanes(r)}"` : ""} title="${esc(r.answer)}">
-        <span class="qg-sb-lab"><i class="qg-chip" data-phase="${r.phase}">${r.phase}</i><b>${esc(r.question)}</b></span>
-        <span class="qg-sb-track">${storyMarks(r, n)}</span>
+      <button class="qg-sb-row" data-row="${k}" data-phase="${r.phase}"${lanes(r) ? ` style="--lanes:${lanes(r)}"` : ""} title="${esc(`${r.question}
+${r.answer}`)}">
+        <span class="qg-sb-lab"><i class="qg-chip" data-phase="${r.phase}">${r.phase}</i><b class="is-q">${esc(r.question)}</b><b class="is-a">${esc(r.short || r.question)}</b></span>
+        <span class="qg-sb-track">${storyMarks(r, ax)}</span>
       </button>`).join("")}
+      <svg class="qg-sb-spine" aria-hidden="true"></svg>
       <span class="qg-sb-peek" aria-hidden="true"></span>
       ${story.rows.filter(r => r.thread).map(r => r.bridge ? bridgePanel(r.bridge) : threadPanel(r.thread)).join("")}
     </section>
@@ -504,6 +513,27 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     root.style.setProperty("--qg-tower-top", `${board.offsetTop + board.offsetHeight + 8}px`);
   }
   new ResizeObserver(() => root.classList.contains("is-story") && placeStory()).observe($(".qg-board"));
+  // The evidence spine: a red line through each shown row's key steps, ending in an arrow at
+  // the current row; drawn over the rows from their measured boxes.
+  let shown = 0;
+  function drawSpine() {
+    const board = $(".qg-board"), svg = $(".qg-sb-spine");
+    if (!root.classList.contains("is-story") || board.classList.contains("is-zoomed")) return;
+    const base = board.getBoundingClientRect(), track = board.querySelector(".qg-sb-row .qg-sb-track").getBoundingClientRect();
+    const X = s => track.left - base.left + story.axis.x(s) / 100 * track.width;
+    const pts = [];
+    board.querySelectorAll(".qg-sb-row").forEach((el, i) => {
+      if (i > shown) return;
+      const r = el.getBoundingClientRect(), y = (r.top + r.bottom) / 2 - base.top;
+      story.rows[i].spine.forEach(s => pts.push([X(s), y]));
+    });
+    svg.setAttribute("viewBox", `0 0 ${base.width} ${base.height}`);
+    const d = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join("");
+    svg.innerHTML = `<defs><marker id="sb-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M1 1L8 5L1 9Z" fill="var(--qg-sig-goal)"/></marker></defs>`
+      + (pts.length ? `<circle class="sb-spine-start" cx="${pts[0][0]}" cy="${pts[0][1]}" r="5"/>` : "")
+      + (pts.length > 1 ? `<path class="sb-spine" d="${d}" marker-end="url(#sb-arrow)"/>` : "");
+  }
+  new ResizeObserver(drawSpine).observe($(".qg-board"));
   // The thread's links: each joins two chips in time order, leaving the earlier chip's side (or
   // bottom, when they share a step) and entering the later one from above or below, a little off
   // its centre so links that meet at one chip do not share a segment.
@@ -552,12 +582,12 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     if (!panel || !board.classList.contains("is-zoomed")) return;
     const br = JSON.parse(panel.dataset.bridge), track = panel.querySelector(".br-track"), svg = panel.querySelector(".br-svg");
     const W = track.clientWidth, H = track.clientHeight;
+    if (H < 80) return;
+    // The bridge unfolds on the board's own axis, so its steps stand in the board's columns.
     const steps = Array.from({length: br.to - br.from + 1}, (_, i) => br.from + i);
-    const weight = s => s === br.anchor ? 3.4 : 1, total = steps.reduce((n, s) => n + weight(s), 0);
-    let acc = 0;
-    const X = new Map(steps.map(s => { const c = (acc + weight(s) / 2) / total * W * 0.9; acc += weight(s); return [s, c]; }));
-    const colOf = s => { let a = 0; for (const t of steps) { if (t === s) return [a / total * W * 0.9, weight(t) / total * W * 0.9]; a += weight(t); } return [0, 0]; };
-    const yTop = 44, yBot = H - 58, yMid = (yTop + yBot) / 2, end = W * 0.94;
+    const X = new Map(steps.map(s => [s, story.axis.x(s) / 100 * W]));
+    const colOf = s => story.axis.col(s).map(v => v / 100 * W);
+    const yTop = 44, yBot = H - 58, yMid = (yTop + yBot) / 2, end = Math.min(W, (story.axis.span(br.from, br.to).reduce((p, q) => p + q) + 2) / 100 * W);
     const sq = (x, y, r, cls) => `<rect class="${cls}" x="${x - r}" y="${y - r}" width="${2 * r}" height="${2 * r}"/>`;
     const brackets = (x0, y0, x1, y1, cls) => `<path class="${cls}" d="M${x0} ${y0 + 6}V${y0}H${x0 + 6}M${x1 - 6} ${y0}H${x1}V${y0 + 6}M${x1} ${y1 - 6}V${y1}H${x1 - 6}M${x0 + 6} ${y1}H${x0}V${y1 - 6}"/>`;
     const tip = t => `<title>${esc(t)}</title>`;
@@ -884,7 +914,9 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       });
       const row = story.rows[k], say = $(".qg-sb-say");
       $(".qg-board").classList.toggle("is-zoomed", !!row.thread);
-      if (row.thread) requestAnimationFrame(() => { drawThread(); drawBridge(); });
+      root.classList.toggle("is-bridge", !!row.thread);
+      shown = k;
+      requestAnimationFrame(() => { drawSpine(); if (row.thread) { drawThread(); drawBridge(); } });
       say.dataset.phase = row.phase;
       say.querySelector(".qg-chip").textContent = row.phase;
       say.querySelector("strong").textContent = row.question;
@@ -894,8 +926,8 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     },
     // The steps a pointed-at tower cloud read, as lit columns over the board's rows.
     peekSteps(steps) {
-      const layer = $(".qg-sb-peek"), n = story.steps;
-      layer.innerHTML = (steps || []).map(s => `<i style="left:${((s - 1) / n * 100).toFixed(2)}%;width:${(100 / n).toFixed(2)}%"></i>`).join("");
+      const layer = $(".qg-sb-peek");
+      layer.innerHTML = (steps || []).map(s => { const [l, w] = story.axis.col(s); return `<i style="left:${pct(l)};width:${pct(w)}"></i>`; }).join("");
       layer.classList.toggle("is-on", !!steps?.length);
     },
     setBeat(b, line) {

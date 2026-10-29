@@ -335,14 +335,14 @@ export function createStage(canvas, scene, model, layout) {
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
     const panel = rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)");
     const head = rect(".qg > header"), foot = rect(".qg-foot");
-    const ruler = rot ? 0 : 170;
+    const ruler = rot || frame.mini ? 0 : 170;
     const left = Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0);
     return {
       left,
       // Only an open details panel takes room; folded, the tower spreads under where it was.
       right: Math.max(16, panel ? box.right - panel.left + 12 : 0),
       top: head ? Math.max(0, head.bottom - box.top) : 0,
-      bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot ? 44 : 0),
+      bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot && !frame.mini ? 44 : 0),
     };
   }
   // A preset marked fit frames the clouds on screen (not the plates under them, which are much
@@ -1041,7 +1041,8 @@ export function createStage(canvas, scene, model, layout) {
     // order of importance (open, hovered, selected, focused, main chain, verdicts), each keeping
     // clear of what is already there; hub names come last and give way.
     placed = labelled.map(({pc, sr}) => { const k = Math.min(sr, 14); return [pc.x - k, pc.y - k, 2 * k, 2 * k]; });
-    ruler(shown, current);
+    // A minimap (the Story mode's tower) has no ruler and names only the clouds in focus.
+    if (!frame.mini) ruler(shown, current);
     markBadges();
     for (const e of edgeLabels) edgeLabel(e);
     if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
@@ -1071,7 +1072,7 @@ export function createStage(canvas, scene, model, layout) {
       if (outside && !hot) continue;
       const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id);
       const quietAll = frame.labelAll && !frame.chain && !frame.phase && backbone.size;
-      const named = quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
+      const named = frame.mini ? focus || hot || selected : quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
       if (!named && quietAll) continue;
       if (named) {
         // In the overview the main chain reads down the right; its tier-mates take the left.

@@ -174,7 +174,7 @@ function buildBridge(scene, thread, w) {
   const need = clash ? `${clash.attr} = ${clash.need}` : goalText(reqs[0]?.entity?.id) || "the goal";
   const got = clash ? `${thread.obj} · ${clash.attr} = ${clash.got}` : thread.obj;
   return {
-    from: thread.from, to: thread.to, anchor: thread.anchor, fail, need, got, world, bridges,
+    from: thread.from, to: thread.to, anchor: thread.anchor, fail, need, got, world, bridges, clash,
     beats: [
       `The goal needs ${need}.`,
       `The world shows ${got}.`,
@@ -223,6 +223,30 @@ function bridgeTower(scene, model, br, thread, w, upto, mapCluster) {
   return beats;
 }
 
+// The board's step axis as a fisheye: the steps the case turns on [lo, hi] share most of the
+// width (the suspect step wider still), and each run of steps outside folds into a narrow band.
+// Positions are percentages of the track; col(s) is a step's column, x(s) its middle.
+const FOLD = 8;
+export function fisheye(n, lo, hi, wide) {
+  const left = lo > 3 ? [1, lo - 1] : null, right = hi < n - 2 ? [hi + 1, n] : null;
+  const a = left ? lo : 1, b = right ? hi : n;
+  const weight = s => s === wide && b - a > 2 ? 2.2 : 1;
+  let total = 0;
+  for (let s = a; s <= b; s++) total += weight(s);
+  const room = 100 - FOLD * ((left ? 1 : 0) + (right ? 1 : 0));
+  const cols = new Map();
+  let at = 0;
+  const fold = ([p, q]) => { const w = FOLD / (q - p + 1); for (let s = p; s <= q; s++) { cols.set(s, [at, w]); at += w; } };
+  if (left) fold(left);
+  for (let s = a; s <= b; s++) { const w = weight(s) / total * room; cols.set(s, [at, w]); at += w; }
+  if (right) fold(right);
+  const col = s => cols.get(Math.max(1, Math.min(n, s)));
+  return {n, col, x: s => col(s)[0] + col(s)[1] / 2,
+          span: (p, q) => [col(p)[0], col(q)[0] + col(q)[1] - col(p)[0]],
+          folded: s => !!((left && s <= left[1]) || (right && s >= right[0])),
+          bands: [left && {a: left[0], b: left[1], fold: true}, {a, b, fold: false}, right && {a: right[0], b: right[1], fold: true}].filter(Boolean)};
+}
+
 export function buildStory(scene, model) {
   const n = scene.meta.steps;
   const ev = scene.events;
@@ -243,6 +267,7 @@ export function buildStory(scene, model) {
   rows.push({
     key: "goal", phase: "MAP", question: "What does the task need, and what failed?",
     answer: `${goalLine}${decided.length ? `; the agent's finishing decision at ${stepList(decided)} broke a constraint` : ""}.`,
+    short: decided.length ? `goal fails at ${stepList(decided)}` : reqs.length > 1 ? `${reqs.length} requirements: ${tally}` : clip(goalLine, 40),
     event: mapAt >= 0 ? mapAt : 0, focus: mapAt >= 0 && ev[mapAt].cluster ? [ev[mapAt].cluster] : ["core"],
     marks: decided.map(step => ({type: "x", step, label: "goal failed"})),
   });
@@ -262,6 +287,7 @@ export function buildStory(scene, model) {
     key: "signals", phase: "ROUTE", question: "Where does the run look wrong?",
     answer: [noise.length && `routine noise on ${noise.length} steps`, invalid.length && `actions with no effect at ${invalid.join(", ")}`,
              goalSteps.length ? `only ${stepList(goalSteps)} ${goalSteps.length === 1 ? "touches" : "touch"} the goal` : "no step touches the goal directly"].filter(Boolean).map((t, i) => i ? t : cap(t)).join("; ") + ".",
+    short: goalSteps.length ? `${goalSteps.length} of ${n} steps touch the goal` : `${kind.size} of ${n} steps flagged`,
     event: global.length ? global[global.length - 1] : Math.max(0, mapAt), focus: global.map(i => ev[i].cluster),
     marks: [...kind].map(([step, k]) => ({type: "signal", step, kind: k})),
   });
@@ -277,9 +303,12 @@ export function buildStory(scene, model) {
   const contrast = merged.map(([a, b], i) => `${i ? "" : "steps "}${a}–${b}`);
   rows.push({
     key: "ranges", phase: "ROUTE", question: "Where did ROUTE look closely?",
+    short: ranged.length ? `${n} steps → ${tight ? span(tight).replace("steps ", "") : "a range"}` : `all ${n} steps`,
     answer: ranged.length ? `From all ${n} steps down to ${tight ? span(tight) : span(ranged[ranged.length - 1][1])}${contrast.length ? `, with ${contrast.join(" and ")} read for contrast` : ""}.` : "It read the whole run without narrowing to a range.",
     event: ranged.length ? ranged[ranged.length - 1][0] : global[global.length - 1] ?? 0, focus: ranged.map(([i]) => ev[i].cluster),
-    marks: [{type: "range", a: 1, b: n, tone: "all"}, ...ranged.map(([i, r]) => ({type: "range", a: r[0], b: r[1], tone: near(r) ? "near" : "contrast", label: ev[i].title}))],
+    // The whole run, the tightest range on a suspect, and the merged contrast reads: one bar each.
+    marks: [{type: "range", a: 1, b: n, tone: "all"}, ...(tight ? [{type: "range", a: tight[0], b: tight[1], tone: "near", label: span(tight)}] : []),
+            ...merged.map(([a, b]) => ({type: "range", a, b, tone: "contrast", label: `contrast: steps ${a}–${b}`}))],
   });
 
   // 4 · The anchor: back from the symptom to the suspect step ROUTE opened a window on.
@@ -288,6 +317,7 @@ export function buildStory(scene, model) {
   const routeAt = ev.findIndex(e => e.name === "route_cases");
   rows.push({
     key: "anchor", phase: "ROUTE", question: "Where should the investigation start?",
+    short: scene.windows.length ? `suspect: ${stepList([...scene.windows].sort((a, b) => a.step - b.step).map(w => w.step))}` : "no suspect",
     answer: scene.windows.length ? cap(`${symptom.length ? `Back from the failure at ${stepList(symptom.slice(0, 2))} to ` : ""}${[...scene.windows].sort((a, b) => a.step - b.step).map(w => `step ${w.step}, ${w.fids.length} clue${w.fids.length === 1 ? "" : "s"} (${[...new Set(w.fids.map(f => SLOT_LABEL[scene.factById.get(f)?.slot]).filter(Boolean))].join(", ")})`).join("; ")}.`) : "ROUTE opened no suspect window.",
     event: routeAt >= 0 ? routeAt : rows[rows.length - 1].event, focus: scene.windows.map(w => w.id),
     marks: [...scene.windows.flatMap(w => symptom.filter(s => s > w.step).slice(0, 1).map(s => ({type: "arrow", from: s, to: w.step}))),
@@ -303,12 +333,14 @@ export function buildStory(scene, model) {
     const goalNode = thread.nodes.find(n => n.lane === "goal"), acts = thread.nodes.filter(n => n.lane === "agent" && n.step > thread.anchor);
     rows.push({
       key: "thread", phase: "ROUTE", question: `How does the failure lead back to step ${thread.anchor}?`,
+      short: `${thread.obj} traced back to step ${thread.anchor}`,
       answer: `Follow ${thread.obj}: ${goalNode ? `the goal check fails at step ${goalNode.step}` : "the goal fails"}${acts.length ? ` after the agent ${acts.map(a => `${a.slot === "act" ? "acts on it" : "uses it"} at step ${a.step}`).join(", ")}` : ""}; it entered the run at step ${thread.anchor}, where the agent's ${[...new Set(thread.nodes.filter(n => n.step === thread.anchor && n.lane === "agent").map(n => SLOT_LABEL[n.slot]))].join(", ")} took it up.`,
       event: routeAt >= 0 ? routeAt : rows[rows.length - 1].event, focus: [rootWindow.id],
       marks: [...thread.nodes.map(n => ({type: "tnode", step: n.step, lane: n.lane})), ...(thread.trace ? [{type: "arrow", from: thread.trace.from, to: thread.trace.to}] : [])],
       thread, bridge: buildBridge(scene, thread, rootWindow),
     });
     const row = rows[rows.length - 1], br = row.bridge;
+    if (br?.clash) row.short = `${br.clash.got} taken for ${br.clash.need}`;
     if (br) br.tower = bridgeTower(scene, model, br, thread, rootWindow, row.event, rows[0].focus[0]);
     if (br) row.marks = [
       ...br.world.map(w => ({type: "bworld", step: w.step})),
@@ -332,6 +364,7 @@ export function buildStory(scene, model) {
   const lanes = scene.lanes;
   rows.push({
     key: "manager", phase: "MANAGER", question: "What will the check ask, and how is it judged?",
+    short: lanes.length ? `${scene.rules.length} rules fixed${lanes.length === 1 ? ` for step ${lanes[0].step}` : " in advance"}` : "nothing to check",
     // The question itself is on the card (and its hover); the answer says what was set up.
     answer: lanes.length ? `${lanes.length === 1 ? `One question about step ${lanes[0].step}` : `${lanes.length} questions, for ${stepList(lanes.map(l => l.step))}`}; ${scene.rules.length ? `${scene.rules.length} rules are fixed before the search.` : "no rules were fixed."}` : "No investigation was planned.",
     event: planAt >= 0 ? planAt : rows[rows.length - 1].event, focus: lanes.map(l => l.id),
@@ -349,6 +382,7 @@ export function buildStory(scene, model) {
   const rows0 = lanes.reduce((k, l) => k + l.rows.length, 0);
   rows.push({
     key: "trace", phase: "TRACE", question: "What did the log search find?",
+    short: `${rows0} log rows · ${blamed.length === 1 ? `blames S${blamed[0].step} ${blamed[0].module}` : `${blamed.length || "no"} steps blamed`}`,
     answer: `${rows0} rows from ${hit.length} steps; ${blamed.length ? `TRACE blames ${blamed.map(c => `step ${c.step}'s ${c.module} (${[statusText(c.status), faultText(c.faultClass)].filter(Boolean).join(": ")})`).join("; ")}` : "TRACE blames no step"}.`,
     event: assessAt >= 0 ? assessAt : rows[rows.length - 1].event, focus: [...lanes.map(l => l.id), ...blamed.map(c => c.id)],
     marks: [...hit.map(step => ({type: "hit", step})), ...blamed.map(c => ({type: "blamed", step: c.step, label: `${c.module}`}))],
@@ -365,6 +399,7 @@ export function buildStory(scene, model) {
   const submitAt = ev.findIndex(e => e.name === "submit");
   rows.push({
     key: "verdict", phase: "SUBMIT", question: "Which step is the root cause?",
+    short: root ? `root cause: step ${root.step} ${root.module}` : "no root cause",
     answer: root ? `Step ${root.step}'s ${root.module}${rule ? `, by the rule for a ${rule.outcome} finding` : ""}${rivals.length ? `; ${rivals.map(r => `step ${r.step}'s ${r.module}`).join(" and ")} weighed and set aside` : ""}.` : "SUBMIT named no root cause.",
     event: submitAt >= 0 ? submitAt : ev.length - 1, focus: root ? ["root"] : [],
     // A rival on the root's own step is named in the root's note, not as a second mark on top of it.
@@ -378,5 +413,17 @@ export function buildStory(scene, model) {
   ]});
 
   rows.forEach(r => { r.focus = r.focus.filter(id => id && byCluster(id)); });
-  return {steps: n, rows, cards};
+
+  // The evidence spine: one line down the board through each row's key step, from the failure
+  // (down its column) across to the suspect at the anchor row, then down to the root.
+  const sus = rootWindow?.step, sym = sus != null ? symptom.find(s => s > sus) ?? symptom[0] : null, rootAt = root?.step ?? sus;
+  const SPINE = {goal: [sym], signals: [kind.has(sym) ? sym : null], ranges: [sym], anchor: [sym, sus], thread: [sus], manager: [sus], trace: [rootAt], verdict: [rootAt]};
+  rows.forEach(r => { r.spine = (SPINE[r.key] || []).filter(s => s != null); });
+  const cols = [...(sym != null ? [{step: sym, tone: "fail"}] : []), ...(sus != null ? [{step: sus, tone: "suspect"}] : []),
+                ...(rootAt != null && rootAt !== sus ? [{step: rootAt, tone: "suspect"}] : [])];
+  // The axis folds the steps before and after the case's turn: from just before the first
+  // suspect (or root) to just after the failure.
+  const turn = [...anchors, root?.step, sym].filter(s => s != null);
+  const axis = fisheye(n, turn.length ? Math.max(1, Math.min(...turn) - 1) : 1, turn.length ? Math.min(n, Math.max(...turn) + 1) : n, sus);
+  return {steps: n, rows, cards, cols, axis};
 }

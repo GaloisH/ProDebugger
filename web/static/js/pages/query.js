@@ -181,7 +181,8 @@ export function mountQuery(app, route) {
       const j = stage.journey;
       if (state.mode === "story" && !stage.view.cluster && [" ", "ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) {
         e.preventDefault();
-        setRow(e.key === "Home" ? 0 : e.key === "End" ? story.rows.length - 1 : state.row + (e.key === "ArrowLeft" ? -1 : 1));
+        if (e.key === "Home" || e.key === "End") setRow(e.key === "Home" ? 0 : story.rows.length - 1);
+        else stepStory(e.key === "ArrowLeft" ? -1 : 1);
       } else if (j && !stage.view.cluster && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
         const k = j.focus == null ? (e.key === "ArrowRight" ? 0 : j.stops.length - 1) : j.focus + (e.key === "ArrowRight" ? 1 : -1);
         stage.focusStop(k < 0 || k >= j.stops.length ? null : k);
@@ -191,13 +192,30 @@ export function mountQuery(app, route) {
       else if (e.key === "Escape") stage.back();
     };
     document.addEventListener("keydown", keyHandler);
+    const beats = k => story.rows[k]?.bridge?.beats || null;
+    const showBeat = () => {
+      const b = beats(state.row);
+      if (!b) return;
+      ui.setBeat(state.beat, b[state.beat - 1]);
+      $count().textContent = `${state.row + 1} / ${story.rows.length} · beat ${state.beat}/${b.length}`;
+    };
+    const $count = () => root.querySelector(".qg-sb-count");
+    const stepStory = d => {
+      const b = beats(state.row);
+      if (b && state.beat + d >= 1 && state.beat + d <= b.length) { state.beat += d; showBeat(); return; }
+      const next = state.row + d;
+      setRow(next);
+      if (beats(state.row)) { state.beat = d < 0 ? beats(state.row).length : 1; showBeat(); }
+    };
     const setRow = k => {
       state.row = Math.max(0, Math.min(story.rows.length - 1, k));
+      state.beat = beats(state.row)?.length || 0;
       stage.clearHover();
       stage.select(null);
       stage.release();
       state.chain = null;
       ui.setRow(state.row);
+      showBeat();
     };
     ui.on("row", setRow);
     const asked = route.query?.get("mode");
@@ -316,6 +334,21 @@ function threadPanel(th) {
     </div>`;
 }
 
+// The evidence bridge (HUD): the goal's rail on top, the world's rail below, the agent's links
+// between them. drawBridge lays it out from the track's measured size; every element carries
+// the beat it belongs to and shows once the scene reaches that beat.
+function bridgePanel(br) {
+  return `
+    <div class="qg-bridge" data-bridge="${esc(JSON.stringify(br))}">
+      <span class="br-lanes">
+        <span class="br-lane" data-lane="need" data-beat="1"><i>Goal needs</i><b>${esc(br.need)}</b></span>
+        <span class="br-lane" data-lane="link" data-beat="3"><i>Agent links them</i><em><s class="is-guess"></s>guess <s class="is-commit"></s>commits</em></span>
+        <span class="br-lane" data-lane="got" data-beat="2"><i>World shows</i><b>${esc(br.got)}</b></span>
+      </span>
+      <span class="br-track"><svg class="br-svg" aria-hidden="false" role="img"><title>Evidence bridge</title></svg></span>
+    </div>`;
+}
+
 function storyBoard(story) {
   const n = story.steps;
   const marked = new Set(story.rows.flatMap(r => r.marks.filter(m => ["x", "anchor", "root"].includes(m.type)).map(m => m.step)));
@@ -330,7 +363,7 @@ function storyBoard(story) {
         <span class="qg-sb-lab"><i class="qg-chip" data-phase="${r.phase}">${r.phase}</i><b>${esc(r.question)}</b></span>
         <span class="qg-sb-track">${storyMarks(r, n)}</span>
       </button>`).join("")}
-      ${story.rows.filter(r => r.thread).map(r => threadPanel(r.thread)).join("")}
+      ${story.rows.filter(r => r.thread).map(r => r.bridge ? bridgePanel(r.bridge) : threadPanel(r.thread)).join("")}
     </section>
     <aside class="qg-cards" aria-label="Evidence">
       <div class="qg-sb-say"><p class="qg-sb-head"><span class="qg-chip"></span><span class="qg-sb-count"></span></p><strong></strong><p class="qg-sb-answer"></p></div>${story.cards.map(c => `
@@ -454,6 +487,63 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       + (Number.isFinite(from) ? `<circle class="th-trace-dot" cx="${from / 100 * W}" cy="${y}" r="5"/><path class="th-trace" d="M${from / 100 * W} ${y} H${to / 100 * W + 10}" marker-end="url(#th-arrow)"/>` : "");
   }
   new ResizeObserver(drawThread).observe($(".qg-board"));
+  let beat = 6;
+  function drawBridge() {
+    const panel = $(".qg-bridge"), board = $(".qg-board");
+    if (!panel || !board.classList.contains("is-zoomed")) return;
+    const br = JSON.parse(panel.dataset.bridge), track = panel.querySelector(".br-track"), svg = panel.querySelector(".br-svg");
+    const W = track.clientWidth, H = track.clientHeight;
+    const steps = Array.from({length: br.to - br.from + 1}, (_, i) => br.from + i);
+    const weight = s => s === br.anchor ? 3.4 : 1, total = steps.reduce((n, s) => n + weight(s), 0);
+    let acc = 0;
+    const X = new Map(steps.map(s => { const c = (acc + weight(s) / 2) / total * W * 0.9; acc += weight(s); return [s, c]; }));
+    const colOf = s => { let a = 0; for (const t of steps) { if (t === s) return [a / total * W * 0.9, weight(t) / total * W * 0.9]; a += weight(t); } return [0, 0]; };
+    const yTop = 44, yBot = H - 58, yMid = (yTop + yBot) / 2, end = W * 0.94;
+    const sq = (x, y, r, cls) => `<rect class="${cls}" x="${x - r}" y="${y - r}" width="${2 * r}" height="${2 * r}"/>`;
+    const brackets = (x0, y0, x1, y1, cls) => `<path class="${cls}" d="M${x0} ${y0 + 6}V${y0}H${x0 + 6}M${x1 - 6} ${y0}H${x1}V${y0 + 6}M${x1} ${y1 - 6}V${y1}H${x1 - 6}M${x0 + 6} ${y1}H${x0}V${y1 - 6}"/>`;
+    const tip = t => `<title>${esc(t)}</title>`;
+    const parts = [];
+    // Columns: the suspect step and the failing step tinted; the step ruler along the bottom.
+    for (const [s, cls] of [[br.anchor, "is-anchor"], [br.fail, "is-fail"]]) if (s != null && X.has(s)) { const [l, w] = colOf(s); parts.push(`<rect class="br-col ${cls}" x="${l}" y="0" width="${w}" height="${H - 22}"/>`); }
+    parts.push(`<line class="br-ruler" x1="0" y1="${H - 20}" x2="${end}" y2="${H - 20}"/>`);
+    for (const s of steps) parts.push(`<line class="br-ruler" x1="${X.get(s)}" y1="${H - 24}" x2="${X.get(s)}" y2="${H - 16}"/><text class="br-step${s === br.anchor || s === br.fail ? " is-on" : ""}" x="${X.get(s)}" y="${H - 3}">${s}</text>`);
+    // Beat 1 · the goal's rail.  Beat 2 · the world's rail and what happened to the object.
+    parts.push(`<g data-beat="1"><line class="br-rail is-need" x1="0" y1="${yTop}" x2="${end}" y2="${yTop}"/></g>`);
+    const w0 = br.world[0]?.step ?? br.anchor;
+    parts.push(`<g data-beat="2"><line class="br-rail is-got" x1="${Math.max(0, X.get(w0) - 40)}" y1="${yBot}" x2="${end}" y2="${yBot}"/>${br.world.map((w, i) => `<g>${tip(w.full || w.label)}${sq(X.get(w.step), yBot, i ? 4 : 5, "br-pt is-got")}<text class="br-note is-got" x="${X.get(w.step)}" y="${yBot + 20}">${esc(w.label)}</text></g>`).join("")}</g>`);
+    // Beats 3–5 · the agent's links: a guess, the commitment, the repeats; the failed check.
+    const sameStep = s => br.bridges.filter(b => b.step === s).length > 1;
+    const xOf = b => X.get(b.step) + (sameStep(b.step) ? (b.role === "guess" ? -26 : 26) : 0);
+    const root = br.bridges.find(b => b.role === "root");
+    const lastRepeat = br.bridges.filter(b => b.role === "repeat").pop();
+    for (const b of br.bridges) {
+      const x = xOf(b), beatNo = b.role === "guess" ? 3 : b.role === "root" ? 4 : 5;
+      const label = b.role === "guess" ? `<text class="br-label is-guess" x="${x - 14}" y="${yMid - 4}" text-anchor="end">${esc(b.label)}</text><text class="br-kicker" x="${x - 14}" y="${yMid + 14}" text-anchor="end">GUESS · S${b.step}</text>`
+        : b.role === "root" ? `<text class="br-label is-root" x="${x + 14}" y="${yMid - 4}">${esc(b.label)}</text><text class="br-kicker is-root" x="${x + 14}" y="${yMid + 14}">COMMITS · S${b.step}</text>`
+        : b === lastRepeat ? `<text class="br-label is-repeat" x="${x + 12}" y="${yMid - 4}">${esc(b.label)}</text><text class="br-kicker" x="${x + 12}" y="${yMid + 14}">REPEATS · S${b.step}</text>` : "";
+      parts.push(`<g data-beat="${beatNo}">${tip(`step ${b.step} · ${b.quotes.join("\n")}`)}<line class="br-link is-${b.role}" x1="${x}" y1="${yTop + 5}" x2="${x}" y2="${yBot - 5}"/>${sq(x, yTop, 3, `br-pt is-${b.role}`)}${sq(x, yBot, 3, `br-pt is-${b.role}`)}${b.role === "guess" ? `<circle class="br-q" cx="${x}" cy="${yTop + (yMid - yTop) * 0.45}" r="8"/><text class="br-qmark" x="${x}" y="${yTop + (yMid - yTop) * 0.45 + 4}">?</text>` : ""}${label}</g>`);
+    }
+    if (br.fail != null && X.has(br.fail)) {
+      const x = X.get(br.fail);
+      parts.push(`<g data-beat="5"><path class="br-x" d="M${x - 6} ${yTop - 6}L${x + 6} ${yTop + 6}M${x + 6} ${yTop - 6}L${x - 6} ${yTop + 6}"/><text class="br-kicker is-fail" x="${x + 12}" y="${yTop - 10}">CHECK FAILS · S${br.fail}</text></g>`);
+      // Beat 6 · the trace back to the first commitment, which gets its brackets.
+      if (root) {
+        const rx = xOf(root), ty = yTop + 20;
+        parts.push(`<g data-beat="6"><circle class="br-dot" cx="${x}" cy="${ty}" r="4"/><path class="br-trace" d="M${x - 6} ${ty}H${rx + 8}" marker-end="url(#br-arrow)"/><text class="br-kicker is-fail" x="${(x + rx) / 2}" y="${ty + 16}" text-anchor="middle">TRACE BACK</text>${brackets(rx + 6, yMid - 24, rx + 30 + root.label.length * 8.6, yMid + 22, "br-brackets")}</g>`);
+      }
+    }
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = `<title>Evidence bridge</title><defs><marker id="br-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.6"/></marker></defs>${parts.join("")}`;
+    // The lane names sit level with their rails.
+    const place = (lane, y) => { const el = panel.querySelector(`[data-lane="${lane}"]`); el.style.top = `${y}px`; };
+    place("need", yTop); place("link", yMid); place("got", yBot);
+    setBeat(beat);
+  }
+  function setBeat(b) {
+    beat = b;
+    $(".qg-bridge")?.querySelectorAll("[data-beat]").forEach(el => el.classList.toggle("is-on", Number(el.dataset.beat) <= b));
+  }
+  new ResizeObserver(drawBridge).observe($(".qg-board"));
   const ticks = [...root.querySelectorAll(".qg-tick")];
   const handlers = {};
   const inspect = $(".qg-inspect"), panelBody = $(".qg-inspect-body"), tip = $(".qg-tip");
@@ -731,13 +821,17 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       });
       const row = story.rows[k], say = $(".qg-sb-say");
       $(".qg-board").classList.toggle("is-zoomed", !!row.thread);
-      if (row.thread) requestAnimationFrame(drawThread);
+      if (row.thread) requestAnimationFrame(() => { drawThread(); drawBridge(); });
       say.dataset.phase = row.phase;
       say.querySelector(".qg-chip").textContent = row.phase;
       say.querySelector("strong").textContent = row.question;
       say.querySelector(".qg-sb-answer").textContent = row.answer;
       $(".qg-sb-count").textContent = k < story.rows.length - 1 ? `${k + 1} / ${story.rows.length} · → next` : `${k + 1} / ${story.rows.length}`;
       root.querySelector(".qg-card-ev.is-now")?.scrollIntoView({block: "nearest"});
+    },
+    setBeat(b, line) {
+      setBeat(b);
+      if (line) $(".qg-sb-answer").textContent = line;
     },
     get journeyRole() { return journeyRole; },
     openPane(name) { setPane(name, true); },

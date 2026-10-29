@@ -206,7 +206,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
       for (const a of args.assignments || []) {
         const lane = {id: `l:${a.agent_id}`, type: "lane", agent: a.agent_id, anchor: a.anchor_case_id, step: windowByCase.get(a.anchor_case_id)?.step,
                       cases: a.route_case_ids || [], question: a.question || "", targets: a.search_targets || [],
-                      rows: [], steps: [], fids: [], candidates: [], purpose: ""};
+                      rows: [], steps: [], fids: [], candidates: [], purpose: "", cards: []};
         lanes.set(a.agent_id, lane);
         ev.lanes.push(lane.id);
         const w = windowByCase.get(a.anchor_case_id);
@@ -230,6 +230,8 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
       if (lane) {
         lane.rows = rows; lane.steps = data?.returned_steps || []; lane.fids = ev.fids;
         lane.purpose = (ev.sql.match(/Purpose:\s*(.+)/) || [])[1]?.trim() || "";
+        // The agent's sentences the search returned, split into structured statements.
+        lane.cards = data?.agent_statements?.cards || [];
       }
       ev.raw = `query_logs(${lane?.agent || "?"})`;
       ev.title = `Search the logs for step ${lane?.step ?? "?"}`;
@@ -278,6 +280,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
   for (const q of traceQueries || []) {
     const lane = lanes.get(q.candidate_id);
     if (lane && !lane.steps.length) lane.steps = q.returned_steps || [];
+    if (lane && !lane.cards.length) lane.cards = q.agent_statements?.cards || [];
   }
 
   let root = null;

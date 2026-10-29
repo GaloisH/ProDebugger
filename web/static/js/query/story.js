@@ -117,6 +117,73 @@ function buildThread(scene, w, symptom) {
           trace: back ? {from: back, to: w.step, label: `back along ${obj} to step ${w.step}`} : null};
 }
 
+
+// The evidence bridge: what the goal needs on one rail, what the world shows on the other,
+// and the agent's own statements (from TRACE's structured read of its text) as the links it
+// drew between them: a tentative guess, a commitment, a repeat. The first commitment at the
+// suspect step is the root; the trace runs back to it from the failed check.
+const LINK_TOPICS = new Set(["hypothesis", "completion", "decision_basis", "expected_gain"]);
+function buildBridge(scene, thread, w) {
+  const reqs = (scene.goalMap?.requirements || []).filter(r => r.status?.state && r.status.state !== "met");
+  const want = reqs.flatMap(r => (r.definition?.constraints || []).map(c => ({attr: String(c.attribute || c.property || "").replace(/^attribute:/, ""), need: String(c.expected)})));
+  // The constraint the object breaks: an observed attribute with another value.
+  let clash = null;
+  for (const f of scene.facts) {
+    if (f.slot !== "obs" || f.rel !== "has" || f.value !== true || !f.args.includes(thread.objKey)) continue;
+    const attr = f.args.find(a => a.startsWith("attribute:"))?.slice(10), got = f.args.find(a => a.startsWith("value:"))?.slice(6);
+    const c = want.find(x => x.attr === attr && got && x.need !== got);
+    if (c) { clash = {attr: attr.replace(/_/g, " "), need: c.need, got, step: f.t}; break; }
+  }
+  const objWord = thread.obj.replace(/\s+\d+$/, "");
+  const names = [thread.obj, objWord, clash?.need].filter(Boolean).map(x => x.toLowerCase());
+  const seen = new Set(), links = [];
+  for (const card of scene.lanes.flatMap(l => l.cards)) {
+    if (seen.has(card.source_id) || card.step < thread.anchor || card.step > thread.to) continue;
+    seen.add(card.source_id);
+    for (const st of card.statements || []) {
+      if (!LINK_TOPICS.has(st.topic) || st.polarity === "negative") continue;
+      const text = `${st.subject_quote || ""} ${st.detail_quote || ""}`.toLowerCase();
+      if (!names.some(nm => text.includes(nm))) continue;
+      links.push({step: card.step, module: card.module, topic: st.topic, modality: st.modality, quote: card.quote, subject: st.subject_quote, detail: st.detail_quote});
+    }
+  }
+  // One bridge per step and kind: guesses (tentative hypotheses), commitments (everything else).
+  const kindOf = l => l.topic === "hypothesis" && l.modality === "tentative" ? "guess" : "commit";
+  const bridges = [];
+  for (const l of links.sort((a, b) => a.step - b.step)) {
+    const kind = kindOf(l), b = bridges.find(x => x.step === l.step && x.kind === kind);
+    if (b) { b.quotes.push(`${l.module}: ${l.quote}`); continue; }
+    bridges.push({step: l.step, kind, module: l.module, topic: l.topic, quotes: [`${l.module}: ${l.quote}`], detail: l.detail, subject: l.subject});
+  }
+  const rootStep = scene.root?.step;
+  const firstCommit = bridges.find(b => b.kind === "commit" && (rootStep == null || b.step === rootStep)) || bridges.find(b => b.kind === "commit");
+  const verbAt = step => String(scene.facts.find(f => f.t === step && f.slot === "act" && f.args.includes(thread.objKey))?.value || "").split(" ")[0];
+  for (const b of bridges) {
+    b.role = b.kind === "guess" ? "guess" : b === firstCommit ? "root" : b.step >= (firstCommit?.step ?? 0) ? "repeat" : "commit";
+    const said = clip(`${b.subject || ""} → ${b.detail || ""}`.replace(/^ → /, ""), 34);
+    if (b.kind === "guess") b.label = clash ? `could be the ${clash.need}` : said;
+    else if (["completion", "expected_gain"].includes(b.topic) && verbAt(b.step)) b.label = `${verbAt(b.step)} it = task done`;
+    else b.label = b.role === "repeat" ? "relies on it again" : said;
+  }
+  if (!bridges.some(b => b.role === "root")) return null;
+  const fail = thread.nodes.find(n => n.lane === "goal")?.step ?? thread.trace?.from;
+  const world = thread.nodes.filter(n => n.lane === "env").map((n, i) => ({step: n.step, label: i === 0 && clash ? `${clash.attr}: ${clash.got}` : n.label.replace(thread.obj, "").replace(/\s+/g, " ").replace(/^sees in /, "seen in ").trim() || n.label, full: n.full}));
+  const root = bridges.find(b => b.role === "root"), guess = bridges.find(b => b.role === "guess"), repeat = bridges.filter(b => b.role === "repeat");
+  const need = clash ? `${clash.attr} = ${clash.need}` : goalText(reqs[0]?.entity?.id) || "the goal";
+  const got = clash ? `${thread.obj} · ${clash.attr} = ${clash.got}` : thread.obj;
+  return {
+    from: thread.from, to: thread.to, anchor: thread.anchor, fail, need, got, world, bridges,
+    beats: [
+      `The goal needs ${need}.`,
+      `The world shows ${got}.`,
+      guess ? `At step ${guess.step} the agent guesses ${thread.obj} ${guess.label}.` : `At step ${root.step} the agent links ${thread.obj} to the goal.`,
+      `At step ${root.step} it commits: ${root.label}. Nothing in the world supports that link.`,
+      `${repeat.length ? `At step ${repeat.map(r => r.step).join(", ")} it repeats the link` : "The link stands"}${fail ? `, and the goal check fails at step ${fail}` : ""}.`,
+      `Tracing back from the failure, the first commitment is step ${root.step}'s ${root.module}: the root cause.`,
+    ],
+  };
+}
+
 export function buildStory(scene, model) {
   const n = scene.meta.steps;
   const ev = scene.events;
@@ -200,7 +267,7 @@ export function buildStory(scene, model) {
       answer: `Follow ${thread.obj}: ${goalNode ? `the goal check fails at step ${goalNode.step}` : "the goal fails"}${acts.length ? ` after the agent ${acts.map(a => `${a.slot === "act" ? "acts on it" : "uses it"} at step ${a.step}`).join(", ")}` : ""}; it entered the run at step ${thread.anchor}, where the agent's ${[...new Set(thread.nodes.filter(n => n.step === thread.anchor && n.lane === "agent").map(n => SLOT_LABEL[n.slot]))].join(", ")} took it up.`,
       event: routeAt >= 0 ? routeAt : rows[rows.length - 1].event, focus: [rootWindow.id],
       marks: [...thread.nodes.map(n => ({type: "tnode", step: n.step, lane: n.lane})), ...(thread.trace ? [{type: "arrow", from: thread.trace.from, to: thread.trace.to}] : [])],
-      thread,
+      thread, bridge: buildBridge(scene, thread, rootWindow),
     });
   }
   const w0 = rootWindow;

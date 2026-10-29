@@ -63,7 +63,7 @@ export function mountQuery(app, route) {
     // Tour plays the calls in order; Overview shows every cloud at once for free exploration.
     const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
                    filter: {phases: new Set()}};
-    const ui = bindUi(root, scene, model, stage, roles);
+    const ui = bindUi(root, scene, model, stage, roles, ref);
     ui.setEvent(state.i);
 
     stage.start(dt => {
@@ -231,8 +231,7 @@ function template(scene, model, ref, roles) {
       <div class="qg-title">
         <span class="qg-kicker">Query Graph</span>
         <h1>${esc(scene.meta.task || scene.meta.tid)}</h1>
-        <p><select class="qg-case" aria-label="Case">${CASES.map(c => `<option value="${esc(queryHref(c.ref))}"${c.ref[1] === ref[2] ? " selected" : ""}>${esc(c.label)}</option>`).join("")}${CASES.some(c => c.ref[1] === ref[2]) ? "" : `<option selected>${esc(scene.meta.tid)}</option>`}</select>
-          <a href="${caseHref(ref)}" title="Open in the workbench">${esc(scene.meta.tid)}</a></p>
+        <p><select class="qg-case" aria-label="Case">${CASES.map(c => `<option value="${esc(queryHref(c.ref))}"${c.ref[1] === ref[2] ? " selected" : ""}>${esc(c.label)}</option>`).join("")}${CASES.some(c => c.ref[1] === ref[2]) ? "" : `<option selected>${esc(scene.meta.tid)}</option>`}</select></p>
       </div>
       <div class="qg-modes">
         <div class="qg-seg"><button data-act="guide" title="Show the guide again">Guide</button></div>
@@ -254,7 +253,7 @@ function template(scene, model, ref, roles) {
       </div>
       <h2>DSL record</h2>
       <dl class="qg-stats">${[["facts", scene.facts.length], ["entities", scene.entities.length], ["relations", rels], ["steps", scene.meta.steps]].map(([k, v]) => `<div><dd>${v}</dd><dt>${k}</dt></div>`).join("")}</dl>
-      <p class="qg-formula">Fact ≔ rel(args) = value @t</p>
+      <p class="qg-formula">One fact = who did or thought what, at which step</p>
       <ul class="qg-key qg-ties">
         <li><i class="k-hub"></i>entity a fact names</li>
         <li><i class="k-thread"></i>same state, next step</li>
@@ -289,7 +288,7 @@ function template(scene, model, ref, roles) {
     </footer>`;
 }
 
-function bindUi(root, scene, model, stage, roles) {
+function bindUi(root, scene, model, stage, roles, ref) {
   const $ = s => root.querySelector(s);
   const ticks = [...root.querySelectorAll(".qg-tick")];
   const handlers = {};
@@ -398,7 +397,8 @@ function bindUi(root, scene, model, stage, roles) {
     panelBody.innerHTML = `${crumbs(c)}
       <p class="qg-kind"><span class="qg-chip" data-phase="${esc(phase)}">${esc(phase)}</span>${esc(c.kind)}${opened ? ` · <button class="qg-link" data-fold>fold</button>` : ""}</p>
       <h3>${esc(c.label)}</h3><p class="qg-muted">${esc(c.detail)}</p>
-      ${!opened && c.groups.length ? `<button class="qg-open" data-open="${esc(c.id)}">Open by entity ›</button>` : ""}${!opened ? chainList(c) : ""}${body}${groups}${sharedHtml}`;
+      ${!opened && c.groups.length ? `<button class="qg-open" data-open="${esc(c.id)}">Open by entity ›</button>` : ""}${!opened ? chainList(c) : ""}${body}${groups}${sharedHtml}
+      <p class="qg-muted qg-run">Run <a href="${caseHref(ref)}" title="Open in the workbench">${esc(scene.meta.tid)}</a></p>`;
   }
 
   // The lit chain as a numbered list matching the badges on the stage: each step's two clouds,

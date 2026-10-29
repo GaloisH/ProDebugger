@@ -209,7 +209,7 @@ function bridgeTower(scene, model, br, thread, w, upto, mapCluster) {
   const M = [{fids: world, kind: "env", label: "1"}, {fids: guess, kind: "agent", label: "2"}, {fids: root, kind: "root", label: "3"},
              {fids: repeat, kind: "agent", label: "4"}, {fids: fail, kind: "goal", label: "5"}].filter(m => m.fids.length);
   const upTo = n => M.filter(m => Number(m.label) <= n);
-  return [
+  const beats = [
     {focus: mapCluster ? [mapCluster] : [], marks: []},
     {focus: holding(world), marks: upTo(1)},
     {focus: [w.id], marks: upTo(2)},
@@ -218,6 +218,9 @@ function bridgeTower(scene, model, br, thread, w, upto, mapCluster) {
     // The journey numbers its own stops, so the root keeps its colour here but not its number.
     {focus: [w.id], marks: M.filter(m => m.kind === "root").map(m => ({...m, label: ""})), journey: root[0], upto},
   ];
+  // Per number: the facts and the clouds holding them, for hovering a mark on the board.
+  beats.marks = Object.fromEntries(M.map(m => [m.label, {fids: m.fids, focus: holding(m.fids).length ? holding(m.fids) : [w.id]}]));
+  return beats;
 }
 
 export function buildStory(scene, model) {
@@ -329,7 +332,8 @@ export function buildStory(scene, model) {
   const lanes = scene.lanes;
   rows.push({
     key: "manager", phase: "MANAGER", question: "What will the check ask, and how is it judged?",
-    answer: lanes.length ? `${lanes.length === 1 ? `“${question(lanes[0], 120)}”` : `${lanes.length} questions, for ${stepList(lanes.map(l => l.step))}.`}${scene.rules.length ? ` ${scene.rules.length} rules are fixed before the search.` : ""}` : "No investigation was planned.",
+    // The question itself is on the card (and its hover); the answer says what was set up.
+    answer: lanes.length ? `${lanes.length === 1 ? `One question about step ${lanes[0].step}` : `${lanes.length} questions, for ${stepList(lanes.map(l => l.step))}`}; ${scene.rules.length ? `${scene.rules.length} rules are fixed before the search.` : "no rules were fixed."}` : "No investigation was planned.",
     event: planAt >= 0 ? planAt : rows[rows.length - 1].event, focus: lanes.map(l => l.id),
     marks: lanes.map(l => ({type: "question", step: l.step})),
   });

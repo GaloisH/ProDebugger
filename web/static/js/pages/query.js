@@ -76,7 +76,8 @@ export function mountQuery(app, route) {
         const row = story.rows[state.row];
         const out = frameAt(row.event, 1);
         const beatSpec = row.bridge?.tower?.[state.beat - 1];
-        Object.assign(out.frame, {focus: new Set(beatSpec?.focus.length ? beatSpec.focus : row.focus), chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: null, filter: state.filter, labelAll: false});
+        const lit = state.peek || (beatSpec?.focus.length ? beatSpec.focus : row.focus);
+        Object.assign(out.frame, {focus: new Set(lit), chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: null, filter: state.filter, labelAll: false});
         out.camera = STORY_CAM;
         return out;
       }
@@ -159,6 +160,14 @@ export function mountQuery(app, route) {
     ui.on("follow", () => { stage.follow(); stage.release(); });
     ui.on("jump", i => { stage.follow(); go(i, 0.5); setPlaying(false); });
     stage.on("select", sel => {
+      if (state.mode === "story" && sel?.kind === "cluster") {
+        const hit = rowOf(sel.cluster.id);
+        if (hit) {
+          setRow(hit.k);
+          if (hit.beat) { state.beat = hit.beat; showBeat(); }
+          return;
+        }
+      }
       if (sel) { setPlaying(false); if (state.phase) { state.phase = null; ui.setPhase(null, true); } }
       const id = sel?.cluster && sel.cluster.id !== "core" ? sel.cluster.id : null;
       if (id !== state.chain?.id) state.chainAll = false;
@@ -237,6 +246,25 @@ export function mountQuery(app, route) {
       showBeat();
     };
     ui.on("row", setRow);
+    // Pointing at the board lights its clouds on the tower (no camera move); pointing at a
+    // tower cloud lights the steps it read on the board.
+    ui.on("peekRow", k => { state.peek = k == null ? null : story.rows[k]?.focus || null; });
+    ui.on("peekMark", n => { state.peek = n == null ? null : story.rows[state.row]?.bridge?.tower?.marks?.[n]?.focus || null; });
+    stage.on("hover", h => {
+      if (state.mode !== "story") return;
+      const c = h?.kind === "cluster" ? h.cluster : null;
+      ui.peekSteps(c && c.kind !== "core" ? [...new Set(c.fids.map(f => scene.factById.get(f)?.t).filter(t => t != null))] : null);
+    });
+    // A click on a tower cloud sends the board to the first row (or evidence beat) that used it.
+    const rowOf = id => {
+      if (id === "core") return {k: 0};
+      for (let k = 0; k < story.rows.length; k++) {
+        const r = story.rows[k], beat = r.bridge?.tower?.findIndex(b => b.focus.includes(id));
+        if (beat >= 0) return {k, beat: beat + 1};
+        if (r.focus.includes(id)) return {k};
+      }
+      return null;
+    };
     const asked = route.query?.get("mode");
     if (asked === "overview" || asked === "story") setMode(asked);
 
@@ -385,6 +413,7 @@ function storyBoard(story) {
         <span class="qg-sb-lab"><i class="qg-chip" data-phase="${r.phase}">${r.phase}</i><b>${esc(r.question)}</b></span>
         <span class="qg-sb-track">${storyMarks(r, n)}</span>
       </button>`).join("")}
+      <span class="qg-sb-peek" aria-hidden="true"></span>
       ${story.rows.filter(r => r.thread).map(r => r.bridge ? bridgePanel(r.bridge) : threadPanel(r.thread)).join("")}
     </section>
     <aside class="qg-cards" aria-label="Evidence">
@@ -509,6 +538,14 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       + (Number.isFinite(from) ? `<circle class="th-trace-dot" cx="${from / 100 * W}" cy="${y}" r="5"/><path class="th-trace" d="M${from / 100 * W} ${y} H${to / 100 * W + 10}" marker-end="url(#th-arrow)"/>` : "");
   }
   new ResizeObserver(drawThread).observe($(".qg-board"));
+  const boardEl = $(".qg-board");
+  boardEl.addEventListener("mouseover", e => {
+    const mark = e.target.closest("[data-mark]");
+    if (mark) { handlers.peekMark?.(mark.dataset.mark); return; }
+    const row = e.target.closest(".qg-sb-row");
+    handlers.peekRow?.(row && !row.classList.contains("is-hidden") ? Number(row.dataset.row) : null);
+  });
+  boardEl.addEventListener("mouseleave", () => { handlers.peekRow?.(null); });
   let beat = 6;
   function drawBridge() {
     const panel = $(".qg-bridge"), board = $(".qg-board");
@@ -534,7 +571,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     // Beat 1 · the goal's rail.  Beat 2 · the world's rail and what happened to the object.
     parts.push(`<g data-beat="1"><line class="br-rail is-need" x1="0" y1="${yTop}" x2="${end}" y2="${yTop}"/></g>`);
     const w0 = br.world[0]?.step ?? br.anchor;
-    parts.push(`<g data-beat="2"><line class="br-rail is-got" x1="${Math.max(0, X.get(w0) - 40)}" y1="${yBot}" x2="${end}" y2="${yBot}"/>${br.world.map((w, i) => `<g>${tip(w.full || w.label)}${sq(X.get(w.step), yBot, i ? 4 : 5, "br-pt is-got")}<text class="br-note is-got" x="${X.get(w.step)}" y="${yBot + 20}">${esc(w.label)}</text></g>`).join("")}${br.world.length ? badge(X.get(br.world[0].step) - 22, yBot - 16, 1, "env") : ""}</g>`);
+    parts.push(`<g data-beat="2" data-mark="1"><line class="br-rail is-got" x1="${Math.max(0, X.get(w0) - 40)}" y1="${yBot}" x2="${end}" y2="${yBot}"/>${br.world.map((w, i) => `<g>${tip(w.full || w.label)}${sq(X.get(w.step), yBot, i ? 4 : 5, "br-pt is-got")}<text class="br-note is-got" x="${X.get(w.step)}" y="${yBot + 20}">${esc(w.label)}</text></g>`).join("")}${br.world.length ? badge(X.get(br.world[0].step) - 22, yBot - 16, 1, "env") : ""}</g>`);
     // Beats 3–5 · the agent's links: a guess, the commitment, the repeats; the failed check.
     const sameStep = s => br.bridges.filter(b => b.step === s).length > 1;
     const xOf = b => X.get(b.step) + (sameStep(b.step) ? (b.role === "guess" ? -26 : 26) : 0);
@@ -547,11 +584,11 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
         : b === lastRepeat ? `<text class="br-label is-repeat" x="${x + 12}" y="${yMid - 4}">${esc(b.label)}</text><text class="br-kicker" x="${x + 12}" y="${yMid + 14}">REPEATS · S${b.step}</text>` : "";
       const num = b.role === "guess" ? 2 : b.role === "root" ? 3 : b === lastRepeat ? 4 : 0;
       const numAt = b.role === "guess" ? badge(x - 14, yTop + 18, 2, "agent") : num ? badge(x + 14, yTop + 42, num, b.role === "root" ? "root" : "agent") : "";
-      parts.push(`<g data-beat="${beatNo}">${numAt}${tip(`step ${b.step} · ${b.quotes.join("\n")}`)}<line class="br-link is-${b.role}" x1="${x}" y1="${yTop + 5}" x2="${x}" y2="${yBot - 5}"/>${sq(x, yTop, 3, `br-pt is-${b.role}`)}${sq(x, yBot, 3, `br-pt is-${b.role}`)}${b.role === "guess" ? `<circle class="br-q" cx="${x}" cy="${yTop + (yMid - yTop) * 0.45}" r="8"/><text class="br-qmark" x="${x}" y="${yTop + (yMid - yTop) * 0.45 + 4}">?</text>` : ""}${label}</g>`);
+      parts.push(`<g data-beat="${beatNo}"${num ? ` data-mark="${num}"` : ""}>${numAt}${tip(`step ${b.step} · ${b.quotes.join("\n")}`)}<line class="br-link is-${b.role}" x1="${x}" y1="${yTop + 5}" x2="${x}" y2="${yBot - 5}"/>${sq(x, yTop, 3, `br-pt is-${b.role}`)}${sq(x, yBot, 3, `br-pt is-${b.role}`)}${b.role === "guess" ? `<circle class="br-q" cx="${x}" cy="${yTop + (yMid - yTop) * 0.45}" r="8"/><text class="br-qmark" x="${x}" y="${yTop + (yMid - yTop) * 0.45 + 4}">?</text>` : ""}${label}</g>`);
     }
     if (br.fail != null && X.has(br.fail)) {
       const x = X.get(br.fail);
-      parts.push(`<g data-beat="5">${badge(x - 18, yTop - 14, 5, "goal")}<path class="br-x" d="M${x - 6} ${yTop - 6}L${x + 6} ${yTop + 6}M${x + 6} ${yTop - 6}L${x - 6} ${yTop + 6}"/><text class="br-kicker is-fail" x="${x + 12}" y="${yTop - 10}">CHECK FAILS · S${br.fail}</text></g>`);
+      parts.push(`<g data-beat="5" data-mark="5">${badge(x - 18, yTop - 14, 5, "goal")}<path class="br-x" d="M${x - 6} ${yTop - 6}L${x + 6} ${yTop + 6}M${x + 6} ${yTop - 6}L${x - 6} ${yTop + 6}"/><text class="br-kicker is-fail" x="${x + 12}" y="${yTop - 10}">CHECK FAILS · S${br.fail}</text></g>`);
       // Beat 6 · the trace back to the first commitment, which gets its brackets.
       if (root) {
         const rx = xOf(root), ty = yTop + 20;
@@ -854,6 +891,12 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       say.querySelector(".qg-sb-answer").textContent = row.answer;
       $(".qg-sb-count").textContent = k < story.rows.length - 1 ? `${k + 1} / ${story.rows.length} · → next` : `${k + 1} / ${story.rows.length}`;
       root.querySelector(".qg-card-ev.is-now")?.scrollIntoView({block: "nearest"});
+    },
+    // The steps a pointed-at tower cloud read, as lit columns over the board's rows.
+    peekSteps(steps) {
+      const layer = $(".qg-sb-peek"), n = story.steps;
+      layer.innerHTML = (steps || []).map(s => `<i style="left:${((s - 1) / n * 100).toFixed(2)}%;width:${(100 / n).toFixed(2)}%"></i>`).join("");
+      layer.classList.toggle("is-on", !!steps?.length);
     },
     setBeat(b, line) {
       setBeat(b);

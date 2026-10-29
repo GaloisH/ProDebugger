@@ -269,6 +269,12 @@ body.page-query .app { padding: 0; }
 .qg-board.is-zoomed .qg-sb-row { visibility: hidden; }
 .qg-board.is-zoomed .qg-thread { display: grid; position: absolute; left: 0; right: 0; top: 0; bottom: 0; grid-template-columns: 27.5rem minmax(0, 1fr); gap: 1rem; background: var(--qg-void); }
 .qg-board.is-zoomed .qg-sb-axis { visibility: hidden; }
+/* Steps a pointed-at tower cloud read: faint lit columns over the rows' track. */
+.qg-sb-peek { position: absolute; top: 1.6rem; bottom: 0; left: calc(27.5rem + 1rem); right: 0; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.qg-sb-peek.is-on { opacity: 1; }
+.qg-sb-peek i { position: absolute; top: 0; bottom: 0; background: color-mix(in srgb, var(--qg-focus) 14%, transparent); border-left: 1px solid color-mix(in srgb, var(--qg-focus) 45%, transparent); }
+.qg-board.is-zoomed .qg-sb-peek { display: none; }
+.qg-bridge [data-mark] { cursor: help; }
 .th-lanes, .th-track { position: relative; }
 .th-lanes b { position: absolute; left: .4rem; transform: translateY(.2rem); font-weight: 500; font-size: .95rem; color: var(--qg-label); }
 .th-lanes b.is-trace { color: var(--qg-sig-goal); }

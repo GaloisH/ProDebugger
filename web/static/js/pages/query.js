@@ -11,6 +11,7 @@ import {createStage, clusterTitle} from "../query/stage.js";
 import {createTour, eventDuration} from "../query/tour.js";
 import {buildStory} from "../query/story.js";
 import {coachSeen, runCoach} from "../query/coach.js";
+import {createDetails} from "../query/details.js";
 
 const GROUP = "evidence-query-claims-n30-20261013";
 // Cases the page is tuned on (one window/lane, two windows/lanes, a large WebShop record), then
@@ -68,6 +69,9 @@ export function mountQuery(app, route) {
     const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
                    filter: {phases: new Set()}, row: story.rows.length - 1};
     const ui = bindUi(root, scene, model, stage, roles, ref, story);
+    // The sentence beside the tower follows the tour's phase; its popup pauses the tour.
+    const details = createDetails(root, scene, model, stage, {onOpen: () => setPlaying(false)});
+    ui.on("event", ph => details.show(ph));
     ui.setEvent(state.i);
 
     stage.start(dt => {
@@ -103,6 +107,7 @@ export function mountQuery(app, route) {
       stage.release();
       state.chain = null;
       setPhase(null);
+      details.close();
       ui.setMode(mode, state.view);
       if (mode !== "tour") setPlaying(false);
       else { go(0); setPlaying(true); }
@@ -188,6 +193,7 @@ export function mountQuery(app, route) {
     stage.on("hover", h => ui.hover(h));
     keyHandler = e => {
       if (e.target.closest("input, textarea, select")) return;
+      if (e.key === "Escape" && details.isOpen) { details.close(); return; }
       const j = stage.journey;
       if (state.mode === "story" && !stage.view.cluster && [" ", "ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) {
         e.preventDefault();
@@ -866,6 +872,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       const played = scene.events.filter(e => !e.error);
       $(".qg-count").textContent = `${String(played.indexOf(ev) + 1).padStart(2, "0")} / ${played.length}`;
       if (!stage.view.cluster) showEvent(i);
+      handlers.event?.(ev.phase);
     },
     setProgress(i, p) {
       const t = ticks[i];

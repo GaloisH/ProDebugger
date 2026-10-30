@@ -671,6 +671,28 @@ body.page-query .app { padding: 0; }
 .sd-outcome[data-outcome="refuted"] { --out: var(--submit); }
 .sd-outcome[data-outcome="unknown"] { --out: var(--qg-sig-idle); }
 .sd-used { margin-left: .5rem; padding: 0 .4rem; background: var(--qg-focus); color: var(--qg-void); font-family: var(--mono); font-size: .72rem; font-weight: 600; }
+/* The decision rules as a fork: question on top, a stem to a rail, one branch per answer. */
+.sd-fork { --gap: .7rem; margin-top: .3rem; }
+.sd-fork-q { position: relative; margin: 0 auto 1.1rem; max-width: 34rem; padding: .5rem .8rem; border: 1px solid var(--qg-line-hi); background: var(--tint-faint); text-align: center; font-size: 1rem; color: var(--text-hi); }
+.sd-fork-q::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 1.1rem; margin-left: -1px; background: var(--qg-line-hi); }
+.sd-fork-agent { font-family: var(--mono); font-size: .76rem; color: var(--manager); }
+.sd-fork.has-used .sd-fork-q::after { background: var(--qg-focus); }
+.sd-fork-br { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1.4rem var(--gap); margin: 0; padding: .9rem 0 0; list-style: none; }
+.sd-fork-br::before { content: ""; position: absolute; top: 0; height: 2px; left: calc(100% / var(--n) / 2); right: calc(100% / var(--n) / 2); background: var(--qg-line-hi); }
+.sd-fork-br li { --out: var(--qg-label-dim); position: relative; padding: .55rem .65rem; border: 1px solid color-mix(in srgb, var(--out) 70%, transparent); transition: opacity .2s; }
+.sd-fork-br li::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 2px; height: .9rem; margin-left: -1px; background: var(--qg-line-hi); }
+.sd-fork-br li[data-outcome="supported"] { --out: var(--qg-sig-goal); }
+.sd-fork-br li[data-outcome="refuted"] { --out: var(--submit); }
+.sd-fork-br li[data-outcome="unknown"] { --out: var(--qg-sig-idle); }
+.sd-fork-br li.is-dim { opacity: .5; }
+.sd-fork-br li.is-dim:hover { opacity: 1; }
+.sd-fork-br li.is-used { border: 2px solid var(--out); background: color-mix(in srgb, var(--out) 9%, transparent); }
+.sd-fork-br li.is-used::before { width: 3px; margin-left: -1.5px; background: var(--qg-focus); }
+.sd-fork-br p { margin: .1rem 0 0; font-size: .9rem; }
+.sd-fork-br .sd-k { margin-top: .45rem; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+.sd-fork-ans { display: inline-block; padding: .05rem .55rem; background: var(--out); color: var(--qg-void); font-family: var(--mono); font-size: .78rem; font-weight: 600; letter-spacing: .06em; }
+.sd-fork-then b { font-family: var(--mono); font-size: .82rem; color: var(--out); letter-spacing: .04em; }
+.sd-fork-br .sd-used { display: inline-block; margin: .5rem 0 0; }
 .sd-rule-mini { margin: 0; padding: 0; list-style: none; display: grid; gap: .3rem; font-size: .85rem; }
 .sd-rule-mini li { display: grid; grid-template-columns: 5.6rem 1fr; gap: .5rem; align-items: center; opacity: .6; }
 .sd-rule-mini li.is-used { opacity: 1; color: var(--qg-focus); }

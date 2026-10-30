@@ -322,12 +322,25 @@ export function buildDetails(scene, model) {
       const src = /observation|feedback/.test(module) ? "env" : "agent";
       return `<blockquote class="sd-quote-card" data-src="${src}" data-step="${esc(step || "")}"><span class="sd-k">step ${esc(step || "?")} · ${esc(module || "")}</span>${mark(ev.quote)}</blockquote>`;
     };
-    // A decision rule as one branch: the outcome TRACE may report, the rule, what follows.
-    const ruleRow = r => `<li class="${usedRule ? (usedRule === r.id ? "is-used" : "is-dim") : ""}">
-        <span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc(r.outcome || "?")}</span>
-        <div><b class="sd-rule-name">${esc(r.id.replace(/_/g, " "))}</b>${usedRule === r.id ? `<span class="sd-used">used by SUBMIT</span>` : ""}
-          <p>→ ${mark(firstSentence(r.conclusion))}</p>
-          <details class="sd-full"><summary>full text</summary>${r.finding ? `<p><span class="sd-k">if</span> ${mark(r.finding)}</p>` : ""}<p><span class="sd-k">then</span> ${mark(r.conclusion)}</p>${r.caveat ? `<p><span class="sd-k">caveat</span> ${mark(r.caveat)}</p>` : ""}</details></div></li>`;
+    // The decision rules as a fork: the question on top, one branch per answer TRACE may give,
+    // each saying what TRACE would have found and what the verdict then is. The branch SUBMIT
+    // took is lit.
+    const ANSWER = {supported: ["YES", "BLAME"], refuted: ["NO", "DROP"], unknown: ["CAN'T TELL", "KEEP OPEN"]};
+    const fork = () => {
+      const q = ls.length === 1 ? mark(question(ls[0], 170)) : ls.map(l => `<span class="sd-fork-agent">${esc(l.agent)}</span> ${mark(question(l, 100))}`).join("<br>");
+      return `<div class="sd-fork${usedRule ? " has-used" : ""}" style="--n:${Math.min(3, scene.rules.length)}">
+        <div class="sd-fork-q">${q}</div>
+        <ol class="sd-fork-br">${scene.rules.map(r => {
+          const [ans, verb] = ANSWER[r.outcome] || [String(r.outcome || "?").toUpperCase(), "DECIDE"];
+          return `<li data-outcome="${esc(r.outcome)}" class="${usedRule === r.id ? "is-used" : usedRule ? "is-dim" : ""}">
+            <span class="sd-fork-ans">${esc(ans)}</span>
+            <div class="sd-k">if TRACE finds</div><p>${mark(clip(firstSentence(r.finding), 110) || "—")}</p>
+            <div class="sd-k">then</div><p class="sd-fork-then"><b>${verb}</b> ${mark(clip(firstSentence(r.conclusion), 110))}</p>
+            ${usedRule === r.id ? `<span class="sd-used">★ TRACE answered · SUBMIT used</span>` : ""}
+            <details class="sd-full"><summary>full text</summary><p><span class="sd-k">rule</span> ${esc(r.id.replace(/_/g, " "))}</p>${r.finding ? `<p><span class="sd-k">if</span> ${mark(r.finding)}</p>` : ""}<p><span class="sd-k">then</span> ${mark(r.conclusion)}</p>${r.caveat ? `<p><span class="sd-k">caveat</span> ${mark(r.caveat)}</p>` : ""}</details>
+          </li>`;
+        }).join("")}</ol></div>`;
+    };
     out.MANAGER = {
       say: ls.length === 1
         ? `ProDebugger turns the step-${ls[0].step} suspicion into one question for a trace agent: “${mark(question(ls[0], 170))}”`
@@ -338,9 +351,9 @@ export function buildDetails(scene, model) {
           <p class="sd-question">${mark(question(l, 200))}</p>${fold(l.question)}</div>
           ${l.evidence.length ? `<div class="sd-sec"><div class="sd-k">what it is shown · ${plural(l.evidence.length, "quote")}</div>${l.evidence.slice(0, 3).map(quoteCard).join("")}${l.evidence.length > 3 ? `<details class="sd-full"><summary>${l.evidence.length - 3} more</summary>${l.evidence.slice(3).map(quoteCard).join("")}</details>` : ""}</div>` : ""}
           ${l.targets.length ? `<div class="sd-sec"><div class="sd-k">what to search · ${plural(l.targets.length, "target")}</div><ol class="sd-targets">${l.targets.map(t => targetRow(t, l)).join("")}</ol></div>` : ""}`).join("")}
-        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">how the answer will be judged · ${plural(scene.rules.length, "rule")}</div><ol class="sd-rules">${scene.rules.map(ruleRow).join("")}</ol></div>` : ""}`,
+        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">how the answer will be judged · fixed before TRACE searches</div>${fork()}</div>` : ""}`,
       rail: `<h4>Assignments</h4><div class="sd-chips">${ls.map(l => `<button class="sd-chip is-hot" data-goto="step:${l.step}"><b>${esc(l.agent)}</b><em>← ${esc(l.anchor)} · step ${l.step}</em></button>`).join("")}</div>
-        ${scene.rules.length ? `<h4>Rules</h4><ul class="sd-rule-mini">${scene.rules.map(r => `<li${usedRule === r.id ? ` class="is-used"` : ""}><span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc(r.outcome || "?")}</span>${esc(r.id.replace(/_/g, " "))}</li>`).join("")}</ul>` : ""}`,
+        ${scene.rules.length ? `<h4>Rules</h4><ul class="sd-rule-mini">${scene.rules.map(r => `<li${usedRule === r.id ? ` class="is-used"` : ""}><span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc((ANSWER[r.outcome] || [r.outcome || "?"])[0])}</span>${esc((ANSWER[r.outcome] || [, "decide"])[1].toLowerCase())}: ${esc(r.id.replace(/_/g, " "))}</li>`).join("")}</ul>` : ""}`,
     };
   }
 

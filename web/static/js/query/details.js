@@ -296,17 +296,51 @@ export function buildDetails(scene, model) {
   // MANAGER: the question each window becomes, and the rules fixed before any answer.
   {
     const ls = scene.lanes;
+    const usedRule = root?.rule?.id || null;
+    // The original text, folded away under the structured line.
+    const fold = text => text ? `<details class="sd-full"><summary>full text</summary><p>${mark(text)}</p></details>` : "";
+    const firstSentence = t => clip(String(t || "").split(/(?<=[.;])\s+/)[0], 150);
+    // A search target as one line: its verb, the words to look for, the modules, the steps.
+    const MODULES = [["observation", "env"], ["feedback", "env"], ["memory", "agent"], ["reflection", "agent"], ["plan", "agent"], ["action", "agent"]];
+    const targetRow = (t, l) => {
+      const verb = (t.match(/^\s*([A-Za-z]+)/) || [])[1] || "";
+      const quoted = [...new Set([...t.matchAll(/(?:^|[\s(,])'(.{2,40}?)'(?=[\s,.;:)]|$)/g)].map(m => m[1]))];
+      const named = [...new Set([...mark(t).matchAll(/data-ent="([^"]+)"[^>]*>([^<]+)</g)].map(m => m[2].toLowerCase()))].filter(w => !quoted.includes(w));
+      const words = [...quoted, ...named].slice(0, 6);
+      const mods = MODULES.filter(([m]) => new RegExp(`\\b${m}`, "i").test(t));
+      const range = t.match(/steps? (\d+)\s*(?:through|to|-|–)\s*(?:step )?(\d+)/i) || t.match(/(\d+)\s*(?:through|to|–)\s*(\d+)/);
+      const until = !range && t.match(/through step (\d+)/i);
+      const [a, b] = range ? [+range[1], +range[2]] : until ? [l.step, +until[1]] : [null, null];
+      const span = a != null ? new Set(Array.from({length: Math.max(0, b - a + 1)}, (_, i) => a + i)) : new Set([...t.matchAll(/step[- ](\d+)/gi)].map(m => +m[1]));
+      return `<li><span class="sd-verb">${esc(verb.toUpperCase())}</span><div>
+        <div class="sd-qres">${words.map(w => `<span class="sd-chip">${mark(w)}</span>`).join("")}${mods.map(([m, src]) => `<span class="sd-modtag" data-src="${src}">${m}</span>`).join("")}${span.size ? `${miniStrip(span)}<span class="sd-k">${a != null ? `steps ${a}–${b}` : stepList([...span])}</span>` : ""}</div>
+        ${fold(t)}</div></li>`;
+    };
+    // A quote the manager hands over, coloured by who wrote it.
+    const quoteCard = ev => {
+      const [, step, module] = String(ev.source_id || "").split(":");
+      const src = /observation|feedback/.test(module) ? "env" : "agent";
+      return `<blockquote class="sd-quote-card" data-src="${src}" data-step="${esc(step || "")}"><span class="sd-k">step ${esc(step || "?")} · ${esc(module || "")}</span>${mark(ev.quote)}</blockquote>`;
+    };
+    // A decision rule as one branch: the outcome TRACE may report, the rule, what follows.
+    const ruleRow = r => `<li class="${usedRule ? (usedRule === r.id ? "is-used" : "is-dim") : ""}">
+        <span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc(r.outcome || "?")}</span>
+        <div><b class="sd-rule-name">${esc(r.id.replace(/_/g, " "))}</b>${usedRule === r.id ? `<span class="sd-used">used by SUBMIT</span>` : ""}
+          <p>→ ${mark(firstSentence(r.conclusion))}</p>
+          <details class="sd-full"><summary>full text</summary>${r.finding ? `<p><span class="sd-k">if</span> ${mark(r.finding)}</p>` : ""}<p><span class="sd-k">then</span> ${mark(r.conclusion)}</p>${r.caveat ? `<p><span class="sd-k">caveat</span> ${mark(r.caveat)}</p>` : ""}</details></div></li>`;
     out.MANAGER = {
       say: ls.length === 1
         ? `ProDebugger turns the step-${ls[0].step} suspicion into one question for a trace agent: “${mark(question(ls[0], 170))}”`
         : `ProDebugger turns the suspicions into ${ls.length} questions, one per trace agent, for ${stepList(ls.map(l => l.step))}.`,
       title: "The questions handed to TRACE",
       lead: scene.rules.length ? `Before any evidence comes in, the manager fixes ${plural(scene.rules.length, "decision rule")} for judging the answers.` : "",
-      body: `${ls.map(l => `<div class="sd-sec" data-step="${l.step}"><div class="sd-k">agent ${esc(l.agent)} · window ${esc(l.anchor)} · step ${l.step}</div><p>${mark(l.question)}</p>
-          ${l.targets.length ? `<div class="sd-k">search targets</div><ul class="sd-bul">${l.targets.map(t => `<li>${mark(clip(t, 320))}</li>`).join("")}</ul>` : ""}</div>`).join("")}
-        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">decision rules</div><ul class="sd-list">${scene.rules.map(r => `<li><span class="sd-k">${esc(r.id)}</span><span>${mark(clip(r.conclusion, 220))}</span></li>`).join("")}</ul></div>` : ""}`,
+      body: `${ls.map(l => `<div class="sd-sec" data-step="${l.step}"><div class="sd-k">agent ${esc(l.agent)} · window ${esc(l.anchor)} · step ${l.step}</div>
+          <p class="sd-question">${mark(question(l, 200))}</p>${fold(l.question)}</div>
+          ${l.evidence.length ? `<div class="sd-sec"><div class="sd-k">what it is shown · ${plural(l.evidence.length, "quote")}</div>${l.evidence.slice(0, 3).map(quoteCard).join("")}${l.evidence.length > 3 ? `<details class="sd-full"><summary>${l.evidence.length - 3} more</summary>${l.evidence.slice(3).map(quoteCard).join("")}</details>` : ""}</div>` : ""}
+          ${l.targets.length ? `<div class="sd-sec"><div class="sd-k">what to search</div><ol class="sd-targets">${l.targets.map(t => targetRow(t, l)).join("")}</ol></div>` : ""}`).join("")}
+        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">if TRACE finds… then</div><ol class="sd-rules">${scene.rules.map(ruleRow).join("")}</ol></div>` : ""}`,
       rail: `<h4>Assignments</h4><div class="sd-chips">${ls.map(l => `<button class="sd-chip is-hot" data-goto="step:${l.step}"><b>${esc(l.agent)}</b><em>← ${esc(l.anchor)} · step ${l.step}</em></button>`).join("")}</div>
-        ${scene.rules.length ? `<h4>Rules</h4><ul class="sd-plain">${scene.rules.map(r => `<li>${esc(r.id.replace(/_/g, " "))}</li>`).join("")}</ul>` : ""}`,
+        ${scene.rules.length ? `<h4>Rules</h4><ul class="sd-rule-mini">${scene.rules.map(r => `<li${usedRule === r.id ? ` class="is-used"` : ""}><span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc(r.outcome || "?")}</span>${esc(r.id.replace(/_/g, " "))}</li>`).join("")}</ul>` : ""}`,
     };
   }
 

@@ -637,6 +637,37 @@ body.page-query .app { padding: 0; }
 .sd-slot { font-weight: 600; color: var(--slot); }
 .sd-req dd > .sd-slot[data-slot="what"], .sd-req dd > .sd-slot[data-slot="where"], .sd-req dd > .sd-slot[data-slot="attr"] { padding: 0 .35rem; border: 1px solid var(--slot); background: color-mix(in srgb, var(--slot) 14%, transparent); }
 .sd-req dt:nth-last-of-type(1), .sd-req dt:nth-last-of-type(1) + dd { padding-top: .4rem; border-top: 1px solid var(--qg-line); }
+/* MANAGER: the question in one line, the quotes it is shown, each search target as a keyword
+   line, and the decision rules as branches; the original prose folds under "full text". */
+.sd-question { font-size: 1.02rem; color: var(--text-hi); }
+.sd-full { margin-top: .2rem; }
+.sd-full summary { display: inline; font-family: var(--mono); font-size: .72rem; color: var(--qg-label-dim); cursor: pointer; text-decoration: underline dotted; }
+.sd-full[open] { padding: .3rem .5rem; border-left: 1px solid var(--qg-line-hi); background: var(--tint-faint); }
+.sd-full p { margin: .25rem 0; font-size: .86rem; color: var(--qg-label-dim); }
+.sd-quote-card { margin: .35rem 0 0; padding: .35rem .6rem; border-left: 3px solid var(--src); background: color-mix(in srgb, var(--src) 7%, transparent); color: var(--qg-label); font-size: .92rem; }
+.sd-quote-card[data-src="env"] { --src: var(--qg-th-env); }
+.sd-quote-card[data-src="agent"] { --src: var(--qg-th-agent); }
+.sd-quote-card .sd-k { display: block; color: var(--src); }
+.sd-targets, .sd-rules { margin: .3rem 0 0; padding: 0; list-style: none; }
+.sd-targets li { display: grid; grid-template-columns: 6.4rem 1fr; gap: .7rem; align-items: start; padding: .4rem 0; border-top: 1px solid var(--qg-line); }
+.sd-verb { padding: .1rem 0; border: 1px solid var(--trace); background: color-mix(in srgb, var(--trace) 14%, transparent); color: var(--trace); font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-align: center; }
+.sd-modtag { padding: 0 .35rem; border: 1px solid color-mix(in srgb, var(--src) 60%, transparent); color: var(--src); font-family: var(--mono); font-size: .74rem; }
+.sd-modtag[data-src="env"] { --src: var(--qg-th-env); }
+.sd-modtag[data-src="agent"] { --src: var(--qg-th-agent); }
+.sd-rules li { display: grid; grid-template-columns: 6.4rem 1fr; gap: .7rem; align-items: start; padding: .45rem .3rem; border-top: 1px solid var(--qg-line); transition: opacity .2s; }
+.sd-rules li.is-dim { opacity: .5; }
+.sd-rules li.is-dim:hover { opacity: 1; }
+.sd-rules li.is-used { border-left: 3px solid var(--qg-focus); background: color-mix(in srgb, var(--qg-focus) 8%, transparent); }
+.sd-rules p { margin: .15rem 0 0; }
+.sd-rule-name { font-weight: 500; color: var(--text-hi); }
+.sd-outcome { --out: var(--qg-label-dim); display: block; padding: .1rem 0; border: 1px solid var(--out); background: color-mix(in srgb, var(--out) 16%, transparent); color: var(--out); font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+.sd-outcome[data-outcome="supported"] { --out: var(--qg-sig-goal); }
+.sd-outcome[data-outcome="refuted"] { --out: var(--submit); }
+.sd-outcome[data-outcome="unknown"] { --out: var(--qg-sig-idle); }
+.sd-used { margin-left: .5rem; padding: 0 .4rem; background: var(--qg-focus); color: var(--qg-void); font-family: var(--mono); font-size: .72rem; font-weight: 600; }
+.sd-rule-mini { margin: 0; padding: 0; list-style: none; display: grid; gap: .3rem; font-size: .85rem; }
+.sd-rule-mini li { display: grid; grid-template-columns: 5.6rem 1fr; gap: .5rem; align-items: center; opacity: .6; }
+.sd-rule-mini li.is-used { opacity: 1; color: var(--qg-focus); }
 .sd-cellrow[data-src] { border-left: 2px solid var(--src, transparent); }
 .sd-cellrow[data-src="env"], .sd-bars [data-src="env"] { --src: var(--qg-th-env); }
 .sd-cellrow[data-src="agent"], .sd-bars [data-src="agent"] { --src: var(--qg-th-agent); }

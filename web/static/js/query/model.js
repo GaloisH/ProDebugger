@@ -205,7 +205,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
       ev.phase = "MANAGER";
       for (const a of args.assignments || []) {
         const lane = {id: `l:${a.agent_id}`, type: "lane", agent: a.agent_id, anchor: a.anchor_case_id, step: windowByCase.get(a.anchor_case_id)?.step,
-                      cases: a.route_case_ids || [], question: a.question || "", targets: a.search_targets || [],
+                      cases: a.route_case_ids || [], question: a.question || "", targets: a.search_targets || [], evidence: a.evidence || [],
                       rows: [], steps: [], fids: [], candidates: [], purpose: "", cards: []};
         lanes.set(a.agent_id, lane);
         ev.lanes.push(lane.id);
@@ -312,7 +312,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     meta: {tid: record.trajectory_id, task: record.task, taskType: record.task_type, steps,
            relations: record.relations || {}, kinds},
     facts, factById, entities, goals, evidence, windows, lanes: [...lanes.values()], candidates, root, events,
-    goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, outcome: r.conditions?.[0]?.outcome || "", conclusion: r.conclusion || ""})),
+    goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, outcome: r.conditions?.[0]?.outcome || "", finding: r.conditions?.[0]?.finding || "", conclusion: r.conclusion || "", caveat: r.caveat || ""})),
   };
 }
 

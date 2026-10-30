@@ -53,13 +53,18 @@ function openClawApplication() {
   </aside>`;
 }
 
-const USE_CASES = [
-  ["alfworld", "Embodied & household agents", "ALFWorld",
-   "Agents that move through rooms, open receptacles and handle objects. ProDebugger checks each action against the goal and the world state the agent had already observed.",
-   ["Repeated or ineffective actions", "Plans that drift from the goal", "Misread observations"]],
-  ["webshop", "Web shopping agents", "WebShop",
-   "Inspect search, product options and purchase actions against recorded shopping requirements, and compare candidate explanations for unmet constraints.",
-   ["Constraints lost during search", "Wrong option or attribute chosen", "Premature purchase"]],
+// Closing section: where the same queryable trajectory leads. Each scene is a use case, a
+// one-line pitch and the kind of query it runs.
+const SCENES = [
+  ["rsi", "RSI", "Recursive self-improvement",
+   "Agents that read their own failures. Each verified root cause becomes the signal the next version learns from, without a person reading every log.",
+   ["submit", "(run)", "root cause", "patch skill"]],
+  ["gov", "Governance", "Accountable autonomy",
+   "Every step checked against the rules an organisation sets, with the quoted log line as proof when one is broken.",
+   ["check", "(step, policy)", "violation", "step 14"]],
+  ["privacy", "Privacy", "Data you can follow",
+   "Private data followed from where it entered the agent to where it left, through every tool call in between.",
+   ["trace", "(passport.pdf)", "left via", "email"]],
 ];
 
 const STAGES = [
@@ -237,7 +242,7 @@ export function mountHome(root) {
           <button type="button" data-scroll="capabilities">Capabilities</button>
           <button type="button" data-scroll="how">How it works</button>
           <button type="button" data-scroll="demo">Demo</button>
-          <button type="button" data-scroll="use-cases">Use cases</button>
+          <button type="button" data-scroll="next">What's next</button>
         </nav>
         <nav class="home-actions" aria-label="Pages">
           <a href="#/runs">Runs</a>
@@ -317,17 +322,45 @@ export function mountHome(root) {
         </div>
       </section>
 
-      <section class="home-section alt" id="use-cases">
-        <div class="section-head" data-reveal>
-          <div class="h-eyebrow">Use cases</div>
-          <h2 class="section-title">Built for agents that act.</h2>
-          <p class="section-lede">ProDebugger reads the agent's own trajectory — observations, memory, reflection, plan and action — so it works wherever an agent takes steps in an environment.</p>
-        </div>
-        <div class="case-grid" data-reveal-group>
-          ${USE_CASES.map(([domain, title, bench, text, issues]) => `<article class="case-card">
-            <div class="case-top"><span class="case-icon">${domainIcon(domain)}</span><span class="case-bench">${bench}</span></div>
-            <h3>${title}</h3><p>${text}</p>
-            <ul class="case-issues">${issues.map(i => `<li>${i}</li>`).join("")}</ul></article>`).join("")}
+      <section class="home-finale" id="next">
+        <svg class="finale-trail" viewBox="0 0 1200 160" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 120 C 120 120 160 40 280 48 S 440 130 560 104 S 740 20 860 36 S 1060 120 1200 70"/>
+          ${[[280, 48], [560, 104], [860, 36], [1200, 70]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="5" style="--i:${i}"/>`).join("")}
+        </svg>
+        <div class="finale-inner">
+          <div class="section-head" data-reveal>
+            <div class="h-eyebrow">Beyond this demo</div>
+            <h2 class="section-title">Every agent leaves a trail.<br><em>Make it accountable.</em></h2>
+            <p class="section-lede">Once a trajectory can be queried, the same evidence serves more than debugging.</p>
+          </div>
+          <div class="scene-grid" data-reveal-group>
+            ${SCENES.map(([id, tag, title, text, [fn, arg, verb, hit]], i) => `<article class="scene scene-${id}">
+              <div class="scene-top"><span class="scene-num">0${i + 1}</span><span class="scene-tag">${tag}</span></div>
+              <h3>${title}</h3><p>${text}</p>
+              <code class="scene-query"><b>${fn}</b>${esc(arg)} <i>→</i> ${verb} <mark>${hit}</mark></code></article>`).join("")}
+          </div>
+          <div class="finale-bottom">
+            <div class="related" data-reveal>
+              <span class="h-eyebrow">Related work from our group</span>
+              <ul class="related-list">
+                ${(PROJECT.related || []).map(({name, tagline, venue, href}) => `<li>${href
+                  ? `<a class="related-item" href="${esc(href)}" target="_blank" rel="noopener">`
+                  : '<div class="related-item">'}
+                  <span class="related-glyph" aria-hidden="true">${esc(name.slice(0, 1))}</span>
+                  <span class="related-copy"><strong>${esc(name)}</strong>${tagline ? `<span>${esc(tagline)}</span>` : ""}</span>
+                  ${venue ? `<small>${esc(venue)}</small>` : ""}${href ? ARROW + "</a>" : "</div>"}</li>`).join("")}
+              </ul>
+            </div>
+            <div class="qr-card" data-reveal>
+              <div class="qr-frame"><img src="./img/qr-project.svg" alt="QR code linking to ${esc(PROJECT.url)}" width="168" height="168"></div>
+              <div class="qr-copy">
+                <span class="h-eyebrow">Scan to visit</span>
+                <strong>Take ProDebugger with you.</strong>
+                <a class="qr-url" href="${esc(PROJECT.url)}">${esc(PROJECT.url.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</a>
+                ${STATIC ? projectLinks() : ""}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

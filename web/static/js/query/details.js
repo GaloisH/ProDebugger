@@ -6,6 +6,8 @@ import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js";
 import {agentWords, cap, faultText, goalText, question, statusText, stepList} from "./narrate.js";
 
 const SLOT_ORDER = ["obs", "mem", "refl", "plan", "act", "chk"];
+// Who wrote a line: the environment, or the agent itself (memory, reflection, plan, action).
+const SOURCE = {obs: "env", mem: "agent", refl: "agent", plan: "agent", act: "agent", chk: "check"};
 const MODULE_SLOT = {observation: "obs", memory: "mem", reflection: "refl", plan: "plan", action: "act", check: "chk"};
 // Entity kinds that never appear by name in the agent's text.
 const UNNAMED = new Set(["agent", "attribute", "value", "int", "req"]);
@@ -27,16 +29,29 @@ function nameIndex(scene) {
   const bases = new Map();
   for (const e of scene.entities) if (!UNNAMED.has(e.kind) && /_\d+$/.test(e.index)) { const b = e.index.replace(/_\d+$/, "").replace(/_/g, " "); bases.set(b, bases.has(b) ? null : e); }
   for (const [b, e] of bases) if (e) add(b, e.key, e.facts);
+  // What a name is to the task: a word of the goal (or its target), a thing the agent handled,
+  // or the rest of the scenery. The page colours them apart.
+  const goalWords = new Set(scene.goals.flatMap(g => [...g.constraints.map(c => c.expected), entName(g.target)]).filter(w => typeof w === "string").map(w => w.toLowerCase()));
+  const acted = new Set(scene.facts.filter(f => f.slot === "act").flatMap(f => f.args));
+  const ents = new Map(scene.entities.map(e => [e.key, e]));
+  const role = key => {
+    if (key.startsWith("goal:")) return "goal";
+    const e = ents.get(key);
+    if (!e) return "other";
+    if (goalWords.has(e.kind) || goalWords.has(e.index.replace(/_\d+$/, "").replace(/_/g, " "))) return "goal";
+    return acted.has(key) && e.kind !== "place" && e.parent !== "place" ? "held" : "other";
+  };
   const names = [...byName.keys()].sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const re = names.length ? new RegExp(`\\b(${names.join("|")})\\b`, "gi") : null;
   const facts = new Map([...byName.values()].map(v => [v.key, v.fids]));
-  const label = new Map([...byName.values()].map(v => [v.key, v.name]));
+  const label = new Map();
+  for (const v of byName.values()) if (!label.has(v.key)) label.set(v.key, v.name);
   // Escapes the text, then wraps every name in a link to its entity.
   const mark = text => {
     const s = esc(text);
-    return re ? s.replace(re, m => { const v = byName.get(m.toLowerCase()); return `<b class="qg-ent" data-ent="${esc(v.key)}">${m}</b>`; }) : s;
+    return re ? s.replace(re, m => { const v = byName.get(m.toLowerCase()); return `<b class="qg-ent" data-ent="${esc(v.key)}" data-role="${role(v.key)}">${m}</b>`; }) : s;
   };
-  return {mark, facts, label};
+  return {mark, facts, label, role};
 }
 
 const entName = key => { const [kind, ...rest] = key.split(":"); const i = rest.join(":"); return /^\d+$/.test(i) ? `${kind} ${i}` : i.replace(/_/g, " "); };
@@ -60,7 +75,7 @@ function strip(steps, marks) {
 }
 
 export function buildDetails(scene, model) {
-  const {mark, facts: entFacts, label} = nameIndex(scene);
+  const {mark, facts: entFacts, label, role} = nameIndex(scene);
   const steps = scene.meta.steps;
   const cell = (t, slot) => scene.facts.filter(f => f.t === t && f.slot === slot);
   const windowSteps = new Map(scene.windows.map(w => [w.step, w]));
@@ -84,22 +99,25 @@ export function buildDetails(scene, model) {
   const ranked = scene.entities.filter(e => !UNNAMED.has(e.kind) && label.has(e.key))
     .map(e => ({e, hot: e.facts.filter(f => keyFids.has(f)).length}))
     .sort((a, b) => (b.hot - a.hot) || (b.e.facts.length - a.e.facts.length)).map(x => x.e);
-  const ent = key => `<b class="qg-ent" data-ent="${esc(key)}">${esc(label.get(key) || entName(key))}</b>`;
-  const entChip = e => `<button class="sd-chip" data-ent="${esc(e.key)}" data-goto="ent:${esc(e.key)}"><b>${esc(label.get(e.key))}</b><em>${e.facts.length}</em></button>`;
+  const ent = key => `<b class="qg-ent" data-ent="${esc(key)}" data-role="${role(key)}">${esc(label.get(key) || entName(key))}</b>`;
+  const entChip = e => `<button class="sd-chip" data-ent="${esc(e.key)}" data-role="${role(e.key)}" data-goto="ent:${esc(e.key)}"${e.key.startsWith("goal:") ? ` title="the task names it; no object of this kind appears in the run"` : ""}><b>${esc(label.get(e.key))}</b><em>${e.key.startsWith("goal:") ? "never seen" : e.facts.length}</em></button>`;
 
   const out = {};
 
   // PARSE: every step, the agent's text with its entities marked, and the facts it became.
   {
     const top = ranked.slice(0, 3);
+    // The steps the case turns on stay lit; the rest step back.
+    const key = new Set([...windowSteps.keys(), ...(root ? [root.step] : [])]);
+    const first = Math.min(...key);
     const rows = [];
     for (let t = 0; t <= steps; t++) {
       const cells = SLOT_ORDER.map(slot => [slot, cell(t, slot)]).filter(([, fs]) => fs.length);
       if (!cells.length) continue;
       const tag = t === root?.step ? `<i class="sd-tag is-root">root</i>` : windowSteps.has(t) ? `<i class="sd-tag">suspect window</i>` : "";
-      rows.push(`<li class="sd-step" data-step="${t}"><h5>${t ? `Step ${t}` : "Task"}${tag}</h5>${cells.map(([slot, fs]) => {
+      rows.push(`<li class="sd-step ${key.has(t) ? "is-key" : key.size ? "is-dim" : ""}" data-step="${t}"><h5>${t ? `Step ${t}` : "Task"}${tag}</h5>${cells.map(([slot, fs]) => {
         const calls = fs.slice(0, 4).map(f => `<code>#${f.fid} ${esc(factCall(f))}</code>`).join("") + (fs.length > 4 ? `<code class="sd-more">+${fs.length - 4}</code>` : "");
-        return `<div class="sd-cellrow" data-fids="${fids(fs.map(f => f.fid))}"><span class="sd-k">${SLOT_LABEL[slot]}</span><p>${mark(clip(cellText(fs), 260))}</p><div class="sd-calls"><span class="sd-arrow">→</span>${calls}</div></div>`;
+        return `<div class="sd-cellrow" data-src="${SOURCE[slot]}" data-fids="${fids(fs.map(f => f.fid))}"><span class="sd-k sd-src">${SLOT_LABEL[slot]}</span><p>${mark(clip(cellText(fs), 260))}</p><div class="sd-calls"><span class="sd-arrow">→</span>${calls}</div></div>`;
       }).join("")}</li>`);
     }
     const bySlot = SLOT_ORDER.map(s => [s, scene.facts.filter(f => f.slot === s).length]).filter(([, n]) => n);
@@ -107,10 +125,17 @@ export function buildDetails(scene, model) {
       say: `ProDebugger compiles the agent's ${steps}-step log into a DSL record: ${scene.facts.length} facts, each saying who saw, thought or did what at which step, about ${top.map(e => ent(e.key)).join(", ")}${ranked.length > top.length ? ` and ${ranked.length - top.length} other entities` : ""}.`,
       title: "How each step became facts",
       lead: `Each line of the log is read by a fixed template; the entities it names become nodes, and each statement becomes one fact.`,
-      body: `<ol class="sd-steps">${rows.join("")}</ol>`,
+      body: `${key.size ? `<button class="sd-jump" data-goto="step:${first}">→ Step ${first}: ${first === root?.step ? "the root cause is here" : "the suspect window is here"}${first === root?.step && windowSteps.has(first) ? " (also the suspect window)" : ""}</button>` : ""}<ol class="sd-steps">${rows.join("")}</ol>`,
+      focus: key.size ? first : null,
       rail: `<h4>DSL record</h4><dl class="sd-stats">${[["facts", scene.facts.length], ["entities", scene.entities.length], ["steps", steps]].map(([k, v]) => `<div><dd>${v}</dd><dt>${k}</dt></div>`).join("")}</dl>
-        <h4>Facts by source</h4><ul class="sd-bars">${bySlot.map(([s, n]) => `<li><span>${SLOT_LABEL[s]}</span><i style="--w:${(n / scene.facts.length * 100).toFixed(1)}%"></i><em>${n}</em></li>`).join("")}</ul>
-        <h4>Entities <small>facts</small></h4><div class="sd-chips" data-fly>${ranked.slice(0, 14).map(entChip).join("")}</div>`,
+        <h4>Facts by source</h4><ul class="sd-bars">${bySlot.map(([s, n]) => `<li data-src="${SOURCE[s]}"><span>${SLOT_LABEL[s]}</span><i style="--w:${(n / scene.facts.length * 100).toFixed(1)}%"></i><em>${n}</em></li>`).join("")}</ul>
+        <h4>Entities <small>facts</small></h4><div class="sd-groups" data-fly>${[["goal", "the task asks for"], ["held", "the agent handled"], ["other", "the rest"]].map(([r, name]) => {
+          // The goal's own words come first, even when no object of that kind ever showed up.
+          const asked = r !== "goal" ? [] : [...new Set(scene.goals.flatMap(g => g.constraints.map(c => c.expected)).filter(w => typeof w === "string"))]
+            .filter(w => !scene.entities.some(e => e.kind === w || e.index.replace(/_\d+$/, "") === w)).map(w => ({key: `goal:${w}`, facts: []}));
+          const es = [...asked, ...ranked.filter(e => role(e.key) === r)].slice(0, r === "other" ? 8 : 6);
+          return es.length ? `<div class="sd-group" data-role="${r}"><span class="sd-k">${name}</span><div class="sd-chips">${es.map(entChip).join("")}</div></div>` : "";
+        }).join("")}</div>`,
       fly: true,
     };
   }
@@ -299,7 +324,13 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
     pop.hidden = rail.hidden = false;
     requestAnimationFrame(() => { pop.classList.toggle("is-in", on); rail.classList.toggle("is-in", on); });
     if (!on) { light(null, null); setTimeout(() => { if (!open) pop.hidden = rail.hidden = true; }, 360); }
-    else if (phases[phase]?.fly) fly();
+    else {
+      const d = phases[phase], body = pop.querySelector(".qg-sd-body");
+      const at = d?.focus != null ? body.querySelector(`[data-step="${d.focus}"]`) : null;
+      // Under the sticky jump bar, with a line of the step before showing.
+      if (at) body.scrollTop += at.getBoundingClientRect().top - body.getBoundingClientRect().top - (body.querySelector(".sd-jump")?.offsetHeight || 0) - 14;
+      if (d?.fly) fly();
+    }
   }
 
   // Pointing at an entity or a fact row lights its twins on the page and its facts on the tower.
@@ -319,7 +350,7 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
     t.dataset.ent ? light(t.dataset.ent, null) : light(null, t.dataset.fids);
   });
   // A rail chip or strip cell scrolls the popup to the first place it names, and flashes it.
-  rail.addEventListener("click", e => {
+  const goto = e => {
     const go = e.target.closest("[data-goto]")?.dataset.goto;
     if (!go) return;
     const [kind, ...rest] = go.split(":"), v = rest.join(":");
@@ -329,7 +360,9 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
     if (!hit) return;
     hit.scrollIntoView({block: "center", behavior: "smooth"});
     hit.classList.remove("is-flash"); void hit.offsetWidth; hit.classList.add("is-flash");
-  });
+  };
+  rail.addEventListener("click", goto);
+  pop.addEventListener("click", goto);
   say.querySelector(".qg-sd-more").addEventListener("click", () => { onOpen?.(); setOpen(true); });
   pop.querySelector(".qg-sd-close").addEventListener("click", () => setOpen(false));
 

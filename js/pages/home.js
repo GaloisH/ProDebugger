@@ -31,6 +31,28 @@ const CAPABILITIES = [
    "Trajectories compile into fact, entity and goal graphs, shown side by side with the debugger's own decisions."],
 ];
 
+const HERO_CAPABILITIES = [
+  ["Structured Agent Logs", "Turn raw logs into linked facts, entities, and task requirements.", '<rect x="4" y="3" width="12" height="17" rx="2"/><path d="M8 7h4M8 11h4M16 15h4M18 13v4"/>'],
+  ["Locate Suspected Errors", "Identify which step and agent component may be wrong.", '<path d="M3 4h18l-7 8v7l-4 2v-9z"/>'],
+  ["Trace Errors Across Steps", "Investigate where a suspected error began and how it developed.", '<circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 6h5a4 4 0 0 1 0 8h-1a4 4 0 0 0 0 4h6"/>'],
+  ["Explain the Diagnosis", "Show why one candidate was selected, with source evidence.", '<path d="M12 3v18M4 7h5M15 7h5M4 12h5M15 12h5M4 17h5M15 17h5"/>'],
+];
+
+const CLOUD_CASE_HREF = "#/query/evidence-query-claims-n30-20261013/GPT-4o_024_alfworld_task_024";
+
+function heroCapabilities() {
+  return `<div class="hero-capabilities" aria-label="Core capabilities">
+    ${HERO_CAPABILITIES.map(([title, text, paths], i) => `<article class="hero-capability"><span class="hero-capability-icon" aria-hidden="true">${icon(paths)}</span><div><span class="hero-capability-num" aria-hidden="true">0${i + 1}</span><h2>${title}</h2><p>${text}</p></div></article>`).join("")}
+  </div>`;
+}
+
+function openClawApplication() {
+  return `<aside class="hero-openclaw" aria-label="Upcoming OpenClaw application">
+    <span class="hero-openclaw-mark" aria-hidden="true">${icon('<path d="M8 5 4 9l4 4M16 5l4 4-4 4M9 19h6M12 13v6"/>')}</span>
+    <div><div class="hero-openclaw-heading"><strong>OpenClaw in the real world</strong><span>In preparation</span></div><p>A forthcoming case study in privacy and governance.</p></div>
+  </aside>`;
+}
+
 const USE_CASES = [
   ["alfworld", "Embodied & household agents", "ALFWorld",
    "Agents that move through rooms, open receptacles and handle objects. ProDebugger checks each action against the goal and the world state the agent had already observed.",
@@ -99,7 +121,7 @@ const SHOTS = [
 ];
 
 // The original GIF composition, packaged as a same-origin static interactive view.
-const CLOUD_PREVIEW = "./home-cloud.html?v=20261030-interactive1";
+const CLOUD_PREVIEW = "./home-cloud.html?v=20261030-compact2";
 
 function heroShots() {
   return `<div class="shot-frame">
@@ -226,17 +248,18 @@ export function mountHome(root) {
 
       <section class="home-hero">
         <div class="hero-copy" data-reveal-group>
+          <div class="hero-eyebrow"><span></span> Evidence-grounded agent debugging</div>
           <h1 class="hero-title">Pro<em>Debugger</em></h1>
           <p class="hero-subtitle">Evidence-Grounded Debugging of LLM Agent Trajectories</p>
           <p class="hero-sub">Investigate why an agent failed. Inspect candidate explanations and the recorded evidence behind them.</p>
           ${STATIC ? projectLinks() : ""}
+          ${heroCapabilities()}
           <div class="hero-ctas">
-            <a class="h-btn primary" href="#/chat">${STATIC ? "Replay a diagnosis" : "Try a live diagnosis"} ${ARROW}</a>
-            <a class="h-btn" href="#/runs">${STATIC ? "Explore examples" : "Explore runs"}</a>
-            <a class="h-btn ghost" href="${caseHref(DEMO_REF, "result")}">See a case ${ARROW}</a>
+            <a class="h-btn primary" href="${CLOUD_CASE_HREF}">Explore the trajectory ${ARROW}</a>
+            <button class="h-btn hero-openclaw-cta" type="button" disabled title="The OpenClaw case study is not available yet">OpenClaw case <span>Coming soon</span></button>
           </div>
         </div>
-        <div class="hero-visual" data-reveal>${heroShots()}</div>
+        <div class="hero-visual" data-reveal><div class="hero-preview-label"><span>INSIDE AN INVESTIGATION</span><span class="hero-preview-status"><i></i> Interactive preview</span></div>${heroShots()}${openClawApplication()}</div>
         <button type="button" class="hero-scroll" data-scroll="${STATIC ? "video" : "capabilities"}" aria-label="Scroll down">${icon('<path d="m6 9 6 6 6-6"/>')}</button>
       </section>
 

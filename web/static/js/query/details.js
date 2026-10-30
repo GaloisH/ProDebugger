@@ -357,29 +357,126 @@ export function buildDetails(scene, model) {
     };
   }
 
-  // TRACE: per lane, the evidence it wants, the DSL it writes, the log rows that come back.
+  // TRACE: per lane, what it set out to find (its SQL cut into the sub-searches it runs), the
+  // finding that decides it, which of the steps it read its verdict then uses, and the SQL.
   {
     const ls = scene.lanes;
-    const sqlOf = l => scene.events.find(e => e.name === "query_logs" && e.lanes.includes(l.id))?.sql || "";
     const cands = l => scene.candidates.filter(c => c.lane === l.id);
-    const rowsBy = l => { const m = new Map(); for (const r of l.rows) { if (!m.has(r.step)) m.set(r.step, []); m.get(r.step).push(r); } return [...m].sort((a, b) => a[0] - b[0]); };
-    const sql = s => esc(s).split("\n").map(line => line.trim().startsWith("--") ? `<span class="sd-cm">${line}</span>` : line).join("\n");
-    const nRows = ls.reduce((n, l) => n + l.rows.length, 0), nSteps = new Set(ls.flatMap(l => l.steps)).size;
+    const SQL_KW = new Set("WITH AS SELECT FROM WHERE UNION ALL AND OR NOT IN LIKE ORDER BY GROUP LIMIT DISTINCT JOIN LEFT ON CAST TEXT LOWER UPPER CASE WHEN THEN ELSE END IS NULL COUNT HAVING".split(" "));
+    const MOD_SRC = {observation: "env", feedback: "env", memory: "agent", reflection: "agent", plan: "agent", action: "agent"};
+    const argOf = a => { a = a.trim(); return /^'.*'$/.test(a) ? a.slice(1, -1) : /^-?\d+(\.\d+)?$/.test(a) ? Number(a) : a; };
+    // The SQL's sub-searches: each CTE with the comment above it and the DSL calls inside.
+    const subSearches = l => {
+      const out = [];
+      let note = "", cur = null;
+      for (const line of l.sql.split("\n")) {
+        const t = line.trim();
+        if (t.startsWith("--")) { if (!cur) note = t.replace(/^--\s*/, ""); continue; }
+        const m = !cur && t.match(/^(?:WITH\s+)?(\w+)\s+AS\s*\($/i);
+        if (m) { cur = {name: m[1], purpose: note.replace(/^Purpose:\s*/i, ""), body: []}; note = ""; continue; }
+        if (cur) { if (/^\),?$/.test(t)) { out.push(cur); cur = null; } else cur.body.push(line); }
+      }
+      const anchor = l.step;
+      for (const c of out) {
+        c.calls = [...c.body.join("\n").matchAll(/\b([A-Z][A-Z_]{3,})\(([^()]*)\)/g)].filter(m => !SQL_KW.has(m[1])).map(m => {
+          const args = m[2].split(",").map(argOf);
+          const fn = m[1], track = fn === "TRACK_ACTION";
+          const call = {fn, args, kw: String(args[0] ?? ""), module: track ? "action" : String(args[1] ?? ""), a: track ? args[1] : args[2], b: track ? args[2] : args[3]};
+          call.matched = l.scopes.find(x => x.fn === fn && JSON.stringify(x.args) === JSON.stringify(args))?.matched ?? null;
+          call.hits = new Set(l.rows.filter(r => r.step >= call.a && r.step <= call.b && r.module === call.module && (fn !== "SEARCH_TEXT" || String(r.text).toLowerCase().includes(call.kw.toLowerCase()))).map(r => r.step));
+          return call;
+        });
+        const mods = [...new Set(c.calls.map(x => x.module))];
+        const from = Math.min(...c.calls.map(x => x.a).filter(Number.isFinite));
+        c.side = mods.every(m => MOD_SRC[m] === "env") ? "env" : from > anchor ? "later" : "agent";
+        c.mods = mods;
+        c.words = [...new Set(c.calls.filter(x => x.fn !== "FIND_CLAIMS").map(x => x.kw))];
+        c.claims = [...new Set(c.calls.filter(x => x.fn === "FIND_CLAIMS").map(x => x.kw.replace(/_/g, " ")))];
+        c.range = [from, Math.max(...c.calls.map(x => x.b).filter(Number.isFinite))];
+        c.hits = new Set(c.calls.flatMap(x => [...x.hits]));
+        c.matched = c.calls.reduce((n, x) => n + (x.matched || 0), 0);
+      }
+      return out;
+    };
+    // A search that decides the question: it looked up to the window and found the word only at
+    // the window's own step (or nowhere), so nothing earlier set the idea up.
+    const keyFindings = (l, subs) => {
+      const seen = new Set();
+      return subs.flatMap(c => c.calls).filter(x => x.fn === "SEARCH_TEXT" && MOD_SRC[x.module] === "agent" && Number.isFinite(x.b) && x.b <= l.step && x.a < l.step
+        && (x.matched === 0 ? x.b < l.step : x.hits.size === 1 && x.hits.has(l.step))).filter(x => { const k = `${x.kw}|${x.module}`; if (seen.has(k)) return false; seen.add(k); return true; });
+    };
+    // One card per word and range, naming every module it was searched in.
+    const groupFindings = keys => {
+      const m = new Map();
+      for (const x of keys) { const k = `${x.kw}|${x.a}|${x.b}`; const g = m.get(k) || {...x, modules: [], matched: 0}; g.modules.push(x.module); g.matched += x.matched || 0; m.set(k, g); }
+      return [...m.values()];
+    };
+    const findingCard = (x, l) => `<div class="sd-key"><span class="sd-key-tag">★ key finding</span>
+      <p>Searched ${x.modules.map(m => `<span class="sd-modtag" data-src="${MOD_SRC[m] || "agent"}">${esc(m)}</span>`).join(" ")} for “${mark(x.kw)}” in <b class="sd-stepno">steps ${x.a}–${x.b}</b>
+      → <b>${x.matched ? `${plural(x.matched, "match", "matches")}, all at step ${l.step}` : "no match"}</b></p>
+      <p class="sd-key-so">⇒ ${x.matched ? `nothing before step ${l.step} sets this up: it first appears at step ${l.step}` : `the agent never writes it before step ${l.step}`}</p></div>`;
+    const SIDE_NAME = {agent: "agent's mind", env: "what happened", later: "after the window"};
+    const subCard = (c, keys) => `<li class="sd-sub" data-side="${c.side}"${c.calls.some(x => keys.includes(x)) ? ` data-key` : ""}>
+        <div class="sd-sub-head"><span class="sd-sub-tag">${esc(c.name.replace(/_/g, " ").toUpperCase())}</span><span class="sd-k">${SIDE_NAME[c.side]}</span></div>
+        ${c.purpose ? `<p>${mark(clip(c.purpose, 150))}</p>` : ""}
+        <div class="sd-qres">${c.words.map(w => `<span class="sd-chip">${mark(w)}</span>`).join("")}${c.claims.map(w => `<span class="sd-chip"><em>claim</em> ${esc(w)}</span>`).join("")}${c.mods.map(m => `<span class="sd-modtag" data-src="${MOD_SRC[m] || "agent"}">${esc(m)}</span>`).join("")}</div>
+        <div class="sd-qres">${miniStrip(c.hits)}<span class="sd-k">steps ${c.range[0]}–${c.range[1]}</span>${num(c.matched, c.matched === 1 ? "match" : "matches")}<span class="sd-k">${c.hits.size && c.hits.size <= 4 ? `at ${esc(stepList([...c.hits].sort((a, b) => a - b)))}` : `in ${plural(c.hits.size, "step")}`}</span></div>
+      </li>`;
+    // The steps the verdict names, read from the candidate's own argument.
+    const citedOf = l => {
+      const text = [...cands(l).map(c => `${c.proposition} ${c.argument}`), l.assessNote].join(" ");
+      const out = new Set([...text.matchAll(/\bsteps?[- ](\d+)/gi)].map(m => +m[1]).filter(s => s >= 1 && s <= steps));
+      cands(l).forEach(c => out.add(c.step));
+      return out;
+    };
+    const hlSql = (sql, names) => {
+      const re = /(--[^\n]*)|('[^'\n]*')|\b(\d+)\b|\b([A-Za-z_]\w*)\b/g;
+      let html = "", i = 0, m;
+      while ((m = re.exec(sql))) {
+        html += esc(sql.slice(i, m.index)); i = re.lastIndex;
+        if (m[1]) html += `<span class="sq-cm">${esc(m[1])}</span>`;
+        else if (m[2]) { const inner = m[2].slice(1, -1), src = MOD_SRC[inner.toLowerCase()]; html += `<span class="sq-str">'${src ? `<span class="sq-mod" data-src="${src}">${esc(inner)}</span>` : mark(inner)}'</span>`; }
+        else if (m[3]) html += `<span class="sq-num">${m[3]}</span>`;
+        else { const w = m[4], call = sql[re.lastIndex] === "(";
+          html += SQL_KW.has(w.toUpperCase()) ? `<span class="sq-kw">${w}</span>` : call && /^[A-Z][A-Z_]{3,}$/.test(w) ? `<span class="sq-fn">${w}</span>` : names.has(w) ? `<b class="sq-cte">${w}</b>` : esc(w); }
+      }
+      return html + esc(sql.slice(i));
+    };
+    const rowsBy = (l, only) => { const m = new Map(); for (const r of l.rows) { if (only && !only(r.step)) continue; if (!m.has(r.step)) m.set(r.step, []); m.get(r.step).push(r); } return [...m].sort((a, b) => a[0] - b[0]); };
+    const stepRows = (l, list) => `<ol class="sd-steps">${list.map(([s, rs]) => `<li class="sd-step" data-step="${s}"><h5>Step ${s}${s === l.step ? `<i class="sd-tag">window</i>` : ""}${cands(l).some(c => c.step === s) ? `<i class="sd-tag is-root">blamed</i>` : ""}</h5>${rs.map(r => [r, goalWords.filter(w => String(r.text).toLowerCase().includes(w)).length]).sort((a, b) => b[1] - a[1]).map(([r]) => r).slice(0, 3).map(r => `<div class="sd-cellrow" data-src="${MOD_SRC[r.module] || "agent"}" data-fids="${fids(cell(r.step, MODULE_SLOT[r.module] || r.module).map(f => f.fid))}"><span class="sd-k sd-src">${esc(r.module)}</span><p>${mark(clip(/^[a-z]/.test(r.text) ? `…${r.text}` : r.text, 200))}</p></div>`).join("")}${rs.length > 3 ? `<span class="sd-k">+${rs.length - 3} more rows</span>` : ""}</li>`).join("")}</ol>`;
+    const tiers = (l, cited) => {
+      const blamedSteps = new Set(cands(l).map(c => c.step));
+      return `<div class="sd-tiers">
+        <span class="sd-k">read</span>${miniStrip(new Set(l.steps))}<b class="sd-qn">${l.steps.length}</b>
+        <span class="sd-k">cited</span>${miniStrip(cited, "cited")}<b class="sd-qn is-cited">${cited.size}</b>
+        <span class="sd-k">blamed</span>${miniStrip(blamedSteps, "root")}<b class="sd-qn is-root">${blamedSteps.size}</b></div>`;
+    };
+    const info = ls.map(l => { const subs = subSearches(l); return {l, subs, keys: keyFindings(l, subs), cited: citedOf(l)}; });
     const blamed = scene.candidates;
     const named = [...new Set(blamed.map(c => `step ${c.step}'s ${c.module}`))];
     const one = ls.length === 1, v = (s1, s2) => one ? s1 : s2;
+    const nRows = ls.reduce((n, l) => n + l.rows.length, 0), nSteps = new Set(ls.flatMap(l => l.steps)).size;
+    const nCited = new Set(info.flatMap(x => [...x.cited])).size;
     out.TRACE = {
-      say: `${one ? "A trace agent writes one DSL query" : `${ls.length} trace agents each write a DSL query`} over the logs, ${v("reads", "read")} ${plural(nRows, "row")} from ${plural(nSteps, "step")}, and ${named.length ? `${v("blames", "blame")} ${named.length > 1 ? `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}` : named[0]}` : `${v("blames", "blame")} no step`}.`,
-      title: "Evidence sought · DSL · steps read",
+      say: `${one ? "A trace agent searches" : `${ls.length} trace agents search`} the logs with ${plural(info.reduce((n, x) => n + x.subs.length, 0), "sub-search", "sub-searches")} and ${v("reads", "read")} ${plural(nRows, "row")} from ${plural(nSteps, "step")}, but ${v("its verdict rests", "their verdicts rest")} on ${nCited <= 4 ? stepList([...new Set(info.flatMap(x => [...x.cited]))].sort((a, b) => a - b)) : plural(nCited, "step")}${named.length ? `: ${v("it blames", "they blame")} ${named.length > 1 ? `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}` : named[0]}` : ""}.`,
+      title: "What TRACE looked for, found and used",
       lead: "",
-      body: ls.map(l => `<div class="sd-lane">
-          <div class="sd-sec"><div class="sd-k">evidence it wants · agent ${esc(l.agent)}</div><p>${mark(l.purpose || question(l, 260))}</p></div>
-          <div class="sd-sec"><div class="sd-k">DSL query</div><pre class="sd-sql">${sql(sqlOf(l))}</pre></div>
-          <div class="sd-sec"><div class="sd-k">log rows back · ${plural(l.rows.length, "row")} from ${plural(l.steps.length, "step")}</div>
-            <ol class="sd-steps">${rowsBy(l).map(([s, rs]) => `<li class="sd-step" data-step="${s}"><h5>Step ${s}${s === l.step ? `<i class="sd-tag">window</i>` : ""}${cands(l).some(c => c.step === s) ? `<i class="sd-tag is-root">blamed</i>` : ""}</h5>${rs.map(r => [r, goalWords.filter(w => String(r.text).toLowerCase().includes(w)).length]).sort((a, b) => b[1] - a[1]).map(([r]) => r).slice(0, 3).map(r => `<div class="sd-cellrow" data-fids="${fids(cell(r.step, MODULE_SLOT[r.module] || r.module).map(f => f.fid))}"><span class="sd-k">${esc(r.module)}</span><p>${mark(clip(r.text, 200))}</p></div>`).join("")}${rs.length > 3 ? `<span class="sd-k">+${rs.length - 3} more rows</span>` : ""}</li>`).join("")}</ol></div>
+      body: info.map(({l, subs, keys, cited}) => {
+        const notCited = rowsBy(l, s => !cited.has(s));
+        return `<div class="sd-lane">
+          <div class="sd-sec"><div class="sd-k">what it wants to know · agent ${esc(l.agent)} · ${plural(subs.length, "sub-search", "sub-searches")}</div>
+            <div class="sd-tree"><div class="sd-tree-q">${mark(l.purpose || question(l, 220))}</div>
+              ${groupFindings(keys).map(x => findingCard(x, l)).join("")}
+              <ol class="sd-subs">${subs.map(c => subCard(c, keys)).join("")}</ol></div></div>
+          <div class="sd-sec"><div class="sd-k">steps read vs used · ${l.steps.length} read · ${cited.size} cited</div>${tiers(l, cited)}
+            ${stepRows(l, rowsBy(l, s => cited.has(s)))}
+            ${notCited.length ? `<details class="sd-full"><summary>${plural(notCited.length, "more step")} read but not cited</summary>${stepRows(l, notCited)}</details>` : ""}</div>
           ${cands(l).length ? `<div class="sd-sec"><div class="sd-k">what it concludes</div><ul class="sd-list">${cands(l).map(c => `<li data-step="${c.step}"${c.fid != null ? ` data-fids="${c.fid}"` : ""}><span class="sd-k">step ${c.step} · ${esc(c.module)} · ${esc([statusText(c.status), faultText(c.faultClass)].filter(Boolean).join(", "))}</span><span>${mark(clip(c.proposition, 260))}</span></li>`).join("")}</ul></div>` : ""}
-        </div>`).join(""),
-      rail: ls.map(l => `<h4>Steps read · ${esc(l.agent)}</h4>${strip(steps, new Map([...l.steps.map(s => [s, {tone: "read", label: "read"}]), [l.step, {tone: "hot", label: "window"}], ...cands(l).map(c => [c.step, {tone: "root", label: `blamed ${c.module}`}])]))}`).join("")
+          <div class="sd-sec"><div class="sd-k">DSL query · ${plural(l.scopes.length, "search call")}</div><pre class="sd-sql">${hlSql(l.sql, new Set(subs.map(c => c.name)))}</pre></div>
+        </div>`;
+      }).join(""),
+      rail: info.map(({l, keys, cited}) => `<h4>Steps · ${esc(l.agent)}</h4>${tiers(l, cited)}
+        ${keys.length ? `<h4>Key finding</h4>${groupFindings(keys).map(x => `<p class="sd-key-mini">“${mark(x.kw)}” in ${esc(x.modules.join(", "))}, steps ${x.a}–${x.b} → ${x.matched ? `only step ${l.step}` : "none"}</p>`).join("")}` : ""}`).join("")
         + `<h4>Blamed</h4><div class="sd-chips">${blamed.map(c => `<button class="sd-chip is-root" data-goto="step:${c.step}"${c.fid != null ? ` data-fids="${c.fid}"` : ""}><b>step ${c.step}</b><em>${esc(c.module)}</em></button>`).join("") || `<span class="sd-k">none</span>`}</div>`,
     };
   }

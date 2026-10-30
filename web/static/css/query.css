@@ -693,6 +693,46 @@ body.page-query .app { padding: 0; }
 .sd-fork-ans { display: inline-block; padding: .05rem .55rem; background: var(--out); color: var(--qg-void); font-family: var(--mono); font-size: .78rem; font-weight: 600; letter-spacing: .06em; }
 .sd-fork-then b { font-family: var(--mono); font-size: .82rem; color: var(--out); letter-spacing: .04em; }
 .sd-fork-br .sd-used { display: inline-block; margin: .5rem 0 0; }
+/* TRACE: the question as the root of a tree, the key finding under it, one branch per
+   sub-search of its SQL; then the steps it read, cited and blamed. */
+.sd-tree { position: relative; }
+.sd-tree-q { padding: .5rem .8rem; border: 1px solid var(--trace); background: color-mix(in srgb, var(--trace) 8%, transparent); color: var(--text-hi); font-size: .98rem; }
+.sd-key { margin: .6rem 0 0 1.4rem; padding: .45rem .7rem; border: 2px solid var(--qg-focus); background: color-mix(in srgb, var(--qg-focus) 10%, transparent); }
+.sd-key p { margin: .2rem 0 0; font-size: .95rem; }
+.sd-key b { color: var(--text-hi); }
+.sd-key-tag { padding: 0 .4rem; background: var(--qg-focus); color: var(--qg-void); font-family: var(--mono); font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.sd-key-so { color: var(--qg-focus); font-weight: 500; }
+.sd-key-mini { font-size: .84rem; color: var(--qg-focus); }
+.sd-subs { position: relative; margin: .5rem 0 0; padding: 0 0 0 1.4rem; list-style: none; }
+.sd-subs::before { content: ""; position: absolute; left: .55rem; top: -.5rem; bottom: 1.2rem; width: 2px; background: var(--qg-line-hi); }
+.sd-sub { --side: var(--qg-th-agent); position: relative; margin-top: .45rem; padding: .4rem .65rem; border: 1px solid color-mix(in srgb, var(--side) 55%, transparent); border-left: 3px solid var(--side); }
+.sd-sub::before { content: ""; position: absolute; left: calc(-.85rem - 3px); top: 1rem; width: .85rem; height: 2px; background: var(--qg-line-hi); }
+.sd-sub[data-side="env"] { --side: var(--qg-th-env); }
+.sd-sub[data-side="later"] { --side: var(--route); }
+.sd-sub[data-key] { box-shadow: 0 0 0 1px var(--qg-focus); }
+.sd-sub[data-key]::before { background: var(--qg-focus); }
+.sd-sub p { margin: .2rem 0; font-size: .88rem; color: var(--qg-label); }
+.sd-sub .sd-qres { margin-top: .25rem; }
+.sd-sub-head { display: flex; align-items: center; gap: .5rem; }
+.sd-sub-tag { padding: 0 .4rem; background: color-mix(in srgb, var(--side) 20%, transparent); color: var(--side); font-family: var(--mono); font-size: .74rem; font-weight: 600; letter-spacing: .06em; }
+.sd-chip em { font-style: normal; }
+.sd-tiers { display: grid; grid-template-columns: 3.6rem auto 2rem; gap: .3rem .6rem; align-items: center; margin: .2rem 0 .6rem; }
+.sd-tiers .sd-mini { width: 14rem; }
+.qg-sd-rail .sd-tiers .sd-mini { width: 11rem; }
+.sd-mini.is-cited i.is-on, .sd-mini.is-cited i.is-on.is-win { background: var(--qg-focus); }
+.sd-qn.is-cited { color: var(--qg-focus); }
+.sd-qn.is-root { color: var(--qg-sig-goal); }
+/* SQL: keywords violet, DSL functions terracotta, entity words in their page colour, module
+   names in their source colour, numbers amber, comments grey. */
+.sq-kw { color: var(--route); }
+.sq-fn { color: var(--trace); font-weight: 600; }
+.sq-str { color: var(--qg-label); }
+.sq-mod[data-src="env"] { color: var(--qg-th-env); }
+.sq-mod[data-src="agent"] { color: var(--qg-th-agent); }
+.sq-num { color: var(--qg-focus); }
+.sq-cm { color: var(--qg-label-dim); font-style: italic; }
+.sq-cte { color: var(--text-hi); font-weight: 600; }
+.sd-sql .qg-ent { font-weight: 600; border-bottom: 0; }
 .sd-rule-mini { margin: 0; padding: 0; list-style: none; display: grid; gap: .3rem; font-size: .85rem; }
 .sd-rule-mini li { display: grid; grid-template-columns: 5.6rem 1fr; gap: .5rem; align-items: center; opacity: .6; }
 .sd-rule-mini li.is-used { opacity: 1; color: var(--qg-focus); }

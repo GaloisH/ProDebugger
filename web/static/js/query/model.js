@@ -206,7 +206,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
       for (const a of args.assignments || []) {
         const lane = {id: `l:${a.agent_id}`, type: "lane", agent: a.agent_id, anchor: a.anchor_case_id, step: windowByCase.get(a.anchor_case_id)?.step,
                       cases: a.route_case_ids || [], question: a.question || "", targets: a.search_targets || [], evidence: a.evidence || [],
-                      rows: [], steps: [], fids: [], candidates: [], purpose: "", cards: []};
+                      rows: [], steps: [], fids: [], candidates: [], purpose: "", cards: [], scopes: [], sql: "", assessNote: ""};
         lanes.set(a.agent_id, lane);
         ev.lanes.push(lane.id);
         const w = windowByCase.get(a.anchor_case_id);
@@ -232,6 +232,9 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
         lane.purpose = (ev.sql.match(/Purpose:\s*(.+)/) || [])[1]?.trim() || "";
         // The agent's sentences the search returned, split into structured statements.
         lane.cards = data?.agent_statements?.cards || [];
+        // Every search function the SQL called, with how many rows it matched.
+        lane.scopes = (data?.function_scopes || []).map(f => ({fn: f.function, args: f.arguments || [], matched: f.matched_rows ?? 0}));
+        lane.sql = ev.sql;
       }
       ev.raw = `query_logs(${lane?.agent || "?"})`;
       ev.title = `Search the logs for step ${lane?.step ?? "?"}`;
@@ -239,10 +242,13 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
       ev.caption = `TRACE runs one search over the logs: ${rows.length} rows from ${(data?.returned_steps || []).length} steps come back as evidence.${purpose}`;
     } else if (call.name === "assess") {
       const lane = lanes.get(args.window_id || data?.window_id);
+      if (lane) lane.assessNote = args.uncertainty || data?.uncertainty || "";
       for (const [i, c] of (args.candidates || data?.candidates || []).entries()) {
         const cand = {id: `c:${lane?.agent || "?"}:${i}`, type: "candidate", lane: lane?.id, step: c.step, module: c.module,
                       fid: moduleFact(c.step, c.module, c.fid), status: c.status, faultClass: c.fault_class,
-                      proposition: c.proposition || "", quote: c.output_quote || ""};
+                      proposition: c.proposition || "", quote: c.output_quote || "",
+                      // The candidate's own argument; the steps it names are the ones TRACE used.
+                      argument: [c.reasoning, c.immediate_effect, c.uncertainty].filter(Boolean).join(" ")};
         candidates.push(cand);
         lane?.candidates.push(cand.id);
         ev.candidates.push(cand.id);

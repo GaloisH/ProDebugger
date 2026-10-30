@@ -92,17 +92,22 @@ function videoSection() {
 
 // Hero screenshots of the workbench (web/capture_shots.py); each opens the live view.
 const SHOTS = [
-  ["result", "Result", "Selected hypothesis, linked evidence", caseHref(DEMO_REF, "result")],
   ["trajectory", "Trajectory", "Debugger decisions linked to agent steps", caseHref(DEMO_REF, "trajectory", "step", 4)],
+  ["result", "Result", "Selected hypothesis, linked evidence", caseHref(DEMO_REF, "result")],
   ["graph", "DSL Graph", "World state compiled from the trajectory", caseHref(DEMO_REF, "graph", "entities")],
   ["chat", "Chat", "Launch or replay a diagnosis", "#/chat"],
 ];
+
+// The original GIF composition, packaged as a same-origin static interactive view.
+const CLOUD_PREVIEW = "./home-cloud.html?v=20261030-interactive1";
 
 function heroShots() {
   return `<div class="shot-frame">
       <div class="shot-bar"><span class="demo-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="shot-caption"></span></div>
       <div class="shot-stage">
-        ${SHOTS.map(([id, label, caption, href]) => `<a class="shot" href="${href}" data-shot="${id}">
+        ${SHOTS.map(([id, label, caption, href]) => id === "trajectory"
+          ? `<div class="shot" data-shot="${id}"><iframe src="${CLOUD_PREVIEW}" title="Interactive evidence cloud" style="display:block;width:100%;height:100%;border:0" loading="eager"></iframe></div>`
+          : `<a class="shot" href="${href}" data-shot="${id}">
           <img src="./img/shots/${id === "trajectory" ? (matchMedia("(prefers-reduced-motion: reduce)").matches ? "evidence-cloud.png" : "evidence-cloud.gif") : `${id}.webp`}" width="1280" height="800" alt="${label} view: ${caption}"></a>`).join("")}
       </div>
     </div>

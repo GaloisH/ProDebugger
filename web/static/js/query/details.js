@@ -277,7 +277,7 @@ export function buildDetails(scene, model) {
       say: `ProDebugger queries the record ${plural(views.length, "time")} for trouble signs and opens ${ws.length === 1 ? "one suspect window" : `${ws.length} suspect windows`}: ${ws.map(w => { const a = actOf(w); return `step ${w.step}${a ? `, where the agent acts “${mark(clip(a.span, 80))}”` : ""}`; }).join("; ") || "none"}.`,
       title: "What the scan found",
       lead: `ROUTE only screens: a window is a place to look, not a verdict.`,
-      body: `${ws.map(w => `<div class="sd-sec sd-win" data-step="${w.step}"><div class="sd-k">window ${esc(w.caseId)} · step ${w.step} · facts ${esc(w.fids.map(f => `#${f}`).join(" "))}</div>
+      body: `${ws.map(w => `<div class="sd-sec sd-win" data-step="${w.step}"><div class="sd-k">suspect window ${esc(w.caseId)} · step ${w.step} · facts ${esc(w.fids.map(f => `#${f}`).join(" "))}</div>
           <ul class="sd-list">${factRows(w.fids.map(fid => scene.factById.get(fid)).filter(Boolean))}</ul>
           <details><summary>ROUTE's hypothesis</summary><p>${mark(w.hypothesis)}</p></details></div>`).join("")}
         <div class="sd-sec"><div class="sd-k">how it got there · ${plural(views.length, "query", "queries")}${hits.some(Boolean) ? ` · lit rows reached ${ws.length === 1 ? "the window" : "a window"}` : ""}</div><ol class="sd-queries">${views.map((e, k) => {
@@ -334,11 +334,11 @@ export function buildDetails(scene, model) {
         : `ProDebugger turns the suspicions into ${ls.length} questions, one per trace agent, for ${stepList(ls.map(l => l.step))}.`,
       title: "The questions handed to TRACE",
       lead: scene.rules.length ? `Before any evidence comes in, the manager fixes ${plural(scene.rules.length, "decision rule")} for judging the answers.` : "",
-      body: `${ls.map(l => `<div class="sd-sec" data-step="${l.step}"><div class="sd-k">agent ${esc(l.agent)} · window ${esc(l.anchor)} · step ${l.step}</div>
+      body: `${ls.map(l => `<div class="sd-sec" data-step="${l.step}"><div class="sd-k">the question · agent ${esc(l.agent)} · window ${esc(l.anchor)} · step ${l.step}</div>
           <p class="sd-question">${mark(question(l, 200))}</p>${fold(l.question)}</div>
           ${l.evidence.length ? `<div class="sd-sec"><div class="sd-k">what it is shown · ${plural(l.evidence.length, "quote")}</div>${l.evidence.slice(0, 3).map(quoteCard).join("")}${l.evidence.length > 3 ? `<details class="sd-full"><summary>${l.evidence.length - 3} more</summary>${l.evidence.slice(3).map(quoteCard).join("")}</details>` : ""}</div>` : ""}
-          ${l.targets.length ? `<div class="sd-sec"><div class="sd-k">what to search</div><ol class="sd-targets">${l.targets.map(t => targetRow(t, l)).join("")}</ol></div>` : ""}`).join("")}
-        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">if TRACE finds… then</div><ol class="sd-rules">${scene.rules.map(ruleRow).join("")}</ol></div>` : ""}`,
+          ${l.targets.length ? `<div class="sd-sec"><div class="sd-k">what to search · ${plural(l.targets.length, "target")}</div><ol class="sd-targets">${l.targets.map(t => targetRow(t, l)).join("")}</ol></div>` : ""}`).join("")}
+        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">how the answer will be judged · ${plural(scene.rules.length, "rule")}</div><ol class="sd-rules">${scene.rules.map(ruleRow).join("")}</ol></div>` : ""}`,
       rail: `<h4>Assignments</h4><div class="sd-chips">${ls.map(l => `<button class="sd-chip is-hot" data-goto="step:${l.step}"><b>${esc(l.agent)}</b><em>← ${esc(l.anchor)} · step ${l.step}</em></button>`).join("")}</div>
         ${scene.rules.length ? `<h4>Rules</h4><ul class="sd-rule-mini">${scene.rules.map(r => `<li${usedRule === r.id ? ` class="is-used"` : ""}><span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc(r.outcome || "?")}</span>${esc(r.id.replace(/_/g, " "))}</li>`).join("")}</ul>` : ""}`,
     };
@@ -360,7 +360,7 @@ export function buildDetails(scene, model) {
       title: "Evidence sought · DSL · steps read",
       lead: "",
       body: ls.map(l => `<div class="sd-lane">
-          <div class="sd-sec"><div class="sd-k">agent ${esc(l.agent)} · evidence it wants</div><p>${mark(l.purpose || question(l, 260))}</p></div>
+          <div class="sd-sec"><div class="sd-k">evidence it wants · agent ${esc(l.agent)}</div><p>${mark(l.purpose || question(l, 260))}</p></div>
           <div class="sd-sec"><div class="sd-k">DSL query</div><pre class="sd-sql">${sql(sqlOf(l))}</pre></div>
           <div class="sd-sec"><div class="sd-k">log rows back · ${plural(l.rows.length, "row")} from ${plural(l.steps.length, "step")}</div>
             <ol class="sd-steps">${rowsBy(l).map(([s, rs]) => `<li class="sd-step" data-step="${s}"><h5>Step ${s}${s === l.step ? `<i class="sd-tag">window</i>` : ""}${cands(l).some(c => c.step === s) ? `<i class="sd-tag is-root">blamed</i>` : ""}</h5>${rs.map(r => [r, goalWords.filter(w => String(r.text).toLowerCase().includes(w)).length]).sort((a, b) => b[1] - a[1]).map(([r]) => r).slice(0, 3).map(r => `<div class="sd-cellrow" data-fids="${fids(cell(r.step, MODULE_SLOT[r.module] || r.module).map(f => f.fid))}"><span class="sd-k">${esc(r.module)}</span><p>${mark(clip(r.text, 200))}</p></div>`).join("")}${rs.length > 3 ? `<span class="sd-k">+${rs.length - 3} more rows</span>` : ""}</li>`).join("")}</ol></div>
@@ -377,7 +377,7 @@ export function buildDetails(scene, model) {
       say: `ProDebugger names step ${root.step}'s ${esc(root.module)} as the root cause: ${mark(clip(root.proposition, 200))}`,
       title: "Verdict and why",
       lead: root.rule?.id ? `Decided by the manager's rule ${esc(root.rule.id.replace(/_/g, " "))}.` : "",
-      body: `<div class="sd-sec" data-step="${root.step}"${root.fid != null ? ` data-fids="${root.fid}"` : ""}><div class="sd-k">root · step ${root.step} · ${esc(root.module)}${root.faultClass ? ` · ${esc(faultText(root.faultClass))}` : ""}</div>
+      body: `<div class="sd-sec" data-step="${root.step}"${root.fid != null ? ` data-fids="${root.fid}"` : ""}><div class="sd-k">root cause · step ${root.step} · ${esc(root.module)}${root.faultClass ? ` · ${esc(faultText(root.faultClass))}` : ""}</div>
           ${root.quote ? `<blockquote>${mark(root.quote)}</blockquote>` : ""}<p>${mark(root.proposition)}</p></div>
         ${root.reasoning ? `<div class="sd-sec"><div class="sd-k">reasoning</div><p>${mark(root.reasoning)}</p></div>` : ""}`,
       rail: `<h4>Root</h4><div class="sd-card is-root"${root.fid != null ? ` data-fids="${root.fid}"` : ""}><b>step ${root.step} · ${esc(root.module)}</b><span class="sd-k">${esc(faultText(root.faultClass))}</span></div>
@@ -463,6 +463,14 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
     pop.querySelector(".qg-sd-lead").innerHTML = d.lead || "";
     pop.querySelector(".qg-sd-lead").hidden = !d.lead;
     pop.querySelector(".qg-sd-body").innerHTML = d.body;
+    pop.dataset.phase = phase;
+    // Each section's label becomes a numbered heading: its name, then the rest as a badge.
+    let n = 0;
+    pop.querySelectorAll(".qg-sd-body .sd-sec > .sd-k:first-child").forEach(k => {
+      const [name, ...rest] = k.textContent.split(" · ");
+      k.className = "sd-h";
+      k.innerHTML = `<b>${++n}</b><span>${esc(name)}</span>${rest.length ? `<em>${esc(rest.join(" · "))}</em>` : ""}`;
+    });
     pop.querySelector(".qg-sd-body").scrollTop = 0;
     rail.querySelector(".qg-sd-railbody").innerHTML = d.rail;
   }

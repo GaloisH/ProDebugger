@@ -545,6 +545,12 @@ body.page-query .app { padding: 0; }
 .qg-sd-body details summary { cursor: pointer; font-family: var(--mono); font-size: .78rem; color: var(--qg-label-dim); }
 .sd-k { font-family: var(--mono); font-size: .76rem; color: var(--qg-label-dim); }
 .sd-sec { padding: .5rem 0; border-bottom: 1px solid var(--qg-line); }
+/* Section headings: a numbered square in the phase colour, the name, a count badge on the right. */
+.sd-h { display: flex; align-items: center; gap: .55rem; margin: .35rem 0 .5rem; padding-bottom: .35rem; border-bottom: 1px solid var(--qg-line-hi); }
+.sd-h b { display: grid; place-items: center; flex: none; width: 1.35rem; height: 1.35rem; background: var(--ph, var(--qg-focus)); color: var(--qg-void); font-family: var(--mono); font-size: .8rem; font-weight: 600; }
+.sd-h span { font-family: var(--mono); font-size: .86rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--text-hi); }
+.sd-h em { margin-left: auto; padding: 0 .45rem; border: 1px solid var(--qg-line-hi); font-family: var(--mono); font-size: .74rem; font-style: normal; color: var(--qg-label-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%; }
+.sd-sec:has(> .sd-h) { border-bottom: 0; padding-top: .7rem; }
 .sd-sec:last-child { border-bottom: 0; }
 .sd-task { font-size: 1.05rem; color: var(--text-hi); }
 .sd-bad { color: var(--qg-sig-goal); font-weight: 500; }

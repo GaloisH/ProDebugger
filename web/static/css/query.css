@@ -716,6 +716,33 @@ body.page-query .app { padding: 0; }
 .sd-sub-head { display: flex; align-items: center; gap: .5rem; }
 .sd-sub-tag { padding: 0 .4rem; background: color-mix(in srgb, var(--side) 20%, transparent); color: var(--side); font-family: var(--mono); font-size: .74rem; font-weight: 600; letter-spacing: .06em; }
 .sd-chip em { font-style: normal; }
+/* TRACE's three questions: BEFORE the window (agent's mind), the FACTS (what happened),
+   AFTER the window; a timeline of where each looked and hit, then a question-and-answer card each. */
+[data-group="before"] { --grp: var(--qg-th-agent); }
+[data-group="facts"] { --grp: var(--qg-th-env); }
+[data-group="after"] { --grp: var(--route); }
+.sd-tl { display: grid; grid-template-columns: 4.6rem 1fr; gap: .35rem .6rem; align-items: center; margin: .7rem 0 .5rem; }
+.sd-tl-axis { position: relative; height: 1rem; font-family: var(--mono); font-size: .7rem; color: var(--qg-label-dim); }
+.sd-tl-axis span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.sd-tl-axis span:first-child { transform: none; }
+.sd-tl-axis span:last-child { transform: translateX(-100%); }
+.sd-tl-axis .is-win { color: var(--qg-focus); font-weight: 600; }
+.sd-tl-lab { font-family: var(--mono); font-size: .72rem; font-weight: 600; letter-spacing: .06em; color: var(--grp); }
+.sd-tl-track { position: relative; height: 1.1rem; background: linear-gradient(var(--qg-line), var(--qg-line)) 0 50% / 100% 1px no-repeat; }
+.sd-tl-track::after { content: ""; position: absolute; left: var(--win); top: -.35rem; bottom: -.35rem; width: 2px; margin-left: -1px; background: var(--qg-focus); opacity: .7; }
+.sd-tl-range { position: absolute; top: .2rem; bottom: .2rem; background: color-mix(in srgb, var(--grp) 22%, transparent); border: 1px solid color-mix(in srgb, var(--grp) 55%, transparent); }
+.sd-tl-dot { position: absolute; top: 50%; width: .5rem; height: .5rem; margin: -.25rem 0 0 -.25rem; border-radius: 50%; background: var(--grp); }
+.sd-tl-dot.is-win { width: .75rem; height: .75rem; margin: -.375rem 0 0 -.375rem; background: var(--qg-focus); box-shadow: 0 0 0 2px var(--qg-panel); }
+.sd-qas { display: grid; gap: .5rem; margin: .6rem 0 0; padding: 0; list-style: none; }
+.sd-qa { padding: .5rem .7rem; border: 1px solid color-mix(in srgb, var(--grp) 45%, transparent); border-left: 3px solid var(--grp); background: color-mix(in srgb, var(--grp) 5%, transparent); }
+.sd-qa-q { display: flex; align-items: baseline; gap: .55rem; font-size: .95rem; color: var(--qg-label); }
+.sd-qa-tag { flex: none; min-width: 4.2rem; padding: 0 .35rem; background: color-mix(in srgb, var(--grp) 22%, transparent); color: var(--grp); font-family: var(--mono); font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-align: center; }
+.sd-qa-a { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .6rem; margin: .35rem 0 .15rem 4.75rem; font-size: 1rem; color: var(--text-hi); }
+.sd-qa-verdict { --v: var(--grp); padding: .05rem .55rem; background: var(--v); color: var(--qg-void); font-family: var(--mono); font-size: .85rem; font-weight: 700; letter-spacing: .06em; }
+.sd-qa-verdict[data-tone="no"] { --v: var(--qg-focus); }
+.sd-qa .sd-k { margin-left: 4.75rem; }
+.sd-how { margin-top: .6rem; }
+.sd-how[open] { padding: .4rem .5rem .6rem; }
 .sd-tiers { display: grid; grid-template-columns: 3.6rem auto 2rem; gap: .3rem .6rem; align-items: center; margin: .2rem 0 .6rem; }
 .sd-tiers .sd-mini { width: 14rem; }
 .qg-sd-rail .sd-tiers .sd-mini { width: 11rem; }

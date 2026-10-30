@@ -383,9 +383,16 @@ export function buildDetails(scene, model) {
           const fn = m[1], track = fn === "TRACK_ACTION";
           const call = {fn, args, kw: String(args[0] ?? ""), module: track ? "action" : String(args[1] ?? ""), a: track ? args[1] : args[2], b: track ? args[2] : args[3]};
           call.matched = l.scopes.find(x => x.fn === fn && JSON.stringify(x.args) === JSON.stringify(args))?.matched ?? null;
-          call.hits = new Set(l.rows.filter(r => r.step >= call.a && r.step <= call.b && r.module === call.module && (fn !== "SEARCH_TEXT" || String(r.text).toLowerCase().includes(call.kw.toLowerCase()))).map(r => r.step));
+          call.hits = new Set(l.rows.filter(r => r.step >= call.a && r.step <= call.b && r.module === call.module && (fn === "FIND_CLAIMS" || String(r.text).toLowerCase().includes(call.kw.toLowerCase()))).map(r => r.step));
           return call;
         });
+        // An action verb the log words differently (put → "move … to …"): its matched rows are the
+        // action rows in range no other tracked verb claimed.
+        const tracked = c.calls.filter(x => x.fn === "TRACK_ACTION");
+        for (const x of tracked) if (x.matched && !x.hits.size) {
+          const taken = new Set(tracked.filter(y => y !== x).flatMap(y => [...y.hits]));
+          x.hits = new Set(l.rows.filter(r => r.module === "action" && r.step >= x.a && r.step <= x.b && !taken.has(r.step)).map(r => r.step));
+        }
         const mods = [...new Set(c.calls.map(x => x.module))];
         const from = Math.min(...c.calls.map(x => x.a).filter(Number.isFinite));
         c.side = mods.every(m => MOD_SRC[m] === "env") ? "env" : from > anchor ? "later" : "agent";
@@ -416,6 +423,7 @@ export function buildDetails(scene, model) {
       → <b>${x.matched ? `${plural(x.matched, "match", "matches")}, all at step ${l.step}` : "no match"}</b></p>
       <p class="sd-key-so">⇒ ${x.matched ? `nothing before step ${l.step} sets this up: it first appears at step ${l.step}` : `the agent never writes it before step ${l.step}`}</p></div>`;
     const SIDE_NAME = {agent: "agent's mind", env: "what happened", later: "after the window"};
+    const fold = text => text ? `<details class="sd-full"><summary>full text</summary><p>${mark(text)}</p></details>` : "";
     const subCard = (c, keys) => `<li class="sd-sub" data-side="${c.side}"${c.calls.some(x => keys.includes(x)) ? ` data-key` : ""}>
         <div class="sd-sub-head"><span class="sd-sub-tag">${esc(c.name.replace(/_/g, " ").toUpperCase())}</span><span class="sd-k">${SIDE_NAME[c.side]}</span></div>
         ${c.purpose ? `<p>${mark(clip(c.purpose, 150))}</p>` : ""}
@@ -451,7 +459,56 @@ export function buildDetails(scene, model) {
         <span class="sd-k">cited</span>${miniStrip(cited, "cited")}<b class="sd-qn is-cited">${cited.size}</b>
         <span class="sd-k">blamed</span>${miniStrip(blamedSteps, "root")}<b class="sd-qn is-root">${blamedSteps.size}</b></div>`;
     };
-    const info = ls.map(l => { const subs = subSearches(l); return {l, subs, keys: keyFindings(l, subs), cited: citedOf(l)}; });
+    // The searches answer three plain questions: did the agent hold the idea before the window,
+    // what really happened, and did the agent come back to it after. A search of the agent's own
+    // text that spans the window counts on both sides, cut at the window.
+    const steps4 = set => { const a = [...set].sort((x, y) => x - y); return a.length > 4 ? `${a.slice(0, 4).join(", ")} …` : a.join(", "); };
+    const qa = (l, subs, keys) => {
+      const w = l.step, calls = subs.flatMap(c => c.calls);
+      const isFact = x => x.fn === "TRACK_ACTION" || MOD_SRC[x.module] === "env";
+      const mind = calls.filter(x => !isFact(x)), factCalls = calls.filter(isFact);
+      const key = groupFindings(keys)[0];
+      const words = [...new Set(mind.filter(x => x.fn === "SEARCH_TEXT").map(x => x.kw))];
+      const disputed = key ? [key.kw] : words.slice(0, 2);
+      const said = disputed.map(x => `“${mark(x)}”`).join(" / ") || "it";
+      const pick = xs => xs.filter(x => !disputed.length || disputed.includes(x.kw));
+      const hitsIn = (xs, ok) => new Set(pick(xs).flatMap(x => [...x.hits]).filter(ok));
+      const beforeCalls = mind.filter(x => x.a <= w), afterCalls = mind.filter(x => x.b > w);
+      const hits = {before: hitsIn(beforeCalls, t => t <= w), facts: new Set(factCalls.flatMap(x => [...x.hits])), after: hitsIn(afterCalls, t => t > w)};
+      const span = (xs, lo, hi) => xs.length ? [Math.max(lo, Math.min(...xs.map(x => x.a))), Math.min(hi, Math.max(...xs.map(x => x.b)))] : null;
+      const ranges = {before: span(beforeCalls, 1, w), facts: span(factCalls, 1, steps), after: span(afterCalls, w + 1, steps)};
+      const earlier = [...hits.before].filter(t => t < w);
+      const factLines = factCalls.filter(x => x.hits.size).map(x => x.fn === "TRACK_ACTION"
+        ? `<b>${esc(x.kw)}</b> at step ${steps4(x.hits)}` : `${mark(x.kw)} seen at ${steps4(x.hits)}`);
+      const card = (g, q, verdict, tone, detail, n) => n ? `<li class="sd-qa" data-group="${g}">
+          <div class="sd-qa-q"><span class="sd-qa-tag">${g.toUpperCase()}</span>${q}</div>
+          <div class="sd-qa-a"><span class="sd-qa-verdict" data-tone="${tone}">${verdict}</span>${detail}</div>
+          <div class="sd-k">${plural(n, "search", "searches")}</div></li>` : "";
+      return {
+        hits, ranges,
+        cards: card("before", `Before step ${w}, did the agent already write ${said}?`,
+            key || !earlier.length ? "NO" : "YES", key || !earlier.length ? "no" : "yes",
+            key || !earlier.length ? (hits.before.has(w) ? `it first appears at <b class="sd-stepno">step ${w}</b>` : `not before step ${w}`) : `already at <b class="sd-stepno">steps ${steps4(earlier)}</b>`, beforeCalls.length)
+          + card("facts", `What did the environment show, and what did the agent do?`, factLines.length ? "SEEN" : "NOTHING", "env", factLines.join(" · ") || "no matching observation or action", factCalls.length)
+          + card("after", `After step ${w}, did the agent come back to ${said}?`, hits.after.size ? "YES" : "NO", hits.after.size ? "yes" : "no",
+            hits.after.size ? `in ${plural(hits.after.size, "later step")} (${Math.min(...hits.after)}–${Math.max(...hits.after)})` : "never mentioned again", afterCalls.length),
+      };
+    };
+    // Where each question looked on the run, and where it hit; the window marked.
+    const timeline = (l, g) => {
+      const x = t => ((t - 0.5) / steps * 100).toFixed(2);
+      const row = k => {
+        const r = g.ranges[k];
+        if (!r) return "";
+        return `<span class="sd-tl-lab" data-group="${k}">${k.toUpperCase()}</span><div class="sd-tl-track" data-group="${k}">
+          <i class="sd-tl-range" style="left:${((r[0] - 1) / steps * 100).toFixed(2)}%;width:${((r[1] - r[0] + 1) / steps * 100).toFixed(2)}%"></i>
+          ${[...g.hits[k]].map(t => `<i class="sd-tl-dot${t === l.step ? " is-win" : ""}" style="left:${x(t)}%" title="step ${t}"></i>`).join("")}</div>`;
+      };
+      return `<div class="sd-tl" style="--win:${x(l.step)}%">
+        <span></span><div class="sd-tl-axis"><span style="left:0">1</span><span class="is-win" style="left:${x(l.step)}%">step ${l.step}</span><span style="left:100%">${steps}</span></div>
+        ${row("before")}${row("facts")}${row("after")}</div>`;
+    };
+    const info = ls.map(l => { const subs = subSearches(l); const keys = keyFindings(l, subs); return {l, subs, keys, cited: citedOf(l), qa: qa(l, subs, keys)}; });
     const blamed = scene.candidates;
     const named = [...new Set(blamed.map(c => `step ${c.step}'s ${c.module}`))];
     const one = ls.length === 1, v = (s1, s2) => one ? s1 : s2;
@@ -461,13 +518,16 @@ export function buildDetails(scene, model) {
       say: `${one ? "A trace agent searches" : `${ls.length} trace agents search`} the logs with ${plural(info.reduce((n, x) => n + x.subs.length, 0), "sub-search", "sub-searches")} and ${v("reads", "read")} ${plural(nRows, "row")} from ${plural(nSteps, "step")}, but ${v("its verdict rests", "their verdicts rest")} on ${nCited <= 4 ? stepList([...new Set(info.flatMap(x => [...x.cited]))].sort((a, b) => a - b)) : plural(nCited, "step")}${named.length ? `: ${v("it blames", "they blame")} ${named.length > 1 ? `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}` : named[0]}` : ""}.`,
       title: "What TRACE looked for, found and used",
       lead: "",
-      body: info.map(({l, subs, keys, cited}) => {
+      body: info.map(({l, subs, keys, cited, qa}) => {
         const notCited = rowsBy(l, s => !cited.has(s));
         return `<div class="sd-lane">
           <div class="sd-sec"><div class="sd-k">what it wants to know · agent ${esc(l.agent)} · ${plural(subs.length, "sub-search", "sub-searches")}</div>
-            <div class="sd-tree"><div class="sd-tree-q">${mark(l.purpose || question(l, 220))}</div>
+            <div class="sd-tree-q">${mark(clip((l.purpose || question(l, 220)).split(/(?<=[.;])\s+/)[0].replace(/[,;]\s*$/, ""), 160))}</div>${fold(l.purpose)}
+            ${timeline(l, qa)}
+            <ol class="sd-qas">${qa.cards}</ol>
+            <details class="sd-full sd-how"><summary>how it searched · ${plural(subs.length, "sub-search", "sub-searches")}</summary>
               ${groupFindings(keys).map(x => findingCard(x, l)).join("")}
-              <ol class="sd-subs">${subs.map(c => subCard(c, keys)).join("")}</ol></div></div>
+              <ol class="sd-subs">${subs.map(c => subCard(c, keys)).join("")}</ol></details></div>
           <div class="sd-sec"><div class="sd-k">steps read vs used · ${l.steps.length} read · ${cited.size} cited</div>${tiers(l, cited)}
             ${stepRows(l, rowsBy(l, s => cited.has(s)))}
             ${notCited.length ? `<details class="sd-full"><summary>${plural(notCited.length, "more step")} read but not cited</summary>${stepRows(l, notCited)}</details>` : ""}</div>

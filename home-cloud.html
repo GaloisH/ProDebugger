@@ -1,0 +1,2146 @@
+<!doctype html>
+<!-- Built from the original cloud renderer by build-prodebugger-home-cloud.mjs. -->
+<html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Interactive evidence cloud</title><link rel="stylesheet" href="./css/theme.css?v=27bf1baa85"><style>
+html,body {margin:0; padding:0; overflow:hidden; background:#06080b;}
+.qg {width:min(100vw,160vh); aspect-ratio:16 / 10; position:fixed; inset:0; margin:auto; overflow:hidden;}
+.qg-canvas {position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none;}
+.qg-canvas:active {cursor:grabbing;}
+.cloud-controls {position:absolute; top:10px; right:12px; left:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; pointer-events:none; font:10px 'IBM Plex Mono',monospace; color:#a9afc3;}
+.cloud-controls button {pointer-events:auto; padding:5px 8px; border:1px solid #bca6db44; border-radius:5px; background:#0c101bc9; color:#ddd3ef; font:inherit; cursor:pointer;}
+.cloud-controls button:hover {background:#29223d;}
+.cloud-preview-info {position:absolute; left:12px; bottom:32px; width:min(300px,calc(100% - 24px)); box-sizing:border-box; padding:10px 12px; border:1px solid #bca6db44; border-radius:7px; background:#101522ed; color:#c6c9d8; font:11px/1.5 'IBM Plex Mono',monospace; max-height:35%; overflow:auto;}
+.cloud-preview-info strong,.cloud-preview-info span {display:block;}
+.cloud-preview-info strong {color:#e7ddf7; margin-bottom:3px;}
+.cloud-preview-info[hidden] {display:none;}
+.cloud-fallback {width:100%;height:100%;object-fit:contain;display:block;}
+.cloud-fallback-note {position:absolute;bottom:10px;left:12px;color:#a9afc3;font:10px monospace;}
+</style></head><body><main class="qg"><img class="cloud-fallback" src="./img/shots/evidence-cloud.png" alt="Loading interactive evidence cloud"></main><script type="module">
+const __modules = Object.create(null);
+__modules["util.js"] = (() => {
+// Small DOM and formatting helpers shared by every view.
+const esc = value => String(value ?? "").replace(/[&<>"']/g,
+  c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[c]);
+
+const short = (value, n = 140) => {
+  const s = String(value ?? "").replace(/\s+/g, " ").trim();
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+};
+
+const pretty = value => typeof value === "string" ? value : JSON.stringify(value ?? null, null, 2);
+const raw = value => `<pre class="raw">${esc(pretty(value))}</pre>`;
+const number = v => Number(v || 0).toLocaleString("en-US");
+
+function ago(seconds) {
+  if (!seconds) return "—";
+  const d = Math.max(0, Date.now() / 1000 - seconds);
+  if (d < 60) return `${Math.round(d)}s ago`;
+  if (d < 3600) return `${Math.round(d / 60)}m ago`;
+  if (d < 86400) return `${Math.round(d / 3600)}h ago`;
+  return new Date(seconds * 1000).toLocaleDateString("en-CA");
+}
+
+// Status vocabulary from result.json plus the server's running/incomplete/compiled.
+const STATUS = {
+  running: ["live", "Running"], incomplete: ["warn", "Incomplete"], compiled: ["teal", "Compiled"],
+  accepted: ["ok", "Accepted"], diagnosed: ["ok", "Diagnosed"], uncertain: ["warn", "Uncertain"], dry_run: ["", "Dry run"],
+  rejected: ["bad", "Rejected"], error: ["bad", "Error"], interrupted: ["bad", "Interrupted"],
+  stopped: ["warn", "Stopped"], failed: ["bad", "Failed"],
+};
+function statusBadge(status, accepted) {
+  const [kind, label] = accepted ? STATUS.accepted : STATUS[status] || ["", status || "unknown"];
+  const dot = kind === "live" ? '<span class="live-dot"></span>' : "";
+  return `<span class="badge ${kind}">${dot}${esc(label)}</span>`;
+}
+
+// Shared loading indicator: the [/] brand mark drawing itself, shown only after a short delay
+// so fast loads never flash it. inline=true gives a one-line variant for lists and side panels.
+const loader = (label = "Loading…", inline = false) =>
+  `<div class="loader${inline ? " is-inline" : ""}" role="status"><svg class="loader-mark" viewBox="0 0 32 32" aria-hidden="true">
+    <path class="loader-bracket" d="M12 8H7v16h5M20 8h5v16h-5" pathLength="1"/><path class="loader-slash" d="M18 11l-4 10" pathLength="1"/></svg>
+    <span class="loader-label">${esc(label)}</span></div>`;
+
+function debounce(fn, ms = 150) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// Simple pub/sub used by stores.
+class Emitter {
+  #handlers = new Map();
+  on(type, fn) {
+    if (!this.#handlers.has(type)) this.#handlers.set(type, new Set());
+    this.#handlers.get(type).add(fn);
+    return () => this.#handlers.get(type).delete(fn);
+  }
+  emit(type, detail) { (this.#handlers.get(type) || []).forEach(fn => fn(detail)); }
+}
+
+return {esc,short,pretty,raw,number,ago,statusBadge,loader,debounce,Emitter};
+})();
+__modules["query/layout.js"] = (() => {
+// World layout of the cluster tower: a cone. Floors sit at an even pitch and each floor's plate
+// is a fixed size that shrinks toward the top, whatever the number of clouds on it, so the
+// outline reads as the search narrowing from the whole record to one conclusion. The record
+// core is the base; ROUTE queries climb a helix in call order. Each tier belongs to a phase.
+// A floor's height is its index k times the pitch; a cone lying on its side (a landscape
+// canvas) gets a longer pitch so it fills the width.
+const PITCH = {upright: 5, lying: 8};
+const TIERS = [
+  {tier: 0, k: -1, plate: 8.6, ring: 0, phase: "PARSE", label: "DSL record", sub: "Entity · Fact · Goal"},
+  {tier: 1, k: 0, plate: 8.2, ring: 6.6, rise: 2.6, phase: "ROUTE", label: "ROUTE access", sub: "one cloud per query"},
+  {tier: 2, k: 1, plate: 6.2, ring: 4.4, phase: "ROUTE", label: "Suspect windows", sub: "route_cases"},
+  {tier: 3, k: 2, plate: 4.6, ring: 3.1, phase: "TRACE", label: "TRACE lanes", sub: "assigned questions, SQL"},
+  {tier: 4, k: 3, plate: 3.2, ring: 2, phase: "TRACE", label: "Candidates", sub: "assess"},
+  {tier: 5, k: 4, plate: 2, ring: 0, phase: "SUBMIT", label: "Conclusion", sub: "SUBMIT root"},
+];
+
+// Cloud radius grows with the cube root of its size, like a ball of packed points.
+const cloudRadius = n => n <= 1 ? 0.22 : 0.26 * Math.cbrt(n) + 0.18;
+// On the tower a cloud stays between these bounds, so a one-fact cloud and the record differ
+// by about 4x, not 10x; the core is the base and may reach the top bound of its own.
+const clampR = (r, lo, hi) => Math.max(lo, Math.min(hi, r));
+const towerRadius = c => c.kind === "core" ? clampR(0.34 * Math.cbrt(c.fids.length) + 0.3, 1, 2)
+  : clampR(cloudRadius(c.fids.length), 0.45, 1.15);
+
+// Lays the clouds out at a pitch; relayout(pitch) moves them in place (the stage calls it when
+// the canvas turns between portrait and landscape, and the points glide to their new seats).
+function layoutClusters({clusters}) {
+  const pos = new Map(), radius = new Map(), angle = new Map();
+  const shape = new Map(clusters.map(c => [c.id, relaxCloud(c)]));
+  const layout = {pos, radius, angle, shape, top: 0, bottom: 0, pitch: 0, relayout};
+  function relayout(pitch) {
+    layout.pitch = pitch;
+    for (const t of TIERS) t.y = t.k * pitch;
+    place();
+    layout.top = TIERS[TIERS.length - 1].y; layout.bottom = TIERS[0].y;
+  }
+  relayout(PITCH.upright);
+  return layout;
+
+  function place() {
+    for (const t of TIERS) {
+      const members = clusters.filter(c => c.tier === t.tier);
+      members.forEach((c, k) => {
+        // Ring order follows call order, starting at the front (+z) and turning clockwise; on a
+        // floor with a rise each call also sits a little higher than the one before.
+        const a = members.length === 1 && !t.ring ? 0 : Math.PI / 2 - (k / members.length) * Math.PI * 2;
+        angle.set(c.id, a);
+        const r = members.length === 1 && t.tier > 1 ? 0 : t.ring;
+        const y = t.y + (t.rise && members.length > 1 ? t.rise * k / (members.length - 1) : 0);
+        pos.set(c.id, [r * Math.cos(a), y, r * Math.sin(a)]);
+        radius.set(c.id, towerRadius(c));
+      });
+    }
+  }
+}
+
+// A cloud's inner shape: a short Fruchterman–Reingold relaxation of its facts and entity hubs
+// in the unit ball. Facts start at their ball sample and hubs at the mean of their facts;
+// spokes and threads pull, every pair pushes, a weak pull to the centre keeps the ball round,
+// and the agent hub stays pinned in the middle. Fixed iterations, so every reload agrees.
+// Returns unit-ball positions (facts by fid, hubs by index), or null for a cloud with no ties.
+const RELAX_STEPS = 90;
+function relaxCloud(c) {
+  const {hubs, spokes, threads} = c.structure || {};
+  if (!spokes?.length && !threads?.length) return null;
+  const n = c.fids.length, N = n + hubs.length;
+  const at = new Map(c.fids.map((fid, k) => [fid, k]));
+  const P = new Float64Array(N * 3), D = new Float64Array(N * 3);
+  c.fids.forEach((_, k) => P.set(ballPoint(k), k * 3));
+  hubs.forEach((h, j) => {
+    for (const fid of h.fids) for (let i = 0; i < 3; i++) P[(n + j) * 3 + i] += P[at.get(fid) * 3 + i] / h.fids.length;
+  });
+  const pinned = new Uint8Array(N);
+  hubs.forEach((h, j) => { if (h.key.startsWith("agent:")) { pinned[n + j] = 1; P.fill(0, (n + j) * 3, (n + j) * 3 + 3); } });
+  const edges = [...spokes.map(([fid, j]) => [at.get(fid), n + j, 1]),
+                 ...threads.map(([a, b]) => [at.get(a), at.get(b), 1.6])];
+  const L = Math.cbrt(4.19 / N), L2 = L * L;   // ideal spacing: the ball's volume shared out
+  let temp = 0.12;
+  for (let step = 0; step < RELAX_STEPS; step++) {
+    D.fill(0);
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      const dx = P[i * 3] - P[j * 3], dy = P[i * 3 + 1] - P[j * 3 + 1], dz = P[i * 3 + 2] - P[j * 3 + 2];
+      const r2 = dx * dx + dy * dy + dz * dz + 1e-6;
+      if (r2 > 9 * L2) continue;
+      const f = L2 / r2;              // |F| = L²/r, along d/r
+      D[i * 3] += dx * f; D[i * 3 + 1] += dy * f; D[i * 3 + 2] += dz * f;
+      D[j * 3] -= dx * f; D[j * 3 + 1] -= dy * f; D[j * 3 + 2] -= dz * f;
+    }
+    for (const [a, b, w] of edges) {
+      const dx = P[a * 3] - P[b * 3], dy = P[a * 3 + 1] - P[b * 3 + 1], dz = P[a * 3 + 2] - P[b * 3 + 2];
+      const f = w * Math.sqrt(dx * dx + dy * dy + dz * dz) / L;   // |F| = r²/L, along d/r
+      D[a * 3] -= dx * f; D[a * 3 + 1] -= dy * f; D[a * 3 + 2] -= dz * f;
+      D[b * 3] += dx * f; D[b * 3 + 1] += dy * f; D[b * 3 + 2] += dz * f;
+    }
+    for (let i = 0; i < N; i++) {
+      if (pinned[i]) continue;
+      for (let k = 0; k < 3; k++) D[i * 3 + k] -= P[i * 3 + k] * 0.6;
+      const len = Math.hypot(D[i * 3], D[i * 3 + 1], D[i * 3 + 2]) || 1e-9, s = Math.min(len, temp) / len;
+      for (let k = 0; k < 3; k++) P[i * 3 + k] += D[i * 3 + k] * s;
+    }
+    temp *= 0.96;
+  }
+  // Back into the unit ball: the farthest point lands on the rim.
+  let far = 1e-6;
+  for (let i = 0; i < N; i++) far = Math.max(far, Math.hypot(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]));
+  const unit = i => [P[i * 3] / far, P[i * 3 + 1] / far, P[i * 3 + 2] / far];
+  return {fact: new Map(c.fids.map((fid, k) => [fid, unit(k)])), hub: hubs.map((_, j) => unit(n + j))};
+}
+
+// Unit-ball sample i: the R3 low-discrepancy sequence (three independent golden-like strides)
+// mapped to radius, height and angle, so a cloud fills its ball evenly and every point keeps
+// its place between reloads.
+const R3 = [0.8191725134, 0.6710436067, 0.5497004779];
+function ballPoint(i) {
+  const [u, v, w] = R3.map(a => (0.5 + i * a) % 1);
+  const r = Math.cbrt(u), y = 1 - 2 * v, s = Math.sqrt(Math.max(0, 1 - y * y)), a = w * Math.PI * 2;
+  return [r * s * Math.cos(a), r * y, r * s * Math.sin(a)];
+}
+
+return {PITCH,TIERS,cloudRadius,layoutClusters,relaxCloud,ballPoint};
+})();
+__modules["api.js"] = (() => {
+// Thin client for web/server.py. Paths are built from validated route segments.
+const enc = parts => parts.map(encodeURIComponent).join("/");
+
+async function request(url) {
+  const response = await fetch(url, {cache: "no-store"});
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
+  return response;
+}
+
+const getIndex = async () => (await request("/api/index")).json();
+const listFiles = async ref => (await request(`/api/files/${enc(ref)}`)).json();
+const getCatalog = async () => (await request("/api/catalog")).json();
+const getLaunch = async () => (await request("/api/launch")).json();
+const getReference = async tid => (await request(`/api/reference/${encodeURIComponent(tid)}`)).json();
+
+// Launcher writes; errors carry the server's message.
+async function post(url, body) {
+  const response = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const value = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(value.error || `${response.status} ${response.statusText}`);
+  return value;
+}
+const launchRun = spec => post("/api/launch", spec);
+const stopRun = () => post("/api/launch/stop", {});
+
+async function getJSON(ref, name, fallback) {
+  try {
+    return await (await request(`/api/file/${enc(ref)}/${name}`)).json();
+  } catch (error) {
+    if (fallback !== undefined) return fallback;
+    throw error;
+  }
+}
+
+// Follows an append-only JSONL file; each poll returns only rows added since the last one.
+class JsonlFollower {
+  constructor(ref, name) { this.url = `/api/file/${enc(ref)}/${name}`; this.offset = 0; this.rows = []; }
+  async poll() {
+    let response;
+    try { response = await request(`${this.url}?offset=${this.offset}`); }
+    catch { return []; } // not created yet
+    const size = Number(response.headers.get("X-File-Size"));
+    if (size < this.offset) { this.offset = 0; this.rows = []; return this.poll(); } // truncated/rewritten
+    const text = await response.text();
+    this.offset = Number(response.headers.get("X-Next-Offset")) || this.offset;
+    const added = text.split("\n").filter(Boolean).flatMap(line => {
+      try { return [JSON.parse(line)]; } catch { return []; }
+    });
+    this.rows.push(...added);
+    return added;
+  }
+}
+
+return {getIndex,listFiles,getCatalog,getLaunch,getReference,launchRun,stopRun,getJSON,JsonlFollower};
+})();
+__modules["query/model.js"] = (() => {
+// Builds the Query Graph scene from one run directory: the DSL record (facts, entities,
+// goals, rule evidence) plus the debugger's tool calls replayed as an event timeline.
+// Every event says which DSL nodes it touched, so the renderer only has to light them.
+const {getJSON, JsonlFollower} = __modules["api.js"];
+const {short} = __modules["util.js"];
+const SLOTS = ["obs", "mem", "refl", "plan", "act", "chk"];
+const SLOT_LABEL = {obs: "observation", mem: "memory", refl: "reflection", plan: "plan", act: "action", chk: "check"};
+const MODULE_SLOT = {observation: "obs", memory: "mem", reflection: "refl", plan: "plan", action: "act", check: "chk"};
+// Keys whose integer values name a fact the result put in front of the debugger.
+const FACT_KEYS = new Set(["fid", "fids", "refs", "issue_fids", "returned_fids"]);
+
+const entityKey = e => e && typeof e === "object" ? `${e.kind}:${e.index}` : String(e);
+
+async function readJsonl(ref, name) {
+  const follower = new JsonlFollower(ref, name);
+  let added;
+  do { added = await follower.poll(); } while (added.length);
+  return follower.rows;
+}
+
+async function loadQueryScene(ref) {
+  const [record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries, input] = await Promise.all([
+    getJSON(ref, "canonical_record.json"),
+    getJSON(ref, "evidences.json", {}),
+    getJSON(ref, "route_candidates.json", []),
+    getJSON(ref, "result.json", null),
+    getJSON(ref, "manager_plan.json", null),
+    readJsonl(ref, "tool_calls.jsonl"),
+    readJsonl(ref, "trace_queries.jsonl"),
+    getJSON(ref, "input.json", null),
+  ]);
+  return buildQueryScene({record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries, input});
+}
+
+// Collects fact ids (and evidence ids) anywhere inside a tool result.
+function collectIds(value, out = {fids: new Set(), eids: new Set()}) {
+  if (Array.isArray(value)) value.forEach(v => collectIds(v, out));
+  else if (value && typeof value === "object") {
+    for (const [k, v] of Object.entries(value)) {
+      if (FACT_KEYS.has(k)) (Array.isArray(v) ? v : [v]).forEach(x => Number.isInteger(x) && out.fids.add(x));
+      else if (k === "eid" && Number.isInteger(v)) out.eids.add(v);
+      collectIds(v, out);
+    }
+  }
+  return out;
+}
+
+// Routing signals that point at trouble (the benign ones, like a state change, are left out).
+const SIGNAL_LABEL = {
+  no_new_task_evidence: "no progress", schema_repetition: "same pattern", near_duplicate_action: "near-repeat",
+  repeated_action: "repeated action", unbound_intention: "vague plan", invalid_action: "invalid action",
+  no_effect: "no effect", failed_precondition: "failed precondition", missing_effect: "missing effect",
+  terminal_cutoff: "cut off", claims_task_complete: "claims done", contradicted_completion: "false completion",
+  constraint_substitution: "constraint swapped", wrong_task_decision: "wrong decision", alignment_violation: "plan/action mismatch",
+};
+
+function countSignals(value, out = new Map()) {
+  if (Array.isArray(value)) value.forEach(v => countSignals(v, out));
+  else if (value && typeof value === "object") {
+    for (const [k, v] of Object.entries(value)) {
+      if ((k === "signals" || k === "routing_signals") && Array.isArray(v)) {
+        for (const s of v) if (SIGNAL_LABEL[s]) out.set(s, (out.get(s) || 0) + 1);
+      } else countSignals(v, out);
+    }
+  }
+  return out;
+}
+
+// What a view asks, in plain words, with its step range.
+const VIEW_INTENT = {
+  requirements: "read the task contract", episodes: "review episodes", scan: "scan every step", local_audits: "audit each step",
+  changes: "list state changes", steps: "read steps", state: "read world state", module: "read module text",
+  packet: "read the evidence packet", statement_discovery: "find statements", rules: "list rules",
+};
+function viewIntent(name, spec) {
+  if (name === "view_evidence") return "look up rule evidence";
+  const [base, ...mods] = String(spec || "").split("|").map(s => s.trim());
+  const range = mods.map(m => m.match(/^steps:(\d+):(\d+)$/)).find(Boolean);
+  const section = mods.find(m => m.startsWith("section:"))?.slice(8).split(",")[0].replace(/_/g, " ");
+  let text;
+  if (base.startsWith("entity:req:")) text = section ? `check the goal's ${section}` : "check the goal";
+  else if (base.startsWith("entity:")) text = `follow ${base.slice(7)}`;
+  else text = VIEW_INTENT[base.split(":")[0]] || `view ${base}`;
+  if (range) text = text.replace(/ every step| each step|$/, m => m ? ` steps ${range[1]}–${range[2]}` : ` S${range[1]}–${range[2]}`);
+  return text;
+}
+
+// The goal's recorded state, wherever the view put it.
+function goalState(data) {
+  const s = data?.status || data?.requirements?.[0]?.status;
+  const state = s?.state || data?.requirements?.[0]?.terminal_state;
+  return state ? {state, decided: s?.decision_steps || []} : null;
+}
+
+function buildQueryScene({record, evidences, routeCandidates, result, managerPlan, toolCalls, traceQueries, input = null}) {
+  const facts = (record.facts || []).map(f => ({
+    id: `f${f.fid}`, type: "fact", fid: f.fid, t: f.t, slot: f.slot, side: f.side, rel: f.rel,
+    args: (f.args || []).map(entityKey), value: f.value, basis: f.basis || [], span: f.span || "",
+  }));
+  const factById = new Map(facts.map(f => [f.fid, f]));
+  const steps = Math.max(1, ...facts.map(f => f.t));
+  const cellFacts = (t, slot) => facts.filter(f => f.t === t && f.slot === slot);
+
+  // Entities: every key in the record, plus any argument the record forgot to list.
+  const kinds = record.kinds || {};
+  const entityMap = new Map();
+  const addEntity = key => {
+    if (entityMap.has(key)) return entityMap.get(key);
+    const [kind, ...rest] = key.split(":");
+    const e = {id: `e:${key}`, type: "entity", key, kind, index: rest.join(":"), parent: kinds[kind] ?? null, facts: []};
+    entityMap.set(key, e);
+    return e;
+  };
+  Object.keys(record.entities || {}).forEach(addEntity);
+  facts.forEach(f => f.args.forEach(a => addEntity(a).facts.push(f.fid)));
+  const entities = [...entityMap.values()].filter(e => e.kind !== "req");
+
+  const goals = (record.goals || []).map(g => {
+    const key = `req:${g.name || `${g.rel}_${g.of_kind}`}`;
+    return {
+      id: `g:${key}`, type: "goal", key, name: g.name, rel: g.rel, count: g.count, ofKind: g.of_kind,
+      target: entityKey(g.target), constraints: g.constraints || [],
+      facts: facts.filter(f => f.args.includes(key)).map(f => f.fid),
+    };
+  });
+
+  const evidence = Object.values(evidences || {}).flatMap(group => (group.items || []).map(item => ({
+    id: `v${item.eid}`, type: "evidence", eid: item.eid, kind: item.kind, rule: item.rule, t: item.t,
+    refs: (item.refs || []).filter(fid => factById.has(fid)), status: item.status,
+    reason: item.details?.reason || "",
+  })));
+  const evidenceById = new Map(evidence.map(v => [v.eid, v]));
+
+  const lastVersion = Array.isArray(routeCandidates) ? routeCandidates[routeCandidates.length - 1] : routeCandidates;
+  const windows = (lastVersion?.windows || []).map(w => ({
+    id: `w:${w.candidate_id}`, type: "window", caseId: w.candidate_id, step: w.issue_step,
+    fids: (w.issue_fids || []).filter(fid => factById.has(fid)), goals: w.goal_links || [], hypothesis: w.hypothesis || "",
+  }));
+  const windowByCase = new Map(windows.map(w => [w.caseId, w]));
+
+  // A module named at a step resolves to the facts in that (step, slot) cell.
+  const moduleFact = (step, module, fid) => {
+    if (factById.has(fid)) return fid;
+    const cell = cellFacts(step, MODULE_SLOT[module] || module);
+    return cell.length ? cell[0].fid : null;
+  };
+
+  const lanes = new Map();
+  const candidates = [];
+  const events = [];
+  const committed = new Map();
+  for (const row of toolCalls) if (row.event === "committed") committed.set(row.tool_call_id || row.ordinal, row);
+
+  events.push({
+    phase: "PARSE", name: "compile", title: "Compile the trajectory into the DSL record",
+    caption: `${facts.length} facts over ${steps} steps, ${entities.length} entities and ${goals.length} goal${goals.length === 1 ? "" : "s"}: every observation, memory, reflection, plan and action becomes rel(args) = value @ t.`,
+    reveal: "base", fids: [], eids: [], entities: [], goals: [],
+  });
+
+  for (const call of [...committed.values()].sort((a, b) => a.ordinal - b.ordinal)) {
+    const data = call.result?.data;
+    const error = call.result?.error;
+    const args = call.arguments || {};
+    const ev = {phase: call.phase, name: call.name, ordinal: call.ordinal, call, error, fids: [], eids: [], goals: [], windows: [], lanes: [], candidates: []};
+    if (error) {
+      ev.intent = viewIntent(call.name, args.spec);
+      ev.title = `${call.name} rejected`;
+      ev.caption = `${call.phase} asked ${call.name}${args.spec ? `(${args.spec})` : ""}; the tool refused: ${short(error.message, 120)}`;
+      events.push(ev);
+      continue;
+    }
+    const ids = collectIds(data);
+    if (call.name === "view" || call.name === "view_evidence") {
+      ev.fids = [...ids.fids].filter(fid => factById.has(fid));
+      ev.eids = [...ids.eids].filter(eid => evidenceById.has(eid));
+      const spec = args.spec || (call.name === "view_evidence" ? "evidence" : "");
+      ev.spec = spec;
+      if (spec === "requirements" || spec.startsWith("entity:req:")) {
+        ev.goals = goals.map(g => g.id);
+        for (const g of goals) ev.fids.push(...g.facts);
+      }
+      ev.fids = [...new Set(ev.fids)];
+      ev.intent = viewIntent(call.name, spec);
+      ev.signals = [...countSignals(data)].sort((a, b) => b[1] - a[1]);
+      ev.goal = goalState(data);
+      ev.changes = Array.isArray(data?.changes) ? (data.truncation?.sections?.find(s => s.path === "changes")?.total ?? data.changes.length) : null;
+      ev.title = `${call.name}("${short(spec, 48)}")`;
+      const signs = ev.signals.slice(0, 3).map(([k, n]) => `${SIGNAL_LABEL[k]} ×${n}`).join(", ");
+      ev.caption = call.phase === "MAP"
+        ? `MAP reads the task contract: ${goals.map(g => g.key).join(", ") || "no structured goal"}${ev.goal ? ` (${ev.goal.state})` : ""}, then hands the goal map to ROUTE.`
+        : `ROUTE asks the record to ${ev.intent} and gets back ${ev.fids.length} fact${ev.fids.length === 1 ? "" : "s"}${signs ? `; trouble signs: ${signs}` : ev.goal ? `; the goal is ${ev.goal.state}` : ""}.`;
+    } else if (call.name === "route_cases") {
+      const cases = args.candidates || [];
+      ev.windows = cases.map(c => `w:${c.candidate_id}`).filter(id => windows.some(w => w.id === id));
+      ev.fids = [...ids.fids].filter(fid => factById.has(fid));
+      ev.title = `route_cases → ${cases.map(c => `${c.candidate_id}@S${c.issue_step}`).join(", ")}`;
+      ev.caption = `ROUTE closes its search and opens ${cases.length} suspect window${cases.length === 1 ? "" : "s"}: ${cases.map(c => `${c.candidate_id} at step ${c.issue_step} (${(c.issue_fids || []).length} issue facts)`).join("; ")}.`;
+    } else if (call.name === "plan_trace") {
+      ev.phase = "MANAGER";
+      for (const a of args.assignments || []) {
+        const lane = {id: `l:${a.agent_id}`, type: "lane", agent: a.agent_id, anchor: a.anchor_case_id,
+                      cases: a.route_case_ids || [], question: a.question || "", targets: a.search_targets || [],
+                      rows: [], steps: [], fids: [], candidates: [], purpose: ""};
+        lanes.set(a.agent_id, lane);
+        ev.lanes.push(lane.id);
+        const w = windowByCase.get(a.anchor_case_id);
+        if (w) ev.windows.push(w.id);
+      }
+      ev.title = `plan_trace → ${ev.lanes.length} lane${ev.lanes.length === 1 ? "" : "s"}`;
+      ev.caption = `The manager turns each window into one investigation question and assigns it to a TRACE lane: ${[...lanes.values()].map(l => `${l.agent} ← ${l.anchor}`).join(", ")}.`;
+    } else if (call.name === "query_logs") {
+      const lane = lanes.get(args.candidate_id || data?.candidate_id);
+      const rows = data?.rows || [];
+      const fids = new Set([...ids.fids].filter(fid => factById.has(fid)));
+      for (const r of rows) cellFacts(r.step, MODULE_SLOT[r.module] || r.module).forEach(f => fids.add(f.fid));
+      ev.fids = [...fids];
+      ev.sql = data?.query || args.sql || "";
+      ev.lanes = lane ? [lane.id] : [];
+      if (lane) {
+        lane.rows = rows; lane.steps = data?.returned_steps || []; lane.fids = ev.fids;
+        lane.purpose = (ev.sql.match(/Purpose:\s*(.+)/) || [])[1]?.trim() || "";
+      }
+      ev.title = `query_logs(${lane?.agent || "?"})`;
+      ev.caption = `TRACE writes one SQL query over the logs: ${rows.length} rows on ${(data?.returned_steps || []).length} steps come back as evidence for lane ${lane?.agent || "?"}.`;
+    } else if (call.name === "assess") {
+      const lane = lanes.get(args.window_id || data?.window_id);
+      for (const [i, submitted] of (args.candidates || data?.candidates || []).entries()) {
+        // The saved tool response can add resolved fact IDs / citations to the
+        // submitted assessment. Keep those recorded fields without inventing
+        // evidence or replacing the submitted explanation / status.
+        const resolved = data?.candidates?.[i];
+        const same = resolved && resolved.step === submitted.step && resolved.module === submitted.module &&
+          (!resolved.proposition || !submitted.proposition || resolved.proposition === submitted.proposition);
+        const c = same ? {...resolved, ...submitted} : submitted;
+        const cand = {id: `c:${lane?.agent || "?"}:${i}`, candidateId: `trace-window:${lane?.agent || "?"}:${i + 1}`,
+                      assessment: c, assessmentUncertainty: args.uncertainty || data?.uncertainty || "",
+                      explicitFid: factById.has(c.fid ?? c.primary_fid), type: "candidate", lane: lane?.id, step: c.step, module: c.module,
+                      fid: moduleFact(c.step, c.module, c.fid ?? c.primary_fid), status: c.status, faultClass: c.fault_class,
+                      proposition: c.proposition || "", quote: c.output_quote || ""};
+        candidates.push(cand);
+        lane?.candidates.push(cand.id);
+        ev.candidates.push(cand.id);
+        if (cand.fid != null) ev.fids.push(cand.fid);
+      }
+      ev.lanes = lane ? [lane.id] : [];
+      const cs = ev.candidates.map(id => candidates.find(c => c.id === id));
+      ev.title = `assess(${lane?.agent || "?"})`;
+      ev.caption = `TRACE judges lane ${lane?.agent || "?"} and proposes ${cs.length ? cs.map(c => `S${c.step} ${c.module} (${c.status}${c.faultClass ? `, ${c.faultClass}` : ""})`).join("; ") : "no candidate"}.`;
+    } else if (FACT_TOOLS.has(call.name)) {
+      // One fact at a time: check(fid) judges it, span(fid) reads its source, and so on.
+      ev.fids = [...new Set([args.fid, ...ids.fids])].filter(fid => factById.has(fid));
+      ev.verdict = call.name === "check" ? data?.value : null;
+    } else {
+      ev.fids = [...ids.fids].filter(fid => factById.has(fid));
+      ev.title = call.name;
+      ev.caption = `${call.phase} calls ${call.name}.`;
+    }
+    events.push(ev);
+  }
+
+  // Consecutive single-fact calls become one "inspect" event, so a run of forty check/span calls
+  // reads as one access instead of forty.
+  for (let i = 0; i < events.length; i++) {
+    if (!FACT_TOOLS.has(events[i].name)) continue;
+    let j = i;
+    while (j + 1 < events.length && FACT_TOOLS.has(events[j + 1].name) && events[j + 1].phase === events[i].phase) j++;
+    const run = events.slice(i, j + 1);
+    events.splice(i, run.length, inspectEvent(run));
+  }
+
+  // Candidates written by assess without tool_calls (older logs) still come from trace_queries.
+  for (const q of traceQueries || []) {
+    const lane = lanes.get(q.candidate_id);
+    if (lane && !lane.steps.length) lane.steps = q.returned_steps || [];
+  }
+
+  let root = null;
+  const r = result?.root;
+  if (r && r.step != null) {
+    const fid = moduleFact(r.step, r.module, r.fid);
+    const exact = candidates.filter(c => c.candidateId === r.root_id);
+    const matching = candidates.filter(c => c.step === r.step && c.module === r.module);
+    const cand = exact.length === 1 ? exact[0] : matching.length === 1 ? matching[0] : null;
+    root = {id: "root", type: "root", step: r.step, module: r.module, fid, faultClass: r.fault_class,
+            proposition: r.proposition || "", quote: r.output_quote || "", candidate: cand?.id || null,
+            accepted: !!result.accepted, status: result.status, rule: decidingRule(result, managerPlan)};
+  }
+  events.push({
+    phase: "SUBMIT", name: "submit", title: root ? `root = S${root.step} ${root.module}` : "no root",
+    caption: root
+      ? `SUBMIT compares the candidates and names the root cause: step ${root.step} ${root.module}${root.fid != null ? ` (fact ${root.fid})` : ""}, ${root.faultClass || "unclassified"}. ${short(root.proposition, 150)}`
+      : `SUBMIT stops without a root: ${short(result?.stop_reason || result?.status || "no result", 220)}`,
+    fids: root?.fid != null ? [root.fid] : [], eids: [], goals: [], windows: [], lanes: [], candidates: root?.candidate ? [root.candidate] : [],
+    root: !!root,
+  });
+
+  for (const ev of events) {
+    const ents = new Set();
+    for (const fid of ev.fids || []) factById.get(fid)?.args.forEach(a => entityMap.has(a) && entityMap.get(a).kind !== "req" && ents.add(`e:${a}`));
+    ev.entities = [...ents];
+  }
+
+  return {
+    result, input, meta: {tid: record.trajectory_id, task: record.task, taskType: record.task_type, steps,
+           relations: record.relations || {}, kinds},
+    facts, factById, entities, goals, evidence, windows, lanes: [...lanes.values()], candidates, root, events,
+  };
+}
+
+const FACT_TOOLS = new Set(["check", "span", "neighbours", "state", "trace_fact"]);
+const tally = list => { const m = new Map(); list.forEach(x => x != null && m.set(x, (m.get(x) || 0) + 1)); return [...m].sort((a, b) => b[1] - a[1]); };
+const VERDICT_ORDER = ["viol", "unk", "sat"];
+
+function inspectEvent(run) {
+  const fids = [...new Set(run.flatMap(e => e.fids))];
+  const tools = tally(run.map(e => e.name));
+  const verdicts = tally(run.map(e => e.verdict)).sort((a, b) => VERDICT_ORDER.indexOf(a[0]) - VERDICT_ORDER.indexOf(b[0]));
+  const errors = run.filter(e => e.error).length;
+  const only = tools.length === 1 ? tools[0][0] : null;
+  const intent = only === "check" ? `check ${fids.length} facts` : only === "span" ? `read the source of ${fids.length} facts` : `inspect ${fids.length} facts`;
+  const toolText = tools.map(([t, n]) => `${t} ×${n}`).join(", ");
+  return {
+    phase: run[0].phase, name: "inspect", ordinal: run[0].ordinal, call: run[0].call, calls: run, fids, eids: [], goals: [],
+    windows: [], lanes: [], candidates: [], tools, verdicts, errors, intent, spec: toolText,
+    title: `${intent} (${toolText})`,
+    caption: `${run[0].phase} looks at facts one by one: ${toolText}${verdicts.length ? `; verdicts ${verdicts.map(([v, n]) => `${v} ${n}`).join(", ")}` : ""}.`,
+  };
+}
+
+// The manager's decision rule SUBMIT leaned on: the first rule its reasoning names.
+function decidingRule(result, plan) {
+  const rules = plan?.decision_rules || [];
+  const text = [result.root?.reasoning, ...(result.candidate_comparisons || []).map(c => c.reasoning)].join(" ");
+  const named = rules.map(r => [r, text.indexOf(r.rule_id)]).filter(([, i]) => i >= 0).sort((a, b) => a[1] - b[1]);
+  const r = named[0]?.[0];
+  return r ? {id: r.rule_id, conclusion: r.conclusion || "", count: rules.length} : rules.length ? {id: null, count: rules.length} : null;
+}
+
+const factRepr = f => `[${f.fid}] t${f.t} ${f.slot}/${f.side} ${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? JSON.stringify(f.value) : JSON.stringify(f.value), 90)}`;
+
+return {SLOTS,SLOT_LABEL,loadQueryScene,SIGNAL_LABEL,viewIntent,buildQueryScene,factRepr};
+})();
+__modules["query/clusters.js"] = (() => {
+// Groups the scene into point clouds: the whole DSL record as one core, then one cloud per
+// debugger access (a ROUTE view, a suspect window, a TRACE lane's SQL result), plus the
+// candidate and root markers. A cloud expands into entity groups, a group into its facts.
+const {short} = __modules["util.js"];
+const {SIGNAL_LABEL, SLOT_LABEL} = __modules["query/model.js"];
+const MAX_GROUPS = 12;
+
+function buildClusters(scene) {
+  const clusters = [];
+  const add = c => { clusters.push({links: [], ...c}); return c; };
+  add({id: "core", tier: 0, kind: "core", event: 0, fids: scene.facts.map(f => f.fid),
+       label: "DSL record", detail: `${scene.facts.length} facts · ${scene.entities.length} entities`});
+
+  scene.events.forEach((ev, i) => {
+    if (ev.phase === "MAP" || (ev.phase === "ROUTE" && ev.name !== "route_cases")) {
+      ev.cluster = `q${ev.ordinal}`;
+      add({id: ev.cluster, tier: 1, kind: "query", event: i, fids: ev.fids, error: ev.error, phase: ev.phase, intent: ev.intent,
+           label: ev.error ? `${ev.name} · rejected` : ev.name === "inspect" ? ev.intent : ev.spec || ev.name, detail: `${ev.fids.length} facts`});
+    } else if (ev.name === "route_cases") {
+      ev.cluster = ev.windows[0];
+      for (const id of ev.windows) {
+        const w = scene.windows.find(x => x.id === id);
+        add({id, tier: 2, kind: "window", event: i, fids: w.fids, ref: w, label: `${w.caseId} · S${w.step}`, detail: `${w.fids.length} issue facts`});
+      }
+    } else if (ev.name === "plan_trace") {
+      ev.cluster = ev.lanes[0];
+      for (const id of ev.lanes) {
+        const l = scene.lanes.find(x => x.id === id);
+        add({id, tier: 3, kind: "lane", event: i, fill: null, fids: l.fids, ref: l, label: l.agent, detail: `← ${l.anchor}`});
+      }
+    } else if (ev.name === "query_logs" && ev.lanes[0]) {
+      ev.cluster = ev.lanes[0];
+      const c = clusters.find(x => x.id === ev.lanes[0]);
+      if (c) { c.fill = i; c.fids = ev.fids; c.detail = `${ev.fids.length} facts · ${c.ref.rows.length} SQL rows`; }
+    } else if (ev.name === "assess") {
+      ev.cluster = ev.candidates[0] || ev.lanes[0];
+      for (const id of ev.candidates) {
+        const cand = scene.candidates.find(x => x.id === id);
+        add({id, tier: 4, kind: "candidate", event: i, fids: cand.fid != null ? [cand.fid] : [], ref: cand,
+             label: `S${cand.step} ${cand.module}`, detail: cand.faultClass || cand.status});
+      }
+    } else if (ev.name === "submit" && scene.root) {
+      ev.cluster = "root";
+      add({id: "root", tier: 5, kind: "root", event: i, fids: scene.root.fid != null ? [scene.root.fid] : [], ref: scene.root,
+           label: `ROOT · S${scene.root.step} ${scene.root.module}`, detail: scene.root.faultClass || ""});
+    }
+  });
+  // Lanes with no SQL result keep the plan_trace event as their fill.
+  for (const c of clusters) if (c.kind === "lane" && c.fill == null) c.fill = c.event;
+  for (const c of clusters) if (c.fill == null) c.fill = c.event;
+
+  // Links: the core feeds every query; queries that saw a window's issue facts feed it;
+  // a window feeds its lanes, a lane its candidates, the chosen candidate the root.
+  // Each link says what happened along it: a title (what was asked), a detail line (what came
+  // back) and a card of rows for the hover.
+  const byId = new Map(clusters.map(c => [c.id, c]));
+  const link = (a, b, desc, weight = 1) => { if (byId.has(a) && byId.has(b)) byId.get(b).links.push({from: a, weight, ...desc}); };
+  const seen = new Set();
+  for (const c of clusters) {
+    if (c.kind === "query") {
+      const ev = scene.events[c.event];
+      const fresh = c.fids.filter(fid => !seen.has(fid)).length;
+      c.fids.forEach(fid => seen.add(fid));
+      link("core", c.id, queryEdge(ev, c, fresh, scene));
+    }
+    if (c.kind === "window") {
+      const own = new Set(c.fids);
+      for (const q of clusters.filter(x => x.kind === "query")) {
+        const shared = q.fids.filter(fid => own.has(fid));
+        if (!shared.length) continue;
+        const slots = [...new Set(shared.map(fid => scene.factById.get(fid).slot))].map(s => SLOT_LABEL[s]);
+        link(q.id, c.id, {title: `${shared.length}/${own.size} clues → S${c.ref.step}`, detail: slots.join(" · "),
+                          card: [["clues", shared.map(fid => `f${fid}`).join(" ")], ["window", `${c.ref.caseId} at step ${c.ref.step}`]]}, shared.length / own.size);
+      }
+    }
+    if (c.kind === "lane") {
+      const l = c.ref;
+      link(`w:${l.anchor}`, c.id, {title: `assign ${l.agent}`, detail: `“${short(l.question, 44)}”`,
+        card: [["question", l.question], ["targets", `${l.targets.length} search targets`]]});
+    }
+    if (c.kind === "candidate") {
+      const lane = byId.get(c.ref.lane)?.ref;
+      const mods = countBy(lane?.rows || [], r => r.module).slice(0, 3).map(([m, n]) => `${m} ${n}`).join(" · ");
+      link(c.ref.lane, c.id, {
+        title: lane?.purpose ? short(lane.purpose.replace(/^test whether /i, "tests: "), 46) : "one SQL query",
+        detail: `${lane?.rows.length || 0} rows${mods ? ` · ${mods}` : ""} → ${c.ref.status}`,
+        card: [["purpose", lane?.purpose || "—"], ["rows", `${lane?.rows.length || 0} on ${lane?.steps.length || 0} steps`],
+               ["by module", countBy(lane?.rows || [], r => r.module).map(([m, n]) => `${m} ${n}`).join(" · ")],
+               ["verdict", `S${c.ref.step} ${c.ref.module} · ${c.ref.status}${c.ref.faultClass ? ` · ${c.ref.faultClass}` : ""}`]],
+      });
+    }
+    if (c.kind === "root") {
+      const r = c.ref, rule = r.rule;
+      link(r.candidate || clusters.find(x => x.kind === "lane")?.id, c.id, {
+        title: "chosen as root cause",
+        detail: rule?.id ? `rule ${rule.id}` : `${r.faultClass || "root"}`,
+        card: [["rule", rule?.id ? `${rule.id} (of ${rule.count})` : "—"], ["conclusion", rule?.conclusion || "—"],
+               ["fault", r.faultClass || "—"], ["claim", r.proposition]],
+      });
+    }
+  }
+  const PHASE = {core: "PARSE", window: "ROUTE", lane: "TRACE", candidate: "TRACE", root: "SUBMIT"};
+  for (const c of clusters) c.phaseKey = c.kind === "query" ? c.phase : PHASE[c.kind];
+
+  for (const c of clusters) {
+    c.groups = groupByEntity(c.fids, scene);
+    c.structure = structureOf(c.fids, scene);
+  }
+  return {clusters, byId};
+}
+
+// Inside a cloud the DSL itself ties the facts together: every fact hangs off the entities it
+// names (a hub per entity with two or more facts here), and facts of one mutable relation on
+// the same key — at(agent:self, ·), open(cabinet:1) — form a thread through time.
+function structureOf(fids, scene) {
+  const relations = scene.meta.relations || {};
+  const named = new Map(), keyed = new Map();
+  for (const fid of fids) {
+    const f = scene.factById.get(fid);
+    if (!f) continue;
+    for (const a of new Set(f.args)) {
+      if (a.startsWith("req:") || a.startsWith("int:")) continue;
+      if (!named.has(a)) named.set(a, []);
+      named.get(a).push(fid);
+    }
+    const rel = relations[f.rel];
+    if (rel && !rel.props?.includes("mutable")) continue;
+    const key = `${f.rel}(${(rel?.key || [0]).map(i => f.args[i] ?? "").join(", ")})`;
+    if (!keyed.has(key)) keyed.set(key, []);
+    keyed.get(key).push(f);
+  }
+  const hubs = [...named].filter(([, list]) => list.length > 1).map(([key, list]) => ({key, fids: list}))
+    .sort((a, b) => b.fids.length - a.fids.length);
+  const spokes = hubs.flatMap((h, j) => h.fids.map(fid => [fid, j]));
+  const threads = [];
+  for (const [key, list] of keyed) {
+    list.sort((a, b) => a.t - b.t || a.fid - b.fid);
+    for (let k = 1; k < list.length; k++) threads.push([list[k - 1].fid, list[k].fid, key]);
+  }
+  return {hubs, spokes, threads};
+}
+
+// Everything upstream and downstream of a cloud along its links: for the root, the candidate,
+// lane, window, the queries that found its clues and the record; for a query, what it fed.
+function chainOf({clusters, byId}, id) {
+  const down = new Map(clusters.map(c => [c.id, []]));
+  for (const c of clusters) for (const l of c.links) down.get(l.from)?.push(c.id);
+  const chain = new Set([id]);
+  const walk = (start, next) => {
+    const stack = [start];
+    while (stack.length) for (const n of next(stack.pop())) if (!chain.has(n)) { chain.add(n); stack.push(n); }
+  };
+  walk(id, x => byId.get(x)?.links.map(l => l.from) || []);
+  walk(id, x => down.get(x) || []);
+  return chain;
+}
+
+const countBy = (list, key) => {
+  const m = new Map();
+  for (const x of list) m.set(key(x), (m.get(key(x)) || 0) + 1);
+  return [...m].sort((a, b) => b[1] - a[1]);
+};
+
+// A ROUTE edge: what the view asked, then what it turned up (trouble signals first, else the
+// goal's state, else a count).
+function queryEdge(ev, c, fresh, scene) {
+  const facts = c.fids.map(fid => scene.factById.get(fid));
+  const ts = facts.map(f => f.t);
+  const signals = (ev.signals || []).map(([s, n]) => `${SIGNAL_LABEL[s]} ×${n}`);
+  let detail;
+  if (ev.name === "inspect") detail = ev.verdicts.length ? ev.verdicts.map(([v, n]) => `${v} ${n}`).join(" · ")
+    : ts.length ? `S${Math.min(...ts)}–S${Math.max(...ts)}` : `${ev.calls.length} calls`;
+  else if (ev.error) detail = `rejected · ${ev.error.code || "error"}`;
+  else if (signals.length) detail = signals.slice(0, 2).join(" · ");
+  else if (ev.goal) detail = `goal ${ev.goal.state}${ev.goal.decided.length ? ` · decided at S${ev.goal.decided.join(", S")}` : ""}`;
+  else if (ev.changes != null) detail = `${ev.changes} state changes`;
+  else detail = `${c.fids.length} facts`;
+  const card = [
+    ["asked", `${ev.name}(${JSON.stringify(ev.spec ?? ev.call?.arguments?.spec ?? "")})`],
+    ["steps", ts.length ? `S${Math.min(...ts)}–S${Math.max(...ts)}` : "—"],
+    ["returned", `${c.fids.length} facts · ${fresh} new`],
+    ["modules", countBy(facts, f => f.slot).map(([s, n]) => `${s} ${n}`).join(" · ") || "—"],
+  ];
+  if (signals.length) card.push(["signals", signals.join(" · ")]);
+  if (ev.goal) card.push(["goal", detail]);
+  if (ev.error) card.push(["error", ev.error.message]);
+  if (ev.name === "inspect") {
+    card[0] = ["asked", ev.spec];
+    if (ev.verdicts.length) card.push(["verdicts", ev.verdicts.map(([v, n]) => `${v} ${n}`).join(" · ")]);
+    if (ev.errors) card.push(["rejected", `${ev.errors} calls`]);
+  }
+  return {title: ev.intent || ev.name, detail, card};
+}
+
+// The entity a fact is mostly about: its first non-agent argument, else its first one.
+function primaryEntity(f) {
+  return f.args.find(a => !a.startsWith("agent:") && !a.startsWith("req:")) || f.args[0] || "(none)";
+}
+
+function groupByEntity(fids, scene) {
+  const groups = new Map();
+  for (const fid of fids) {
+    const f = scene.factById.get(fid);
+    if (!f) continue;
+    const key = primaryEntity(f);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(fid);
+  }
+  let list = [...groups].map(([key, list]) => ({key, fids: list.sort((a, b) => scene.factById.get(a).t - scene.factById.get(b).t)}))
+    .sort((a, b) => b.fids.length - a.fids.length);
+  if (list.length > MAX_GROUPS) {
+    const rest = list.slice(MAX_GROUPS - 1);
+    list = [...list.slice(0, MAX_GROUPS - 1), {key: `+${rest.length} more entities`, other: true, fids: rest.flatMap(g => g.fids)}];
+  }
+  return list;
+}
+
+// Evidence roles a fact can earn, each tied to the cloud that gives it; the stage shows a role
+// only once that cloud is on screen. Later roles win: issue < candidate < root.
+const ROLE_ORDER = ["issue", "candidate", "root"];
+function factRoles(clusters) {
+  const roles = new Map();
+  const give = (fid, role, id) => { if (!roles.has(fid)) roles.set(fid, []); roles.get(fid).push({role, id}); };
+  for (const c of clusters) {
+    const role = c.kind === "window" ? "issue" : c.kind === "candidate" ? "candidate" : c.kind === "root" ? "root" : null;
+    if (role) c.fids.forEach(fid => give(fid, role, c.id));
+  }
+  return roles;
+}
+
+// The facts that earned each role, furthest-reaching first: a clue that went on to be the root
+// leads the clue list.
+function roleFacts(clusters) {
+  const roles = factRoles(clusters);
+  const reach = fid => Math.max(...roles.get(fid).map(r => ROLE_ORDER.indexOf(r.role)));
+  const out = new Map(ROLE_ORDER.map(r => [r, []]));
+  for (const [fid, list] of roles) for (const r of new Set(list.map(x => x.role))) out.get(r).push(fid);
+  for (const list of out.values()) list.sort((a, b) => reach(b) - reach(a) || a - b);
+  return {byRole: out, reach: fid => roles.has(fid) ? ROLE_ORDER[reach(fid)] : null};
+}
+
+// One fact's way from the record to its verdict: every cloud that returned it, climbing the
+// tiers in call order, each stop saying what that step made of the fact. Where the way stops
+// short of the root, or starts above ROUTE, a note says why.
+function journeyOf(scene, {clusters, byId}, fid) {
+  const f = scene.factById.get(fid);
+  const at = c => c.kind === "lane" ? c.fill : c.event;
+  const clouds = clusters.filter(c => c.kind !== "core" && c.fids.includes(fid)).sort((a, b) => at(a) - at(b) || a.tier - b.tier);
+  const stops = [{id: "core", kind: "core", event: 0, phase: "PARSE", outcome: `compiled from S${f.t} ${SLOT_LABEL[f.slot]}`}];
+  let seen = 0;
+  for (const c of clouds) {
+    const ev = scene.events[at(c)];
+    let outcome;
+    if (c.kind === "query") {
+      const verdict = (ev.calls || []).find(e => e.call?.arguments?.fid === fid && e.verdict)?.verdict;
+      outcome = `${seen++ ? "returned again" : "first returned"}${verdict ? ` · check → ${verdict}` : ""}`;
+    } else if (c.kind === "window") outcome = `clue of suspect window ${c.ref.caseId} at S${c.ref.step}`;
+    else if (c.kind === "lane") {
+      const own = c.ref.rows.some(r => r.step === f.t && r.module === SLOT_LABEL[f.slot]);
+      outcome = own ? `SQL returned its row (S${f.t} ${SLOT_LABEL[f.slot]})` : c.ref.rows.some(r => r.step === f.t) ? `SQL returned step S${f.t}` : "SQL returned it";
+    } else if (c.kind === "candidate") outcome = `blamed: S${c.ref.step} ${c.ref.module} · ${c.ref.status}${c.ref.faultClass ? ` · ${c.ref.faultClass}` : ""}`;
+    else if (c.kind === "root") outcome = `chosen as root cause${c.ref.rule?.id ? ` by rule ${c.ref.rule.id}` : ""}`;
+    stops.push({id: c.id, kind: c.kind, event: at(c), phase: c.phaseKey, outcome});
+  }
+
+  // Why it stops: judged at the highest tier it reached; in parallel lanes, by all of them.
+  const first = clouds[0], top = Math.max(-1, ...clouds.map(c => c.tier)), last = clouds.findLast(c => c.tier === top);
+  const start = !first || first.kind === "query" ? null
+    : first.kind === "window" ? "put in a window without a ROUTE view returning it"
+    : first.kind === "lane" ? "found by TRACE's SQL directly, not via ROUTE"
+    : first.kind === "candidate" ? "named by TRACE's assess directly" : "named by SUBMIT directly";
+  let end = null;
+  if (!last) end = "no debugger call returned it";
+  else if (last.kind === "query") end = "ROUTE read it but put it in no suspect window";
+  else if (last.kind === "window") {
+    const lanes = clusters.filter(c => c.kind === "lane" && (c.ref.anchor === last.ref.caseId || c.ref.cases.includes(last.ref.caseId)));
+    end = lanes.length ? `the SQL of ${lanes.map(l => l.ref.agent).join(", ")} did not return it` : `window ${last.ref.caseId} got no TRACE lane`;
+  } else if (last.kind === "lane") {
+    const lanes = new Set(clouds.filter(c => c.kind === "lane").map(c => c.id));
+    const blamed = [...new Set(clusters.filter(c => c.kind === "candidate" && lanes.has(c.ref.lane)).map(c => `S${c.ref.step} ${c.ref.module}`))];
+    end = blamed.length ? `TRACE blamed ${blamed.join(", ")} instead` : `TRACE blamed no step in ${last.ref.agent}`;
+  } else if (last.kind === "candidate") {
+    const root = byId.get("root")?.ref;
+    end = root ? `SUBMIT chose S${root.step} ${root.module} instead` : "SUBMIT named no root";
+  }
+  return {fid, fact: f, stops, start, end};
+}
+
+const factLabel = f => `${f.rel}(${f.args.join(", ")}) = ${short(typeof f.value === "string" ? f.value : JSON.stringify(f.value), 46)}  @S${f.t}`;
+
+return {buildClusters,chainOf,primaryEntity,ROLE_ORDER,factRoles,roleFacts,journeyOf,factLabel};
+})();
+__modules["query/stage.js"] = (() => {
+// Zero-dependency 3D stage for the cluster tower: a perspective orbit camera over a 2D canvas.
+// Flat square points, 1px lines and HUD brackets; the only motion is camera easing and points
+// moving to their place when a cloud appears, expands or folds.
+const {ballPoint, cloudRadius, PITCH, TIERS} = __modules["query/layout.js"];
+const {factLabel, factRoles, ROLE_ORDER} = __modules["query/clusters.js"];
+const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim", "issue", "cand"];
+const PHASE_TOKENS = {PARSE: "parse", MAP: "map", ROUTE: "route", MANAGER: "manager", TRACE: "trace", SUBMIT: "submit"};
+const readColors = () => {
+  const css = getComputedStyle(document.documentElement);
+  const read = name => css.getPropertyValue(name).trim() || "#888";
+  return {
+    ...Object.fromEntries(TOKENS.map(t => [t, read(`--qg-${t}`)])),
+    phase: Object.fromEntries(Object.entries(PHASE_TOKENS).map(([k, t]) => [k, read(`--${t}`)])),
+  };
+};
+const MAX_FACTS = 26;     // facts listed when a group opens; the inspector has the rest
+const FACT_GAP = 0.5;     // world units between fact rows
+const LABEL_ROOM = 240;   // px kept free each side of an upright journey for its stop labels
+const LABEL_ROW = 90;     // px kept free above and below a journey lying across
+
+function createStage(canvas, scene, model, layout) {
+  const ctx = canvas.getContext("2d");
+  const colors = readColors();
+  const {clusters, byId} = model;
+  const cam = {target: [0, 7, 0], yaw: 0.5, pitch: 0.32, dist: 48, fov: 0.8};
+  let goal = {...cam, target: [...cam.target]};
+  let tourGoal = goal, manual = false;
+  let frame = {visible: new Set(["core"]), filled: new Set(["core"]), focus: new Set(), appear: new Map(), chain: null, labelAll: false, filter: null};
+  const view = {cluster: null, group: null, basis: null, fact: null, selected: null};
+  let hover = null;
+  let targets = [];
+  // A fact's journey (journeyOf) drawn as one numbered line through the clouds that returned
+  // it; focus is the stop the camera is on, or null for the whole line.
+  let journey = null;
+  let rot = false;
+  let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
+  const listeners = {hover: [], select: [], manual: [], view: [], journey: []};
+  const emit = (k, v) => listeners[k].forEach(fn => fn(v));
+  const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // Point instances per cloud; a cloud's points start at the core and travel out to it.
+  const inst = new Map(clusters.map(c => [c.id, c.fids.map((fid, k) => ({fid, k, cur: null}))]));
+  // A fact's evidence role, counted only from clouds already on screen.
+  const roles = factRoles(clusters);
+  const roleColor = {issue: colors.issue, candidate: colors.cand, root: colors.focus};
+  function roleOf(fid) {
+    let best = -1;
+    for (const r of roles.get(fid) || []) if (frame.visible.has(r.id)) best = Math.max(best, ROLE_ORDER.indexOf(r.role));
+    return best < 0 ? null : ROLE_ORDER[best];
+  }
+  const phaseColor = c => colors.phase[c.phaseKey] || colors.label;
+  const groupOf = new Map(clusters.map(c => [c.id, new Map(c.groups.flatMap((g, gi) => g.fids.map(fid => [fid, gi])))]));
+  // The main chain the overview lights: record → query → window → lane → candidate → root.
+  // Walk down from the root through its first link; at the window take the query that gave it
+  // most of its clues.
+  const backbone = new Set();
+  for (let c = byId.get("root"); c; ) {
+    backbone.add(c.id);
+    const links = c.links.filter(l => byId.has(l.from));
+    if (c.kind === "window") { const q = [...links].sort((a, b) => b.weight - a.weight)[0]; if (q) backbone.add(q.from); break; }
+    c = links[0] && byId.get(links[0].from);
+    if (c && (c.kind === "core" || c.kind === "query")) { backbone.add(c.id); break; }
+  }
+  if (backbone.size) backbone.add("core");
+  // Depth fog: clouds behind the tower's middle fade, those in front stay full.
+  const fog = z => 1 - 0.55 * Math.max(0, Math.min(1, (z - cam.dist + 9) / 18));
+  // Entity hubs travel like points; opened, a hub sits on its entity group (or the "+more" one).
+  const hubInst = new Map(clusters.map(c => [c.id, c.structure.hubs.map(() => ({cur: null}))]));
+  const hubGroup = new Map(clusters.map(c => {
+    const other = c.groups.findIndex(g => g.other);
+    return [c.id, c.structure.hubs.map(h => { const gi = c.groups.findIndex(g => g.key === h.key); return gi >= 0 ? gi : other; })];
+  }));
+
+  function resize() {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    const r = canvas.getBoundingClientRect();
+    // A clean capture keeps one logical viewport at every displayed size, so
+    // responsive scaling cannot push its unchanged labels back into each other.
+    W = Number(canvas.dataset?.renderWidth) || r.width;
+    H = Number(canvas.dataset?.renderHeight) || r.height;
+    // A landscape canvas lays the tower on its side: the funnel reads left to right.
+    rot = W > H * 1.05;
+    const pitch = rot ? PITCH.lying : PITCH.upright;
+    if (layout.pitch !== pitch) layout.relayout(pitch);
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+  }
+  function basis() {
+    const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+    const eye = [cam.target[0] + cam.dist * cp * Math.sin(cam.yaw), cam.target[1] + cam.dist * sp, cam.target[2] + cam.dist * cp * Math.cos(cam.yaw)];
+    const f = norm(sub(cam.target, eye)), r = norm(cross(f, [0, 1, 0]));
+    return {eye, f, r, u: cross(r, f), focal: H / (2 * Math.tan(cam.fov / 2))};
+  }
+  function project(p) {
+    const d = sub(p, B.eye), z = dot(d, B.f);
+    if (z < 0.5) return null;
+    const a = B.focal * dot(d, B.r) / z, b = B.focal * dot(d, B.u) / z;
+    // On its side the picture turns a quarter clockwise: the camera's up points right.
+    return rot ? {x: W / 2 + b, y: H / 2 + a, z, s: B.focal / z} : {x: W / 2 + a, y: H / 2 - b, z, s: B.focal / z};
+  }
+  function drawNebula(now) {
+    const moving = !reducedMotion(), t = moving ? now / 1000 : 0;
+    const span = Math.max(W, H), driftX = moving ? Math.sin(t * 0.035) * W * 0.025 : 0, driftY = moving ? Math.cos(t * 0.028) * H * 0.018 : 0;
+    const cloud = (x, y, radius, stops) => {
+      const haze = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      for (const [at, color] of stops) haze.addColorStop(at, color);
+      ctx.fillStyle = haze; ctx.fillRect(0, 0, W, H);
+    };
+    ctx.save(); ctx.globalCompositeOperation = "screen";
+    cloud(W * 0.36 + driftX, H * 0.43 + driftY, span * 0.67, [[0, "rgba(126, 73, 208, 0.27)"], [.42, "rgba(76, 57, 161, 0.16)"], [1, "rgba(7, 10, 16, 0)"]]);
+    cloud(W * 0.73 - driftX * .7, H * 0.59 - driftY, span * 0.58, [[0, "rgba(39, 145, 192, 0.23)"], [.48, "rgba(36, 88, 159, 0.13)"], [1, "rgba(7, 10, 16, 0)"]]);
+    cloud(W * 0.56, H * 0.22 - driftY, span * 0.4, [[0, "rgba(198, 87, 171, 0.13)"], [.5, "rgba(96, 76, 162, 0.07)"], [1, "rgba(7, 10, 16, 0)"]]);
+    // Sparse, deterministic background stars add depth without encoding graph data.
+    const twinkle = moving ? t : 0;
+    for (let i = 0; i < 48; i++) {
+      const x = ((Math.sin(i * 127.1 + 8.3) * 43758.5453) % 1 + 1) % 1 * W;
+      const y = ((Math.sin(i * 311.7 + 2.1) * 24634.6345) % 1 + 1) % 1 * H;
+      const alpha = 0.07 + 0.08 * (0.5 + 0.5 * Math.sin(twinkle * (0.14 + (i % 5) * 0.02) + i * 1.7));
+      const radius = i % 17 === 0 ? 0.9 : 0.45 + (i % 3) * 0.08;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = i % 4 === 0 ? "#b8caff" : "#d9e4ff";
+      ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+  // World directions that read as screen right and screen down for a camera frame {r, u}.
+  const screenRight = ({r, u}) => rot ? u : r;
+  const screenDown = ({r, u}) => rot ? r : scale(u, -1);
+
+  // Expanded layout: entity groups on a ring in the camera plane around the cloud, the open
+  // group's facts as a column beside it.
+  const groupRing = c => layout.radius.get(c.id) + 1.3 + 0.07 * c.groups.length;
+  function groupCenter(c, gi) {
+    const center = layout.pos.get(c.id), R = groupRing(c), a = Math.PI / 2 - gi / c.groups.length * Math.PI * 2;
+    const {r, u} = view.basis;
+    return add(center, add(scale(r, R * Math.cos(a)), scale(u, R * Math.sin(a))));
+  }
+  function factSlot(c, gi, k, n) {
+    const gc = groupCenter(c, gi), right = screenRight(view.basis), down = screenDown(view.basis);
+    const top = (Math.min(n, MAX_FACTS) - 1) / 2 * FACT_GAP;
+    return add(gc, add(scale(right, cloudRadius(n) * 0.7 + 0.8), scale(down, k * FACT_GAP - top)));
+  }
+  function targetOf(c, p) {
+    const center = layout.pos.get(c.id), R = layout.radius.get(c.id), shape = layout.shape.get(c.id);
+    if (view.cluster !== c.id) return add(center, scale(shape ? shape.fact.get(p.fid) : ballPoint(p.k), R));
+    const gi = groupOf.get(c.id).get(p.fid), g = c.groups[gi];
+    const k = g.fids.indexOf(p.fid);
+    if (view.group === gi && k < MAX_FACTS) return factSlot(c, gi, k, g.fids.length);
+    return add(groupCenter(c, gi), scale(ballPoint(k), cloudRadius(g.fids.length) * 0.7));
+  }
+  function hubTarget(c, j) {
+    const gi = hubGroup.get(c.id)[j];
+    if (view.cluster === c.id && gi >= 0) return groupCenter(c, gi);
+    return add(layout.pos.get(c.id), scale(layout.shape.get(c.id).hub[j], layout.radius.get(c.id)));
+  }
+
+  // The DSL inside a cloud: hairline spokes from each fact to the entities it names, threads in
+  // the phase colour along each state's timeline, and the hubs as small rings. With a group
+  // open, ties to its facts stay lit and the rest drop back.
+  function drawStructure(c, alpha, isOpen, m) {
+    const st = c.structure, hubs = hubInst.get(c.id);
+    if (!layout.shape.get(c.id)) return;
+    st.hubs.forEach((h, j) => {
+      const t = hubTarget(c, j), q = hubs[j];
+      if (!q.cur) q.cur = c.kind === "core" ? t : [...layout.pos.get("core")];
+      for (let i = 0; i < 3; i++) q.cur[i] += (t[i] - q.cur[i]) * m;
+    });
+    const cur = new Map(inst.get(c.id).map(p => [p.fid, p.cur]));
+    const lit = isOpen && view.group != null ? new Set(c.groups[view.group].fids) : null;
+    const path = (pairs, color, a) => {
+      if (!pairs.length || a < 0.01) return;
+      stroke(color, a, 1);
+      ctx.beginPath();
+      for (const [p, q] of pairs) {
+        const pa = project(p), pb = project(q);
+        if (pa && pb) { ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); }
+      }
+      ctx.stroke();
+    };
+    const split = (list, touches) => lit ? [list.filter(e => !touches(e)), list.filter(touches)] : [list, []];
+    const [spokeDim, spokeLit] = split(st.spokes, ([fid]) => lit.has(fid));
+    const [threadDim, threadLit] = split(st.threads, ([a, b]) => lit.has(a) || lit.has(b));
+    const spokeSeg = ([fid, j]) => [cur.get(fid), hubs[j].cur];
+    const threadSeg = ([a, b]) => [cur.get(a), cur.get(b)];
+    const base = lit ? 0.3 : 1;
+    path(spokeDim.map(spokeSeg), colors["line-hi"], alpha * (isOpen ? 0.3 : 0.22) * base);
+    path(threadDim.map(threadSeg), phaseColor(c), alpha * (isOpen ? 0.6 : 0.5) * base);
+    path(spokeLit.map(spokeSeg), colors["line-hi"], alpha * 0.7);
+    path(threadLit.map(threadSeg), phaseColor(c), alpha * 0.95);
+    ctx.setLineDash([]);
+    // Rings only for the entities the inspector lists; the rest still anchor their spokes.
+    const other = c.groups.findIndex(g => g.other);
+    hubs.forEach((q, j) => {
+      const s = hubGroup.get(c.id)[j] !== other && project(q.cur);
+      if (!s) return;
+      const agent = st.hubs[j].key.startsWith("agent:");
+      stroke(colors.label, alpha * (agent ? 0.9 : 0.7), 1);
+      ctx.beginPath(); ctx.arc(s.x, s.y, Math.max(2, Math.min(agent ? 5 : 3.5, s.s * (agent ? 0.14 : 0.09))), 0, Math.PI * 2); ctx.stroke();
+    });
+  }
+  // A selected, folded cloud names its biggest hubs.
+  function hubLabels(c, alpha) {
+    const hubs = hubInst.get(c.id);
+    ctx.textAlign = "left";
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    ctx.fillStyle = colors["label-dim"];
+    ctx.globalAlpha = alpha;
+    c.structure.hubs.slice(0, 4).forEach((h, j) => {
+      const s = hubs[j].cur && project(hubs[j].cur);
+      if (s) ctx.fillText(h.key, s.x + 6, s.y - 4);
+    });
+  }
+
+  function expansionGoal() {
+    const c = byId.get(view.cluster);
+    if (view.group != null) {
+      const g = c.groups[view.group];
+      const t = add(groupCenter(c, view.group), scale(screenRight(view.basis), 2.6));
+      return {target: t, yaw: cam.yaw, pitch: cam.pitch, dist: Math.max(10, Math.min(g.fids.length, MAX_FACTS) * FACT_GAP * 1.9 + 4)};
+    }
+    return {target: layout.pos.get(c.id), yaw: cam.yaw, pitch: cam.pitch, dist: Math.max(12, groupRing(c) * 4.2)};
+  }
+
+  // How much of the canvas the HUD covers on each side: header, footer, the open panels, and
+  // the phase ruler (left when upright, along the bottom when on its side).
+  function hudInsets() {
+    const box = canvas.getBoundingClientRect(), page = canvas.closest(".qg");
+    const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
+    const panel = rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)");
+    const head = rect(".qg > header"), foot = rect(".qg-foot");
+    const ruler = rot ? 0 : 130;
+    return {
+      left: Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0),
+      right: Math.max(16, panel ? box.right - panel.left + 12 : 0),
+      top: head ? Math.max(0, head.bottom - box.top) : 0,
+      bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot ? 36 : 0),
+    };
+  }
+  // A preset marked fit frames the whole cone in the canvas area the HUD leaves free: the
+  // distance fits the cone's length and width to that area in either orientation, and the
+  // target slides so the cone centres in it.
+  function fitGoal(g) {
+    // Lying down, a low camera sees the cone from the side instead of down its length.
+    if (rot && g.pitch < 0.6) g = {...g, pitch: g.pitch * 0.35};
+    const cp = Math.cos(g.pitch), sp = Math.abs(Math.sin(g.pitch));
+    const R = TIERS[0].plate, along = (layout.top + 2.5 - layout.bottom) * cp + 2 * R * sp, across = 2 * R;
+    const {left, right, top, bottom} = hudInsets();
+    const freeW = Math.max(240, W - left - right), freeH = Math.max(200, H - top - bottom);
+    const [needW, needH] = rot ? [along, across] : [across, along];
+    const focal = H / (2 * Math.tan(cam.fov / 2));
+    const dist = 1.08 * focal * Math.max(needW / freeW, needH / freeH);
+    const px = dist / focal;                    // world units per screen pixel at the target
+    const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
+    const frame = camFrame(g);
+    // Moving the target against a screen direction moves the picture along it.
+    const shift = add(scale(screenRight(frame), -ox), scale(screenDown(frame), -oy));
+    return {...g, dist, target: add([0, (layout.top + layout.bottom) / 2 + 0.6, 0], shift)};
+  }
+
+  // A journey is framed from the angle the overview (or tour) camera has: all its stops fit the
+  // free canvas with room for their labels on the right; a focused stop is seen up close.
+  function journeyGoal() {
+    const base = tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+    const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
+    if (journey.focus != null) {
+      const s = journey.stops[journey.focus];
+      return {...g, target: journeyPoint(s), dist: Math.max(14, (layout.radius.get(s.id) || 1) * 7)};
+    }
+    const pts = journey.stops.map(journeyPoint), frame = camFrame(g);
+    const R = screenRight(frame), D = screenDown(frame);
+    const xs = pts.map(p => dot(p, R)), ys = pts.map(p => dot(p, D));
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const {left, right, top, bottom} = hudInsets();
+    const wide = x1 - x0 >= y1 - y0;
+    const freeW = Math.max(200, W - left - right - (wide ? 60 : 2 * LABEL_ROOM)), freeH = Math.max(160, H - top - bottom - (wide ? 2 * LABEL_ROW : 60));
+    const focal = H / (2 * Math.tan(cam.fov / 2));
+    const dist = Math.max(16, 1.2 * focal * Math.max((x1 - x0 + 2) / freeW, (y1 - y0 + 2) / freeH));
+    const px = dist / focal;
+    // Centre the stops in the free area; the label rows (or columns) flank them.
+    const mid = scale(pts.reduce(add, [0, 0, 0]), 1 / pts.length);
+    const at = add(mid, add(scale(R, (x0 + x1) / 2 - dot(mid, R)), scale(D, (y0 + y1) / 2 - dot(mid, D))));
+    const ox = (left - right) / 2 * px, oy = (top - bottom) / 2 * px;
+    return {...g, dist, target: add(at, add(scale(R, -ox), scale(D, -oy)))};
+  }
+  function journeyPoint(s) {
+    return inst.get(s.id)?.find(q => q.fid === journey.fid)?.cur || layout.pos.get(s.id);
+  }
+
+  // The guide has its own panel outside the canvas. Frame the visible evidence itself,
+  // keeping one stable angle while chapters reveal more of the investigation.
+  function guidedGoal() {
+    const visible = clusters.filter(c => frame.visible.has(c.id) && (!frame.chain || frame.chain.has(c.id)));
+    if (!visible.length) return tourGoal;
+    const g = {yaw: frame.captureCamera?.yaw ?? .55, pitch: frame.captureCamera?.pitch ?? .12};
+    const orientation = camFrame(g), right = screenRight(orientation), down = screenDown(orientation);
+    const centers = visible.map(c => layout.pos.get(c.id));
+    const extents = visible.map((c, k) => ({p: centers[k], r: (layout.radius.get(c.id) || 1) + .6}));
+    const x0 = Math.min(...extents.map(({p, r}) => dot(p, right) - r)), x1 = Math.max(...extents.map(({p, r}) => dot(p, right) + r));
+    const y0 = Math.min(...extents.map(({p, r}) => dot(p, down) - r)), y1 = Math.max(...extents.map(({p, r}) => dot(p, down) + r));
+    const mid = scale(centers.reduce(add, [0, 0, 0]), 1 / centers.length);
+    let target = add(mid, add(scale(right, (x0 + x1) / 2 - dot(mid, right)), scale(down, (y0 + y1) / 2 - dot(mid, down))));
+    const dist = Math.max(15, 1.2 * B.focal * Math.max((x1 - x0) / Math.max(220, W - 190), (y1 - y0) / Math.max(180, H - 125))) * (frame.captureCamera?.distanceScale || 1);
+    if (frame.captureCamera?.shiftX) target = add(target, scale(right, frame.captureCamera.shiftX * dist / B.focal));
+    if (frame.captureCamera?.shiftY) target = add(target, scale(down, frame.captureCamera.shiftY * dist / B.focal));
+    return {...g, target, dist};
+  }
+
+  // The journey: segments in the phase colour of the stop they reach, a chevron on each, the
+  // first one dashed when the fact enters above ROUTE; a numbered badge per stop with a callout
+  // saying what that step concluded; a bar where the journey stops.
+  function drawJourney(now) {
+    const J = journey, pts = J.stops.map(s => project(journeyPoint(s)));
+    const lit = k => J.focus == null || J.focus === k;
+    for (let k = 1; k < pts.length; k++) {
+      const a = pts[k - 1], b = pts[k];
+      if (!a || !b) continue;
+      const color = colors.phase[J.stops[k].phase] || colors.focus;
+      const on = J.focus == null || J.focus === k || J.focus === k - 1;
+      stroke(color, on ? 0.95 : 0.35, 1.6, k === 1 && J.start ? [5, 4] : null);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      shootingStar(journeyPoint(J.stops[k - 1]), journeyPoint(J.stops[k]), now, -k * 0.17, color, on ? 1 : 0.35);
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      if (len > 40) {
+        const ux = (b.x - a.x) / len, uy = (b.y - a.y) / len, mx = a.x + (b.x - a.x) * 0.55, my = a.y + (b.y - a.y) * 0.55;
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(mx - 6 * ux - 4 * uy, my - 6 * uy + 4 * ux); ctx.lineTo(mx, my); ctx.lineTo(mx - 6 * ux + 4 * uy, my - 6 * uy - 4 * ux); ctx.stroke();
+      }
+    }
+    const last = pts.length - 1, end = pts[last], prev = pts[last - 1];
+    if (J.end && end && prev) {
+      const len = Math.hypot(end.x - prev.x, end.y - prev.y) || 1, ux = (end.x - prev.x) / len, uy = (end.y - prev.y) / len;
+      const bx = end.x + ux * 14, by = end.y + uy * 14;
+      stroke(colors.label, 0.9, 1.6);
+      ctx.beginPath(); ctx.moveTo(end.x + ux * 8, end.y + uy * 8); ctx.lineTo(bx, by);
+      ctx.moveTo(bx - uy * 7, by + ux * 7); ctx.lineTo(bx + uy * 7, by - ux * 7); ctx.stroke();
+    }
+
+    // Labels as callouts, subway-map style: along a line that runs across, two rows above and
+    // below it; along a line that runs up, two columns beside it. Stops alternate between the
+    // two in their order along the line, each row is swept so no two labels overlap, and a
+    // leader ties every label to its numbered badge.
+    const shown = pts.map((p, k) => p && {k, p}).filter(Boolean);
+    if (!shown.length) return;
+    const bx = shown.map(i => i.p.x), by = shown.map(i => i.p.y);
+    const [minX, maxX, minY, maxY] = [Math.min(...bx), Math.max(...bx), Math.min(...by), Math.max(...by)];
+    const wide = maxX - minX >= maxY - minY;
+    for (const it of shown) {
+      const s = J.stops[it.k], on = lit(it.k);
+      it.color = colors.phase[s.phase] || colors.focus;
+      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 11px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "10px", on ? colors.label : colors["label-dim"]]];
+      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "10px", colors.label]);
+      if (it.k === last && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 10px", colors["ink-hi"]]);
+      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 14;
+      it.h = it.lines.length * 13 + 6;
+    }
+    const order = [...shown].sort((a, b) => wide ? a.p.x - b.p.x : a.p.y - b.p.y);
+    const ins = hudInsets(), GAP = wide ? 10 : 6;
+    const lo = wide ? ins.left + 8 : ins.top + 8, hi = wide ? W - ins.right - 8 : H - ins.bottom - 8;
+    const size = it => wide ? it.w : it.h;
+    // A long journey whose labels outgrow one row per side stacks further rows outward.
+    const levels = Math.max(1, Math.ceil(order.reduce((n, it) => n + size(it) + GAP, 0) / 2 / Math.max(1, hi - lo)));
+    order.forEach((it, i) => { it.side = i % 2 ? 1 : -1; it.level = Math.floor(i / 2) % levels; });
+    const depth = Math.max(...order.map(it => wide ? it.h : it.w)) + 6;
+    for (const side of [-1, 1]) for (let level = 0; level < levels; level++) {
+      const row = order.filter(it => it.side === side && it.level === level);
+      let end = lo - GAP;
+      for (const it of row) { it.a = Math.max(wide ? it.p.x - 12 : it.p.y - it.h / 2, end + GAP); end = it.a + size(it); }
+      let limit = hi + GAP;
+      for (const it of [...row].reverse()) { it.a = Math.min(it.a, limit - GAP - size(it)); limit = it.a; }
+      const out = level * depth;
+      for (const it of row) {
+        it.box = wide ? [it.a, side < 0 ? minY - 30 - out - it.h : maxY + 30 + out, it.w, it.h]
+                      : [side < 0 ? minX - 34 - out - it.w : maxX + 34 + out, it.a, it.w, it.h];
+        // Never past the canvas edge or under a panel: on a narrow canvas a label may cover the
+        // line rather than leave the screen.
+        it.box[0] = Math.max(ins.left + 4, Math.min(W - ins.right - 4 - it.w, it.box[0]));
+        it.box[1] = Math.max(ins.top + 4, Math.min(H - ins.bottom - 4 - it.h, it.box[1]));
+        it.box = it.box.map(Math.round);
+      }
+    }
+    for (const it of shown) {
+      const [x, y, w, h] = it.box, on = lit(it.k), {p} = it;
+      const [lx, ly] = wide ? [Math.max(x + 6, Math.min(x + w - 6, p.x)), it.side < 0 ? y + h : y]
+                            : [it.side < 0 ? x + w : x, Math.max(y + 6, Math.min(y + h - 6, p.y))];
+      stroke(it.color, on ? 0.6 : 0.25, 1);
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(lx, ly); ctx.stroke();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = colors.void;
+      ctx.fillRect(x, y, w, h);
+      stroke(it.color, on ? (J.focus === it.k ? 0.9 : 0.35) : 0.15, 1);
+      ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      ctx.globalAlpha = on ? 1 : 0.6;
+      ctx.fillStyle = it.color;
+      ctx.fillRect(x, y, 2, h);
+      ctx.textAlign = "left";
+      it.lines.forEach(([t, f, col], i) => {
+        ctx.font = `${f} 'IBM Plex Mono', monospace`;
+        ctx.fillStyle = col;
+        ctx.fillText(t, x + 8, y + 14 + i * 13);
+      });
+      targets.push({kind: "stop", k: it.k, stop: J.stops[it.k], x: x + w / 2, y: y + h / 2, r: 0, rect: [x, y, w, h]});
+    }
+    // Badges last, on top of every leader.
+    for (const {k, p, color} of shown) {
+      const on = lit(k);
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = J.focus === k ? color : colors.void;
+      ctx.fillRect(p.x - 8, p.y - 8, 16, 16);
+      stroke(color, on ? 1 : 0.5, 1);
+      ctx.strokeRect(p.x - 7.5, p.y - 7.5, 15, 15);
+      ctx.fillStyle = J.focus === k ? colors.void : on ? colors["ink-hi"] : colors["label-dim"];
+      ctx.font = "600 10px 'IBM Plex Mono', monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(String(k + 1), p.x, p.y + 3.5);
+      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 10});
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function setView(cluster, group = null) {
+    if (cluster && cluster !== view.cluster) view.basis = {r: [...B.r], u: [...B.u]};
+    view.cluster = cluster; view.group = group;
+    manual = false; emit("manual", false);
+    emit("view", {cluster: cluster ? byId.get(cluster) : null, group});
+  }
+
+  // ---- drawing helpers
+  const stroke = (color, alpha = 1, width = 1, dash = null) => {
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = width; ctx.setLineDash(dash || []);
+  };
+  function line3(a, b) {
+    const pa = project(a), pb = project(b);
+    if (!pa || !pb) return;
+    ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+  }
+  function shootingStar(a, b, now, offset, color, intensity = 1) {
+    if (reducedMotion()) return;
+    const pa = project(a), pb = project(b);
+    if (!pa || !pb) return;
+    const phase = ((now / 1700 + offset) % 1 + 1) % 1;
+    const dx = pb.x - pa.x, dy = pb.y - pa.y;
+    const head = Math.max(0.015, Math.min(0.985, phase));
+    const tail = Math.max(0, head - Math.min(0.34, 92 / Math.max(30, Math.hypot(dx, dy))));
+    const hx = pa.x + dx * head, hy = pa.y + dy * head;
+    ctx.save();
+    ctx.globalAlpha = intensity * (phase < 0.035 || phase > 0.965 ? 0.55 : 1);
+    ctx.lineCap = "round";
+    const streak = ctx.createLinearGradient(pa.x + dx * tail, pa.y + dy * tail, hx, hy);
+    streak.addColorStop(0, "rgba(176, 198, 255, 0)"); streak.addColorStop(0.62, color); streak.addColorStop(1, "#ffffff");
+    ctx.strokeStyle = streak; ctx.lineWidth = 3.2;
+    ctx.shadowColor = color; ctx.shadowBlur = 15;
+    ctx.beginPath(); ctx.moveTo(pa.x + dx * tail, pa.y + dy * tail); ctx.lineTo(hx, hy); ctx.stroke();
+    ctx.globalAlpha = intensity;
+    ctx.shadowColor = color; ctx.shadowBlur = 26;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.arc(hx, hy, 3.8, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0; ctx.fillStyle = color;
+    for (const d of [18, 34, 52]) {
+      const x = pa.x + dx * Math.max(0, head - d / Math.max(30, Math.hypot(dx, dy)));
+      const y = pa.y + dy * Math.max(0, head - d / Math.max(30, Math.hypot(dx, dy)));
+      ctx.globalAlpha = intensity * (1 - d / 68) * 0.65;
+      ctx.beginPath(); ctx.arc(x, y, d === 18 ? 1.8 : 1.2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawProgressComet(links, now) {
+    if (reducedMotion() || links.length === 0) return;
+    const cycleNo = Math.floor(now / (920 * links.length));
+    const segments = links.map((link, index) => ({link, index}))
+      .map(({link, index}) => {
+        const sources = (inst.get(link.from) || []).filter(p => p.cur && project(p.cur));
+        const destinations = inst.get(link.to) || [], targetCluster = byId.get(link.to);
+        const targetPoints = targetCluster ? destinations.map(p => targetOf(targetCluster, p)).filter(p => project(p)) : [];
+        const source = sources.length ? sources[(cycleNo * 17 + index * 11) % sources.length].cur : link.a;
+        const destination = targetPoints.length ? targetPoints[(cycleNo * 13 + index * 7) % targetPoints.length] : link.b;
+        return {link, a: source, b: destination, color: link.color};
+      }).filter(s => project(s.a) && project(s.b));
+    if (!segments.length) return;
+    // Fire one comet per investigation hop: source cloud → MAP → ROUTE → TRACE → SUBMIT.
+    const hopMs = 920, cycle = hopMs * segments.length;
+    const time = now % cycle, index = Math.min(segments.length - 1, Math.floor(time / hopMs));
+    const progress = (time - index * hopMs) / hopMs, s = segments[index];
+    // A short volley makes it clear the light is emitted by several fact-stars in the cloud.
+    for (let shot = 0; shot < 1; shot++) {
+      const local = progress / 0.76;
+      if (local < 0 || local > 1) continue;
+      const sourceDots = (inst.get(s.link.from) || []).filter(p => p.cur && project(p.cur));
+      const targetDots = (inst.get(s.link.to) || []).filter(p => p.cur && project(targetOf(byId.get(s.link.to), p)));
+      const source = sourceDots.length ? sourceDots[(cycleNo * 17 + index * 11 + shot * 5) % sourceDots.length].cur : s.a;
+      const targetPoint = targetDots.length ? targetDots[(cycleNo * 13 + index * 7 + shot * 3) % targetDots.length] : null;
+      const destination = targetPoint ? targetOf(byId.get(s.link.to), targetPoint) : s.b;
+      const a = project(source), b = project(destination);
+      if (!a || !b) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, length = Math.hypot(dx, dy);
+      if (length < 2) continue;
+      const head = 0.04 + local * 0.94, tail = Math.max(0, head - Math.min(0.52, 88 / length));
+      const hx = a.x + dx * head, hy = a.y + dy * head, tx = a.x + dx * tail, ty = a.y + dy * tail;
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 1; ctx.lineCap = "round";
+      const streak = ctx.createLinearGradient(tx, ty, hx, hy);
+      streak.addColorStop(0, "rgba(160, 190, 255, 0)"); streak.addColorStop(0.55, s.color); streak.addColorStop(1, "rgba(255,255,255,0.78)");
+      ctx.strokeStyle = streak; ctx.lineWidth = 2; ctx.shadowColor = s.color; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, Math.PI * 2); ctx.fill();
+      // Flash the exact source fact-star as each comet leaves its cloud.
+      if (local < 0.24) {
+        const pulse = (1 - local / 0.24) * 0.38;
+        const glow = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 13);
+        glow.addColorStop(0, "rgba(255,255,255,0.55)"); glow.addColorStop(0.25, s.color); glow.addColorStop(1, "rgba(120,170,255,0)");
+        ctx.globalAlpha = pulse; ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(a.x, a.y, 13, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+  function ring3(center, R, seg = 120) {
+    ctx.beginPath();
+    let open = false;
+    for (let i = 0; i <= seg; i++) {
+      const a = i / seg * Math.PI * 2, p = project([center[0] + R * Math.cos(a), center[1], center[2] + R * Math.sin(a)]);
+      if (!p) { open = false; continue; }
+      open ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y);
+      open = true;
+    }
+    ctx.stroke();
+  }
+  // The ROUTE floor's guide: one turn of a helix through the query clouds, rising with call order.
+  function helix3(t, n) {
+    if (n < 2) return;
+    ctx.beginPath();
+    let open = false;
+    for (let i = 0; i <= 120; i++) {
+      const f = i / 120 * (n - 1) / n, a = Math.PI / 2 - f * Math.PI * 2;
+      const p = project([t.ring * Math.cos(a), t.y + t.rise * f * n / (n - 1), t.ring * Math.sin(a)]);
+      if (!p) { open = false; continue; }
+      open ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y);
+      open = true;
+    }
+    ctx.stroke();
+  }
+  // A tier's floor: only its rim in the phase colour, the near half drawn and the far half
+  // barely there, so six floors read as one cone instead of a stack of discs. The current
+  // floor alone gets a faint fill.
+  function plate(center, R, color, alpha, active) {
+    const N = 96, pts = [];
+    for (let i = 0; i <= N; i++) {
+      const a = i / N * Math.PI * 2, d = [R * Math.cos(a), 0, R * Math.sin(a)];
+      pts.push({p: project(add(center, d)), near: dot(d, B.f) < 0});
+    }
+    ctx.setLineDash([]);
+    if (active) {
+      ctx.beginPath();
+      pts.forEach(({p}, i) => p && (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.globalAlpha = 0.07 * alpha;
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+    for (const near of [false, true]) {
+      stroke(color, (near ? (active ? 0.75 : 0.38) : (active ? 0.3 : 0.1)) * alpha, 1);
+      ctx.beginPath();
+      for (let i = 1; i <= N; i++) {
+        const a = pts[i - 1], b = pts[i];
+        if (!a.p || !b.p || b.near !== near) continue;
+        ctx.moveTo(a.p.x, a.p.y); ctx.lineTo(b.p.x, b.p.y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // Phase ruler: a fixed HUD scale on the left whose ticks sit at each tier's projected height,
+  // one segment per phase, the current tier lit.
+  function ruler(shown, current) {
+    if (rot) return rulerAcross(shown, current);
+    const x = 18, top = 96, bottom = H - 150;
+    const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
+      .map(t => ({t, y: project([0, t.y, 0])?.y})).filter(r => r.y != null)
+      .map(r => ({...r, y: Math.max(top, Math.min(bottom, r.y))}));
+    if (!tiers.length) return;
+    // Clamped ticks keep at least a label's height between them, pushing upward.
+    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 28);
+    stroke(colors.line, 1, 1);
+    ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+    tiers.forEach((r, k) => {
+      const color = colors.phase[r.t.phase];
+      const next = tiers[k + 1];
+      const on = current === r.t.tier;
+      if (next) {
+        stroke(color, on ? 1 : 0.55, on ? 3 : 2);
+        ctx.beginPath(); ctx.moveTo(x, r.y); ctx.lineTo(x, next.y + 3); ctx.stroke();
+      }
+      stroke(color, 1, 1);
+      ctx.beginPath(); ctx.moveTo(x - 5, r.y); ctx.lineTo(x + 6, r.y); ctx.stroke();
+      const n = shown.filter(c => c.tier === r.t.tier).length;
+      ctx.textAlign = "left";
+      ctx.globalAlpha = on ? 1 : 0.75;
+      ctx.fillStyle = color;
+      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, x + 10, r.y - 2);
+      ctx.fillStyle = colors["label-dim"];
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 10);
+    });
+    ctx.globalAlpha = 1;
+  }
+  // On its side the same ruler runs along the bottom, ticks under each floor, labels above.
+  function rulerAcross(shown, current) {
+    const {left, right, bottom} = hudInsets();
+    const y = H - bottom + 22, x0 = left + 8, x1 = W - right - 8;
+    const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
+      .map(t => ({t, x: project([0, t.y, 0])?.x})).filter(r => r.x != null)
+      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 90, r.x))}));
+    if (!tiers.length) return;
+    // Clamped ticks keep at least a label's width between them, pushing right.
+    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 96);
+    stroke(colors.line, 1, 1);
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    tiers.forEach((r, k) => {
+      const color = colors.phase[r.t.phase], next = tiers[k + 1], on = current === r.t.tier;
+      if (next) {
+        stroke(color, on ? 1 : 0.55, on ? 3 : 2);
+        ctx.beginPath(); ctx.moveTo(r.x, y); ctx.lineTo(next.x - 3, y); ctx.stroke();
+      }
+      stroke(color, 1, 1);
+      ctx.beginPath(); ctx.moveTo(r.x, y - 5); ctx.lineTo(r.x, y + 6); ctx.stroke();
+      const n = shown.filter(c => c.tier === r.t.tier).length;
+      ctx.textAlign = "left";
+      ctx.globalAlpha = on ? 1 : 0.75;
+      ctx.fillStyle = color;
+      ctx.font = `${on ? 600 : 500} 10px 'IBM Plex Mono', monospace`;
+      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, r.x + 4, y - 18);
+      // The floor's name only where the next tick leaves room for it.
+      if (!next || next.x - r.x > 150) {
+        ctx.fillStyle = colors["label-dim"];
+        ctx.font = "10px 'IBM Plex Mono', monospace";
+        ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, r.x + 4, y - 7);
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function brackets(x, y, r, color, alpha = 1) {
+    const L = Math.max(5, Math.min(10, r * 0.4));
+    stroke(color, alpha, 1);
+    ctx.beginPath();
+    for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      const cx = x + sx * r, cy = y + sy * r;
+      ctx.moveTo(cx, cy - sy * L); ctx.lineTo(cx, cy); ctx.lineTo(cx - sx * L, cy);
+    }
+    ctx.stroke();
+  }
+  // A cloud's name, led out away from the tower's axis so names on the two sides never cross it;
+  // a fixed side (+1 right, -1 left) overrides that.
+  function tag(x, y, r, title, detail, color, alpha = 1, side = 0) {
+    if (rot) return tagAcross(x, y, r, title, detail, color, alpha, -side);
+    const axis = project([0, cam.target[1], 0]);
+    const s = side || (axis && x < axis.x - 4 ? -1 : 1);
+    // Leader: a short diagonal from the bracket corner, then the text.
+    const x0 = x + s * r, y0 = y - r, x1 = x0 + s * 10, y1 = y0 - 10;
+    stroke(color, alpha * 0.8, 1);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + s * 6, y1); ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = s > 0 ? "left" : "right";
+    ctx.fillStyle = color;
+    ctx.font = "500 11px 'IBM Plex Mono', monospace";
+    ctx.fillText(title, x1 + s * 10, y1 + 4);
+    if (detail) {
+      ctx.fillStyle = colors["label-dim"];
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillText(detail, x1 + s * 10, y1 + 17);
+    }
+  }
+  // On its side the axis runs across, so a name leads up (above the axis) or down (below it);
+  // a fixed side is -1 up, +1 down.
+  function tagAcross(x, y, r, title, detail, color, alpha, side) {
+    const axis = project([0, cam.target[1], 0]);
+    const s = side || (axis && y < axis.y - 4 ? -1 : 1);
+    const x0 = x + r, y0 = y + s * r, x1 = x0 + 10, y1 = y0 + s * 10;
+    stroke(color, alpha * 0.8, 1);
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + 6, y1); ctx.stroke();
+    ctx.globalAlpha = alpha;
+    ctx.textAlign = "left";
+    ctx.fillStyle = color;
+    ctx.font = "500 11px 'IBM Plex Mono', monospace";
+    const ty = s < 0 && detail ? y1 - 9 : y1 + 4;
+    ctx.fillText(title, x1 + 10, ty);
+    if (detail) {
+      ctx.fillStyle = colors["label-dim"];
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillText(detail, x1 + 10, ty + 13);
+    }
+  }
+
+  // A two-line label on an edge (what was asked / what came back), on a void plate so it reads
+  // over points. It sits 40% of the way from the source, so edges converging on one cloud keep
+  // their labels apart, and it is a hover target for the full card.
+  function edgeLabel({a, b, link, cluster, color, hot}) {
+    const pa = project(a), pb = project(b);
+    if (!pa || !pb) return;
+    const x = pa.x + (pb.x - pa.x) * 0.4, y = pa.y + (pb.y - pa.y) * 0.4;
+    ctx.font = "500 10px 'IBM Plex Mono', monospace";
+    const w1 = ctx.measureText(link.title).width;
+    ctx.font = "10px 'IBM Plex Mono', monospace";
+    const w2 = link.detail ? ctx.measureText(link.detail).width : 0;
+    const w = Math.max(w1, w2) + 14, h = link.detail ? 30 : 17;
+    const x0 = Math.round(x - w / 2), y0 = Math.round(y - h / 2);
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.94;
+    ctx.fillStyle = colors.void;
+    ctx.fillRect(x0, y0, w, h);
+    stroke(color, hot ? 1 : 0.65, 1);
+    ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 1, h - 1);
+    ctx.fillStyle = color;
+    ctx.fillRect(x0, y0, 2, h);
+    ctx.globalAlpha = 1;
+    ctx.textAlign = "left";
+    ctx.fillStyle = color;
+    ctx.font = "500 10px 'IBM Plex Mono', monospace";
+    ctx.fillText(link.title, x0 + 8, y0 + 12);
+    if (link.detail) {
+      ctx.fillStyle = colors.label;
+      ctx.font = "10px 'IBM Plex Mono', monospace";
+      ctx.fillText(link.detail, x0 + 8, y0 + 25);
+    }
+    targets.push({kind: "edge", link, cluster, x, y, rect: [x0, y0, w, h]});
+  }
+  function diamond(x, y, r, fill) {
+    ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
+    fill ? ctx.fill() : ctx.stroke();
+  }
+
+  function draw(now) {
+    const dt = Math.min(0.1, (now - (last || now)) / 1000);
+    last = now;
+    const motionEnabled = !reducedMotion();
+    if (onFrame) {
+      const next = onFrame(dt);
+      if (next) { frame = next.frame; tourGoal = next.camera; }
+    }
+    B = basis();
+    if (!manual) {
+      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.guided ? guidedGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+      const k = 1 - Math.exp(-dt * 2.4);
+      if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
+      if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;
+      cam.dist += (goal.dist - cam.dist) * k;
+      for (let i = 0; i < 3; i++) cam.target[i] += (goal.target[i] - cam.target[i]) * k;
+      B = basis();
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = colors.void;
+    ctx.fillRect(0, 0, W, H);
+    drawNebula(now);
+    targets = [];
+    const open = view.cluster ? byId.get(view.cluster) : null;
+    const fade = open ? 0.12 : 1;
+
+    // Frame: the central axis, then one plate per populated tier in its phase colour, so each
+    // phase stands on its own floor. Legend filters can hide phases.
+    const hiddenPhase = frame.filter?.phases;
+    const shown = clusters.filter(c => frame.visible.has(c.id) && !hiddenPhase?.has(c.phaseKey));
+    const tierUsed = new Set(shown.map(c => c.tier));
+    const floors = TIERS.filter(t => tierUsed.has(t.tier));
+    // The axis in segments, each floor's phase colour up to the next floor.
+    floors.forEach((t, k) => {
+      const next = floors[k + 1];
+      stroke(colors.phase[t.phase], 0.55 * fade, 1);
+      line3([0, t.y, 0], [0, next ? next.y : t.y + 1.2, 0]);
+    });
+    // The cone's outline: the two silhouette edges between neighbouring plates, taken along the
+    // camera's horizontal right vector so they hug the rims from any angle.
+    const side = norm([B.r[0], 0, B.r[2]]);
+    stroke(colors["line-hi"], 0.45 * fade, 1, [3, 5]);
+    for (let k = 1; k < floors.length; k++) {
+      const a = floors[k - 1], b = floors[k];
+      for (const s of [-1, 1]) line3([s * side[0] * a.plate, a.y, s * side[2] * a.plate], [s * side[0] * b.plate, b.y, s * side[2] * b.plate]);
+    }
+    // The current floor: the selected cloud's, else the hovered one's, else the tour's focus.
+    const tierOf = id => id ? byId.get(id)?.tier : undefined;
+    const current = (journey?.focus != null ? tierOf(journey.stops[journey.focus].id) : null) ?? tierOf(view.selected) ?? tierOf(hover?.cluster?.id) ?? (frame.focus.size ? tierOf([...frame.focus][0]) : null);
+    for (const t of floors) {
+      const members = shown.filter(c => c.tier === t.tier);
+      const active = current === t.tier;
+      plate([0, t.y, 0], t.plate, colors.phase[t.phase], fade, active);
+      stroke(colors.line, (active ? 0.9 : 0.45) * fade, 1, [2, 5]);
+      if (t.rise) helix3(t, members.length);
+      else if (members.length > 1) ring3([0, t.y, 0], t.ring);
+    }
+
+    // Links between clouds, in the phase colour of the cloud they lead to. The edges of the
+    // focused, open or hovered cloud carry their short label.
+    const edgeLabels = [];
+    const flowEdges = [];
+    const hoverId = hover?.kind === "cluster" ? hover.cluster.id : null;
+    for (const c of shown) for (const l of c.links) {
+      if (!frame.visible.has(l.from)) continue;
+      if (hiddenPhase?.has(byId.get(l.from)?.phaseKey)) continue;
+      // Under a journey the links only hint at the tower; the journey line carries the story.
+      if (journey) { stroke(colors["line-hi"], 0.14, 1, l.from === "core" ? [1, 4] : null); line3(layout.pos.get(l.from), layout.pos.get(c.id)); continue; }
+      const inChain = frame.chain && frame.chain.has(c.id) && frame.chain.has(l.from);
+      const hot = inChain || (!frame.chain && frame.focus.has(c.id)) || (open && (open.id === c.id || (open.id === l.from && l.from !== "core")));
+      const phaseFlow = frame.focus.has(c.id) || frame.focus.has(l.from);
+      const hovered = hoverId === c.id || (hoverId === l.from && l.from !== "core");
+      const spoke = l.from === "core";
+      const color = phaseColor(c);
+      const quiet = frame.chain && !inChain ? 0.25 : 1;
+      const main = frame.labelAll && !frame.chain && !open && backbone.has(c.id) && backbone.has(l.from);
+      if (main) stroke(color, 0.9, 1.6);
+      else stroke(hot || hovered ? color : colors["line-hi"], hot || hovered ? 0.85 : (spoke ? 0.45 : 0.35 + 0.5 * l.weight) * fade * quiet * (frame.labelAll && !frame.chain ? 0.7 : 1), 1, spoke ? [1, 4] : null);
+      line3(layout.pos.get(l.from), layout.pos.get(c.id));
+      if (main || phaseFlow || hot || hovered || inChain && (view.selected === c.id || view.selected === l.from)) {
+        flowEdges.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), from: l.from, to: c.id, color, tier: c.tier || 0});
+      }
+      const edgeHot = hover?.kind === "edge" && hover.link === l;
+      if (((!frame.guided && (hot || hovered)) || edgeHot) && l.title) edgeLabels.push({a: layout.pos.get(l.from), b: layout.pos.get(c.id), link: l, cluster: c, color, hot: edgeHot});
+    }
+    flowEdges.sort((a, b) => a.tier - b.tier);
+
+    // Points.
+    ctx.setLineDash([]);
+    const labelled = [];
+    for (const c of shown) {
+      const appear = frame.appear.get(c.id) ?? 1;
+      const center = layout.pos.get(c.id), pc = project(center);
+      const R = layout.radius.get(c.id);
+      const focus = frame.focus.has(c.id);
+      const isOpen = open?.id === c.id;
+      const outside = frame.chain && !frame.chain.has(c.id);
+      const lead = frame.labelAll && !frame.chain && backbone.has(c.id) && c.kind !== "core";
+      const onWay = journey && journey.stops.some(s => s.id === c.id);
+      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead ? 1 : c.kind === "core" ? 0.5 : 0.6)
+        * appear * (pc && !isOpen ? fog(pc.z) : 1);
+      if (frame.filled.has(c.id)) {
+        if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
+        const gmap = groupOf.get(c.id);
+        const m = 1 - Math.exp(-dt * 5);
+        for (const p of inst.get(c.id)) {
+          const t = targetOf(c, p);
+          if (!p.cur) p.cur = c.kind === "core" ? t : [...layout.pos.get("core")];
+          for (let i = 0; i < 3; i++) p.cur[i] += (t[i] - p.cur[i]) * m;
+        }
+        if (!journey || isOpen) drawStructure(c, alpha, isOpen, m);
+        for (const p of inst.get(c.id)) {
+          const s = project(p.cur);
+          if (!s) continue;
+          const inGroup = isOpen && view.group === gmap.get(p.fid);
+          const role = roleOf(p.fid);
+          // The travelling fact stands out in every cloud it passes; other role facts step back.
+          const traveller = journey?.fid === p.fid;
+          const inspected = frame.factFocus?.has(p.fid);
+          const size = traveller ? 6 : inspected ? 4 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
+          ctx.globalAlpha = isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha;
+          if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, (journey ? 0.5 : 0.95) * appear);
+          if (traveller) ctx.globalAlpha = 1;
+          if (frame.factFocus?.size) ctx.globalAlpha = inspected ? 1 : ctx.globalAlpha * .2;
+          const pointColor = inspected ? colors.focus : role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
+          const twinkle = motionEnabled ? 0.94 + 0.06 * (0.5 + 0.5 * Math.sin(now / 1800 + p.fid * 0.73)) : 1;
+          ctx.save(); ctx.globalAlpha *= twinkle; ctx.fillStyle = pointColor;
+          ctx.shadowColor = pointColor; ctx.shadowBlur = role || traveller ? 5 : 1.5;
+          // This glyph is the data point itself: no decorative stars are added to the scene.
+          const outer = Math.max(1.2, size * 0.78), inner = Math.max(0.55, outer * 0.34);
+          ctx.beginPath();
+          for (let j = 0; j < 8; j++) {
+            const a = -Math.PI / 2 + j * Math.PI / 4, r = j % 2 ? inner : outer;
+            const x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r;
+            if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.closePath(); ctx.fill(); ctx.restore();
+          if (inGroup && c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS) {
+            targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid ? colors["ink-hi"] : colors.label;
+            ctx.font = "11px 'IBM Plex Mono', monospace";
+            ctx.textAlign = "left";
+            ctx.fillText(factLabel(scene.factById.get(p.fid)), s.x + 9, s.y + 4);
+          }
+        }
+      } else if (pc) {
+        // A lane before its SQL result: an empty dashed slot.
+        stroke(colors["line-hi"], alpha, 1, [2, 3]);
+        ctx.beginPath(); ctx.arc(pc.x, pc.y, Math.max(6, 0.6 * pc.s), 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (!pc) continue;
+      const sr = Math.max(7, R * pc.s * 1.08);
+      if (c.kind === "candidate" || c.kind === "root") {
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = colors.focus;
+        ctx.strokeStyle = c.kind === "root" ? colors.focus : colors.cand;
+        ctx.lineWidth = 1.2;
+        diamond(pc.x, pc.y, c.kind === "root" ? 9 : 7, c.kind === "root");
+      }
+      if (c.error) {
+        stroke(colors["ink-dim"], alpha, 1);
+        ctx.beginPath(); ctx.moveTo(pc.x - 4, pc.y - 4); ctx.lineTo(pc.x + 4, pc.y + 4); ctx.moveTo(pc.x + 4, pc.y - 4); ctx.lineTo(pc.x - 4, pc.y + 4); ctx.stroke();
+      }
+      if (!isOpen) targets.push({kind: "cluster", cluster: c, x: pc.x, y: pc.y, r: sr + 3});
+      labelled.push({c, pc, sr, focus, alpha, isOpen});
+    }
+
+    // Draw the launch over the fact glyphs so it visibly emerges from within the source cloud.
+    drawProgressComet(flowEdges, now);
+
+    // Groups of the open cloud: a bracket and a name each.
+    if (open && frame.filled.has(open.id)) {
+      open.groups.forEach((g, gi) => {
+        const p = project(groupCenter(open, gi));
+        if (!p) return;
+        const r = Math.max(6, cloudRadius(g.fids.length) * 0.7 * p.s + 3);
+        const on = view.group === gi, hot = hover?.kind === "group" && hover.gi === gi;
+        brackets(p.x, p.y, r, on || hot ? phaseColor(open) : colors["line-hi"], 1);
+        if (!on) {
+          ctx.globalAlpha = view.group != null ? 0.5 : 1;
+          ctx.textAlign = "left";
+          ctx.fillStyle = hot ? phaseColor(open) : colors.label;
+          ctx.font = "11px 'IBM Plex Mono', monospace";
+          ctx.fillText(g.key, p.x + r + 5, p.y - 1);
+          ctx.fillStyle = colors["label-dim"];
+          ctx.font = "10px 'IBM Plex Mono', monospace";
+          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 11);
+        } else if (g.fids.length > MAX_FACTS) {
+          const q = project(factSlot(open, gi, MAX_FACTS, g.fids.length));
+          if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = "10px 'IBM Plex Mono', monospace"; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
+        }
+        targets.push({kind: "group", cluster: open, gi, x: p.x, y: p.y, r: r + 4});
+      });
+    }
+
+    // HUD: brackets and tags for the clouds that matter right now.
+    for (const {c, pc, sr, focus, alpha, isOpen} of labelled) {
+      const hot = hover?.kind === "cluster" && hover.cluster === c;
+      if (isOpen) {
+        const r = layout.radius.get(c.id) * pc.s + 6;
+        brackets(pc.x, pc.y, r, phaseColor(c));
+        tag(pc.x, pc.y, r, clusterTitle(c), c.detail, phaseColor(c));
+        continue;
+      }
+      const selected = view.selected === c.id;
+      if (journey && !hot) continue;
+      if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubLabels(c, fade);
+      const outside = frame.chain && !frame.chain.has(c.id);
+      if (focus || hot || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
+      if (outside && !hot) continue;
+      const lead = frame.labelAll && !frame.chain && backbone.has(c.id);
+      const named = c.kind !== "query" || focus || hot || selected || lead || (frame.chain && frame.chain.has(c.id));
+      if (named) {
+        // In the overview the main chain reads down the right; its tier-mates take the left.
+        const side = !frame.labelAll || frame.chain ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
+        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || c.kind === "root" ? phaseColor(c) : colors.label, fade * Math.min(1, alpha / 0.6), side);
+      } else {
+        // Unnamed queries keep only their call tag under the cloud; hover names them.
+        ctx.globalAlpha = 0.9 * fade * alpha;
+        ctx.fillStyle = colors["label-dim"];
+        ctx.font = "10px 'IBM Plex Mono', monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(callTag(c), pc.x, pc.y + sr + 12);
+      }
+    }
+    for (const e of edgeLabels) edgeLabel(e);
+    if (journey) drawJourney(now);
+    ruler(shown, current);
+    ctx.globalAlpha = 1;
+    raf = requestAnimationFrame(draw);
+  }
+
+  function pick(x, y) {
+    let best = null, bd = Infinity;
+    for (const t of targets) {
+      const d = Math.hypot(t.x - x, t.y - y);
+      // A fact's label sits to the right of its point and is clickable too; edge labels are boxes.
+      const hit = t.kind === "edge" || t.rect ? x >= t.rect[0] && x <= t.rect[0] + t.rect[2] && y >= t.rect[1] && y <= t.rect[1] + t.rect[3]
+        : t.kind === "fact" ? d < t.r || (x > t.x && x < t.x + 380 && Math.abs(y - t.y) < 7) : d < t.r;
+      const score = t.kind === "stop" ? d - 3000 : t.kind === "edge" ? -2000 : t.kind === "fact" ? Math.abs(y - t.y) - 1000 : t.kind === "group" ? d - 500 : d;
+      if (hit && score < bd) { best = t; bd = score; }
+    }
+    return best;
+  }
+
+  // ---- input
+  let drag = null;
+  const takeOver = () => { if (!manual) { manual = true; emit("manual", true); } };
+  const onDown = e => { drag = {x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch, target: [...cam.target], pan: e.button === 2 || e.shiftKey, moved: false}; canvas.setPointerCapture(e.pointerId); };
+  const onMove = e => {
+    const r = canvas.getBoundingClientRect(), x = (e.clientX - r.left) * W / r.width, y = (e.clientY - r.top) * H / r.height;
+    if (drag) {
+      const sx = (e.clientX - drag.x) * W / r.width, sy = (e.clientY - drag.y) * H / r.height;
+      if (!drag.moved && Math.abs(sx) + Math.abs(sy) > 3) { drag.moved = true; takeOver(); }
+      // Work in the camera's own frame: on its side, screen down is the camera's right.
+      const [dx, dy] = rot ? [sy, -sx] : [sx, sy];
+      if (!drag.moved) return;
+      if (drag.pan) { const s = cam.dist / B.focal; for (let i = 0; i < 3; i++) cam.target[i] = drag.target[i] - (B.r[i] * dx - B.u[i] * dy) * s; }
+      else { cam.yaw = drag.yaw - dx * 0.006; cam.pitch = Math.max(-0.3, Math.min(1.45, drag.pitch + dy * 0.005)); }
+      return;
+    }
+    hover = pick(x, y);
+    canvas.style.cursor = hover ? "pointer" : "grab";
+    emit("hover", hover ? {...hover, x, y} : null);
+  };
+  const onUp = e => {
+    if (drag && !drag.moved) {
+      const r = canvas.getBoundingClientRect();
+      const t = pick((e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height);
+      // Under a journey a badge or a cloud on the way focuses that stop; another cloud ends it.
+      const stopAt = t && journey ? (t.kind === "stop" ? t.k : t.kind === "cluster" ? journey.stops.findIndex(s => s.id === t.cluster.id) : -1) : -1;
+      if (stopAt >= 0) focusStop(journey.focus === stopAt ? null : stopAt);
+      else if (!t) back();
+      else if (journey && t.kind === "cluster") { setJourney(null); select(t.cluster.id); }
+      else if (t.kind === "cluster" || t.kind === "edge") view.selected === t.cluster.id ? open(t.cluster.id) : select(t.cluster.id);
+      else if (t.kind === "group") open(t.cluster.id, view.group === t.gi ? null : t.gi);
+      else if (t.kind === "fact") { view.fact = t.fid; emit("select", {kind: "fact", cluster: t.cluster, gi: view.group, fid: t.fid}); }
+    }
+    drag = null;
+  };
+  // First click selects a cloud (the page lights its causal chain); a second click opens it.
+  function select(id) {
+    view.selected = id;
+    if (view.cluster && view.cluster !== id) setView(null);
+    emit("select", id ? {kind: "cluster", cluster: byId.get(id), opened: false} : null);
+  }
+  function open(id, group = null) {
+    view.selected = id;
+    view.fact = null;
+    setView(id, group);
+    const c = byId.get(id);
+    emit("select", group == null ? {kind: "cluster", cluster: c, opened: true} : {kind: "group", cluster: c, gi: group});
+  }
+  function setJourney(j) {
+    journey = j ? {...j, focus: null} : null;
+    view.selected = null; view.fact = null;
+    if (view.cluster) setView(null);
+    manual = false; emit("manual", false);
+    emit("journey", journey);
+  }
+  function focusStop(k) {
+    if (!journey) return;
+    journey.focus = k;
+    manual = false; emit("manual", false);
+    emit("journey", journey);
+  }
+  function back() {
+    if (journey && !view.cluster) { journey.focus != null ? focusStop(null) : setJourney(null); return; }
+    if (view.fact != null) { view.fact = null; emit("select", {kind: "group", cluster: byId.get(view.cluster), gi: view.group}); }
+    else if (view.group != null) open(view.cluster);
+    else if (view.cluster) { setView(null); emit("select", {kind: "cluster", cluster: byId.get(view.selected), opened: false}); }
+    else if (view.selected) { view.selected = null; emit("select", null); }
+  }
+  const onWheel = e => { e.preventDefault(); takeOver(); cam.dist = Math.max(5, Math.min(110, cam.dist * Math.exp(e.deltaY * 0.001))); };
+  const onLeave = () => { hover = null; emit("hover", null); };
+  const onCancel = () => { drag = null; onLeave(); };
+  const noMenu = e => e.preventDefault();
+  canvas.addEventListener("pointerdown", onDown);
+  canvas.addEventListener("pointermove", onMove);
+  canvas.addEventListener("pointerup", onUp);
+  canvas.addEventListener("pointerleave", onLeave);
+  canvas.addEventListener("pointercancel", onCancel);
+  canvas.addEventListener("wheel", onWheel, {passive: false});
+  canvas.addEventListener("contextmenu", noMenu);
+  const ro = new ResizeObserver(resize);
+  ro.observe(canvas);
+  resize();
+  B = basis();
+
+  return {
+    start(fn, {snap = false} = {}) {
+      onFrame = fn;
+      if (snap) {
+        const next = fn(0);
+        frame = next.frame; tourGoal = next.camera;
+        const initial = frame.guided ? guidedGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourGoal;
+        Object.assign(cam, initial, {target:[...initial.target]});
+        B = basis();
+        for (const c of clusters) {
+          for (const p of inst.get(c.id)) p.cur = targetOf(c, p);
+          hubInst.get(c.id).forEach((p, j) => { p.cur = hubTarget(c, j); });
+        }
+      }
+      raf = requestAnimationFrame(draw);
+    },
+    // Fold everything and hand the camera back to the tour.
+    follow() { if (journey) setJourney(null); view.fact = null; view.selected = null; setView(null); emit("select", null); },
+    // Hand the camera back to whoever drives it (tour or overview presets) without folding.
+    release() { manual = false; emit("manual", false); },
+    open,
+    select,
+    back,
+    setJourney,
+    focusStop,
+    get journey() { return journey; },
+    selectFact(fid) { view.fact = fid; },
+    get view() { return view; },
+    get manual() { return manual; },
+    colors: () => colors,
+    on(k, fn) { listeners[k].push(fn); },
+    destroy() {
+      cancelAnimationFrame(raf); ro.disconnect();
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointerleave", onLeave);
+      canvas.removeEventListener("pointercancel", onCancel);
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("contextmenu", noMenu);
+    },
+  };
+}
+
+const clip = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t;
+const stopTitle = c => c.kind === "core" ? "DSL record" : clusterTitle(c);
+const camFrame = g => ({r: [Math.cos(g.yaw), 0, -Math.sin(g.yaw)],
+                        u: [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)]});
+const callTag = c => `${c.phase === "MAP" ? "M" : "Q"}${String(c.event).padStart(2, "0")}`;
+const clusterTitle = c => c.kind === "query" ? `${callTag(c)} ${shortSpec(c.error ? c.label : c.intent || c.label)}` : c.label;
+const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 34 ? t.slice(0, 33) + "…" : t; };
+const angleDelta = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const scale = (a, s) => [a[0] * s, a[1] * s, a[2] * s];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm = a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+
+return {createStage,callTag,clusterTitle};
+})();
+__modules["query/tour.js"] = (() => {
+// Turns a position on the call timeline (event index + progress inside it) into what the
+// stage shows: which clouds exist yet, which are filled, which one is in focus, and where the
+// tour camera looks. Clouds simply appear; nothing pulses or flies.
+const DURATION = {compile: 4, view: 2.4, view_evidence: 2.4, route_cases: 4, plan_trace: 3.5, query_logs: 4, assess: 3.5, submit: 5};
+const eventDuration = ev => ev.error ? 1.4 : ev.phase === "MAP" ? 3 : DURATION[ev.name] || 3;
+
+const ramp = (x, a, b) => Math.max(0, Math.min(1, (x - a) / (b - a)));
+
+function createTour(scene, model, layout) {
+  const {clusters} = model;
+  const focusOf = ev => {
+    if (ev.phase === "PARSE") return ["core"];
+    if (ev.name === "route_cases") return ev.windows;
+    if (ev.name === "plan_trace" || ev.name === "query_logs") return ev.lanes;
+    if (ev.name === "assess") return ev.candidates.length ? ev.candidates : ev.lanes;
+    if (ev.name === "submit") return scene.root ? ["root"] : [];
+    return ev.cluster ? [ev.cluster] : [];
+  };
+  // Looking at a ring member from outside: the camera sits on the member's side of the axis.
+  const yawFacing = id => { const a = layout.angle.get(id); return a == null ? null : Math.atan2(Math.cos(a), Math.sin(a)); };
+  const P = id => layout.pos.get(id) || [0, 0, 0];
+
+  function camera(ev, focus) {
+    const id = focus[0];
+    switch (ev.phase) {
+      case "PARSE": return {target: [0, 1.5, 0], yaw: 0.55, pitch: 0.3, dist: 26};
+      case "MAP": case "ROUTE":
+        if (ev.name === "route_cases") return {target: [0, 4, 0], yaw: null, pitch: 0.3, dist: 44};
+        return {target: [P(id)[0] * 0.55, 2, P(id)[2] * 0.55], yaw: yawFacing(id), pitch: 0.36, dist: 34};
+      case "MANAGER": case "TRACE": return {target: [P(id)[0], P(id)[1] - 2.5, P(id)[2]], yaw: null, pitch: 0.28, dist: 30};
+      case "SUBMIT": return {target: [0, 9.5, 0], yaw: null, pitch: 0.16, dist: 58};
+      default: return {target: [0, 7, 0], yaw: null, pitch: 0.3, dist: 48};
+    }
+  }
+
+  return function frameAt(i, p) {
+    const ev = scene.events[i];
+    const visible = new Set(), filled = new Set(), appear = new Map();
+    for (const c of clusters) {
+      if (c.event > i) continue;
+      visible.add(c.id);
+      if (c.fill <= i) filled.add(c.id);
+      if (c.event === i && c.kind !== "core") appear.set(c.id, ramp(p, 0, 0.3));
+    }
+    const focus = focusOf(ev);
+    return {frame: {visible, filled, appear, focus: new Set(focus)}, camera: camera(ev, focus)};
+  };
+}
+
+return {eventDuration,createTour};
+})();
+__modules["query/showcase.js"] = (() => {
+// UI-free capture of the original Guided graph, not a redesigned composition.
+const {chainOf} = __modules["query/clusters.js"];
+const {createTour} = __modules["query/tour.js"];
+const SHOWCASE_SIZE = {width:1280, height:800}; // Home .shot-stage is 16:10.
+const CAPTURE_CAMERA = Object.freeze({yaw:.95, pitch:.12, distanceScale:.90, shiftX:52, shiftY:45});
+
+function showcaseFrame(scene, model, layout) {
+  const tour = createTour(scene, model, layout);
+  const chain = scene.root ? chainOf(model, "root") : new Set(model.clusters.map(c => c.id));
+  return () => {
+    const out = tour(scene.events.length - 1, 1);
+    Object.assign(out.frame, {
+      chain, labelAll:false, guided:true, captureCamera:CAPTURE_CAMERA,
+      focus:new Set(scene.root ? ["root"] : []), filter:{phases:new Set()},
+    });
+    return out;
+  };
+}
+
+return {SHOWCASE_SIZE,CAPTURE_CAMERA,showcaseFrame};
+})();
+__modules["query/interactive-showcase.js"] = (() => {
+// The GIF's original scene, camera and renderer, with the existing orbit controls enabled.
+const {esc} = __modules["util.js"];
+const {createStage, clusterTitle} = __modules["query/stage.js"];
+const {showcaseFrame} = __modules["query/showcase.js"];
+function mountInteractiveShowcase(root, scene, model, layout) {
+  root.classList.add("is-showcase", "is-interactive-showcase");
+  root.innerHTML = `<canvas class="qg-canvas" data-render-width="1072" data-render-height="670" tabindex="0" aria-label="Interactive evidence cloud. Drag to rotate, scroll to zoom, click to inspect. Press Escape to reset."></canvas>
+    <div class="cloud-controls"><span>Drag to rotate · Scroll to zoom · Click to inspect</span><button type="button" data-cloud-reset>Reset view</button></div>
+    <div class="cloud-preview-info" role="status" aria-live="polite" hidden></div>`;
+  const canvas = root.querySelector("canvas"), info = root.querySelector(".cloud-preview-info");
+  const stage = createStage(canvas, scene, model, layout);
+  let selected = null;
+  const show = item => {
+    const c = item?.cluster;
+    info.hidden = !c;
+    if (!c) { info.innerHTML = ""; return; }
+    const fact = item.fid != null ? scene.factById.get(item.fid) : null;
+    const group = item.gi != null ? c.groups[item.gi] : null;
+    info.innerHTML = `<strong>${esc(fact ? `S${fact.t} · ${fact.slot}` : group?.key || clusterTitle(c))}</strong><span>${esc(fact ? fact.span || `${fact.rel} ${fact.args.join(" · ")}` : c.detail || `${c.fids.length} recorded facts`)}</span>`;
+  };
+  stage.on("hover", item => { if (!selected) show(item); });
+  stage.on("select", item => { selected = item; show(item); });
+  const reset = () => { selected = null; stage.follow(); stage.release(); show(null); };
+  root.querySelector("[data-cloud-reset]").addEventListener("click", reset);
+  canvas.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); reset(); } });
+  stage.start(showcaseFrame(scene, model, layout), {snap:true});
+  return stage;
+}
+
+return {mountInteractiveShowcase};
+})();
+const root = document.querySelector('main');
+try {
+  await document.fonts.ready;
+  const base = './data/runs/evidence-query-claims-n30-20261013/GPT-4o_024_alfworld_task_024/';
+  const files = {record:'canonical_record.json', input:'input.json', evidences:'evidences.json', routeCandidates:'route_candidates.json', result:'result.json', managerPlan:'manager_plan.json', toolCalls:'tool_calls.jsonl', traceQueries:'trace_queries.jsonl'};
+  const data = Object.fromEntries(await Promise.all(Object.entries(files).map(async ([key, name]) => {
+    const response = await fetch(base + name);
+    if (!response.ok) throw new Error('Saved example unavailable');
+    const text = await response.text();
+    return [key, name.endsWith('.jsonl') ? text.trim().split('\n').filter(Boolean).map(JSON.parse) : JSON.parse(text)];
+  })));
+  const scene = __modules['query/model.js'].buildQueryScene(data);
+  const model = __modules['query/clusters.js'].buildClusters(scene);
+  const layout = __modules['query/layout.js'].layoutClusters(model);
+  const stage = __modules['query/interactive-showcase.js'].mountInteractiveShowcase(root, scene, model, layout);
+  window.addEventListener('pagehide', () => stage.destroy(), {once:true});
+} catch (error) {
+  root.innerHTML = '<img class="cloud-fallback" src="./img/shots/evidence-cloud.gif" alt="Recorded evidence cloud animation"><p class="cloud-fallback-note">Interactive view unavailable · Showing recorded animation</p>';
+  console.warn(error.message);
+}
+</script></body></html>

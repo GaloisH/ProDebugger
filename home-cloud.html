@@ -2,7 +2,7 @@
 <!-- Built from the original cloud renderer by build-prodebugger-home-cloud.mjs. -->
 <html lang="en" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Interactive evidence cloud</title><link rel="stylesheet" href="./css/theme.css?v=27bf1baa85"><style>
 html,body {margin:0; padding:0; overflow:hidden; background:#06080b;}
-.qg {width:min(100vw,160vh); aspect-ratio:16 / 10; position:fixed; inset:0; margin:auto; overflow:hidden;}
+.qg {width:100vw; height:100vh; position:fixed; inset:0; margin:0; overflow:hidden;}
 .qg-canvas {position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none;}
 .qg-canvas:active {cursor:grabbing;}
 .cloud-controls {position:absolute; top:10px; right:12px; left:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; pointer-events:none; font:10px 'IBM Plex Mono',monospace; color:#a9afc3;}
@@ -2096,9 +2096,9 @@ __modules["query/interactive-showcase.js"] = (() => {
 const {esc} = __modules["util.js"];
 const {createStage, clusterTitle} = __modules["query/stage.js"];
 const {showcaseFrame} = __modules["query/showcase.js"];
-function mountInteractiveShowcase(root, scene, model, layout) {
+function mountInteractiveShowcase(root, scene, model, layout, {height = 670} = {}) {
   root.classList.add("is-showcase", "is-interactive-showcase");
-  root.innerHTML = `<canvas class="qg-canvas" data-render-width="1072" data-render-height="670" tabindex="0" aria-label="Interactive evidence cloud. Drag to rotate, scroll to zoom, click to inspect. Press Escape to reset."></canvas>
+  root.innerHTML = `<canvas class="qg-canvas" data-render-width="1072" data-render-height="${height}" tabindex="0" aria-label="Interactive evidence cloud. Drag to rotate, scroll to zoom, click to inspect. Press Escape to reset."></canvas>
     <div class="cloud-controls"><span>Drag to rotate · Scroll to zoom · Click to inspect</span><button type="button" data-cloud-reset>Reset view</button></div>
     <div class="cloud-preview-info" role="status" aria-live="polite" hidden></div>`;
   const canvas = root.querySelector("canvas"), info = root.querySelector(".cloud-preview-info");
@@ -2137,7 +2137,7 @@ try {
   const scene = __modules['query/model.js'].buildQueryScene(data);
   const model = __modules['query/clusters.js'].buildClusters(scene);
   const layout = __modules['query/layout.js'].layoutClusters(model);
-  const stage = __modules['query/interactive-showcase.js'].mountInteractiveShowcase(root, scene, model, layout);
+  const stage = __modules['query/interactive-showcase.js'].mountInteractiveShowcase(root, scene, model, layout, {height:560});
   window.addEventListener('pagehide', () => stage.destroy(), {once:true});
 } catch (error) {
   root.innerHTML = '<img class="cloud-fallback" src="./img/shots/evidence-cloud.gif" alt="Recorded evidence cloud animation"><p class="cloud-fallback-note">Interactive view unavailable · Showing recorded animation</p>';

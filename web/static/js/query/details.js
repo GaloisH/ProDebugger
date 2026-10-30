@@ -11,6 +11,23 @@ const SOURCE = {obs: "env", mem: "agent", refl: "agent", plan: "agent", act: "ag
 const MODULE_SLOT = {observation: "obs", memory: "mem", reflection: "refl", plan: "plan", action: "act", check: "chk"};
 // Entity kinds that never appear by name in the agent's text.
 const UNNAMED = new Set(["agent", "attribute", "value", "int", "req"]);
+// A ROUTE query by what it sets out to do: check the goal, look over the run, audit it step by
+// step, or inspect single facts.
+function queryKind(e) {
+  if (e.name === "inspect" || e.name === "view_evidence") return "INSPECT";
+  const base = String(e.spec || "").split("|")[0].trim();
+  if (base === "requirements" || base.startsWith("entity:req:")) return "GOAL";
+  if (/^(local_audits|steps)\b/.test(base)) return "AUDIT";
+  if (/^(packet|statement_discovery|module|rules)\b/.test(base) || base.startsWith("entity:")) return "INSPECT";
+  return "SCAN";
+}
+// How bad a trouble sign is: it bears on the task, the agent is spinning, or it is a soft hint.
+const SIGNAL_SEVERITY = {
+  no_new_task_evidence: "task", constraint_substitution: "task", wrong_task_decision: "task", contradicted_completion: "task",
+  claims_task_complete: "task", alignment_violation: "task", failed_precondition: "task", missing_effect: "task",
+  schema_repetition: "spin", repeated_action: "spin", near_duplicate_action: "spin", no_effect: "spin", invalid_action: "spin",
+};
+const signalSeverity = s => SIGNAL_SEVERITY[s] || "soft";
 const clip = (t, n) => { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, "") + "…" : t; };
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -184,6 +201,12 @@ export function buildDetails(scene, model) {
     const ws = scene.windows;
     const signs = new Map();
     views.forEach(e => (e.signals || []).forEach(([k, n]) => signs.set(k, Math.max(signs.get(k) || 0, n))));
+    // Per query, the windows whose clue facts it returned, and how many of them.
+    const hits = views.map(e => {
+      const got = new Set(e.fids);
+      const h = ws.map(w => ({w, n: w.fids.filter(f => got.has(f)).length})).filter(x => x.n);
+      return h.length ? h : null;
+    });
     out.ROUTE = {
       say: `ProDebugger queries the record ${plural(views.length, "time")} for trouble signs and opens ${ws.length === 1 ? "one suspect window" : `${ws.length} suspect windows`}: ${ws.map(w => { const a = actOf(w); return `step ${w.step}${a ? `, where the agent acts “${mark(clip(a.span, 80))}”` : ""}`; }).join("; ") || "none"}.`,
       title: "What the scan found",
@@ -191,10 +214,20 @@ export function buildDetails(scene, model) {
       body: `${ws.map(w => `<div class="sd-sec sd-win" data-step="${w.step}"><div class="sd-k">window ${esc(w.caseId)} · step ${w.step} · facts ${esc(w.fids.map(f => `#${f}`).join(" "))}</div>
           <ul class="sd-list">${factRows(w.fids.map(fid => scene.factById.get(fid)).filter(Boolean))}</ul>
           <details><summary>ROUTE's hypothesis</summary><p>${mark(w.hypothesis)}</p></details></div>`).join("")}
-        <div class="sd-sec"><div class="sd-k">how it got there · ${plural(views.length, "query", "queries")}</div><ul class="sd-list sd-queries">${views.map((e, k) => `<li data-fids="${fids(e.fids)}"><span class="sd-k">${String(k + 1).padStart(2, "0")}</span><span>${esc(cap(e.intent || e.name))}: ${plural(e.fids.length, "fact")} back${e.signals?.length ? ` · ${esc(e.signals.slice(0, 3).map(([s, n]) => `${SIGNAL_LABEL[s]} ×${n}`).join(" · "))}` : ""}</span><code title="${esc(e.raw || "")}">${esc(e.name)}</code></li>`).join("")}</ul></div>`,
+        <div class="sd-sec"><div class="sd-k">how it got there · ${plural(views.length, "query", "queries")}${hits.some(Boolean) ? ` · lit rows reached ${ws.length === 1 ? "the window" : "a window"}` : ""}</div><ol class="sd-queries">${views.map((e, k) => {
+          const kind = queryKind(e), hit = hits[k];
+          const at = new Set(e.fids.map(fid => scene.factById.get(fid)?.t));
+          const cells = Array.from({length: steps}, (_, i) => `<i class="${at.has(i + 1) ? "is-on" : ""}${windowSteps.has(i + 1) ? " is-win" : ""}"></i>`).join("");
+          return `<li class="${hit ? "is-hit" : hits.some(Boolean) ? "is-dim" : ""}" data-fids="${fids(e.fids)}">
+            <span class="sd-qtag" data-kind="${kind}" title="${esc(e.raw || e.name)}">${kind}</span>
+            <div><p>${esc(cap(e.intent || e.name))}</p>
+              <div class="sd-qres"><span class="sd-mini" style="--n:${steps}" title="steps its facts come from">${cells}</span><b class="sd-qn">${e.fids.length}</b><span class="sd-k">facts</span>
+                ${(e.signals || []).slice(0, 3).map(([s, n]) => `<span class="sd-sig" data-sev="${signalSeverity(s)}">${esc(SIGNAL_LABEL[s])} <b>×${n}</b></span>`).join("")}
+                ${hit ? hit.map(h => `<span class="sd-hit" data-goto="step:${h.w.step}" title="returned ${h.n} of the window's ${h.w.fids.length} clue facts">→ ${esc(h.w.caseId)} · ${h.n}/${h.w.fids.length}</span>`).join("") : ""}</div></div></li>`;
+        }).join("")}</ol></div>`,
       rail: `<h4>Suspect steps</h4>${strip(steps, new Map(ws.map(w => [w.step, {tone: "hot", label: `window ${w.caseId}`}])))}
         <div class="sd-chips">${ws.map(w => `<button class="sd-chip is-hot" data-goto="step:${w.step}" data-fids="${fids(w.fids)}"><b>${esc(w.caseId)}</b><em>step ${w.step}</em></button>`).join("")}</div>
-        ${signs.size ? `<h4>Trouble signs</h4><ul class="sd-bars">${[...signs].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, n]) => `<li><span>${esc(SIGNAL_LABEL[k])}</span><i style="--w:${Math.min(100, n / steps * 100 * 3).toFixed(1)}%"></i><em>${n}</em></li>`).join("")}</ul>` : ""}`,
+        ${signs.size ? `<h4>Trouble signs</h4><ul class="sd-bars">${[...signs].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, n]) => `<li data-sev="${signalSeverity(k)}"><span>${esc(SIGNAL_LABEL[k])}</span><i style="--w:${Math.min(100, n / steps * 100 * 3).toFixed(1)}%"></i><em>${n}</em></li>`).join("")}</ul>` : ""}`,
     };
   }
 

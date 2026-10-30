@@ -627,5 +627,35 @@ body.page-query .app { padding: 0; }
   background: color-mix(in srgb, var(--qg-panel) 85%, var(--qg-focus)); color: var(--qg-focus); font-family: var(--mono); font-size: .82rem; text-align: left; cursor: pointer;
 }
 .sd-jump:hover { background: color-mix(in srgb, var(--qg-panel) 70%, var(--qg-focus)); }
+/* ROUTE's queries: a coloured kind tag, the plain-words intent, then what came back (where its
+   facts sit in the run, the trouble signs, whether it reached the window); rows that reached it lit. */
+.sd-queries { margin: .3rem 0 0; padding: 0; list-style: none; }
+.sd-queries li { display: grid; grid-template-columns: 4.8rem 1fr; gap: .7rem; align-items: start; padding: .4rem .3rem; border-top: 1px solid var(--qg-line); transition: opacity .2s; }
+.sd-queries li:hover { background: var(--tint-hover); }
+.sd-queries li.is-dim { opacity: .5; }
+.sd-queries li.is-dim:hover { opacity: 1; }
+.sd-queries li.is-hit { border-left: 3px solid var(--qg-focus); background: color-mix(in srgb, var(--qg-focus) 8%, transparent); }
+.sd-queries li.is-hit p { color: var(--text-hi); }
+.sd-queries p { margin: 0 0 .25rem; }
+.sd-qtag { --kind: var(--qg-line-hi); display: block; padding: .1rem 0; border: 1px solid var(--kind); background: color-mix(in srgb, var(--kind) 18%, transparent); color: var(--kind); font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-align: center; cursor: help; }
+.sd-qtag[data-kind="GOAL"] { --kind: var(--qg-sig-goal); }
+.sd-qtag[data-kind="SCAN"] { --kind: var(--qg-th-env); }
+.sd-qtag[data-kind="AUDIT"] { --kind: var(--route); }
+.sd-qtag[data-kind="INSPECT"] { --kind: var(--qg-focus); }
+.sd-qres { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .45rem; }
+.sd-mini { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 1px; width: 8.5rem; height: .7rem; }
+.sd-mini i { background: var(--qg-line); }
+.sd-mini i.is-on { background: var(--qg-ink-dim); }
+.sd-queries li.is-hit .sd-mini i.is-on { background: var(--qg-ink); }
+.sd-mini i.is-win { outline: 1px solid var(--qg-focus); outline-offset: 0; }
+.sd-mini i.is-win.is-on { background: var(--qg-focus); }
+.sd-qn { font-family: var(--mono); font-size: 1rem; font-weight: 500; color: var(--text-hi); }
+.sd-sig { --sev: var(--qg-label-dim); padding: 0 .35rem; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--sev) 60%, transparent); background: color-mix(in srgb, var(--sev) 14%, transparent); color: var(--sev); font-size: .76rem; }
+.sd-sig b { font-family: var(--mono); font-weight: 500; }
+[data-sev="task"] { --sev: var(--qg-sig-goal); }
+[data-sev="spin"] { --sev: var(--qg-sig-idle); }
+.sd-bars li[data-sev] i { background-image: linear-gradient(var(--sev), var(--sev)); }
+.sd-bars li[data-sev] span { color: var(--sev); }
+.sd-hit { padding: 0 .4rem; background: var(--qg-focus); color: var(--qg-void); font-family: var(--mono); font-size: .76rem; font-weight: 600; cursor: pointer; }
 .qg-sd-ghost { position: absolute; z-index: 7; padding: 0 .2rem; border-radius: 2px; background: var(--qg-focus); color: var(--qg-void); font-size: .9rem; font-weight: 600; pointer-events: none; }
 @media (max-width: 1100px) { .qg-sd-rail { width: 17rem; } .qg-sd-pop { right: calc(1.2rem + 17rem + .8rem); } }

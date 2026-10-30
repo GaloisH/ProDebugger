@@ -71,7 +71,7 @@ export function mountQuery(app, route) {
     const ui = bindUi(root, scene, model, stage, roles, ref, story);
     // The sentence beside the tower follows the tour's phase; its popup pauses the tour.
     const details = createDetails(root, scene, model, stage, {onOpen: () => setPlaying(false)});
-    ui.on("event", ph => details.show(ph));
+    ui.on("event", (ph, i) => { details.show(ph); details.caption(scene.events[i]); });
     ui.setEvent(state.i);
 
     stage.start(dt => {
@@ -872,7 +872,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       const played = scene.events.filter(e => !e.error);
       $(".qg-count").textContent = `${String(played.indexOf(ev) + 1).padStart(2, "0")} / ${played.length}`;
       if (!stage.view.cluster) showEvent(i);
-      handlers.event?.(ev.phase);
+      handlers.event?.(ev.phase, i);
     },
     setProgress(i, p) {
       const t = ticks[i];

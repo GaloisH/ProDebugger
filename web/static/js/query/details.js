@@ -3,7 +3,7 @@
 // Both name the same entities and steps; pointing at one lights it everywhere, on the tower too.
 import {esc} from "../util.js";
 import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js";
-import {agentWords, cap, faultText, goalText, question, statusText, stepList} from "./narrate.js";
+import {agentWords, cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js";
 
 const SLOT_ORDER = ["obs", "mem", "refl", "plan", "act", "chk"];
 // Who wrote a line: the environment, or the agent itself (memory, reflection, plan, action).
@@ -119,6 +119,16 @@ export function buildDetails(scene, model) {
   const ent = key => `<b class="qg-ent" data-ent="${esc(key)}" data-role="${role(key)}">${esc(label.get(key) || entName(key))}</b>`;
   const entChip = e => `<button class="sd-chip" data-ent="${esc(e.key)}" data-role="${role(e.key)}" data-goto="ent:${esc(e.key)}"${e.key.startsWith("goal:") ? ` title="the task names it; no object of this kind appears in the run"` : ""}><b>${esc(label.get(e.key))}</b><em>${e.key.startsWith("goal:") ? "never seen" : e.facts.length}</em></button>`;
 
+  // Shared pieces of a result line: where its facts sit in the run, its trouble signs, the
+  // windows whose clue facts it returned.
+  const miniStrip = (at, tone = "") => `<span class="sd-mini${tone ? ` is-${tone}` : ""}" style="--n:${steps}" title="steps it touches">${Array.from({length: steps}, (_, i) => `<i class="${at.has(i + 1) ? "is-on" : ""}${windowSteps.has(i + 1) ? " is-win" : ""}"></i>`).join("")}</span>`;
+  const stepsOf = list => new Set(list.map(fid => scene.factById.get(fid)?.t));
+  const signalPills = sig => (sig || []).slice(0, 3).map(([s, n]) => `<span class="sd-sig" data-sev="${signalSeverity(s)}">${esc(SIGNAL_LABEL[s])} <b>×${n}</b></span>`).join("");
+  const hitsOf = list => { const got = new Set(list); const h = scene.windows.map(w => ({w, n: w.fids.filter(f => got.has(f)).length})).filter(x => x.n); return h.length ? h : null; };
+  const hitChips = hit => (hit || []).map(h => `<span class="sd-hit" data-goto="step:${h.w.step}" title="returned ${h.n} of the window's ${h.w.fids.length} clue facts">→ ${esc(h.w.caseId)} · ${h.n}/${h.w.fids.length}</span>`).join("");
+  const num = (n, unit) => `<b class="sd-qn">${n}</b><span class="sd-k">${unit}</span>`;
+  const stepNo = html => html.replace(/\bsteps? \d+(?:[–-]\d+)?/g, m => `<b class="sd-stepno">${m}</b>`);
+
   const out = {};
 
   // PARSE: every step, the agent's text with its entities marked, and the facts it became.
@@ -202,11 +212,7 @@ export function buildDetails(scene, model) {
     const signs = new Map();
     views.forEach(e => (e.signals || []).forEach(([k, n]) => signs.set(k, Math.max(signs.get(k) || 0, n))));
     // Per query, the windows whose clue facts it returned, and how many of them.
-    const hits = views.map(e => {
-      const got = new Set(e.fids);
-      const h = ws.map(w => ({w, n: w.fids.filter(f => got.has(f)).length})).filter(x => x.n);
-      return h.length ? h : null;
-    });
+    const hits = views.map(e => hitsOf(e.fids));
     out.ROUTE = {
       say: `ProDebugger queries the record ${plural(views.length, "time")} for trouble signs and opens ${ws.length === 1 ? "one suspect window" : `${ws.length} suspect windows`}: ${ws.map(w => { const a = actOf(w); return `step ${w.step}${a ? `, where the agent acts “${mark(clip(a.span, 80))}”` : ""}`; }).join("; ") || "none"}.`,
       title: "What the scan found",
@@ -216,14 +222,10 @@ export function buildDetails(scene, model) {
           <details><summary>ROUTE's hypothesis</summary><p>${mark(w.hypothesis)}</p></details></div>`).join("")}
         <div class="sd-sec"><div class="sd-k">how it got there · ${plural(views.length, "query", "queries")}${hits.some(Boolean) ? ` · lit rows reached ${ws.length === 1 ? "the window" : "a window"}` : ""}</div><ol class="sd-queries">${views.map((e, k) => {
           const kind = queryKind(e), hit = hits[k];
-          const at = new Set(e.fids.map(fid => scene.factById.get(fid)?.t));
-          const cells = Array.from({length: steps}, (_, i) => `<i class="${at.has(i + 1) ? "is-on" : ""}${windowSteps.has(i + 1) ? " is-win" : ""}"></i>`).join("");
           return `<li class="${hit ? "is-hit" : hits.some(Boolean) ? "is-dim" : ""}" data-fids="${fids(e.fids)}">
             <span class="sd-qtag" data-kind="${kind}" title="${esc(e.raw || e.name)}">${kind}</span>
             <div><p>${esc(cap(e.intent || e.name))}</p>
-              <div class="sd-qres"><span class="sd-mini" style="--n:${steps}" title="steps its facts come from">${cells}</span><b class="sd-qn">${e.fids.length}</b><span class="sd-k">facts</span>
-                ${(e.signals || []).slice(0, 3).map(([s, n]) => `<span class="sd-sig" data-sev="${signalSeverity(s)}">${esc(SIGNAL_LABEL[s])} <b>×${n}</b></span>`).join("")}
-                ${hit ? hit.map(h => `<span class="sd-hit" data-goto="step:${h.w.step}" title="returned ${h.n} of the window's ${h.w.fids.length} clue facts">→ ${esc(h.w.caseId)} · ${h.n}/${h.w.fids.length}</span>`).join("") : ""}</div></div></li>`;
+              <div class="sd-qres">${miniStrip(stepsOf(e.fids))}${num(e.fids.length, "facts")}${signalPills(e.signals)}${hitChips(hit)}</div></div></li>`;
         }).join("")}</ol></div>`,
       rail: `<h4>Suspect steps</h4>${strip(steps, new Map(ws.map(w => [w.step, {tone: "hot", label: `window ${w.caseId}`}])))}
         <div class="sd-chips">${ws.map(w => `<button class="sd-chip is-hot" data-goto="step:${w.step}" data-fids="${fids(w.fids)}"><b>${esc(w.caseId)}</b><em>step ${w.step}</em></button>`).join("")}</div>
@@ -292,12 +294,61 @@ export function buildDetails(scene, model) {
     };
   }
 
-  return {phases: out, mark, entFacts};
+  // The footer caption for one tour event: an action tag, the title with its key words lit,
+  // and one line of what the action produced.
+  const VERDICT_TONE = {viol: "task", unk: "soft", sat: "ok"};
+  const goalEv = scene.events.find(e => e.goal);
+  function caption(ev) {
+    const title = stepNo(mark(ev.title || ""));
+    const lane = ev.lanes?.length ? scene.lanes.find(l => l.id === ev.lanes[0]) : null;
+    if (ev.error) return {kind: "REJECTED", title, line: `<span class="sd-k">${esc(clip(ev.error.message, 140))}</span>`};
+    switch (ev.name) {
+      case "compile": {
+        const env = scene.facts.filter(f => f.slot === "obs").length, chk = scene.facts.filter(f => f.slot === "chk").length, all = scene.facts.length;
+        return {kind: "COMPILE", title, line: `${num(all, "facts")}${num(scene.entities.length, "entities")}${num(steps, "steps")}<span class="sd-split" title="who wrote the lines"><i data-src="env" style="flex:${env}">env ${env}</i><i data-src="agent" style="flex:${all - env - chk}">agent ${all - env - chk}</i>${chk ? `<i data-src="check" style="flex:${chk}" title="checks">${chk}</i>` : ""}</span>`};
+      }
+      case "view": case "view_evidence": {
+        if (ev.phase === "MAP") {
+          const st = ev.goal?.state || goalEv?.goal?.state, at = ev.goal?.decided || goalEv?.goal?.decided || [];
+          const words = [...new Set(scene.goals.flatMap(g => [...g.constraints.filter(c => typeof c.expected === "string" && c.expected !== entName(g.target)).map(c => c.expected), `${g.rel} ${entName(g.target)}`]))];
+          return {kind: "GOAL", title, line: `${words.map(w => `<span class="sd-chip" data-role="goal">${mark(w)}</span>`).join("")}${st ? `<span class="sd-state${/unmet|unsat|fail|false|viol/i.test(st) ? " is-bad" : ""}">${esc(st)}</span>` : ""}${at.length ? `<span class="sd-k">decided at</span><b class="sd-stepno">${esc(stepList(at))}</b>` : ""}`};
+        }
+        return {kind: queryKind(ev), title, line: `${miniStrip(stepsOf(ev.fids))}${num(ev.fids.length, "facts")}${signalPills(ev.signals)}${hitChips(hitsOf(ev.fids))}`};
+      }
+      case "inspect":
+        return {kind: "INSPECT", title, line: `${miniStrip(stepsOf(ev.fids))}${(ev.verdicts || []).map(([v, n]) => `<span class="sd-sig" data-sev="${VERDICT_TONE[v] || "soft"}"><b>${n}</b> ${esc(VERDICT_WORD[v] || v)}</span>`).join("")}${hitChips(hitsOf(ev.fids))}`};
+      case "route_cases": {
+        const ws = scene.windows.filter(w => ev.windows.includes(w.id));
+        return {kind: "WINDOW", title, line: `${miniStrip(new Set())}${ws.map(w => {
+          const a = w.fids.map(f => scene.factById.get(f)).find(f => f?.slot === "act");
+          return `<span class="sd-hit" data-goto="step:${w.step}">${esc(w.caseId)} · step ${w.step}</span>${num(w.fids.length, "clue facts")}${a ? `<span class="sd-quote">“${mark(clip(a.span, 60))}”</span>` : ""}`;
+        }).join("")}`};
+      }
+      case "plan_trace": {
+        const ls = scene.lanes.filter(l => ev.lanes.includes(l.id));
+        return {kind: "PLAN", title, line: `${ls.map(l => `<span class="sd-chip is-hot"><b>${esc(l.agent)}</b><em>← ${esc(l.anchor)} · step ${l.step}</em></span>`).join("")}${scene.rules.length ? num(scene.rules.length, "decision rules") : ""}`};
+      }
+      case "query_logs":
+        return {kind: "SEARCH", title, line: `${miniStrip(new Set(lane?.steps || []))}${num(lane?.rows.length ?? 0, "rows")}${num(lane?.steps.length ?? 0, "steps")}`};
+      case "assess": {
+        const cs = scene.candidates.filter(c => ev.candidates.includes(c.id));
+        return {kind: "ASSESS", title, line: cs.map(c => `<span class="sd-cand${c.status === "error" ? " is-bad" : ""}">step ${c.step} · ${esc(c.module)} · ${esc(statusText(c.status))}</span><span class="sd-k">${esc(faultText(c.faultClass))}</span>`).join("") || `<span class="sd-k">no step blamed</span>`};
+      }
+      case "submit":
+        return root
+          ? {kind: "ROOT", title, line: `${miniStrip(new Set([root.step]), "root")}<span class="sd-cand is-bad">step ${root.step} · ${esc(root.module)}</span><span class="sd-k">${esc(faultText(root.faultClass))}</span>${root.rule?.id ? `<span class="sd-chip"><em>rule</em> <b>${esc(root.rule.id.replace(/_/g, " "))}</b></span>` : ""}<span class="sd-state${root.accepted ? " is-ok" : ""}">${root.accepted ? "accepted" : esc(root.status || "not accepted")}</span>`}
+          : {kind: "ROOT", title, line: `<span class="sd-k">no root cause</span>`};
+      default:
+        return {kind: ev.phase, title, line: `<span class="sd-k">${esc(clip(ev.caption, 160))}</span>`};
+    }
+  }
+
+  return {phases: out, mark, entFacts, caption};
 }
 
 // Mounts the sentence, the popup and the rail on the page, and wires them together.
 export function createDetails(root, scene, model, stage, {onOpen} = {}) {
-  const {phases, mark, entFacts} = buildDetails(scene, model);
+  const {phases, mark, entFacts, caption} = buildDetails(scene, model);
   const h1 = root.querySelector(".qg-title h1");
   if (h1) h1.innerHTML = mark(scene.meta.task || scene.meta.tid);
   root.insertAdjacentHTML("beforeend", `
@@ -411,5 +462,13 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
       if (open && phases[ph]?.fly) fly();
     },
     close() { if (open) setOpen(false); },
+    // The footer caption in the same shape as the popup's rows.
+    caption(ev) {
+      const c = caption(ev), box = root.querySelector(".qg-caption");
+      if (!box) return;
+      box.classList.add("is-rich");
+      box.querySelector(".qg-cap-title").innerHTML = `<span class="sd-qtag" data-kind="${c.kind}" title="${esc(ev.raw || ev.name || "")}">${c.kind}</span><span>${c.title}</span>`;
+      box.querySelector(".qg-cap-text").innerHTML = `<span class="sd-qres">${c.line}</span>`;
+    },
   };
 }

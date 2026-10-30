@@ -103,7 +103,7 @@ function heroShots() {
       <div class="shot-bar"><span class="demo-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="shot-caption"></span></div>
       <div class="shot-stage">
         ${SHOTS.map(([id, label, caption, href]) => `<a class="shot" href="${href}" data-shot="${id}">
-          <img src="./img/shots/${id}.webp" width="1280" height="800" alt="${label} view: ${caption}"></a>`).join("")}
+          <img src="./img/shots/${id === "trajectory" ? (matchMedia("(prefers-reduced-motion: reduce)").matches ? "evidence-cloud.png" : "evidence-cloud.gif") : `${id}.webp`}" width="1280" height="800" alt="${label} view: ${caption}"></a>`).join("")}
       </div>
     </div>
     <div class="shot-tabs" role="tablist" aria-label="Product views">
@@ -116,7 +116,8 @@ function heroShots() {
 // further back is picked. The active tab's progress bar times each slide, so hovering
 // (which pauses the bar) also pauses the rotation; no autoplay for reduced motion.
 function rotateShots(box) {
-  const auto = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Keep the cloud loop visible; the existing four tabs remain manually selectable.
+  const auto = false;
   const shots = [...box.querySelectorAll("[data-shot]")];
   let index = -1;
   function go(i, dir = 1) {
@@ -156,7 +157,7 @@ function rotateShots(box) {
     const i = b ? SHOTS.findIndex(s => s[0] === b.dataset.shotTab) : -1;
     if (i >= 0) go(i, i < index ? -1 : 1);
   });
-  go(0);
+  go(SHOTS.findIndex(([id]) => id === "trajectory"));
 }
 
 // Read-only workbench views for DEMO_REF inside a dark app window. Tab changes and

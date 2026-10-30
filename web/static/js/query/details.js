@@ -51,11 +51,14 @@ function nameIndex(scene) {
   const goalWords = new Set(scene.goals.flatMap(g => [...g.constraints.map(c => c.expected), entName(g.target)]).filter(w => typeof w === "string").map(w => w.toLowerCase()));
   const acted = new Set(scene.facts.filter(f => f.slot === "act").flatMap(f => f.args));
   const ents = new Map(scene.entities.map(e => [e.key, e]));
+  const whereWords = new Set(scene.goals.map(g => entName(g.target).toLowerCase()));
   const role = key => {
-    if (key.startsWith("goal:")) return "goal";
+    if (key.startsWith("goal:")) return whereWords.has(key.slice(5).toLowerCase()) ? "where" : "goal";
     const e = ents.get(key);
     if (!e) return "other";
-    if (goalWords.has(e.kind) || goalWords.has(e.index.replace(/_\d+$/, "").replace(/_/g, " "))) return "goal";
+    const base = e.index.replace(/_\d+$/, "").replace(/_/g, " ");
+    if (whereWords.has(e.kind) || whereWords.has(base)) return "where";
+    if (goalWords.has(e.kind) || goalWords.has(base)) return "goal";
     return acted.has(key) && e.kind !== "place" && e.parent !== "place" ? "held" : "other";
   };
   const names = [...byName.keys()].sort((a, b) => b.length - a.length).map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
@@ -187,18 +190,75 @@ export function buildDetails(scene, model) {
         if (v && v !== c.expected && !off.some(o => o.f.args[0] === f.args[0])) off.push({f, c, v});
       }
     }
-    const goals = scene.goals.map(g => `<div class="sd-goal" data-fids="${fids(g.facts)}"><div class="sd-k">requirement</div><code>${esc(g.key)}</code>
-      <ol class="sd-cons">${g.constraints.map(c => `<li>${esc(String(c.property?.index || "").replace(/_/g, " "))} = ${typeof c.expected === "string" ? mark(c.expected) : esc(JSON.stringify(c.expected))} <span class="sd-k">checked by ${esc(c.mode || "—")}</span></li>`).join("")}
-      <li>${esc(g.rel)} ${mark(entName(g.target))} <span class="sd-k">target</span></li></ol></div>`).join("");
+    // Two goal shapes: placing an object somewhere (ALFWorld), or one item meeting several
+    // attributes (WebShop: every attribute is its own goal on attribute:<name>).
+    const typeOf = g => g.constraints.find(c => c.property?.index === "object_type")?.expected;
+    const whereOf = g => entName(g.target);
+    const isAttr = g => g.target.startsWith("attribute:");
+    const attrGoals = scene.goals.filter(isAttr), placeGoals = scene.goals.filter(g => !isAttr(g));
+    const attrName = g => entName(g.target).replace(/_/g, " ");
+    const OP = {eq: "=", lt: "<", le: "≤", gt: ">", ge: "≥", semantic_match: "≈"};
+    const MODE = {observation: "must be seen", selection: "must be chosen", semantic: "matched by meaning"};
+    const SLOT_NAME = {action: "ACTION", count: "COUNT", what: "WHAT", rel: "RELATION", where: "WHERE"};
+    // The task sentence cut into its words, each tagged with the slot it fills; a run of words
+    // from one long value is named once, on its first word.
+    const STOP = new Set(["a", "an", "the", "and", "or", "with", "of", "for", "in", "on", "to"]);
+    const diagram = () => {
+      const tag = new Map();
+      const put = (w, slot, label, key) => { if (w && !tag.has(w)) tag.set(w, {slot, label, key}); };
+      for (const g of placeGoals) {
+        const type = typeOf(g), where = whereOf(g);
+        put(String(type || "").toLowerCase(), "what", "WHAT", type ? `goal:${type}` : null);
+        put(where.toLowerCase(), "where", "WHERE", `goal:${where}`);
+        put(String(g.rel).toLowerCase(), "rel", "RELATION");
+      }
+      for (const g of attrGoals) for (const c of g.constraints) {
+        const label = attrName(g).toUpperCase();
+        if (typeof c.expected === "number") put(`#${c.expected}`, "attr", label);
+        else if (typeof c.expected === "string") c.expected.toLowerCase().split(/[\s,]+/).filter(w => w && !STOP.has(w)).forEach(w => put(w, /\s/.test(c.expected) ? "desc" : "attr", label));
+      }
+      let first = true, prev = null;
+      return scene.meta.task.split(/(\s+)/).map(t => {
+        if (!t.trim()) return " ";
+        const word = t.replace(/[.,;:!?]+$/, ""), punct = t.slice(word.length), w = word.toLowerCase();
+        const num = Number.isFinite(parseFloat(w)) ? tag.get(`#${parseFloat(w)}`) : null;
+        let hit = first ? {slot: "action", label: "ACTION"} : num || tag.get(w) || (placeGoals.length && /^(a|an|one|\d+)$/.test(w) ? {slot: "count", label: "COUNT"} : null);
+        first = false;
+        const label = hit && !(prev && prev.slot === hit.slot && prev.label === hit.label) ? hit.label : "";
+        prev = hit;
+        const tok = `<span class="sd-tok"${hit ? ` data-slot="${hit.slot}"` : ""}${hit?.key ? ` data-ent="${esc(hit.key)}"` : ""}><b>${esc(word)}</b>${hit ? `<i>${label || " "}</i>` : ""}</span>`;
+        return tok + (punct ? `<span class="sd-tok"><b>${esc(punct)}</b></span>` : "");
+      }).join("");
+    };
+    const slotWord = (slot, w, key) => `<span class="sd-slot" data-slot="${slot}"${key ? ` data-ent="${esc(key)}"` : ""}>${esc(w)}</span>`;
+    const status = () => state ? `<dt>STATUS</dt><dd><span class="sd-state${/unmet|unsat|unres|fail|false|viol/i.test(state) ? " is-bad" : " is-ok"}">${esc(state)}</span>${goalEv.goal.decided?.length ? ` <span class="sd-k">decided at</span> <b class="sd-stepno">${esc(stepList(goalEv.goal.decided))}</b>` : ""}</dd>` : "";
+    const placeCard = g => {
+      const type = typeOf(g), where = whereOf(g), what = type || g.ofKind;
+      const typeC = g.constraints.find(c => c.property?.index === "object_type");
+      return `<dl class="sd-req" data-fids="${fids(g.facts)}">
+        <dt>WHAT</dt><dd>${slotWord("what", what, type ? `goal:${type}` : null)}${typeC ? ` <span class="sd-k">object type · ${esc(MODE[typeC.mode] || typeC.mode)}</span>` : ""}</dd>
+        <dt>HOW MANY</dt><dd>${slotWord("count", String(g.count ?? 1))}</dd>
+        <dt>WHERE</dt><dd>${esc(g.rel)} ${slotWord("where", where, `goal:${where}`)}</dd>
+        <dt>DONE WHEN</dt><dd>the run shows ${g.count > 1 ? g.count : "one"} ${slotWord("what", what)} ${esc(g.rel)} the ${slotWord("where", where)}</dd>
+        ${status()}</dl>`;
+    };
+    const attrCard = () => {
+      const item = attrGoals.find(g => g.ofKind && g.ofKind !== "value")?.ofKind || "item";
+      return `<dl class="sd-req">
+        <dt>WHAT</dt><dd>${slotWord("what", `one ${item}`)}</dd>
+        ${attrGoals.map(g => g.constraints.map(c => `<dt>${esc(attrName(g).toUpperCase())}</dt><dd data-fids="${fids(g.facts)}"><b class="sd-op">${esc(OP[c.operator] || c.operator || "=")}</b> ${slotWord(typeof c.expected === "string" && /\s/.test(c.expected) ? "desc" : "attr", typeof c.expected === "string" ? c.expected : String(c.expected))} <span class="sd-k">${esc(MODE[c.mode] || c.mode || "")}</span></dd>`).join("")).join("")}
+        <dt>DONE WHEN</dt><dd>the run ends with ${slotWord("what", `one ${item}`)} meeting all ${attrGoals.reduce((n, g) => n + g.constraints.length, 0)} conditions</dd>
+        ${status()}</dl>`;
+    };
     out.MAP = {
       say: `ProDebugger reads the task “${mark(scene.meta.task)}” as ${scene.goals.length === 1 ? "one requirement" : `${scene.goals.length} requirements`}: ${scene.goals.map(g => mark(phrase(g))).join("; ")}.${state ? ` At the end of the run it is <b class="sd-bad">${esc(state)}</b>.` : ""}`,
       title: "What the task maps to",
       lead: `Every suspicion raised later has to name the requirement it hurts.`,
-      body: `<div class="sd-sec"><div class="sd-k">task</div><p class="sd-task">${mark(scene.meta.task)}</p></div>
-        <div class="sd-sec">${goals}</div>
+      body: `<div class="sd-sec"><div class="sd-k">the task, word by word</div><div class="sd-diagram">${diagram()}</div></div>
+        <div class="sd-sec"><div class="sd-k">the requirement it becomes</div>${placeGoals.map(placeCard).join("")}${attrGoals.length ? attrCard() : ""}</div>
         <div class="sd-sec"><div class="sd-k">facts that check the goal</div><ul class="sd-list">${scene.goals.flatMap(g => g.facts).map(fid => scene.factById.get(fid)).filter(Boolean).slice(0, 8).map(f => factRow(f, `<code>${esc(String(f.value ?? "open"))}</code>`)).join("") || `<li class="sd-k">none</li>`}</ul></div>
         ${off.length ? `<div class="sd-sec"><div class="sd-k">things the agent handled, by recorded type</div><ul class="sd-list">${off.slice(0, 6).map(({f, c, v}) => `<li data-fids="${f.fid}" data-step="${f.t}"><span class="sd-k">step ${f.t} · #${f.fid}</span><span>${ent(f.args[0])} is a ${mark(v)} <b class="sd-bad">≠ ${esc(c.expected)}</b></span></li>`).join("")}</ul></div>` : ""}`,
-      rail: `<h4>Goal</h4>${scene.goals.map(g => `<div class="sd-card"><p>${mark(phrase(g))}</p><div class="sd-chips">${g.constraints.filter(c => typeof c.expected === "string").map(c => `<span class="sd-chip" data-ent="goal:${esc(c.expected)}"><b>${esc(c.expected)}</b></span>`).join("")}</div></div>`).join("")}
+      rail: `<h4>Goal</h4>${scene.goals.map(g => `<div class="sd-card"><p>${mark(phrase(g))}</p><div class="sd-chips">${g.constraints.filter(c => typeof c.expected === "string").map(c => `<span class="sd-chip" data-ent="goal:${esc(c.expected)}" data-role="${role(`goal:${c.expected}`)}"><b>${esc(c.expected)}</b></span>`).join("")}</div></div>`).join("")}
         ${state ? `<h4>Status</h4><p class="sd-bad">${esc(state)}${goalEv.goal.decided?.length ? ` <span class="sd-k">decided at ${esc(stepList(goalEv.goal.decided))}</span>` : ""}</p>` : ""}
         ${off.length ? `<h4>Wrong type in hand</h4><div class="sd-chips">${off.slice(0, 6).map(o => `<button class="sd-chip" data-ent="${esc(o.f.args[0])}" data-goto="ent:${esc(o.f.args[0])}"><b>${esc(entName(o.f.args[0]))}</b></button>`).join("")}</div>` : ""}`,
     };
@@ -311,7 +371,7 @@ export function buildDetails(scene, model) {
         if (ev.phase === "MAP") {
           const st = ev.goal?.state || goalEv?.goal?.state, at = ev.goal?.decided || goalEv?.goal?.decided || [];
           const words = [...new Set(scene.goals.flatMap(g => [...g.constraints.filter(c => typeof c.expected === "string" && c.expected !== entName(g.target)).map(c => c.expected), `${g.rel} ${entName(g.target)}`]))];
-          return {kind: "GOAL", title, line: `${words.map(w => `<span class="sd-chip" data-role="goal">${mark(w)}</span>`).join("")}${st ? `<span class="sd-state${/unmet|unsat|fail|false|viol/i.test(st) ? " is-bad" : ""}">${esc(st)}</span>` : ""}${at.length ? `<span class="sd-k">decided at</span><b class="sd-stepno">${esc(stepList(at))}</b>` : ""}`};
+          return {kind: "GOAL", title, line: `${words.map(w => `<span class="sd-chip" data-role="${w.includes(" ") ? "where" : "goal"}">${mark(w)}</span>`).join("")}${st ? `<span class="sd-state${/unmet|unsat|fail|false|viol/i.test(st) ? " is-bad" : ""}">${esc(st)}</span>` : ""}${at.length ? `<span class="sd-k">decided at</span><b class="sd-stepno">${esc(stepList(at))}</b>` : ""}`};
         }
         return {kind: queryKind(ev), title, line: `${miniStrip(stepsOf(ev.fids))}${num(ev.fids.length, "facts")}${signalPills(ev.signals)}${hitChips(hitsOf(ev.fids))}`};
       }

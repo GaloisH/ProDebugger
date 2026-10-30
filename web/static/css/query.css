@@ -610,6 +610,33 @@ body.page-query .app { padding: 0; }
 .sd-chip[data-role="other"] { color: var(--qg-label-dim); }
 .sd-groups { display: grid; gap: .45rem; }
 .sd-group > .sd-k { display: block; margin-bottom: .15rem; }
+/* The goal's destination is blue (the MAP colour); its object stays red. */
+.qg-ent[data-role="where"] { color: var(--map); border-bottom-color: var(--map); }
+.qg-ent[data-role="where"].is-hl { background: color-mix(in srgb, var(--map) 24%, transparent); }
+.sd-chip[data-role="where"] { border-color: var(--map); color: var(--map); }
+/* MAP: the task sentence word by word, each slot word underlined and named in its colour,
+   then the requirement as a fill-in card. */
+[data-slot] { --slot: var(--qg-label-dim); }
+[data-slot="what"] { --slot: var(--qg-sig-goal); }
+[data-slot="where"] { --slot: var(--map); }
+[data-slot="count"], [data-slot="action"], [data-slot="rel"] { --slot: var(--qg-label); }
+[data-slot="attr"] { --slot: var(--qg-cand); }
+[data-slot="desc"] { --slot: color-mix(in srgb, var(--qg-sig-goal) 60%, var(--qg-label)); }
+.sd-op { font-family: var(--mono); color: var(--qg-label); }
+.sd-tok[data-slot="desc"] b { font-weight: 500; border-bottom-width: 1px; }
+.sd-diagram { display: flex; flex-wrap: wrap; align-items: flex-start; gap: .2rem .75rem; margin: .4rem 0 .2rem; }
+.sd-tok { display: inline-flex; flex-direction: column; align-items: center; gap: .2rem; }
+.sd-tok b { padding: 0 .1rem; font-size: 1.35rem; font-weight: 500; color: var(--qg-label-dim); }
+.sd-tok[data-slot] b { color: var(--slot); border-bottom: 2px solid var(--slot); }
+.sd-tok[data-slot="what"] b, .sd-tok[data-slot="where"] b { font-weight: 600; }
+.sd-tok[data-slot="count"] b, .sd-tok[data-slot="action"] b, .sd-tok[data-slot="rel"] b { border-bottom-style: dashed; border-bottom-width: 1px; }
+.sd-tok i { font-style: normal; font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; color: var(--slot); }
+.sd-req { display: grid; grid-template-columns: 6.5rem 1fr; gap: .35rem .8rem; margin: .4rem 0 0; padding: .6rem .8rem; border: 1px solid var(--qg-line-hi); background: color-mix(in srgb, var(--map) 5%, transparent); }
+.sd-req dt { font-family: var(--mono); font-size: .74rem; letter-spacing: .1em; color: var(--qg-label-dim); padding-top: .15rem; }
+.sd-req dd { margin: 0; font-size: 1rem; color: var(--qg-label); }
+.sd-slot { font-weight: 600; color: var(--slot); }
+.sd-req dd > .sd-slot[data-slot="what"], .sd-req dd > .sd-slot[data-slot="where"], .sd-req dd > .sd-slot[data-slot="attr"] { padding: 0 .35rem; border: 1px solid var(--slot); background: color-mix(in srgb, var(--slot) 14%, transparent); }
+.sd-req dt:nth-last-of-type(1), .sd-req dt:nth-last-of-type(1) + dd { padding-top: .4rem; border-top: 1px solid var(--qg-line); }
 .sd-cellrow[data-src] { border-left: 2px solid var(--src, transparent); }
 .sd-cellrow[data-src="env"], .sd-bars [data-src="env"] { --src: var(--qg-th-env); }
 .sd-cellrow[data-src="agent"], .sd-bars [data-src="agent"] { --src: var(--qg-th-agent); }

@@ -12,6 +12,7 @@ import {createTour, eventDuration} from "../query/tour.js?v=649c5ab31a";
 import {buildStory} from "../query/story.js?v=649c5ab31a";
 import {coachSeen, runCoach} from "../query/coach.js?v=649c5ab31a";
 import {createDetails} from "../query/details.js?v=649c5ab31a";
+import {mountOverviewNarrative} from "../query/overview.js?v=overview-narrative1";
 
 const GROUP = "evidence-query-claims-n30-20261013";
 // Cases the page is tuned on (one window/lane, two windows/lanes, a large WebShop record), then
@@ -44,7 +45,7 @@ export function mountQuery(app, route) {
   const ref = ["runs", ...(route.ref || DEFAULT_CASE)];
   app.innerHTML = `<div class="qg">${loader("Building the query graph…")}</div>`;
   const root = app.firstElementChild;
-  let stage = null, keyHandler = null, destroyed = false;
+  let stage = null, narrative = null, keyHandler = null, destroyed = false;
 
   loadQueryScene(ref).then(scene => {
     if (destroyed) return;
@@ -71,6 +72,7 @@ export function mountQuery(app, route) {
     const ui = bindUi(root, scene, model, stage, roles, ref, story);
     // The sentence beside the tower follows the tour's phase; its popup pauses the tour.
     const details = createDetails(root, scene, model, stage, {onOpen: () => setPlaying(false)});
+    narrative = mountOverviewNarrative(root, scene, model, stage);
     ui.on("event", (ph, i) => { details.show(ph); details.caption(scene.events[i]); });
     ui.setEvent(state.i);
 
@@ -109,6 +111,7 @@ export function mountQuery(app, route) {
       setPhase(null);
       details.close();
       ui.setMode(mode, state.view);
+      narrative.mode(mode);
       if (mode !== "tour") setPlaying(false);
       else { go(0); setPlaying(true); }
       if (mode === "story") setRow(0);
@@ -124,12 +127,13 @@ export function mountQuery(app, route) {
     ui.on("play", toggle);
     ui.on("step", d => go(state.i + d, 0, d));
     // In Overview the timeline and the phase bar pick a cloud instead of moving the playhead.
-    const pick = i => stage.select(scene.events[i].cluster || "core");
+    const pick = i => { stage.select(scene.events[i].cluster || "core"); narrative.event(i); };
     ui.on("seek", i => state.mode === "overview" ? pick(i) : go(i, 0.5));
     // In Overview a phase button focuses that phase's clouds instead; a second click lets go.
     const setPhase = ph => {
       state.phase = ph ? phaseFocus(model, ph) : null;
-      ui.setPhase(state.phase);
+      ui.setPhase(state.phase, state.mode === "overview");
+      narrative.phase(ph);
     };
     ui.on("phase", ph => {
       if (state.mode === "overview") {
@@ -179,7 +183,9 @@ export function mountQuery(app, route) {
       state.chain = id ? chainPath(model, id, state.chainAll) : null;
       ui.setChain(state.chain);
       ui.inspect(sel);
+      narrative.selection(sel);
     });
+    stage.on("details", id => narrative.details(id));
     // "show all" on the chain list puts the parallel queries back on the chain, and folds them.
     ui.on("chainAll", () => {
       if (!state.chain) return;
@@ -190,7 +196,7 @@ export function mountQuery(app, route) {
     });
     stage.on("manual", () => ui.syncFollow());
     stage.on("view", () => ui.syncFollow());
-    stage.on("hover", h => ui.hover(h));
+    stage.on("hover", h => { ui.hover(state.mode === "overview" ? null : h); narrative.hover(h); });
     keyHandler = e => {
       if (e.target.closest("input, textarea, select")) return;
       if (e.key === "Escape" && details.isOpen) { details.close(); return; }
@@ -287,6 +293,7 @@ export function mountQuery(app, route) {
   return {
     unmount() {
       destroyed = true;
+      narrative?.destroy();
       stage?.destroy();
       if (keyHandler) document.removeEventListener("keydown", keyHandler);
     },
@@ -749,6 +756,14 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     const shared = c.kind !== "core" ? sharing(c) : [];
     const sharedHtml = shared.length ? `<h4>Shares facts with</h4><ul class="qg-rows">${shared.map(([o, k]) => `<li><button data-open="${esc(o.id)}"><span>${esc(clusterTitle(o))}</span><em>${k}</em></button></li>`).join("")}</ul>` : "";
     const phase = ev?.phase || "PARSE";
+    if (root.classList.contains("is-overview") && c.narrative) {
+      panelBody.innerHTML = `${crumbs(c)}<p class="qg-kind">Evidence index · ${esc(c.kind)}</p>
+        <h3>${esc(clusterTitle(c))}</h3><p class="qg-muted">${c.fids.length} mapped facts. Select an entity or fact to inspect its source.</p>
+        <button class="ovn-more" data-ov-more>Explain this investigation</button>
+        ${groups}${sharedHtml}<details><summary>Recorded request / assessment</summary>${body}</details>
+        <p class="qg-hint">Association does not establish a bug or a causal relationship.</p>`;
+      return;
+    }
     panelBody.innerHTML = `${crumbs(c)}
       <p class="qg-kind"><span class="qg-chip" data-phase="${esc(phase)}">${esc(phase)}</span>${esc(c.kind)}${opened ? ` · <button class="qg-link" data-fold>fold</button>` : ""}</p>
       <h3>${esc(c.label)}</h3><p class="qg-muted">${esc(c.detail)}</p>
@@ -808,7 +823,8 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       <dl><dt>step</dt><dd>S${f.t} · ${SLOT_LABEL[f.slot]} · ${f.side}</dd>
       ${sig ? `<dt>relation</dt><dd>${esc(`${sig.name}(${(sig.arg_kinds || []).join(", ")})`)}${(sig.props || []).length ? ` <small>${esc(sig.props.join(" · "))}</small>` : ""}</dd>` : ""}
       ${f.basis.length ? `<dt>basis</dt><dd>${f.basis.map(b => `<code>f${b}</code>`).join(" ")}</dd>` : ""}</dl>
-      ${f.span ? `<blockquote>${esc(short(f.span, 420))}</blockquote>` : ""}
+      ${f.span ? `<blockquote>${esc(root.classList.contains("is-overview") ? f.span : short(f.span, 420))}</blockquote>` : ""}
+      ${root.classList.contains("is-overview") ? `<button class="ovn-inline" data-ov-step="${f.t}">Read original step S${f.t} ↗</button>` : ""}
       ${roles.reach(fid) ? `<button class="qg-open" data-journey-fact="${fid}">Follow its journey ›</button>` : ""}
       <h4>Returned by <small>${seen.length}</small></h4>
       <ul class="qg-rows">${seen.map(o => `<li><button data-open="${esc(o.id)}"><span>${esc(clusterTitle(o))}</span><em>T${o.tier}</em></button></li>`).join("")}</ul>`;
@@ -996,7 +1012,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     },
     inspect(sel) {
       this.syncFollow();
-      setPane("inspect", !!sel);
+      setPane("inspect", !!sel && !(root.classList.contains("is-overview") && sel.kind === "cluster" && !sel.opened));
       if (!sel) { showEvent(current); return; }
       if (sel.kind === "cluster") showCluster(sel.cluster, scene.events[sel.cluster.event], sel.opened);
       else if (sel.kind === "group") showGroup(sel.cluster, sel.gi);

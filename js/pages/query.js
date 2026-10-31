@@ -3,15 +3,15 @@
 // above it, ending in the root. Click a cloud to open it by entity, an entity to read its facts.
 import {esc, short, loader} from "../util.js?v=27bf1baa85";
 import {caseHref, queryHref} from "../routes.js?v=27bf1baa85";
-import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js?v=649c5ab31a";
-import {agentWords} from "../query/narrate.js?v=649c5ab31a";
-import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} from "../query/clusters.js?v=649c5ab31a";
-import {layoutClusters, TIERS} from "../query/layout.js?v=649c5ab31a";
-import {createStage, clusterTitle} from "../query/stage.js?v=649c5ab31a";
-import {createTour, eventDuration} from "../query/tour.js?v=649c5ab31a";
-import {buildStory} from "../query/story.js?v=649c5ab31a";
-import {coachSeen, runCoach} from "../query/coach.js?v=649c5ab31a";
-import {createDetails} from "../query/details.js?v=649c5ab31a";
+import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js?v=3e72ea587b";
+import {agentWords} from "../query/narrate.js?v=3e72ea587b";
+import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} from "../query/clusters.js?v=3e72ea587b";
+import {layoutClusters, TIERS} from "../query/layout.js?v=3e72ea587b";
+import {createStage, clusterTitle} from "../query/stage.js?v=3e72ea587b";
+import {createTour, eventDuration} from "../query/tour.js?v=3e72ea587b";
+import {buildStory} from "../query/story.js?v=3e72ea587b";
+import {coachSeen, runCoach} from "../query/coach.js?v=3e72ea587b";
+import {createDetails} from "../query/details.js?v=3e72ea587b";
 import {mountOverviewNarrative} from "../query/overview.js?v=overview-narrative1";
 
 const GROUP = "evidence-query-claims-n30-20261013";

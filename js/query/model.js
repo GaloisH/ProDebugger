@@ -3,7 +3,7 @@
 // Every event says which DSL nodes it touched, so the renderer only has to light them.
 import {getJSON, JsonlFollower} from "../api.js?v=27bf1baa85";
 import {short} from "../util.js?v=27bf1baa85";
-import {cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js?v=649c5ab31a";
+import {cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js?v=3e72ea587b";
 
 export const SLOTS = ["obs", "mem", "refl", "plan", "act", "chk"];
 export const SLOT_LABEL = {obs: "observation", mem: "memory", refl: "reflection", plan: "plan", act: "action", chk: "check"};
@@ -321,7 +321,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     meta: {tid: record.trajectory_id, task: record.task, taskType: record.task_type, steps,
            relations: record.relations || {}, kinds},
     facts, factById, entities, goals, evidence, windows, lanes: [...lanes.values()], candidates, root, events,
-    goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, outcome: r.conditions?.[0]?.outcome || "", finding: r.conditions?.[0]?.finding || "", conclusion: r.conclusion || "", caveat: r.caveat || ""})),
+    goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, agent: r.conditions?.[0]?.agent_id || "", conds: (r.conditions || []).map(c => ({agent: c.agent_id, outcome: c.outcome})), outcome: r.conditions?.[0]?.outcome || "", finding: r.conditions?.[0]?.finding || "", conclusion: r.conclusion || "", caveat: r.caveat || ""})),
   };
 }
 

@@ -983,26 +983,13 @@ body.page-query .app { padding: 0; }
 .qg.is-overview .ovn-hover-help { font-size:.875rem;line-height:1.5; }
 .qg.is-overview .ovn-fold { padding:.8rem 0; }
 .qg.is-overview .ovn-section { padding:1rem 0; }
-/* SUBMIT details: verdict card, deciding rule, rivals, fix and caveats. Root stays red (sig-goal). */
+/* SUBMIT details: verdict card, deciding rule and fix. Root stays red (sig-goal). */
 .sd-verdict { margin-top: .3rem; padding: .6rem .8rem; border: 1px solid color-mix(in srgb, var(--qg-sig-goal) 55%, transparent); border-left: 3px solid var(--qg-sig-goal); background: color-mix(in srgb, var(--qg-sig-goal) 6%, transparent); }
 .sd-verdict-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .6rem; }
 .sd-verdict-head > b { font-family: var(--mono); font-size: 1.05rem; font-weight: 600; color: var(--qg-sig-goal); }
 .sd-verdict-head .sd-state { margin-left: auto; }
 .sd-verdict-tag, .sd-fix-tag { padding: 0 .45rem; background: var(--qg-sig-goal); color: var(--qg-void); font-family: var(--mono); font-size: .74rem; font-weight: 600; letter-spacing: .08em; }
 .qg-sd-body .sd-verdict-claim { margin: .45rem 0 .1rem; font-size: 1.02rem; color: var(--text-hi); }
-.sd-rivals { margin: .3rem 0 0; padding: 0; list-style: none; }
-.sd-rivals li { display: grid; grid-template-columns: 7.4rem 6.6rem 1fr; gap: .7rem; align-items: baseline; padding: .4rem .3rem; border-top: 1px solid var(--qg-line); }
-.sd-rivals li:hover { background: var(--tint-hover); }
-.sd-rival-at { font-family: var(--mono); font-size: .84rem; color: var(--qg-label); }
-.sd-rival-tag { padding: .05rem 0; border: 1px solid var(--qg-line-hi); color: var(--qg-label-dim); font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-align: center; }
-.sd-rivals li.is-chosen { border-left: 3px solid var(--qg-sig-goal); background: color-mix(in srgb, var(--qg-sig-goal) 7%, transparent); }
-.sd-rivals li.is-chosen .sd-rival-at { color: var(--qg-sig-goal); font-weight: 600; }
-.sd-rivals li.is-chosen .sd-rival-tag { border-color: var(--qg-sig-goal); background: var(--qg-sig-goal); color: var(--qg-void); font-weight: 600; }
-.sd-rivals li:not(.is-chosen) p { color: var(--qg-label); }
-.qg-sd-body .sd-rivals p { margin: 0; }
 .sd-fix { display: grid; grid-template-columns: auto 1fr; gap: .7rem; align-items: baseline; margin-top: .3rem; padding: .5rem .7rem; border: 1px solid color-mix(in srgb, var(--submit) 55%, transparent); border-left: 3px solid var(--submit); background: color-mix(in srgb, var(--submit) 7%, transparent); }
 .sd-fix .sd-fix-tag { background: var(--submit); }
 .qg-sd-body .sd-fix p { margin: 0; color: var(--text-hi); }
-.sd-caveats { margin: .3rem 0 0; padding: 0; list-style: none; }
-.sd-caveats li { position: relative; padding: .25rem 0 .25rem 1.5rem; border-top: 1px solid var(--qg-line); color: var(--qg-label); font-size: .9rem; }
-.sd-caveats li::before { content: "?"; position: absolute; left: .2rem; top: .25rem; width: .95rem; height: .95rem; border: 1px solid var(--qg-sig-idle); border-radius: 50%; color: var(--qg-sig-idle); font-family: var(--mono); font-size: .68rem; line-height: .95rem; text-align: center; }

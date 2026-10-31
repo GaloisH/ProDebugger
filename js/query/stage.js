@@ -49,7 +49,8 @@ export function createStage(canvas, scene, model, layout) {
   let markOf = new Map(), marks = [], badgeAt = [];
   let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
-  const listeners = {hover: [], select: [], manual: [], view: [], journey: [], back: []};
+  const listeners = {hover: [], select: [], manual: [], view: [], journey: [], back: [], details: []};
+  let evidenceHighlight = new Set();
   const emit = (k, v) => listeners[k].forEach(fn => fn(v));
 
   // Point instances per cloud; a cloud's points start at the core and travel out to it.
@@ -964,7 +965,7 @@ export function createStage(canvas, scene, model, layout) {
           ctx.setLineDash([]);
         }
         for (const p of inst.get(c.id)) {
-          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid && !markOf.has(p.fid)) continue;
+          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid && !markOf.has(p.fid) && !(frame.labelAll && evidenceHighlight.has(p.fid))) continue;
           const s = project(p.cur);
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
@@ -972,17 +973,22 @@ export function createStage(canvas, scene, model, layout) {
           // The travelling fact stands out in every cloud it passes; other role facts step back.
           const traveller = journey?.fid === p.fid;
           const mk = markOf.get(p.fid);
+          const inspected = frame.labelAll && evidenceHighlight.has(p.fid);
           const size = mk ? 5 : traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
           ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role || mk ? 1 : plain);
           if (mk) { ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * appear); if (!open) badgeAt.push({mk, x: s.x, y: s.y, z: s.z, focus}); }
           if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, (journey ? 0.5 : 0.95) * appear);
-          if (traveller) ctx.globalAlpha = 1;
+          if (traveller || inspected) ctx.globalAlpha = 1;
           ctx.fillStyle = mk ? mk.color : role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
           ctx.fillRect(s.x - size / 2, s.y - size / 2, size, size);
+          if (inspected) {
+            stroke(colors.focus, .95, 1);
+            ctx.strokeRect(s.x - size / 2 - 2, s.y - size / 2 - 2, size + 4, size + 4);
+          }
           if (inGroup && c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS) {
             targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
             ctx.globalAlpha = 1;
-            ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid ? colors["ink-hi"] : colors.label;
+            ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid || inspected ? colors["ink-hi"] : colors.label;
             ctx.font = `13.5px ${MONO}`;
             ctx.textAlign = "left";
             ctx.fillText(factLabel(scene.factById.get(p.fid)), s.x + 9, s.y + 4);
@@ -1007,7 +1013,7 @@ export function createStage(canvas, scene, model, layout) {
         stroke(colors["ink-dim"], alpha, 1);
         ctx.beginPath(); ctx.moveTo(pc.x - 4, pc.y - 4); ctx.lineTo(pc.x + 4, pc.y + 4); ctx.moveTo(pc.x + 4, pc.y - 4); ctx.lineTo(pc.x - 4, pc.y + 4); ctx.stroke();
       }
-      if (!isOpen) targets.push({kind: "cluster", cluster: c, x: pc.x, y: pc.y, r: sr + 3});
+      if (!isOpen) targets.push({kind: "cluster", cluster: c, x: pc.x, y: pc.y, r: frame.labelAll ? Math.max(16,sr+3) : sr+3});
       labelled.push({c, pc, sr, focus, alpha, isOpen});
     }
 
@@ -1042,7 +1048,7 @@ export function createStage(canvas, scene, model, layout) {
     // clear of what is already there; hub names come last and give way.
     placed = labelled.map(({pc, sr}) => { const k = Math.min(sr, 14); return [pc.x - k, pc.y - k, 2 * k, 2 * k]; });
     // A minimap (the Story mode's tower) has no ruler and names only the clouds in focus.
-    if (!frame.mini) ruler(shown, current);
+    if (!frame.mini && !frame.labelAll) ruler(shown, current);
     markBadges();
     for (const e of edgeLabels) edgeLabel(e);
     if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
@@ -1059,7 +1065,7 @@ export function createStage(canvas, scene, model, layout) {
       }
       const selected = view.selected === c.id;
       if (journey && !hot) continue;
-      if ((selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubsLater.push(c);
+      if ((!frame.labelAll || open) && (selected || hot) && frame.filled.has(c.id) && layout.shape.get(c.id)) hubsLater.push(c);
       const outside = (frame.chain && !frame.chain.has(c.id)) || (frame.phase && !frame.phase.near.has(c.id));
       const inPhase = frame.phase?.members.has(c.id);
       // The hovered cloud answers the pointer: a faint disc in its phase colour, brackets pushed out.
@@ -1069,6 +1075,8 @@ export function createStage(canvas, scene, model, layout) {
         ctx.beginPath(); ctx.arc(pc.x, pc.y, sr + 6, 0, Math.PI * 2); ctx.fill();
         brackets(pc.x, pc.y, sr + 7, phaseColor(c), 1);
       } else if (focus || selected) brackets(pc.x, pc.y, sr + 4, phaseColor(c), fade);
+      // Overview is a quiet cloud until hover. Its HTML preview owns all narrative text.
+      if (frame.labelAll && !journey) continue;
       if (outside && !hot) continue;
       const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id);
       const quietAll = frame.labelAll && !frame.chain && !frame.phase && backbone.size;
@@ -1093,7 +1101,7 @@ export function createStage(canvas, scene, model, layout) {
       // A fact's label sits to the right of its point and is clickable too; edge labels are boxes.
       const hit = t.kind === "edge" || t.rect ? x >= t.rect[0] && x <= t.rect[0] + t.rect[2] && y >= t.rect[1] && y <= t.rect[1] + t.rect[3]
         : t.kind === "fact" ? d < t.r || (x > t.x && x < t.x + 380 && Math.abs(y - t.y) < 7) : d < t.r;
-      const score = t.kind === "stop" ? d - 3000 : t.kind === "edge" ? -2000 : t.kind === "fact" ? Math.abs(y - t.y) - 1000 : t.kind === "group" ? d - 500 : d;
+      const score = t.kind === "details" ? -4000 : t.kind === "stop" ? d - 3000 : t.kind === "edge" ? -2000 : t.kind === "fact" ? Math.abs(y - t.y) - 1000 : t.kind === "group" ? d - 500 : d;
       if (hit && score < bd) { best = t; bd = score; }
     }
     return best;
@@ -1125,9 +1133,11 @@ export function createStage(canvas, scene, model, layout) {
       const t = pick(e.clientX - r.left, e.clientY - r.top);
       // Under a journey a badge or a cloud on the way focuses that stop; another cloud ends it.
       const stopAt = t && journey ? (t.kind === "stop" ? t.k : t.kind === "cluster" ? journey.stops.findIndex(s => s.id === t.cluster.id) : -1) : -1;
-      if (stopAt >= 0) focusStop(journey.focus === stopAt ? null : stopAt);
+      if (t?.kind === "details") emit("details", t.cluster.id);
+      else if (stopAt >= 0) focusStop(journey.focus === stopAt ? null : stopAt);
       else if (!t) back();
       else if (journey && t.kind === "cluster") { setJourney(null); select(t.cluster.id); }
+      else if (frame.labelAll && t.kind === "cluster") emit("details", t.cluster.id);
       else if (t.kind === "cluster" || t.kind === "edge") view.selected === t.cluster.id ? open(t.cluster.id) : select(t.cluster.id);
       else if (t.kind === "group") open(t.cluster.id, view.group === t.gi ? null : t.gi);
       else if (t.kind === "fact") { view.fact = t.fid; emit("select", {kind: "fact", cluster: t.cluster, gi: view.group, fid: t.fid}); }
@@ -1135,12 +1145,13 @@ export function createStage(canvas, scene, model, layout) {
     drag = null;
   };
   // First click selects a cloud (the page lights its causal chain); a second click opens it.
-  function select(id) {
+  function select(id, {preserveCamera = false} = {}) {
     view.selected = id;
     if (view.cluster && view.cluster !== id) setView(null);
     // Picking a cloud hands the camera back, so it can frame the chain the pick lights, even
     // after the reader has dragged or zoomed.
-    if (id && manual) { manual = false; emit("manual", false); }
+    if (preserveCamera) { manual = true; emit("manual",true); }
+    else if (id && manual) { manual = false; emit("manual", false); }
     emit("select", id ? {kind: "cluster", cluster: byId.get(id), opened: false} : null);
   }
   function open(id, group = null) {
@@ -1203,6 +1214,7 @@ export function createStage(canvas, scene, model, layout) {
     selectFact(fid) { view.fact = fid; },
     // [{fids, color, label}]: later marks win where they share a fact.
     markFacts(list) { marks = list || []; markOf = new Map(marks.flatMap(m => m.fids.map(fid => [fid, m]))); },
+    highlightEvidence(fids) { evidenceHighlight = new Set(fids); },
     get view() { return view; },
     get manual() { return manual; },
     colors: () => colors,

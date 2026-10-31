@@ -21,7 +21,7 @@ async function readJsonl(ref, name) {
 }
 
 export async function loadQueryScene(ref) {
-  const [record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries] = await Promise.all([
+  const [record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries, input] = await Promise.all([
     getJSON(ref, "canonical_record.json"),
     getJSON(ref, "evidences.json", {}),
     getJSON(ref, "route_candidates.json", []),
@@ -30,8 +30,11 @@ export async function loadQueryScene(ref) {
     getJSON(ref, "goal_map.json", null),
     readJsonl(ref, "tool_calls.jsonl"),
     readJsonl(ref, "trace_queries.jsonl"),
+    getJSON(ref, "input.json", null),
   ]);
-  return buildQueryScene({record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries});
+  const scene = buildQueryScene({record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries});
+  scene.source = {input, goalMap, result, managerPlan};
+  return scene;
 }
 
 // Collects fact ids (and evidence ids) anywhere inside a tool result.

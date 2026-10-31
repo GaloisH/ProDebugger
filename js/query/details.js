@@ -2,8 +2,8 @@
 // this case, and behind its "more details" a popup (how it did it) and a rail (what came out).
 // Both name the same entities and steps; pointing at one lights it everywhere, on the tower too.
 import {esc} from "../util.js?v=27bf1baa85";
-import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=3e72ea587b";
-import {agentWords, cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js?v=3e72ea587b";
+import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=79ed589a01";
+import {agentWords, cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js?v=79ed589a01";
 
 const SLOT_ORDER = ["obs", "mem", "refl", "plan", "act", "chk"];
 // Who wrote a line: the environment, or the agent itself (memory, reflection, plan, action).
@@ -589,18 +589,59 @@ export function buildDetails(scene, model) {
     };
   }
 
-  // SUBMIT: the verdict, the agent's own words at the root, and why.
+  // SUBMIT: the verdict with the agent's own words, the rule that decided it, the rivals it
+  // beat, the fix, and what it cannot rule out; the free-text reasoning folds under the verdict.
   {
+    const sentences = t => String(t || "").split(/(?<=[.?!])\s+/).map(x => x.trim()).filter(Boolean);
+    const first = t => sentences(t)[0] || "";
+    // A comparison's first sentence that says something: past "Selected." or "the only candidate".
+    const gist = t => (sentences(t).map(x => x.replace(/^(Selected|Chosen)[.:]\s*/i, ""))
+      .find(x => x.length > 12 && !(/\bonly (supplied )?candidate\b/i.test(x) && x.length < 60) &&!(/^(selected|chosen) as\b/i.test(x) && x.length < 90)) || first(t));
+    const stepsIn = t => [...String(t || "").matchAll(/\bsteps?[- ](\d+)/gi)].map(m => +m[1]).filter(s => s >= 1 && s <= steps);
+    const stepHl = html => html.replace(/\bsteps?[- ]\d+(?:[–-]\d+)?/g, m => `<b class="sd-stepno">${m}</b>`);
+    const fold = (text, label = "full text") => text ? `<details class="sd-full"><summary>${label}</summary><p>${stepHl(mark(text))}</p></details>` : "";
+    const srcOf = m => /observation|feedback/.test(m) ? "env" : "agent";
+    const ANSWER = {supported: "YES", refuted: "NO", unknown: "CAN'T TELL"};
+    const answerOf = r => (r.conds?.length > 1 ? r.conds : [r]).map(c => ANSWER[c.outcome] || String(c.outcome || "?").toUpperCase()).join(" + ");
+    const rule = root?.rule?.id ? scene.rules.find(r => r.id === root.rule.id) : null;
+    // The rivals: every other candidate SUBMIT weighed; with none, the rival its reasoning names.
+    const others = (root?.rivals || []).filter(r => !r.selected);
+    const named = others.length ? [] : sentences(root?.reasoning).filter(x => /\brival\b/i.test(x));
+    const cited = new Set(stepsIn(root?.reasoning));
+    const at = r => `step ${r.step} · ${esc(r.module || "?")}`;
+    const rivalRow = r => `<li data-step="${r.step}"${r.selected ? ` class="is-chosen"` : ""}>
+        <span class="sd-rival-at">${at(r)}</span><span class="sd-rival-tag">${r.selected ? "CHOSEN" : "PASSED OVER"}</span>
+        <div><p>${stepHl(mark(clip(gist(r.reasoning), 200)))}</p>${sentences(r.reasoning).length > 1 ? fold(r.reasoning) : ""}</div></li>`;
+    const chosen = (root?.rivals || []).find(r => r.selected) || (root ? {step: root.step, module: root.module, selected: true, reasoning: ""} : null);
+    const caveats = sentences(root?.uncertainty);
     out.SUBMIT = root ? {
       say: `ProDebugger names step ${root.step}'s ${esc(root.module)} as the root cause: ${mark(clip(root.proposition, 200))}`,
-      title: "Verdict and why",
-      lead: root.rule?.id ? `Decided by the manager's rule ${esc(root.rule.id.replace(/_/g, " "))}.` : "",
-      body: `<div class="sd-sec" data-step="${root.step}"${root.fid != null ? ` data-fids="${root.fid}"` : ""}><div class="sd-k">root cause · step ${root.step} · ${esc(root.module)}${root.faultClass ? ` · ${esc(faultText(root.faultClass))}` : ""}</div>
-          ${root.quote ? `<blockquote>${mark(root.quote)}</blockquote>` : ""}<p>${mark(root.proposition)}</p></div>
-        ${root.reasoning ? `<div class="sd-sec"><div class="sd-k">reasoning</div><p>${mark(root.reasoning)}</p></div>` : ""}`,
+      title: "The verdict, and what it rests on",
+      lead: `SUBMIT weighs TRACE's candidates against the manager's rules and names one step.`,
+      body: `<div class="sd-sec" data-step="${root.step}"${root.fid != null ? ` data-fids="${root.fid}"` : ""}><div class="sd-k">the verdict · step ${root.step} · ${esc(root.module)}</div>
+          <div class="sd-verdict">
+            <div class="sd-verdict-head"><span class="sd-verdict-tag">ROOT CAUSE</span><b>${at(root)}</b>${root.faultClass ? `<span class="sd-k">${esc(faultText(root.faultClass))}</span>` : ""}<span class="sd-state${root.accepted ? " is-ok" : ""}">${root.accepted ? "accepted" : esc(root.status || "not accepted")}</span></div>
+            <p class="sd-verdict-claim">${mark(root.proposition)}</p>
+            ${root.quote ? `<blockquote class="sd-quote-card" data-src="${srcOf(root.module)}" data-step="${root.step}"><span class="sd-k">the agent wrote · step ${root.step} · ${esc(root.module)}</span>${mark(root.quote)}</blockquote>` : ""}
+            ${fold(root.reasoning, "SUBMIT's full reasoning")}
+          </div></div>
+        ${rule ? `<div class="sd-sec"><div class="sd-k">the rule that decided it · fixed by the manager before TRACE searched</div>
+          <ol class="sd-verdicts">${[rule, ...scene.rules.filter(r => r !== rule)].map(r => `<li class="${r === rule ? "is-used" : "is-dim"}">
+            <span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc(answerOf(r))}</span>
+            <p>${r === rule ? `<span class="sd-k">TRACE found</span> ${mark(clip(first(r.finding), 170) || "—")} <span class="sd-k">so</span> blame <b class="sd-stepno">step ${root.step}</b>'s ${esc(root.module)}` : `<span class="sd-k">not taken ·</span> ${esc(r.id.replace(/_/g, " "))}`}</p>
+            ${r === rule ? `<span class="sd-used">★ applied</span>` : "<span></span>"}</li>`).join("")}</ol>
+          <details class="sd-full"><summary>the rule in full</summary><p><span class="sd-k">${esc(rule.id.replace(/_/g, " "))}</span><br>${rule.finding ? `<span class="sd-k">if</span> ${mark(rule.finding)} ` : ""}<span class="sd-k">then</span> ${mark(rule.conclusion)}${rule.caveat ? ` <span class="sd-k">caveat</span> ${mark(rule.caveat)}` : ""}</p></details></div>` : ""}
+        <div class="sd-sec"><div class="sd-k">the rivals it beat · ${others.length ? plural(others.length, "other candidate") : named.length ? "named in its reasoning" : "the only candidate"}</div>
+          <ol class="sd-rivals">${chosen ? rivalRow(chosen) : ""}${others.slice(0, 4).map(rivalRow).join("")}
+            ${named.map(x => { const s = stepsIn(x)[0]; return `<li${s ? ` data-step="${s}"` : ""}><span class="sd-rival-at">${s ? `step ${s}` : "—"}</span><span class="sd-rival-tag">RIVAL</span><div><p>${stepHl(mark(clip(x, 240)))}</p></div></li>`; }).join("")}</ol>
+          ${others.length > 4 ? `<details class="sd-full"><summary>${plural(others.length - 4, "more candidate")} passed over</summary><ol class="sd-rivals">${others.slice(4).map(rivalRow).join("")}</ol></details>` : ""}</div>
+        ${root.repair ? `<div class="sd-sec"><div class="sd-k">how to fix it · step ${root.step} · ${esc(root.module)}</div><div class="sd-fix"><span class="sd-fix-tag">FIX</span><p>${stepHl(mark(root.repair))}</p></div></div>` : ""}
+        ${caveats.length ? `<div class="sd-sec"><div class="sd-k">what it cannot rule out · ${plural(caveats.length, "caveat")}</div><ul class="sd-caveats">${caveats.map(x => `<li>${stepHl(mark(x))}</li>`).join("")}</ul></div>` : ""}`,
       rail: `<h4>Root</h4><div class="sd-card is-root"${root.fid != null ? ` data-fids="${root.fid}"` : ""}><b>step ${root.step} · ${esc(root.module)}</b><span class="sd-k">${esc(faultText(root.faultClass))}</span></div>
-        ${strip(steps, new Map([[root.step, {tone: "root", label: "root"}]]))}
-        <h4>Status</h4><p>${root.accepted ? "accepted" : esc(root.status || "not accepted")}</p>`,
+        <h4>Steps it cites <small>${cited.size}</small></h4>${strip(steps, new Map([...[...cited].map(s => [s, {tone: "read", label: "cited"}]), [root.step, {tone: "root", label: "root"}]]))}
+        <h4>Status</h4><p><span class="sd-state${root.accepted ? " is-ok" : ""}">${root.accepted ? "accepted" : esc(root.status || "not accepted")}</span></p>
+        ${rule ? `<h4>Answer used</h4><p class="sd-rail-used"><span class="sd-outcome" data-outcome="${esc(rule.outcome)}">${esc(answerOf(rule))}</span><span>blame <b class="sd-stepno">step ${root.step}</b>'s ${esc(root.module)}</span></p>` : ""}
+        ${others.length ? `<h4>Passed over <small>${others.length}</small></h4><div class="sd-chips">${others.slice(0, 8).map(r => `<button class="sd-chip" data-goto="step:${r.step}"><b>step ${r.step}</b><em>${esc(r.module || "")}</em></button>`).join("")}</div>` : ""}`,
     } : {
       say: "ProDebugger stops without naming a root cause.", title: "No verdict", lead: "", body: "", rail: "",
     };

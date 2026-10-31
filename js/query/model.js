@@ -3,7 +3,7 @@
 // Every event says which DSL nodes it touched, so the renderer only has to light them.
 import {getJSON, JsonlFollower} from "../api.js?v=27bf1baa85";
 import {short} from "../util.js?v=27bf1baa85";
-import {cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js?v=3e72ea587b";
+import {cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js?v=79ed589a01";
 
 export const SLOTS = ["obs", "mem", "refl", "plan", "act", "chk"];
 export const SLOT_LABEL = {obs: "observation", mem: "memory", refl: "reflection", plan: "plan", act: "action", chk: "check"};
@@ -299,7 +299,20 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     const cand = candidates.find(c => c.step === r.step && (c.module === r.module || c.fid === fid));
     root = {id: "root", type: "root", step: r.step, module: r.module, fid, faultClass: r.fault_class,
             proposition: r.proposition || "", quote: r.output_quote || "", reasoning: r.reasoning || result.reasoning || "", candidate: cand?.id || null,
-            accepted: !!result.accepted, status: result.status, rule: decidingRule(result, managerPlan)};
+            accepted: !!result.accepted, status: result.status, rule: decidingRule(result, managerPlan),
+            repair: result.repair || "", uncertainty: result.uncertainty || "", rivals: []};
+    // SUBMIT's word on every candidate it weighed ("trace-window:<agent>:<n>"), tied to the
+    // candidate TRACE wrote, else to the alternative SUBMIT recorded.
+    const alts = new Map((result.alternatives || []).map(a => [a.candidate_id, a]));
+    for (const c of result.candidate_comparisons || []) {
+      const [, agent, n] = String(c.candidate_id).split(":");
+      const id = lanes.get(agent)?.candidates[Number(n) - 1];
+      const cand = id ? candidates.find(x => x.id === id) : null, alt = alts.get(c.candidate_id);
+      const step = cand?.step ?? alt?.step ?? alt?.assessment?.step, module = cand?.module ?? alt?.module ?? alt?.assessment?.module;
+      if (step == null) continue;
+      root.rivals.push({id: c.candidate_id, step, module, faultClass: cand?.faultClass ?? alt?.assessment?.fault_class,
+                        selected: c.candidate_id === r.root_id, reasoning: c.reasoning || ""});
+    }
   }
   events.push({
     phase: "SUBMIT", name: "submit", title: root ? `Root cause: step ${root.step} ${root.module}` : "No root cause",

@@ -667,7 +667,6 @@ body.page-query .app { padding: 0; }
 .sd-ab li { display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: baseline; }
 .sd-ab p { margin: 0; font-size: 1rem; color: var(--text-hi); }
 .sd-ab-tag { display: grid; place-items: center; height: 1.4rem; border: 1px solid var(--manager); color: var(--manager); font-family: var(--mono); font-size: .8rem; font-weight: 600; }
-.sd-rival { margin: .35rem 0 0 2.2rem !important; font-size: .86rem; color: var(--qg-label-dim); }
 .sd-hedge { padding: 0 .15rem; background: color-mix(in srgb, var(--qg-th-agent) 30%, transparent); color: var(--text-hi); }
 .sd-plan { display: grid; gap: .35rem; margin: .3rem 0 .2rem; padding: 0; list-style: none; }
 .sd-plan-row { display: grid; grid-template-columns: 4.6rem minmax(0, 1.3fr) minmax(0, 1fr) 6rem; grid-template-areas: "tag what where steps" "tag why why why"; gap: .15rem .7rem; align-items: center; padding: .4rem .6rem; border-left: 3px solid var(--grp); background: color-mix(in srgb, var(--grp) 5%, transparent); }
@@ -830,26 +829,13 @@ body.page-query .app { padding: 0; }
 .sd-mini.is-root i.is-on, .sd-mini.is-root i.is-on.is-win { background: var(--qg-sig-goal); outline-color: var(--qg-sig-goal); }
 .qg-sd-ghost { position: absolute; z-index: 7; padding: 0 .2rem; border-radius: 2px; background: var(--qg-focus); color: var(--qg-void); font-size: .9rem; font-weight: 600; pointer-events: none; }
 @media (max-width: 1100px) { .qg-sd-rail { width: 17rem; } .qg-sd-pop { right: calc(1.2rem + 17rem + .8rem); } }
-/* SUBMIT details: verdict card, deciding rule, rivals, fix and caveats. Root stays red (sig-goal). */
+/* SUBMIT details: verdict card, deciding rule and fix. Root stays red (sig-goal). */
 .sd-verdict { margin-top: .3rem; padding: .6rem .8rem; border: 1px solid color-mix(in srgb, var(--qg-sig-goal) 55%, transparent); border-left: 3px solid var(--qg-sig-goal); background: color-mix(in srgb, var(--qg-sig-goal) 6%, transparent); }
 .sd-verdict-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .6rem; }
 .sd-verdict-head > b { font-family: var(--mono); font-size: 1.05rem; font-weight: 600; color: var(--qg-sig-goal); }
 .sd-verdict-head .sd-state { margin-left: auto; }
 .sd-verdict-tag, .sd-fix-tag { padding: 0 .45rem; background: var(--qg-sig-goal); color: var(--qg-void); font-family: var(--mono); font-size: .74rem; font-weight: 600; letter-spacing: .08em; }
 .qg-sd-body .sd-verdict-claim { margin: .45rem 0 .1rem; font-size: 1.02rem; color: var(--text-hi); }
-.sd-rivals { margin: .3rem 0 0; padding: 0; list-style: none; }
-.sd-rivals li { display: grid; grid-template-columns: 7.4rem 6.6rem 1fr; gap: .7rem; align-items: baseline; padding: .4rem .3rem; border-top: 1px solid var(--qg-line); }
-.sd-rivals li:hover { background: var(--tint-hover); }
-.sd-rival-at { font-family: var(--mono); font-size: .84rem; color: var(--qg-label); }
-.sd-rival-tag { padding: .05rem 0; border: 1px solid var(--qg-line-hi); color: var(--qg-label-dim); font-family: var(--mono); font-size: .7rem; letter-spacing: .08em; text-align: center; }
-.sd-rivals li.is-chosen { border-left: 3px solid var(--qg-sig-goal); background: color-mix(in srgb, var(--qg-sig-goal) 7%, transparent); }
-.sd-rivals li.is-chosen .sd-rival-at { color: var(--qg-sig-goal); font-weight: 600; }
-.sd-rivals li.is-chosen .sd-rival-tag { border-color: var(--qg-sig-goal); background: var(--qg-sig-goal); color: var(--qg-void); font-weight: 600; }
-.sd-rivals li:not(.is-chosen) p { color: var(--qg-label); }
-.qg-sd-body .sd-rivals p { margin: 0; }
 .sd-fix { display: grid; grid-template-columns: auto 1fr; gap: .7rem; align-items: baseline; margin-top: .3rem; padding: .5rem .7rem; border: 1px solid color-mix(in srgb, var(--submit) 55%, transparent); border-left: 3px solid var(--submit); background: color-mix(in srgb, var(--submit) 7%, transparent); }
 .sd-fix .sd-fix-tag { background: var(--submit); }
 .qg-sd-body .sd-fix p { margin: 0; color: var(--text-hi); }
-.sd-caveats { margin: .3rem 0 0; padding: 0; list-style: none; }
-.sd-caveats li { position: relative; padding: .25rem 0 .25rem 1.5rem; border-top: 1px solid var(--qg-line); color: var(--qg-label); font-size: .9rem; }
-.sd-caveats li::before { content: "?"; position: absolute; left: .2rem; top: .25rem; width: .95rem; height: .95rem; border: 1px solid var(--qg-sig-idle); border-radius: 50%; color: var(--qg-sig-idle); font-family: var(--mono); font-size: .68rem; line-height: .95rem; text-align: center; }

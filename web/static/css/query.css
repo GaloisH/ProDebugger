@@ -643,56 +643,48 @@ body.page-query .app { padding: 0; }
 .sd-slot { font-weight: 600; color: var(--slot); }
 .sd-req dd > .sd-slot[data-slot="what"], .sd-req dd > .sd-slot[data-slot="where"], .sd-req dd > .sd-slot[data-slot="attr"] { padding: 0 .35rem; border: 1px solid var(--slot); background: color-mix(in srgb, var(--slot) 14%, transparent); }
 .sd-req dt:nth-last-of-type(1), .sd-req dt:nth-last-of-type(1) + dd { padding-top: .4rem; border-top: 1px solid var(--qg-line); }
-/* MANAGER: the question in one line, the quotes it is shown, each search target as a keyword
-   line, and the decision rules as branches; the original prose folds under "full text". */
+/* MANAGER: the question as two accounts A/B, the one quote that carries the suspicion, where
+   TRACE will look in its BEFORE/FACTS/AFTER groups, and one line per answer; the original prose
+   folds away. */
 .sd-question { font-size: 1.02rem; color: var(--text-hi); }
 .sd-full { margin-top: .2rem; }
 .sd-full summary { display: inline; font-family: var(--mono); font-size: .72rem; color: var(--qg-label-dim); cursor: pointer; text-decoration: underline dotted; }
 .sd-full[open] { padding: .3rem .5rem; border-left: 1px solid var(--qg-line-hi); background: var(--tint-faint); }
 .sd-full p { margin: .25rem 0; font-size: .86rem; color: var(--qg-label-dim); }
-.sd-quote-card { margin: .35rem 0 0; padding: .35rem .6rem; border-left: 3px solid var(--src); background: color-mix(in srgb, var(--src) 7%, transparent); color: var(--qg-label); font-size: .92rem; }
+.qg-sd-body .sd-quote-card, .sd-quote-card { margin: .35rem 0 0; padding: .35rem .6rem; border-left: 3px solid var(--src); background: color-mix(in srgb, var(--src) 7%, transparent); color: var(--qg-label); font-size: .92rem; }
 .sd-quote-card[data-src="env"] { --src: var(--qg-th-env); }
 .sd-quote-card[data-src="agent"] { --src: var(--qg-th-agent); }
 .sd-quote-card .sd-k { display: block; color: var(--src); }
-.sd-targets, .sd-rules { margin: .3rem 0 0; padding: 0; list-style: none; }
-.sd-targets li { display: grid; grid-template-columns: 6.4rem 1fr; gap: .7rem; align-items: start; padding: .4rem 0; border-top: 1px solid var(--qg-line); }
-.sd-verb { padding: .1rem 0; border: 1px solid var(--trace); background: color-mix(in srgb, var(--trace) 14%, transparent); color: var(--trace); font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-align: center; }
 .sd-modtag { padding: 0 .35rem; border: 1px solid color-mix(in srgb, var(--src) 60%, transparent); color: var(--src); font-family: var(--mono); font-size: .74rem; }
 .sd-modtag[data-src="env"] { --src: var(--qg-th-env); }
 .sd-modtag[data-src="agent"] { --src: var(--qg-th-agent); }
-.sd-rules li { display: grid; grid-template-columns: 6.4rem 1fr; gap: .7rem; align-items: start; padding: .45rem .3rem; border-top: 1px solid var(--qg-line); transition: opacity .2s; }
-.sd-rules li.is-dim { opacity: .5; }
-.sd-rules li.is-dim:hover { opacity: 1; }
-.sd-rules li.is-used { border-left: 3px solid var(--qg-focus); background: color-mix(in srgb, var(--qg-focus) 8%, transparent); }
-.sd-rules p { margin: .15rem 0 0; }
-.sd-rule-name { font-weight: 500; color: var(--text-hi); }
 .sd-outcome { --out: var(--qg-label-dim); display: block; padding: .1rem 0; border: 1px solid var(--out); background: color-mix(in srgb, var(--out) 16%, transparent); color: var(--out); font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
 .sd-outcome[data-outcome="supported"] { --out: var(--qg-sig-goal); }
 .sd-outcome[data-outcome="refuted"] { --out: var(--submit); }
 .sd-outcome[data-outcome="unknown"] { --out: var(--qg-sig-idle); }
 .sd-used { margin-left: .5rem; padding: 0 .4rem; background: var(--qg-focus); color: var(--qg-void); font-family: var(--mono); font-size: .72rem; font-weight: 600; }
-/* The decision rules as a fork: question on top, a stem to a rail, one branch per answer. */
-.sd-fork { --gap: .7rem; margin-top: .3rem; }
-.sd-fork-q { position: relative; margin: 0 auto 1.1rem; max-width: 34rem; padding: .5rem .8rem; border: 1px solid var(--qg-line-hi); background: var(--tint-faint); text-align: center; font-size: 1rem; color: var(--text-hi); }
-.sd-fork-q::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 1.1rem; margin-left: -1px; background: var(--qg-line-hi); }
-.sd-fork-agent { font-family: var(--mono); font-size: .76rem; color: var(--manager); }
-.sd-fork.has-used .sd-fork-q::after { background: var(--qg-focus); }
-.sd-fork-br { position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1.4rem var(--gap); margin: 0; padding: .9rem 0 0; list-style: none; }
-.sd-fork-br::before { content: ""; position: absolute; top: 0; height: 2px; left: calc(100% / var(--n) / 2); right: calc(100% / var(--n) / 2); background: var(--qg-line-hi); }
-.sd-fork-br li { --out: var(--qg-label-dim); position: relative; padding: .55rem .65rem; border: 1px solid color-mix(in srgb, var(--out) 70%, transparent); transition: opacity .2s; }
-.sd-fork-br li::before { content: ""; position: absolute; left: 50%; bottom: 100%; width: 2px; height: .9rem; margin-left: -1px; background: var(--qg-line-hi); }
-.sd-fork-br li[data-outcome="supported"] { --out: var(--qg-sig-goal); }
-.sd-fork-br li[data-outcome="refuted"] { --out: var(--submit); }
-.sd-fork-br li[data-outcome="unknown"] { --out: var(--qg-sig-idle); }
-.sd-fork-br li.is-dim { opacity: .5; }
-.sd-fork-br li.is-dim:hover { opacity: 1; }
-.sd-fork-br li.is-used { border: 2px solid var(--out); background: color-mix(in srgb, var(--out) 9%, transparent); }
-.sd-fork-br li.is-used::before { width: 3px; margin-left: -1.5px; background: var(--qg-focus); }
-.sd-fork-br p { margin: .1rem 0 0; font-size: .9rem; }
-.sd-fork-br .sd-k { margin-top: .45rem; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
-.sd-fork-ans { display: inline-block; padding: .05rem .55rem; background: var(--out); color: var(--qg-void); font-family: var(--mono); font-size: .78rem; font-weight: 600; letter-spacing: .06em; }
-.sd-fork-then b { font-family: var(--mono); font-size: .82rem; color: var(--out); letter-spacing: .04em; }
-.sd-fork-br .sd-used { display: inline-block; margin: .5rem 0 0; }
+.sd-ab { display: grid; gap: .3rem; margin: .3rem 0 0; padding: 0; list-style: none; }
+.sd-ab li { display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: baseline; }
+.sd-ab p { margin: 0; font-size: 1rem; color: var(--text-hi); }
+.sd-ab-tag { display: grid; place-items: center; height: 1.4rem; border: 1px solid var(--manager); color: var(--manager); font-family: var(--mono); font-size: .8rem; font-weight: 600; }
+.sd-rival { margin: .35rem 0 0 2.2rem !important; font-size: .86rem; color: var(--qg-label-dim); }
+.sd-hedge { padding: 0 .15rem; background: color-mix(in srgb, var(--qg-th-agent) 30%, transparent); color: var(--text-hi); }
+.sd-plan { display: grid; gap: .35rem; margin: .3rem 0 .2rem; padding: 0; list-style: none; }
+.sd-plan-row { display: grid; grid-template-columns: 4.6rem minmax(0, 1.3fr) minmax(0, 1fr) 6rem; grid-template-areas: "tag what where steps" "tag why why why"; gap: .15rem .7rem; align-items: center; padding: .4rem .6rem; border-left: 3px solid var(--grp); background: color-mix(in srgb, var(--grp) 5%, transparent); }
+.sd-plan-row .sd-qa-tag { grid-area: tag; align-self: start; min-width: 0; }
+.sd-plan-what { grid-area: what; display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem .5rem; }
+.sd-word { font-size: .95rem; color: var(--text-hi); }
+.sd-plan-where { grid-area: where; display: flex; flex-wrap: wrap; gap: .25rem; }
+.sd-plan-steps { grid-area: steps; font-family: var(--mono); font-size: .8rem; color: var(--qg-label); text-align: right; }
+.sd-plan-why { grid-area: why; font-size: .82rem; color: var(--qg-label-dim); }
+.sd-verdicts { display: grid; gap: .3rem; margin: .3rem 0 .2rem; padding: 0; list-style: none; }
+.sd-verdicts li { display: grid; grid-template-columns: 6.2rem 1fr auto; gap: .7rem; align-items: center; padding: .35rem .5rem; border-left: 3px solid transparent; transition: opacity .2s; }
+.sd-verdicts li p { margin: 0; font-size: .96rem; }
+.sd-verdicts li.is-dim { opacity: .55; }
+.sd-verdicts li.is-dim:hover { opacity: 1; }
+.sd-verdicts li.is-used { border-left-color: var(--qg-focus); background: color-mix(in srgb, var(--qg-focus) 8%, transparent); }
+.sd-verdicts .sd-used { margin: 0; }
+.sd-rail-used { display: grid; grid-template-columns: 5.6rem 1fr; gap: .5rem; align-items: center; font-size: .86rem; }
 /* TRACE: the question as the root of a tree, the key finding under it, one branch per
    sub-search of its SQL; then the steps it read, cited and blamed. */
 .sd-tree { position: relative; }
@@ -760,9 +752,6 @@ body.page-query .app { padding: 0; }
 .sq-cm { color: var(--qg-label-dim); font-style: italic; }
 .sq-cte { color: var(--text-hi); font-weight: 600; }
 .sd-sql .qg-ent { font-weight: 600; border-bottom: 0; }
-.sd-rule-mini { margin: 0; padding: 0; list-style: none; display: grid; gap: .3rem; font-size: .85rem; }
-.sd-rule-mini li { display: grid; grid-template-columns: 5.6rem 1fr; gap: .5rem; align-items: center; opacity: .6; }
-.sd-rule-mini li.is-used { opacity: 1; color: var(--qg-focus); }
 .sd-cellrow[data-src] { border-left: 2px solid var(--src, transparent); }
 .sd-cellrow[data-src="env"], .sd-bars [data-src="env"] { --src: var(--qg-th-env); }
 .sd-cellrow[data-src="agent"], .sd-bars [data-src="agent"] { --src: var(--qg-th-agent); }

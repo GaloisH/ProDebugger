@@ -293,67 +293,115 @@ export function buildDetails(scene, model) {
     };
   }
 
-  // MANAGER: the question each window becomes, and the rules fixed before any answer.
+  // MANAGER: per window, the question it becomes (two accounts to tell apart), where TRACE
+  // will look, and what each possible answer then means, fixed before any evidence comes in.
   {
     const ls = scene.lanes;
     const usedRule = root?.rule?.id || null;
-    // The original text, folded away under the structured line.
-    const fold = text => text ? `<details class="sd-full"><summary>full text</summary><p>${mark(text)}</p></details>` : "";
-    const firstSentence = t => clip(String(t || "").split(/(?<=[.;])\s+/)[0], 150);
-    // A search target as one line: its verb, the words to look for, the modules, the steps.
-    const MODULES = [["observation", "env"], ["feedback", "env"], ["memory", "agent"], ["reflection", "agent"], ["plan", "agent"], ["action", "agent"]];
-    const targetRow = (t, l) => {
-      const verb = (t.match(/^\s*([A-Za-z]+)/) || [])[1] || "";
-      const quoted = [...new Set([...t.matchAll(/(?:^|[\s(,])'(.{2,40}?)'(?=[\s,.;:)]|$)/g)].map(m => m[1]))];
-      const named = [...new Set([...mark(t).matchAll(/data-ent="([^"]+)"[^>]*>([^<]+)</g)].map(m => m[2].toLowerCase()))].filter(w => !quoted.includes(w));
-      const words = [...quoted, ...named].slice(0, 6);
-      const mods = MODULES.filter(([m]) => new RegExp(`\\b${m}`, "i").test(t));
+    const sentencesOf = t => String(t || "").split(/(?<=[.?!])\s+/).map(x => x.trim()).filter(Boolean);
+    // The question's first sentence cut at its ", or" into account A and account B; the rival
+    // the manager names is kept as one dim line.
+    const accounts = l => {
+      const all = sentencesOf(l.question), first = all[0] || "";
+      const cut = first.endsWith("?") ? first.search(/,\s+or\s+/i) : -1;
+      const rival = all.find(x => /^the rival\b/i.test(x));
+      const ab = cut > 0
+        ? `<ol class="sd-ab"><li><span class="sd-ab-tag">A</span><p>${mark(first.slice(0, cut))}</p></li><li><span class="sd-ab-tag">B</span><p>${mark(first.slice(cut + 1).trim().replace(/^or\s+/i, ""))}</p></li></ol>`
+        : `<p class="sd-question">${mark(clip(first, 220))}</p>`;
+      return ab + (rival ? `<p class="sd-rival"><span class="sd-k">rival</span> ${mark(clip(rival.replace(/^the rival is\s*/i, ""), 160))}</p>` : "");
+    };
+    // The quote that carries the suspicion: the agent's own words, preferring hedged ones
+    // ("could potentially"); the hedge is lit.
+    const HEDGE = /\b(could potentially|potentially|potential|might|maybe|possibly|probably|likely|seems?|appears?)\b/gi;
+    const srcOf = ev => { const [, step, module] = String(ev.source_id || "").split(":"); return {step: +step, module: module || "", src: /observation|feedback/.test(module) ? "env" : "agent"}; };
+    const keyQuote = l => {
+      const agent = l.evidence.filter(ev => srcOf(ev).src === "agent");
+      return agent.find(ev => new RegExp(HEDGE.source, "i").test(ev.quote)) || agent.find(ev => srcOf(ev).step === l.step) || l.evidence[0];
+    };
+    // Marks the hedge words outside the entity tags only.
+    const lightHedge = html => html.split(/(<[^>]+>)/).map(p => p.startsWith("<") ? p : p.replace(HEDGE, m => `<mark class="sd-hedge">${m}</mark>`)).join("");
+    const quoteCard = (ev, lit = false) => {
+      const {step, module, src} = srcOf(ev);
+      return `<blockquote class="sd-quote-card" data-src="${src}" data-step="${step || ""}"><span class="sd-k">step ${step || "?"} · ${esc(module)}</span>${lit ? lightHedge(mark(ev.quote)) : mark(ev.quote)}</blockquote>`;
+    };
+    // A search target as one row of the plan, in TRACE's three groups: before the window in the
+    // agent's own text, what the environment and the actions show, and after the window. A target
+    // that only weighs the evidence is not a search, so it leaves the plan.
+    const MODS = [["memory", "agent"], ["reflection", "agent"], ["plan", "agent"], ["observation", "env"], ["feedback", "env"], ["action", "act"]];
+    const modSide = m => MODS.find(x => x[0] === m)[1];
+    const GROUP_WHY = {before: "where the idea first appears", facts: "what really happened", after: "whether the agent came back to it"};
+    const planRow = (t, l) => {
+      const verb = ((t.match(/^\s*([A-Za-z]+)/) || [])[1] || "").toLowerCase();
+      if (/^(assess|decide|judge|determine|weigh|evaluate|conclude)$/.test(verb)) return null;
+      let mods = MODS.filter(([m]) => new RegExp(`\\b${m}`, "i").test(t)).map(([m]) => m);
+      if (/\bmental\b|\bmind\b/i.test(t)) mods = [...new Set(["memory", "reflection", "plan", ...mods])];
       const range = t.match(/steps? (\d+)\s*(?:through|to|-|–)\s*(?:step )?(\d+)/i) || t.match(/(\d+)\s*(?:through|to|–)\s*(\d+)/);
       const until = !range && t.match(/through step (\d+)/i);
-      const [a, b] = range ? [+range[1], +range[2]] : until ? [l.step, +until[1]] : [null, null];
-      const span = a != null ? new Set(Array.from({length: Math.max(0, b - a + 1)}, (_, i) => a + i)) : new Set([...t.matchAll(/step[- ](\d+)/gi)].map(m => +m[1]));
-      return `<li><span class="sd-verb">${esc(verb.toUpperCase())}</span><div>
-        <div class="sd-qres">${words.map(w => `<span class="sd-chip">${mark(w)}</span>`).join("")}${mods.map(([m, src]) => `<span class="sd-modtag" data-src="${src}">${m}</span>`).join("")}${span.size ? `${miniStrip(span)}<span class="sd-k">${a != null ? `steps ${a}–${b}` : stepList([...span])}</span>` : ""}</div>
-        ${fold(t)}</div></li>`;
+      let [a, b] = range ? [+range[1], +range[2]] : until ? [l.step, +until[1]] : [null, null];
+      const mind = mods.some(m => modSide(m) === "agent");
+      const group = !mind || verb === "compare" ? "facts" : a != null && b > l.step && a >= l.step ? "after" : "before";
+      if (group === "after" && a != null) a = Math.max(a, l.step + 1);
+      // Each row searches one side: the agent's text, or the environment and the actions.
+      mods = mods.filter(m => (group === "facts") === (modSide(m) !== "agent"));
+      const quoted = [...new Set([...t.matchAll(/(?:^|[\s(,])'(.{2,40}?)'(?=[\s,.;:)]|$)/g)].map(m => m[1]))];
+      const named = [...new Set([...mark(t).matchAll(/data-ent="([^"]+)"[^>]*>([^<]+)</g)].map(m => m[2].toLowerCase()))];
+      const claimM = t.match(/([a-z_]+(?:\/[a-z_]+)+)\s+claim variants/i);
+      const claims = claimM ? claimM[1].split("/").map(c => c.replace(/_/g, " ")) : [];
+      // Without quoted words, the slash-joined terms of the first clause ("cool/cooling") say
+      // what to look for; module lists ("memory/reflection/plan") are not terms.
+      const head = (claimM ? t.replace(claimM[0], "") : t).split(/;|\.\s|,\s*(?:including|compare|do not)\b/i)[0];
+      const terms = quoted.length ? [] : [...head.matchAll(/\b([a-z]+(?:\/[a-z]+(?: [a-z]+)?)+)\b/gi)].map(m => m[1])
+        .filter(g => { const seg = g.toLowerCase().split("/").map(w => w.trim().split(" ")[0]); return !seg.some(w => w === "state" || MODS.some(([m]) => w === m)) && new Set(seg).size > 1; })
+        .map(g => g.split("/").join(" / "));
+      const words = [...(quoted.length ? quoted : named).slice(0, 4), ...terms.slice(0, 2)];
+      // A row that names neither words nor steps says nothing a reader can follow.
+      if (!words.length && !claims.length && a == null) return null;
+      return `<li class="sd-plan-row" data-group="${group}">
+        <span class="sd-qa-tag">${group.toUpperCase()}</span>
+        <div class="sd-plan-what">${words.map(w => `<span class="sd-word">“${mark(w)}”</span>`).join("")}${claims.length ? `<span class="sd-k">+ claims: ${esc(claims.join(", "))}</span>` : ""}</div>
+        <div class="sd-plan-where">${mods.map(m => `<span class="sd-modtag" data-src="${modSide(m) === "agent" ? "agent" : "env"}">${m}</span>`).join("")}</div>
+        <span class="sd-plan-steps">${a == null ? "" : a === b ? `step ${a}` : `steps ${a}–${b}`}</span>
+        <span class="sd-plan-why">${GROUP_WHY[group]}</span></li>`;
     };
-    // A quote the manager hands over, coloured by who wrote it.
-    const quoteCard = ev => {
-      const [, step, module] = String(ev.source_id || "").split(":");
-      const src = /observation|feedback/.test(module) ? "env" : "agent";
-      return `<blockquote class="sd-quote-card" data-src="${src}" data-step="${esc(step || "")}"><span class="sd-k">step ${esc(step || "?")} · ${esc(module || "")}</span>${mark(ev.quote)}</blockquote>`;
+    // What each answer TRACE may give then means, one line each; the line SUBMIT used is lit.
+    const ANSWER = {supported: "YES", refuted: "NO", unknown: "CAN'T TELL"};
+    const laneOf = r => ls.find(l => l.agent === r.agent) || ls[0];
+    const meaning = r => {
+      const l = laneOf(r);
+      if (r.conds?.length > 1) return r.conds.every(c => c.outcome === "supported") ? "both hold: weigh which one explains the failure" : mark(clip(r.conclusion, 100));
+      if (r.outcome === "supported") return usedRule === r.id && root ? `blame <b class="sd-stepno">step ${root.step}</b>'s ${esc(root.module)}` : `blame the suspected step${l ? ` (<b class="sd-stepno">step ${l.step}</b>, or an earlier source TRACE finds)` : ""}`;
+      if (r.outcome === "refuted") return "drop this suspicion and weigh other evidence";
+      if (r.outcome === "unknown") return "keep it open: no verdict on this suspicion";
+      return mark(clip(r.conclusion, 100));
     };
-    // The decision rules as a fork: the question on top, one branch per answer TRACE may give,
-    // each saying what TRACE would have found and what the verdict then is. The branch SUBMIT
-    // took is lit.
-    const ANSWER = {supported: ["YES", "BLAME"], refuted: ["NO", "DROP"], unknown: ["CAN'T TELL", "KEEP OPEN"]};
-    const fork = () => {
-      const q = ls.length === 1 ? mark(question(ls[0], 170)) : ls.map(l => `<span class="sd-fork-agent">${esc(l.agent)}</span> ${mark(question(l, 100))}`).join("<br>");
-      return `<div class="sd-fork${usedRule ? " has-used" : ""}" style="--n:${Math.min(3, scene.rules.length)}">
-        <div class="sd-fork-q">${q}</div>
-        <ol class="sd-fork-br">${scene.rules.map(r => {
-          const [ans, verb] = ANSWER[r.outcome] || [String(r.outcome || "?").toUpperCase(), "DECIDE"];
-          return `<li data-outcome="${esc(r.outcome)}" class="${usedRule === r.id ? "is-used" : usedRule ? "is-dim" : ""}">
-            <span class="sd-fork-ans">${esc(ans)}</span>
-            <div class="sd-k">if TRACE finds</div><p>${mark(clip(firstSentence(r.finding), 110) || "—")}</p>
-            <div class="sd-k">then</div><p class="sd-fork-then"><b>${verb}</b> ${mark(clip(firstSentence(r.conclusion), 110))}</p>
-            ${usedRule === r.id ? `<span class="sd-used">★ TRACE answered · SUBMIT used</span>` : ""}
-            <details class="sd-full"><summary>full text</summary><p><span class="sd-k">rule</span> ${esc(r.id.replace(/_/g, " "))}</p>${r.finding ? `<p><span class="sd-k">if</span> ${mark(r.finding)}</p>` : ""}<p><span class="sd-k">then</span> ${mark(r.conclusion)}</p>${r.caveat ? `<p><span class="sd-k">caveat</span> ${mark(r.caveat)}</p>` : ""}</details>
-          </li>`;
-        }).join("")}</ol></div>`;
-    };
+    // A rule may need several answers at once (both suspicions hold): its tag joins them.
+    const answerOf = r => (r.conds?.length > 1 ? r.conds : [r]).map(c => ANSWER[c.outcome] || String(c.outcome || "?").toUpperCase()).join(" + ");
+    const whoOf = r => ls.length < 2 ? "" : ` <span class="sd-k">· ${(r.conds?.length > 1 ? r.conds : [r]).map(c => esc(ls.find(l => l.agent === c.agent)?.anchor || c.agent)).join(" + ")}</span>`;
+    const verdicts = () => `<ol class="sd-verdicts">${scene.rules.map(r => `<li class="${usedRule === r.id ? "is-used" : usedRule ? "is-dim" : ""}">
+        <span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc(answerOf(r))}</span>
+        <p>${meaning(r)}${whoOf(r)}</p>
+        ${usedRule === r.id ? `<span class="sd-used">★ used by SUBMIT</span>` : "<span></span>"}</li>`).join("")}</ol>
+      <details class="sd-full"><summary>the rules in full</summary>${scene.rules.map(r => `<p><span class="sd-k">${esc(answerOf(r))} · ${esc(r.id.replace(/_/g, " "))}</span><br>${r.finding ? `<span class="sd-k">if</span> ${mark(r.finding)} ` : ""}<span class="sd-k">then</span> ${mark(r.conclusion)}${r.caveat ? ` <span class="sd-k">caveat</span> ${mark(r.caveat)}` : ""}</p>`).join("")}</details>`;
+    const used = scene.rules.find(r => r.id === usedRule);
     out.MANAGER = {
       say: ls.length === 1
         ? `ProDebugger turns the step-${ls[0].step} suspicion into one question for a trace agent: “${mark(question(ls[0], 170))}”`
         : `ProDebugger turns the suspicions into ${ls.length} questions, one per trace agent, for ${stepList(ls.map(l => l.step))}.`,
       title: "The questions handed to TRACE",
-      lead: scene.rules.length ? `Before any evidence comes in, the manager fixes ${plural(scene.rules.length, "decision rule")} for judging the answers.` : "",
-      body: `${ls.map(l => `<div class="sd-sec" data-step="${l.step}"><div class="sd-k">the question · agent ${esc(l.agent)} · window ${esc(l.anchor)} · step ${l.step}</div>
-          <p class="sd-question">${mark(question(l, 200))}</p>${fold(l.question)}</div>
-          ${l.evidence.length ? `<div class="sd-sec"><div class="sd-k">what it is shown · ${plural(l.evidence.length, "quote")}</div>${l.evidence.slice(0, 3).map(quoteCard).join("")}${l.evidence.length > 3 ? `<details class="sd-full"><summary>${l.evidence.length - 3} more</summary>${l.evidence.slice(3).map(quoteCard).join("")}</details>` : ""}</div>` : ""}
-          ${l.targets.length ? `<div class="sd-sec"><div class="sd-k">what to search · ${plural(l.targets.length, "target")}</div><ol class="sd-targets">${l.targets.map(t => targetRow(t, l)).join("")}</ol></div>` : ""}`).join("")}
-        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">how the answer will be judged · fixed before TRACE searches</div>${fork()}</div>` : ""}`,
-      rail: `<h4>Assignments</h4><div class="sd-chips">${ls.map(l => `<button class="sd-chip is-hot" data-goto="step:${l.step}"><b>${esc(l.agent)}</b><em>← ${esc(l.anchor)} · step ${l.step}</em></button>`).join("")}</div>
-        ${scene.rules.length ? `<h4>Rules</h4><ul class="sd-rule-mini">${scene.rules.map(r => `<li${usedRule === r.id ? ` class="is-used"` : ""}><span class="sd-outcome" data-outcome="${esc(r.outcome)}">${esc((ANSWER[r.outcome] || [r.outcome || "?"])[0])}</span>${esc((ANSWER[r.outcome] || [, "decide"])[1].toLowerCase())}: ${esc(r.id.replace(/_/g, " "))}</li>`).join("")}</ul>` : ""}`,
+      lead: "",
+      body: `${ls.map(l => {
+          const key = l.evidence.length ? keyQuote(l) : null, rest = l.evidence.filter(ev => ev !== key);
+          const rows = l.targets.map(t => planRow(t, l)).filter(Boolean);
+          return `<div class="sd-sec" data-step="${l.step}"><div class="sd-k">the question · ${ls.length > 1 ? `${esc(l.agent)} · ` : ""}window ${esc(l.anchor)} · step ${l.step}</div>
+            ${accounts(l)}
+            ${key ? quoteCard(key, true) : ""}
+            <details class="sd-full"><summary>full question${rest.length ? ` and ${plural(rest.length, "more quote")}` : ""}</summary><p>${mark(l.question)}</p>${rest.map(ev => quoteCard(ev)).join("")}</details></div>
+          ${rows.length ? `<div class="sd-sec"><div class="sd-k">where TRACE will look</div><ol class="sd-plan">${rows.join("")}</ol>
+            <details class="sd-full"><summary>search targets in full</summary>${l.targets.map(t => `<p>${mark(t)}</p>`).join("")}</details></div>` : ""}`;
+        }).join("")}
+        ${scene.rules.length ? `<div class="sd-sec"><div class="sd-k">what each answer means · fixed before TRACE searches</div>${verdicts()}</div>` : ""}`,
+      rail: `<h4>Suspect</h4><div class="sd-chips">${ls.map(l => `<button class="sd-chip is-hot" data-goto="step:${l.step}"><b>${esc(l.anchor)}</b><em>step ${l.step}</em></button>`).join("")}</div>
+        ${used ? `<h4>Answer used</h4><p class="sd-rail-used"><span class="sd-outcome" data-outcome="${esc(used.outcome)}">${esc(answerOf(used))}</span><span>${meaning(used)}</span></p>` : ""}`,
     };
   }
 

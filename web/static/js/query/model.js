@@ -318,7 +318,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
     meta: {tid: record.trajectory_id, task: record.task, taskType: record.task_type, steps,
            relations: record.relations || {}, kinds},
     facts, factById, entities, goals, evidence, windows, lanes: [...lanes.values()], candidates, root, events,
-    goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, outcome: r.conditions?.[0]?.outcome || "", finding: r.conditions?.[0]?.finding || "", conclusion: r.conclusion || "", caveat: r.caveat || ""})),
+    goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, agent: r.conditions?.[0]?.agent_id || "", conds: (r.conditions || []).map(c => ({agent: c.agent_id, outcome: c.outcome})), outcome: r.conditions?.[0]?.outcome || "", finding: r.conditions?.[0]?.finding || "", conclusion: r.conclusion || "", caveat: r.caveat || ""})),
   };
 }
 

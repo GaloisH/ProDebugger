@@ -667,6 +667,7 @@ body.page-query .app { padding: 0; }
 .sd-ab li { display: grid; grid-template-columns: 1.6rem 1fr; gap: .6rem; align-items: baseline; }
 .sd-ab p { margin: 0; font-size: 1rem; color: var(--text-hi); }
 .sd-ab-tag { display: grid; place-items: center; height: 1.4rem; border: 1px solid var(--manager); color: var(--manager); font-family: var(--mono); font-size: .8rem; font-weight: 600; }
+.sd-rival { margin: .35rem 0 0 2.2rem !important; font-size: .86rem; color: var(--qg-label-dim); }
 .sd-hedge { padding: 0 .15rem; background: color-mix(in srgb, var(--qg-th-agent) 30%, transparent); color: var(--text-hi); }
 .sd-plan { display: grid; gap: .35rem; margin: .3rem 0 .2rem; padding: 0; list-style: none; }
 .sd-plan-row { display: grid; grid-template-columns: 4.6rem minmax(0, 1.3fr) minmax(0, 1fr) 6rem; grid-template-areas: "tag what where steps" "tag why why why"; gap: .15rem .7rem; align-items: center; padding: .4rem .6rem; border-left: 3px solid var(--grp); background: color-mix(in srgb, var(--grp) 5%, transparent); }

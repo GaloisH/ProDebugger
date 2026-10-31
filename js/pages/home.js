@@ -6,7 +6,7 @@ import {caseHref} from "../routes.js?v=27bf1baa85";
 import {domainIcon} from "./runs.js?v=27bf1baa85";
 import {esc, loader} from "../util.js?v=27bf1baa85";
 import {STATIC} from "../api.js?v=27bf1baa85";
-import {PROJECT} from "../site.js?v=27bf1baa85";
+import {PROJECT} from "../site.js?v=a53d9f0cb7";
 
 // The showcase case: a fully correct reference run kept under artifacts/.
 export const DEMO_REF = ["runs", "dsl-route-causal-timeline-high-unlimited-alf18-20261007-live", "GPT-4o_018_alfworld_task_018"];

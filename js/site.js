@@ -11,8 +11,8 @@ export const PROJECT = {
   },
   // Related work from the group, shown on the home page's closing section; each links to its paper.
   related: [
-    {name: "MermaidFlow", tagline: "Safety-constrained evolutionary programming for agentic workflow generation", venue: "arXiv 2025", href: "https://arxiv.org/abs/2505.22967"},
-    {name: "NesyProAct", tagline: "", venue: "OpenReview", href: "https://openreview.net/pdf?id=9xteuRjHr7"},
-    {name: "SkillTracer", tagline: "Structural failure attribution and refinement of agentic skills in long-horizon web tasks", venue: "ACM 2026", href: "https://doi.org/10.1145/3770855.3817981"},
+    {name: "MermaidFlow-CF", tagline: "How agentic workflow representation governs constraint-faithful control", venue: "AAAI 2026 TrustAgent Workshop", href: "https://trustagenticai.github.io/AAAI2026/AAAI-Workshop/57.pdf"},
+    {name: "NesyProAct", tagline: "Proactive neural-symbolic control for web agents", venue: "NeurIPS 2026", href: "https://openreview.net/pdf?id=9xteuRjHr7"},
+    {name: "SkillTracer", tagline: "Structural failure attribution and refinement of agentic skills in long-horizon web tasks", venue: "KDD 2026", href: "https://doi.org/10.1145/3770855.3817981"},
   ],
 };

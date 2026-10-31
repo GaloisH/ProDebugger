@@ -1,8 +1,8 @@
 // Zero-dependency 3D stage for the cluster tower: a perspective orbit camera over a 2D canvas.
 // Flat square points, 1px lines and HUD brackets; the only motion is camera easing and points
 // moving to their place when a cloud appears, expands or folds.
-import {ballPoint, cloudRadius, PITCH, TIERS} from "./layout.js?v=27bf1baa85";
-import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js?v=27bf1baa85";
+import {ballPoint, cloudRadius, PITCH, TIERS} from "./layout.js?v=649c5ab31a";
+import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js?v=649c5ab31a";
 
 const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim", "issue", "cand"];
 const PHASE_TOKENS = {PARSE: "parse", MAP: "map", ROUTE: "route", MANAGER: "manager", TRACE: "trace", SUBMIT: "submit"};
@@ -21,8 +21,14 @@ const POINT_LIFT = 0.65;  // ... in the focused or selected cloud
 const SIDE_SCALE = 0.45;  // size of a cloud off the main chain while nobody looks at it
 const TOUR_NEAR = 20;     // closest a tour shot comes when it fits the clouds shown so far
 const CORE_POINTS = 140;  // points the folded record cloud keeps (plus every role point)
-const LABEL_ROOM = 300;   // px kept free each side of an upright journey for its stop labels
-const LABEL_ROW = 110;    // px kept free above and below a journey lying across
+const LABEL_ROOM = 380;   // px kept free each side of an upright journey for its stop labels
+const LABEL_ROW = 140;    // px kept free above and below a journey lying across
+// Canvas type: names read in Plex Sans, counts and the DSL's own text in Plex Mono.
+const SANS = "'IBM Plex Sans', sans-serif", MONO = "'IBM Plex Mono', monospace";
+const pxOf = font => Number(font.match(/([\d.]+)px/)[1]);
+const lineH = font => Math.round(pxOf(font) * 1.3);
+// A detail line is a count ("85 facts") in Mono, a phrase ("ignored a task constraint") in Sans.
+const detailFont = t => `15px ${/^\d/.test(t) ? MONO : SANS}`;
 
 export function createStage(canvas, scene, model, layout) {
   const ctx = canvas.getContext("2d");
@@ -38,6 +44,9 @@ export function createStage(canvas, scene, model, layout) {
   // A fact's journey (journeyOf) drawn as one numbered line through the clouds that returned
   // it; focus is the stop the camera is on, or null for the whole line.
   let journey = null;
+  // Facts the Story board is talking about: each mark recolours its points wherever they are
+  // drawn and puts its number once, beside the copy in a focused cloud if there is one.
+  let markOf = new Map(), marks = [], badgeAt = [];
   let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
   const listeners = {hover: [], select: [], manual: [], view: [], journey: [], back: []};
@@ -271,7 +280,7 @@ export function createStage(canvas, scene, model, layout) {
       ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
       if (!lit) continue;
       const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2, t = String(n);
-      ctx.font = "12px 'IBM Plex Mono', monospace";
+      ctx.font = `13px ${MONO}`;
       const w = ctx.measureText(t).width + 10;
       ctx.globalAlpha = 0.9 * alpha;
       ctx.fillStyle = colors.void;
@@ -295,14 +304,14 @@ export function createStage(canvas, scene, model, layout) {
   function hubLabels(c, alpha) {
     const hubs = hubInst.get(c.id);
     ctx.textAlign = "left";
-    ctx.font = "12px 'IBM Plex Mono', monospace";
+    ctx.font = `14px ${MONO}`;
     ctx.fillStyle = colors["label-dim"];
     ctx.globalAlpha = alpha;
     c.structure.hubs.slice(0, 4).forEach((h, j) => {
       const s = hubs[j].cur && project(hubs[j].cur);
       if (!s) return;
       // A hub's name gives way to any name or badge already there.
-      const bx = [s.x + 6, s.y - 15, ctx.measureText(h.key).width, 14];
+      const bx = [s.x + 6, s.y - 17, ctx.measureText(h.key).width, 17];
       if (clash(bx, 1)) return;
       placed.push(bx);
       ctx.fillText(h.key, s.x + 6, s.y - 4);
@@ -326,14 +335,14 @@ export function createStage(canvas, scene, model, layout) {
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
     const panel = rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)");
     const head = rect(".qg > header"), foot = rect(".qg-foot");
-    const ruler = rot ? 0 : 130;
+    const ruler = rot || frame.mini ? 0 : 170;
     const left = Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0);
     return {
       left,
       // Only an open details panel takes room; folded, the tower spreads under where it was.
       right: Math.max(16, panel ? box.right - panel.left + 12 : 0),
       top: head ? Math.max(0, head.bottom - box.top) : 0,
-      bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot ? 36 : 0),
+      bottom: (foot ? Math.max(0, box.bottom - foot.top + 8) : 0) + (rot && !frame.mini ? 44 : 0),
     };
   }
   // A preset marked fit frames the clouds on screen (not the plates under them, which are much
@@ -480,11 +489,11 @@ export function createStage(canvas, scene, model, layout) {
     for (const it of shown) {
       const s = J.stops[it.k], on = lit(it.k);
       it.color = colors.phase[s.phase] || colors.focus;
-      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), "500 13px", on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), "12px", on ? colors.label : colors["label-dim"]]];
-      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), "12px", colors.label]);
-      if (it.k === J.endAt && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), "500 12px", colors["ink-hi"]]);
-      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; })) + 16;
-      it.h = it.lines.length * 16 + 7;
+      it.lines = [[clip(stopTitle(byId.get(s.id)), 36), `500 17px ${SANS}`, on ? it.color : colors["label-dim"]], [clip(s.outcome, 44), `15px ${SANS}`, on ? colors.label : colors["label-dim"]]];
+      if (it.k === 1 && J.start) it.lines.push([clip(`↳ ${J.start}`, 54), `15px ${SANS}`, colors.label]);
+      if (it.k === J.endAt && J.end) it.lines.push([clip(`⊣ stops: ${J.end}`, 60), `500 15px ${SANS}`, colors["ink-hi"]]);
+      it.w = Math.max(...it.lines.map(([t, f]) => { ctx.font = f; return ctx.measureText(t).width; })) + 18;
+      it.h = it.lines.reduce((n, [, f]) => n + lineH(f), 0) + 8;
     }
     const order = [...shown].sort((a, b) => wide ? a.p.x - b.p.x : a.p.y - b.p.y);
     const ins = hudInsets(), GAP = wide ? 10 : 6;
@@ -526,28 +535,30 @@ export function createStage(canvas, scene, model, layout) {
       ctx.fillStyle = it.color;
       ctx.fillRect(x, y, 2, h);
       ctx.textAlign = "left";
-      it.lines.forEach(([t, f, col], i) => {
-        ctx.font = `${f} 'IBM Plex Mono', monospace`;
+      let base = y + 4;
+      it.lines.forEach(([t, f, col]) => {
+        base += lineH(f);
+        ctx.font = f;
         ctx.fillStyle = col;
-        ctx.fillText(t, x + 9, y + 16 + i * 16);
+        ctx.fillText(t, x + 10, base - Math.round(pxOf(f) * 0.32));
       });
       targets.push({kind: "stop", k: it.k, stop: J.stops[it.k], x: x + w / 2, y: y + h / 2, r: 0, rect: [x, y, w, h]});
     }
     // Badges last, on top of every leader.
     for (const {k, p, color} of shown) {
       const on = lit(k), num = J.stops[k].num;
-      ctx.font = "600 12px 'IBM Plex Mono', monospace";
-      const w = Math.max(20, Math.ceil(ctx.measureText(num).width) + 8);
+      ctx.font = `600 15px ${MONO}`;
+      const w = Math.max(24, Math.ceil(ctx.measureText(num).width) + 10);
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
       ctx.fillStyle = J.focus === k ? color : colors.void;
-      ctx.fillRect(p.x - w / 2, p.y - 10, w, 20);
+      ctx.fillRect(p.x - w / 2, p.y - 12, w, 24);
       stroke(color, on ? 1 : 0.5, 1);
-      ctx.strokeRect(p.x - w / 2 + 0.5, p.y - 9.5, w - 1, 19);
+      ctx.strokeRect(p.x - w / 2 + 0.5, p.y - 11.5, w - 1, 23);
       ctx.fillStyle = J.focus === k ? colors.void : on ? colors["ink-hi"] : colors["label-dim"];
       ctx.textAlign = "center";
-      ctx.fillText(num, p.x, p.y + 4);
-      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 12});
+      ctx.fillText(num, p.x, p.y + 5);
+      targets.push({kind: "stop", k, stop: J.stops[k], x: p.x, y: p.y, r: 14});
     }
     ctx.globalAlpha = 1;
   }
@@ -633,7 +644,7 @@ export function createStage(canvas, scene, model, layout) {
       .map(r => ({...r, y: Math.max(top, Math.min(bottom, r.y))}));
     if (!tiers.length) return;
     // Clamped ticks keep at least a label's height between them, pushing upward.
-    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 34);
+    for (let k = 1; k < tiers.length; k++) tiers[k].y = Math.min(tiers[k].y, tiers[k - 1].y - 42);
     stroke(colors.line, 1, 1);
     ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
     tiers.forEach((r, k) => {
@@ -650,11 +661,12 @@ export function createStage(canvas, scene, model, layout) {
       ctx.textAlign = "left";
       ctx.globalAlpha = on ? 1 : 0.75;
       ctx.fillStyle = color;
-      ctx.font = `${on ? 600 : 500} 12px 'IBM Plex Mono', monospace`;
-      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, x + 10, r.y - 3);
+      ctx.font = `${on ? 600 : 500} 15px ${SANS}`;
+      ctx.fillText(`${on ? "▸ " : ""}${r.t.phase}`, x + 10, r.y - 4);
+      placed.push([x - 6, r.y - 19, 170, 40]);
       ctx.fillStyle = colors["label-dim"];
-      ctx.font = "11px 'IBM Plex Mono', monospace";
-      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 12);
+      ctx.font = `14px ${SANS}`;
+      ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, x + 10, r.y + 15);
     });
     ctx.globalAlpha = 1;
   }
@@ -664,10 +676,10 @@ export function createStage(canvas, scene, model, layout) {
     const y = H - bottom + 22, x0 = left + 8, x1 = W - right - 8;
     const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
       .map(t => ({t, x: project([0, t.y, 0])?.x})).filter(r => r.x != null)
-      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 104, r.x))}));
+      .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 140, r.x))}));
     if (!tiers.length) return;
     // Clamped ticks keep at least a label's width between them, pushing right.
-    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 112);
+    for (let k = 1; k < tiers.length; k++) tiers[k].x = Math.max(tiers[k].x, tiers[k - 1].x + 140);
     stroke(colors.line, 1, 1);
     ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
     tiers.forEach((r, k) => {
@@ -682,13 +694,14 @@ export function createStage(canvas, scene, model, layout) {
       ctx.textAlign = "left";
       ctx.globalAlpha = on ? 1 : 0.75;
       ctx.fillStyle = color;
-      ctx.font = `${on ? 600 : 500} 12px 'IBM Plex Mono', monospace`;
-      ctx.fillText(`${on ? "▸ " : ""}T${r.t.tier} ${r.t.phase}`, r.x + 4, y - 21);
+      ctx.font = `${on ? 600 : 500} 15px ${SANS}`;
+      ctx.fillText(`${on ? "▸ " : ""}${r.t.phase}`, r.x + 4, y - 25);
+      placed.push([r.x - 2, y - 40, Math.min(200, next ? next.x - r.x : 200), 46]);
       // The floor's name only where the next tick leaves room for it.
-      if (!next || next.x - r.x > 170) {
+      if (!next || next.x - r.x > 200) {
         ctx.fillStyle = colors["label-dim"];
-        ctx.font = "11px 'IBM Plex Mono', monospace";
-        ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, r.x + 4, y - 7);
+        ctx.font = `14px ${SANS}`;
+        ctx.fillText(`${r.t.label.toLowerCase()}${n > 1 ? ` · ${n}` : ""}`, r.x + 4, y - 8);
       }
     });
     ctx.globalAlpha = 1;
@@ -719,11 +732,12 @@ export function createStage(canvas, scene, model, layout) {
   // goes first. The first corner whose text box is clear of everything placed and inside the
   // canvas wins. A hovered cloud adds a line in the accent colour: what a
   // click will do there.
-  function tag(x, y, r, title, detail, color, alpha = 1, side = 0, act = null) {
+  function tag(x, y, r, title, detail, color, alpha = 1, side = 0, act = null, big = false) {
     const axis = project([0, cam.target[1], 0]);
-    const lines = [[title, "500 14px", color], ...(detail ? [[detail, "12px", colors["label-dim"]]] : []), ...(act ? [[act, "12px", colors.focus]] : [])];
-    const w = Math.max(...lines.map(([t, f]) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; return ctx.measureText(t).width; }));
-    const h = 16 * lines.length;
+    const lines = [[title, `500 ${big ? 20 : 16}px ${SANS}`, color], ...(detail ? [[detail, detailFont(detail), colors["label-dim"]]] : []), ...(act ? [[act, `14px ${SANS}`, colors.focus]] : [])];
+    const w = Math.max(...lines.map(([t, f]) => { ctx.font = f; return ctx.measureText(t).width; }));
+    const heights = lines.map(([, f]) => lineH(f)), h = heights.reduce((a, b) => a + b, 0);
+    const px0 = pxOf(lines[0][1]), lift = h - heights[heights.length - 1];
     let cands;
     if (rot) {
       const v = -side || (axis && y < axis.y - 4 ? -1 : 1);
@@ -735,8 +749,8 @@ export function createStage(canvas, scene, model, layout) {
     const layoutAt = ([sx, sy]) => {
       const x0 = x + sx * r, y0 = y + sy * r, x1 = x0 + sx * 10, y1 = y0 + sy * 10, tx = x1 + sx * 10;
       // On its side, above the axis the block grows upward from the leader; else it hangs from it.
-      const by = sy < 0 && rot ? y1 + 5 - 16 * (lines.length - 1) : y1 + 5;
-      return {sx, x0, y0, x1, y1, tx, by, box: [sx > 0 ? tx : tx - w, by - 13, w, h]};
+      const by = (sy < 0 && rot ? y1 - lift : y1) + Math.round(px0 * 0.36);
+      return {sx, x0, y0, x1, y1, tx, by, box: [sx > 0 ? tx : tx - w, by - Math.round(px0 * 0.95), w, h]};
     };
     const all = cands.map(layoutAt);
     // Clear and on the canvas; else the on-canvas corner that overlaps least (a slight overlap
@@ -750,7 +764,8 @@ export function createStage(canvas, scene, model, layout) {
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1 + sx * 6, y1); ctx.stroke();
     ctx.globalAlpha = alpha;
     ctx.textAlign = sx > 0 ? "left" : "right";
-    lines.forEach(([t, f, c], i) => { ctx.font = `${f} 'IBM Plex Mono', monospace`; ctx.fillStyle = c; ctx.fillText(t, tx, by + 16 * i); });
+    let at = by;
+    lines.forEach(([t, f, c], i) => { ctx.font = f; ctx.fillStyle = c; ctx.fillText(t, tx, at); at += heights[i + 1] ?? 0; });
   }
   // An edge that has something to say carries a small square at its middle instead of a text
   // plate over the line: the square is the hover target, and its card shows over the details
@@ -782,16 +797,40 @@ export function createStage(canvas, scene, model, layout) {
       ctx.setLineDash([]);
       ctx.globalAlpha = 1;
       ctx.fillStyle = hi ? color : colors.void;
-      ctx.fillRect(x - 10, y - 10, 20, 20);
+      ctx.fillRect(x - 12, y - 12, 24, 24);
       stroke(color, 1, 1);
-      ctx.strokeRect(x - 9.5, y - 9.5, 19, 19);
+      ctx.strokeRect(x - 11.5, y - 11.5, 23, 23);
       ctx.fillStyle = hi ? colors.void : colors["ink-hi"];
-      ctx.font = "600 12px 'IBM Plex Mono', monospace";
+      ctx.font = `600 15px ${MONO}`;
       ctx.textAlign = "center";
-      ctx.fillText(String(k + 1), x, y + 4);
-      placed.push([x - 10, y - 10, 20, 20]);
-      targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 11, y - 11, 22, 22]});
+      ctx.fillText(String(k + 1), x, y + 5);
+      placed.push([x - 12, y - 12, 24, 24]);
+      targets.push({kind: "edge", link: e.link, cluster: c, k, x, y, rect: [x - 13, y - 13, 26, 26]});
     });
+  }
+  // One numbered square per mark, beside a point of it: in a focused cloud first, else the nearest.
+  function markBadges() {
+    for (const mk of marks) {
+      if (!mk.label) continue;
+      const at = badgeAt.filter(b => b.mk === mk).sort((a, b) => (b.focus - a.focus) || a.z - b.z)[0];
+      if (!at) continue;
+      // The first corner whose square is clear of the badges and names already placed.
+      const [dx, dy] = [[1, -1], [-1, -1], [1, 1], [-1, 1], [2, -1], [-2, -1]].find(([u, v]) => !clash([at.x + 13 * u - 11, at.y + 13 * v - 11, 22, 22], 2)) || [1, -1];
+      const x = at.x + 13 * dx, y = at.y + 13 * dy;
+      stroke(mk.color, 0.9, 1);
+      ctx.beginPath(); ctx.moveTo(at.x + 3 * Math.sign(dx), at.y + 3 * dy); ctx.lineTo(x - 9 * Math.sign(dx), y - 9 * dy); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = colors.void;
+      ctx.fillRect(x - 10, y - 10, 20, 20);
+      stroke(mk.color, 1, 1.5);
+      ctx.strokeRect(x - 9.5, y - 9.5, 19, 19);
+      ctx.fillStyle = mk.color;
+      ctx.font = `600 13px ${MONO}`;
+      ctx.textAlign = "center";
+      ctx.fillText(mk.label, x, y + 4.5);
+      placed.push([x - 11, y - 11, 22, 22]);
+    }
+    badgeAt = [];
   }
   function diamond(x, y, r, fill) {
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
@@ -903,7 +942,7 @@ export function createStage(canvas, scene, model, layout) {
       const inPhase = frame.phase?.members.has(c.id);
       const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id) && c.kind !== "core";
       const onWay = journey && journey.stops.some(s => s.id === c.id);
-      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead || inPhase ? 1 : c.kind === "core" ? 0.5 : 0.6)
+      const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead || inPhase ? 1 : c.kind === "core" ? 0.5 : c.error ? 0.3 : 0.6)
         * appear * (pc && !isOpen ? fog(pc.z) : 1);
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
@@ -925,24 +964,26 @@ export function createStage(canvas, scene, model, layout) {
           ctx.setLineDash([]);
         }
         for (const p of inst.get(c.id)) {
-          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid) continue;
+          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid && !markOf.has(p.fid)) continue;
           const s = project(p.cur);
           if (!s) continue;
           const inGroup = isOpen && view.group === gmap.get(p.fid);
           const role = roleOf(p.fid);
           // The travelling fact stands out in every cloud it passes; other role facts step back.
           const traveller = journey?.fid === p.fid;
-          const size = traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
-          ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role ? 1 : plain);
+          const mk = markOf.get(p.fid);
+          const size = mk ? 5 : traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
+          ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role || mk ? 1 : plain);
+          if (mk) { ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * appear); if (!open) badgeAt.push({mk, x: s.x, y: s.y, z: s.z, focus}); }
           if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, (journey ? 0.5 : 0.95) * appear);
           if (traveller) ctx.globalAlpha = 1;
-          ctx.fillStyle = role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
+          ctx.fillStyle = mk ? mk.color : role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
           ctx.fillRect(s.x - size / 2, s.y - size / 2, size, size);
           if (inGroup && c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS) {
             targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
             ctx.globalAlpha = 1;
             ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid ? colors["ink-hi"] : colors.label;
-            ctx.font = "12.5px 'IBM Plex Mono', monospace";
+            ctx.font = `13.5px ${MONO}`;
             ctx.textAlign = "left";
             ctx.fillText(factLabel(scene.factById.get(p.fid)), s.x + 9, s.y + 4);
           }
@@ -982,24 +1023,27 @@ export function createStage(canvas, scene, model, layout) {
           ctx.globalAlpha = view.group != null ? 0.5 : 1;
           ctx.textAlign = "left";
           ctx.fillStyle = hot ? phaseColor(open) : colors.label;
-          ctx.font = "13px 'IBM Plex Mono', monospace";
+          ctx.font = `15px ${MONO}`;
           ctx.fillText(g.key, p.x + r + 5, p.y - 1);
           ctx.fillStyle = colors["label-dim"];
-          ctx.font = "11.5px 'IBM Plex Mono', monospace";
-          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 13);
-          if (hot) { ctx.fillStyle = colors.focus; ctx.fillText("click to list its facts", p.x + r + 5, p.y + 28); }
+          ctx.font = `13px ${MONO}`;
+          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 15);
+          if (hot) { ctx.fillStyle = colors.focus; ctx.font = `14px ${SANS}`; ctx.fillText("click to list its facts", p.x + r + 5, p.y + 32); }
         } else if (g.fids.length > MAX_FACTS) {
           const q = project(factSlot(open, gi, MAX_FACTS, g.fids.length));
-          if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
+          if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = `13px ${MONO}`; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
         }
         targets.push({kind: "group", cluster: open, gi, x: p.x, y: p.y, r: r + 4});
       });
     }
 
-    // HUD. Badges go down first and every cloud's core is an obstacle, then names are placed in
+    // HUD. The phase ruler and badges go down first and every cloud's core is an obstacle, then names are placed in
     // order of importance (open, hovered, selected, focused, main chain, verdicts), each keeping
     // clear of what is already there; hub names come last and give way.
     placed = labelled.map(({pc, sr}) => { const k = Math.min(sr, 14); return [pc.x - k, pc.y - k, 2 * k, 2 * k]; });
+    // A minimap (the Story mode's tower) has no ruler and names only the clouds in focus.
+    if (!frame.mini) ruler(shown, current);
+    markBadges();
     for (const e of edgeLabels) edgeLabel(e);
     if (frame.chain && frame.chainEdges && !journey && !open) chainBadges(frame.chainEdges);
     const rank = ({c, focus, isOpen}) => isOpen ? 0 : hover?.kind === "cluster" && hover.cluster === c ? 1 : view.selected === c.id ? 2 : focus ? 3
@@ -1010,7 +1054,7 @@ export function createStage(canvas, scene, model, layout) {
       if (isOpen) {
         const r = layout.radius.get(c.id) * pc.s + 6;
         brackets(pc.x, pc.y, r, phaseColor(c));
-        tag(pc.x, pc.y, r, clusterTitle(c), c.detail, phaseColor(c));
+        tag(pc.x, pc.y, r, clusterTitle(c), c.detail, phaseColor(c), 1, 0, null, true);
         continue;
       }
       const selected = view.selected === c.id;
@@ -1028,27 +1072,16 @@ export function createStage(canvas, scene, model, layout) {
       if (outside && !hot) continue;
       const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id);
       const quietAll = frame.labelAll && !frame.chain && !frame.phase && backbone.size;
-      const named = quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
+      const named = frame.mini ? focus || hot || selected : quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
       if (!named && quietAll) continue;
       if (named) {
         // In the overview the main chain reads down the right; its tier-mates take the left.
         const side = !frame.labelAll || frame.chain || frame.phase ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
-        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || inPhase || c.kind === "root" ? phaseColor(c) : colors.label, hot ? 1 : fade * Math.min(1, alpha / 0.6), side, hot ? clickSays(c) : null);
-      } else {
-        // Unnamed queries keep only their call tag under the cloud; hover names them.
-        ctx.globalAlpha = 0.9 * fade * alpha;
-        ctx.fillStyle = colors["label-dim"];
-        ctx.font = "12px 'IBM Plex Mono', monospace";
-        ctx.textAlign = "center";
-        const t = callTag(c), tw = ctx.measureText(t).width, bx = [pc.x - tw / 2, pc.y + sr + 4, tw, 14];
-        if (clash(bx, 1)) continue;
-        placed.push(bx);
-        ctx.fillText(t, pc.x, pc.y + sr + 15);
+        tag(pc.x, pc.y, sr + 4, clusterTitle(c), c.detail, focus || hot || lead || inPhase || c.kind === "root" ? phaseColor(c) : colors.label, hot ? 1 : fade * Math.min(1, alpha / 0.6), side, hot ? clickSays(c) : null, focus && !frame.labelAll);
       }
     }
     for (const c of hubsLater) hubLabels(c, fade);
     if (journey) drawJourney();
-    ruler(shown, current);
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(draw);
   }
@@ -1168,6 +1201,8 @@ export function createStage(canvas, scene, model, layout) {
     highlightChainEdge(k) { chainHi = k; },
     get journey() { return journey; },
     selectFact(fid) { view.fact = fid; },
+    // [{fids, color, label}]: later marks win where they share a fact.
+    markFacts(list) { marks = list || []; markOf = new Map(marks.flatMap(m => m.fids.map(fid => [fid, m]))); },
     get view() { return view; },
     get manual() { return manual; },
     colors: () => colors,
@@ -1181,9 +1216,8 @@ const stopTitle = c => c.kind === "core" ? "DSL record" : clusterTitle(c);
 const camFrame = g => ({r: [Math.cos(g.yaw), 0, -Math.sin(g.yaw)],
                         u: [-Math.sin(g.yaw) * Math.sin(g.pitch), Math.cos(g.pitch), -Math.cos(g.yaw) * Math.sin(g.pitch)]});
 const hash01 = n => { let x = Math.imul((n | 0) ^ 0x9e3779b9, 0x85ebca6b); x ^= x >>> 13; x = Math.imul(x, 0xc2b2ae35); x ^= x >>> 16; return (x >>> 0) / 4294967296; };
-export const callTag = c => `${c.phase === "MAP" ? "M" : "Q"}${String(c.event).padStart(2, "0")}`;
-export const clusterTitle = c => c.kind === "query" ? `${callTag(c)} ${shortSpec(c.error ? c.label : c.intent || c.label)}` : c.label;
-const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 34 ? t.slice(0, 33) + "…" : t; };
+export const clusterTitle = c => c.kind === "query" ? shortSpec(c.label) : c.label;
+const shortSpec = s => { const t = String(s).replace(/\s+/g, " "); return t.length > 40 ? t.slice(0, 39) + "…" : t; };
 const angleDelta = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];

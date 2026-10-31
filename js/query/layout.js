@@ -6,12 +6,12 @@
 // canvas) gets a longer pitch so it fills the width.
 export const PITCH = {upright: 5, lying: 8};
 export const TIERS = [
-  {tier: 0, k: -1, plate: 8.6, ring: 0, phase: "PARSE", label: "DSL record", sub: "Entity · Fact · Goal"},
-  {tier: 1, k: 0, plate: 8.2, ring: 6.6, rise: 2.6, phase: "ROUTE", label: "ROUTE access", sub: "one cloud per query"},
-  {tier: 2, k: 1, plate: 6.2, ring: 4.4, phase: "ROUTE", label: "Suspect windows", sub: "route_cases"},
-  {tier: 3, k: 2, plate: 4.6, ring: 3.1, phase: "TRACE", label: "TRACE lanes", sub: "assigned questions, SQL"},
-  {tier: 4, k: 3, plate: 3.2, ring: 2, phase: "TRACE", label: "Candidates", sub: "assess"},
-  {tier: 5, k: 4, plate: 2, ring: 0, phase: "SUBMIT", label: "Conclusion", sub: "SUBMIT root"},
+  {tier: 0, k: -1, plate: 8.6, ring: 0, phase: "PARSE", label: "DSL record", sub: "the compiled log"},
+  {tier: 1, k: 0, plate: 8.2, ring: 6.6, rise: 2.6, phase: "ROUTE", label: "ROUTE queries", sub: "one cloud per query"},
+  {tier: 2, k: 1, plate: 6.2, ring: 4.4, phase: "ROUTE", label: "Suspect windows", sub: "where ROUTE suspects a fault"},
+  {tier: 3, k: 2, plate: 4.6, ring: 3.1, phase: "TRACE", label: "Investigations", sub: "one question each, searched in the logs"},
+  {tier: 4, k: 3, plate: 3.2, ring: 2, phase: "TRACE", label: "Blamed steps", sub: "what TRACE concluded"},
+  {tier: 5, k: 4, plate: 2, ring: 0, phase: "SUBMIT", label: "Root cause", sub: "SUBMIT's verdict"},
 ];
 
 // Cloud radius grows with the cube root of its size, like a ball of packed points.

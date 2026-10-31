@@ -12,6 +12,19 @@ const WROTE = {
 };
 const VERDICT = {viol: " A direct check flagged it as breaking a rule.", unk: " A direct check could not decide either way.", sat: " A direct check found nothing wrong with it."};
 
+// The page's surface vocabulary: every name a reader sees on the stage, the caption or a card
+// comes from these, so tool names, case ids, lane ids and rule ids stay in the Details.
+const FAULT = {
+  constraint_ignorance: "ignored a task constraint", progress_misjudge: "misjudged its progress",
+  causal_misattribution: "blamed the wrong cause", inefficient_plan: "planned inefficiently",
+};
+export const faultText = f => f ? FAULT[f] || String(f).replace(/_/g, " ") : "";
+export const statusText = s => s === "uncertain" ? "possible error" : s || "";
+export const VERDICT_WORD = {viol: "broke a rule", unk: "undecided", sat: "fine"};
+export const goalText = key => String(key || "").replace(/^req:/, "").replace(/_/g, " ");
+export const cap = s => s ? s[0].toUpperCase() + s.slice(1) : "";
+export const stepList = steps => { const s = steps.map(x => `step ${x}`); return s.length > 1 ? `${s.slice(0, -1).join(", ")} and ${s[s.length - 1]}` : s[0] || ""; };
+
 const clip = (t, n) => { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, "") + "…" : t; };
 const sentences = t => String(t || "").replace(/\s+/g, " ").split(/(?<=[.?!])\s+(?=[A-Z“"'])/).filter(Boolean);
 export const stepThing = (step, module) => `step ${step}'s ${module}`;
@@ -35,7 +48,7 @@ export function suspicion(w) {
   return clip(all.find(s => own.test(s)) || all[0], 240);
 }
 
-export const question = lane => clip(sentences(lane.question)[0], 220);
+export const question = (lane, n = 220) => clip(sentences(lane.question)[0], n);
 
 // One sentence per stop kind; `seen` counts the reads before this one, `verdict` is a direct
 // check's verdict on the fact if one ran in that read.

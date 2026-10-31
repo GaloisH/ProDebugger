@@ -69,6 +69,10 @@
   --qg-void: #06080b; --qg-ink: #aab4be; --qg-ink-hi: #eef2f6; --qg-ink-dim: #56616c; --qg-line: #222c36; --qg-line-hi: #46535f;
   --qg-focus: #e0b867; --qg-label: #c6cfd7; --qg-label-dim: #8592a0; --qg-panel: #0a0e13;
   --qg-issue: #4fc1bb; --qg-cand: #f0a35e;
+  /* Story board signals: routine noise, an action with no effect, a sign that touches the goal */
+  --qg-sig-noise: #4a5560; --qg-sig-idle: #c9a24a; --qg-sig-goal: #ef6b5e;
+  /* Evidence thread: what the environment showed, what the agent believed or did */
+  --qg-th-env: #5cc3b6; --qg-th-agent: #e49a7a;
   --sans: 'IBM Plex Sans', 'Segoe UI', 'Microsoft YaHei UI', Arial, sans-serif;
   --mono: 'IBM Plex Mono', 'Cascadia Mono', Consolas, monospace;
   --radius: .9rem;

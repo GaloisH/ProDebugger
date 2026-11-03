@@ -1,0 +1,26 @@
+{
+  "abstract.rule": {
+    "kind": "abstract.rule",
+    "items": [
+      {
+        "eid": 0,
+        "kind": "abstract.rule",
+        "t": 17,
+        "refs": [
+          493,
+          494
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 17,
+          "visible_step": 17,
+          "bindings": {
+            "fact": 493
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      }
+    ]
+  }
+}

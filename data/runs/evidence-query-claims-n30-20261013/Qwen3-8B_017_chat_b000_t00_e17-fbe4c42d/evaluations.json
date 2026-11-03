@@ -1,0 +1,1140 @@
+[
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 2,
+    "refs": [
+      41
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 41
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 3,
+    "refs": [
+      79
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 79
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      162
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 162
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 8,
+    "refs": [
+      275
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 275
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      333
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 333
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 2,
+    "refs": [
+      41
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 41
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 3,
+    "refs": [
+      79
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 79
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      162
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 162
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 8,
+    "refs": [
+      275
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 275
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      333
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 333
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 2,
+    "refs": [
+      41
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 41
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 3,
+    "refs": [
+      79
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 79
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      162
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 162
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 8,
+    "refs": [
+      275
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 275
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      333
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 333
+      },
+      "reason": "unbound_or_page_placeholder"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 1,
+    "refs": [
+      6,
+      7
+    ],
+    "details": {
+      "event_step": 1,
+      "visible_step": 1,
+      "bindings": {
+        "fact": 6
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 2,
+    "refs": [
+      44,
+      45
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 44
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 3,
+    "refs": [
+      82,
+      83
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 82
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 4,
+    "refs": [
+      120,
+      121
+    ],
+    "details": {
+      "event_step": 4,
+      "visible_step": 4,
+      "bindings": {
+        "fact": 120
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 5,
+    "refs": [
+      127,
+      128
+    ],
+    "details": {
+      "event_step": 5,
+      "visible_step": 5,
+      "bindings": {
+        "fact": 127
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 6,
+    "refs": [
+      165,
+      166
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 165
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 7,
+    "refs": [
+      221,
+      222
+    ],
+    "details": {
+      "event_step": 7,
+      "visible_step": 7,
+      "bindings": {
+        "fact": 221
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 8,
+    "refs": [
+      278,
+      279
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 278
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 9,
+    "refs": [
+      336,
+      337
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 336
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 2,
+    "refs": [
+      6,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39
+    ],
+    "details": {
+      "event_step": 1,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 6
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 3,
+    "refs": [
+      44,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 44
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 4,
+    "refs": [
+      82,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 4,
+      "bindings": {
+        "fact": 82
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 5,
+    "refs": [
+      120,
+      122
+    ],
+    "details": {
+      "event_step": 4,
+      "visible_step": 5,
+      "bindings": {
+        "fact": 120
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      127,
+      129,
+      130,
+      131,
+      132,
+      133,
+      134,
+      135,
+      136,
+      137,
+      138,
+      139,
+      140,
+      141,
+      142,
+      143,
+      144,
+      145,
+      146,
+      147,
+      148,
+      149,
+      150,
+      151,
+      152,
+      153,
+      154,
+      155,
+      156,
+      157,
+      158,
+      159,
+      160
+    ],
+    "details": {
+      "event_step": 5,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 127
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 7,
+    "refs": [
+      165,
+      167,
+      168,
+      169,
+      170,
+      171,
+      172,
+      173,
+      174,
+      175,
+      176,
+      177,
+      178,
+      179,
+      180,
+      181,
+      182,
+      183,
+      184,
+      185,
+      186,
+      187,
+      188,
+      189,
+      190,
+      191,
+      192,
+      193,
+      194,
+      195,
+      196,
+      197,
+      198,
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213,
+      214,
+      215,
+      216
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 7,
+      "bindings": {
+        "fact": 165
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 8,
+    "refs": [
+      221,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271,
+      272,
+      273
+    ],
+    "details": {
+      "event_step": 7,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 221
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      278,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287,
+      288,
+      289,
+      290,
+      291,
+      292,
+      293,
+      294,
+      295,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      320,
+      321,
+      322,
+      323,
+      324,
+      325,
+      326,
+      327,
+      328,
+      329,
+      330,
+      331
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 278
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      336
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 336
+      },
+      "reason": "missing_feedback"
+    }
+  },
+  {
+    "rule": "completion.consistency/v1",
+    "state": "unknown",
+    "t": null,
+    "refs": [],
+    "details": {
+      "bindings": {},
+      "reason": "missing_completion_assertion"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 2,
+    "refs": [
+      6
+    ],
+    "details": {
+      "event_step": 1,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 6
+      },
+      "reason": "missing_previous_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 3,
+    "refs": [
+      44
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 44
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 4,
+    "refs": [
+      82,
+      44,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      105,
+      106,
+      107,
+      108,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 4,
+      "bindings": {
+        "fact": 82
+      },
+      "reason": "changed_or_incomplete_context"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 5,
+    "refs": [
+      120
+    ],
+    "details": {
+      "event_step": 4,
+      "visible_step": 5,
+      "bindings": {
+        "fact": 120
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      127
+    ],
+    "details": {
+      "event_step": 5,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 127
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 7,
+    "refs": [
+      165
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 7,
+      "bindings": {
+        "fact": 165
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 8,
+    "refs": [
+      221
+    ],
+    "details": {
+      "event_step": 7,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 221
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      278,
+      221,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271,
+      272,
+      273,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287,
+      288,
+      289,
+      290,
+      291,
+      292,
+      293,
+      294,
+      295,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      320,
+      321,
+      322,
+      323,
+      324,
+      325,
+      326,
+      327,
+      328,
+      329,
+      330,
+      331
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 278
+      },
+      "reason": "changed_or_incomplete_context"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      336
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 336
+      },
+      "reason": "missing_feedback"
+    }
+  }
+]

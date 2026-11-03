@@ -1,0 +1,197 @@
+{
+  "abstract.rule": {
+    "kind": "abstract.rule",
+    "items": [
+      {
+        "eid": 0,
+        "kind": "abstract.rule",
+        "t": 2,
+        "refs": [
+          54,
+          55
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 2,
+          "visible_step": 2,
+          "bindings": {
+            "fact": 54
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 1,
+        "kind": "abstract.rule",
+        "t": 3,
+        "refs": [
+          61,
+          62
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 3,
+          "visible_step": 3,
+          "bindings": {
+            "fact": 61
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 2,
+        "kind": "abstract.rule",
+        "t": 4,
+        "refs": [
+          68,
+          69
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 4,
+          "visible_step": 4,
+          "bindings": {
+            "fact": 68
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 3,
+        "kind": "abstract.rule",
+        "t": 5,
+        "refs": [
+          75,
+          76
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 5,
+          "visible_step": 5,
+          "bindings": {
+            "fact": 75
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 4,
+        "kind": "abstract.rule",
+        "t": 11,
+        "refs": [
+          130,
+          131
+        ],
+        "status": "candidate",
+        "rule": "decision.applicability/v1",
+        "details": {
+          "event_step": 11,
+          "visible_step": 11,
+          "bindings": {
+            "fact": 130
+          },
+          "reason": "explicit_contract_mismatch"
+        }
+      },
+      {
+        "eid": 8,
+        "kind": "abstract.rule",
+        "t": 3,
+        "refs": [
+          54,
+          56
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 2,
+          "visible_step": 3,
+          "bindings": {
+            "fact": 54
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 9,
+        "kind": "abstract.rule",
+        "t": 4,
+        "refs": [
+          61,
+          63
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 3,
+          "visible_step": 4,
+          "bindings": {
+            "fact": 61
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 10,
+        "kind": "abstract.rule",
+        "t": 5,
+        "refs": [
+          68,
+          70
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 4,
+          "visible_step": 5,
+          "bindings": {
+            "fact": 68
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 11,
+        "kind": "abstract.rule",
+        "t": 6,
+        "refs": [
+          75,
+          77
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 5,
+          "visible_step": 6,
+          "bindings": {
+            "fact": 75
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      },
+      {
+        "eid": 12,
+        "kind": "abstract.rule",
+        "t": 12,
+        "refs": [
+          130,
+          132
+        ],
+        "status": "candidate",
+        "rule": "execution.result/v1",
+        "details": {
+          "event_step": 11,
+          "visible_step": 12,
+          "bindings": {
+            "fact": 130
+          },
+          "reason": "explicit_no_effect_not_responsibility_judgment"
+        }
+      }
+    ]
+  }
+}

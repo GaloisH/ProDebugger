@@ -1,0 +1,2703 @@
+[
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      50,
+      39
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 50
+      },
+      "reason": "missing_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      51,
+      1
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 51
+      },
+      "reason": "missing_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 8,
+    "refs": [
+      70,
+      39
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 70
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 9,
+    "refs": [
+      81,
+      39
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 81
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 10,
+    "refs": [
+      88,
+      47
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 88
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 10,
+    "refs": [
+      89,
+      67
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 89
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 11,
+    "refs": [
+      96
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 96
+      },
+      "reason": "missing_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 11,
+    "refs": [
+      97,
+      67
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 97
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 13,
+    "refs": [
+      118,
+      39
+    ],
+    "details": {
+      "event_step": 13,
+      "visible_step": 13,
+      "bindings": {
+        "fact": 118
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 14,
+    "refs": [
+      131
+    ],
+    "details": {
+      "event_step": 14,
+      "visible_step": 14,
+      "bindings": {
+        "fact": 131
+      },
+      "reason": "missing_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 16,
+    "refs": [
+      152
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 152
+      },
+      "reason": "missing_matching_observation"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 16,
+    "refs": [
+      153,
+      137
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 153
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 17,
+    "refs": [
+      161
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 161
+      },
+      "reason": "missing_matching_observation"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 17,
+    "refs": [
+      162,
+      39
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 162
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 18,
+    "refs": [
+      172
+    ],
+    "details": {
+      "event_step": 18,
+      "visible_step": 18,
+      "bindings": {
+        "fact": 172
+      },
+      "reason": "missing_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 19,
+    "refs": [
+      181,
+      158
+    ],
+    "details": {
+      "event_step": 19,
+      "visible_step": 19,
+      "bindings": {
+        "fact": 181
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 20,
+    "refs": [
+      194,
+      158
+    ],
+    "details": {
+      "event_step": 20,
+      "visible_step": 20,
+      "bindings": {
+        "fact": 194
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 23,
+    "refs": [
+      225,
+      158
+    ],
+    "details": {
+      "event_step": 23,
+      "visible_step": 23,
+      "bindings": {
+        "fact": 225
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 24,
+    "refs": [
+      236
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 236
+      },
+      "reason": "missing_matching_observation"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 24,
+    "refs": [
+      237,
+      158
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 237
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "unknown",
+    "t": 25,
+    "refs": [
+      248
+    ],
+    "details": {
+      "event_step": 25,
+      "visible_step": 25,
+      "bindings": {
+        "fact": 248
+      },
+      "reason": "missing_matching_observation"
+    }
+  },
+  {
+    "rule": "assertion.consistency/v1",
+    "state": "satisfied",
+    "t": 29,
+    "refs": [
+      293,
+      158
+    ],
+    "details": {
+      "event_step": 29,
+      "visible_step": 29,
+      "bindings": {
+        "fact": 293
+      },
+      "reason": "functional_consistency"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      50
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 50
+      },
+      "reason": "missing_grounding_or_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      51
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 51
+      },
+      "reason": "missing_grounding_or_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 8,
+    "refs": [
+      70,
+      39
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 70
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 9,
+    "refs": [
+      81,
+      39
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 81
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 10,
+    "refs": [
+      88,
+      47
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 88
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 10,
+    "refs": [
+      89,
+      67
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 89
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 11,
+    "refs": [
+      96,
+      47
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 96
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 11,
+    "refs": [
+      97,
+      67
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 97
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 13,
+    "refs": [
+      118,
+      39
+    ],
+    "details": {
+      "event_step": 13,
+      "visible_step": 13,
+      "bindings": {
+        "fact": 118
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 14,
+    "refs": [
+      131,
+      39
+    ],
+    "details": {
+      "event_step": 14,
+      "visible_step": 14,
+      "bindings": {
+        "fact": 131
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 16,
+    "refs": [
+      152
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 152
+      },
+      "reason": "missing_grounding_or_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 16,
+    "refs": [
+      153,
+      137
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 153
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 17,
+    "refs": [
+      161
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 161
+      },
+      "reason": "missing_grounding_or_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 17,
+    "refs": [
+      162,
+      39
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 162
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 18,
+    "refs": [
+      172,
+      39
+    ],
+    "details": {
+      "event_step": 18,
+      "visible_step": 18,
+      "bindings": {
+        "fact": 172
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 19,
+    "refs": [
+      181,
+      158
+    ],
+    "details": {
+      "event_step": 19,
+      "visible_step": 19,
+      "bindings": {
+        "fact": 181
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 20,
+    "refs": [
+      194,
+      158
+    ],
+    "details": {
+      "event_step": 20,
+      "visible_step": 20,
+      "bindings": {
+        "fact": 194
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 23,
+    "refs": [
+      225,
+      158
+    ],
+    "details": {
+      "event_step": 23,
+      "visible_step": 23,
+      "bindings": {
+        "fact": 225
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 24,
+    "refs": [
+      236
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 236
+      },
+      "reason": "missing_grounding_or_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 24,
+    "refs": [
+      237,
+      158
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 237
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "unknown",
+    "t": 25,
+    "refs": [
+      248
+    ],
+    "details": {
+      "event_step": 25,
+      "visible_step": 25,
+      "bindings": {
+        "fact": 248
+      },
+      "reason": "missing_grounding_or_assertion_time"
+    }
+  },
+  {
+    "rule": "assertion.grounding/v1",
+    "state": "satisfied",
+    "t": 29,
+    "refs": [
+      293,
+      158
+    ],
+    "details": {
+      "event_step": 29,
+      "visible_step": 29,
+      "bindings": {
+        "fact": 293
+      },
+      "reason": "matching_record_exists_not_proof_of_use"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      50
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 50
+      },
+      "reason": "missing_old_supported_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      51
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 51
+      },
+      "reason": "missing_old_supported_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 8,
+    "refs": [
+      70,
+      39
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 70
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 9,
+    "refs": [
+      81,
+      39
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 81
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 10,
+    "refs": [
+      88,
+      47
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 88
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 10,
+    "refs": [
+      89,
+      67
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 89
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 11,
+    "refs": [
+      96,
+      47,
+      67
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 96
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 11,
+    "refs": [
+      97,
+      67
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 97
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 13,
+    "refs": [
+      118,
+      39
+    ],
+    "details": {
+      "event_step": 13,
+      "visible_step": 13,
+      "bindings": {
+        "fact": 118
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 14,
+    "refs": [
+      131,
+      39,
+      102
+    ],
+    "details": {
+      "event_step": 14,
+      "visible_step": 14,
+      "bindings": {
+        "fact": 131
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 16,
+    "refs": [
+      152
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 152
+      },
+      "reason": "missing_old_supported_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 16,
+    "refs": [
+      153,
+      137
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 153
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 17,
+    "refs": [
+      161
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 161
+      },
+      "reason": "missing_old_supported_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "satisfied",
+    "t": 17,
+    "refs": [
+      162,
+      39
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 162
+      },
+      "reason": "supported_value_not_observed_invalidated"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 18,
+    "refs": [
+      172,
+      39,
+      146
+    ],
+    "details": {
+      "event_step": 18,
+      "visible_step": 18,
+      "bindings": {
+        "fact": 172
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 19,
+    "refs": [
+      181,
+      39,
+      146
+    ],
+    "details": {
+      "event_step": 19,
+      "visible_step": 19,
+      "bindings": {
+        "fact": 181
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 20,
+    "refs": [
+      194,
+      39,
+      146
+    ],
+    "details": {
+      "event_step": 20,
+      "visible_step": 20,
+      "bindings": {
+        "fact": 194
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 23,
+    "refs": [
+      225,
+      39,
+      146
+    ],
+    "details": {
+      "event_step": 23,
+      "visible_step": 23,
+      "bindings": {
+        "fact": 225
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 24,
+    "refs": [
+      236
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 236
+      },
+      "reason": "missing_old_supported_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 24,
+    "refs": [
+      237,
+      39,
+      146
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 237
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 25,
+    "refs": [
+      248
+    ],
+    "details": {
+      "event_step": 25,
+      "visible_step": 25,
+      "bindings": {
+        "fact": 248
+      },
+      "reason": "missing_old_supported_assertion"
+    }
+  },
+  {
+    "rule": "information.update/v1",
+    "state": "unknown",
+    "t": 29,
+    "refs": [
+      293,
+      39,
+      146
+    ],
+    "details": {
+      "event_step": 29,
+      "visible_step": 29,
+      "bindings": {
+        "fact": 293
+      },
+      "reason": "missing_current_state_assertion"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 1,
+    "refs": [
+      16,
+      17
+    ],
+    "details": {
+      "event_step": 1,
+      "visible_step": 1,
+      "bindings": {
+        "fact": 16
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "violated",
+    "t": 2,
+    "refs": [
+      23,
+      24
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 23
+      },
+      "reason": "explicit_contract_mismatch"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "violated",
+    "t": 3,
+    "refs": [
+      30,
+      31
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 30
+      },
+      "reason": "explicit_contract_mismatch"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 4,
+    "refs": [
+      37,
+      38
+    ],
+    "details": {
+      "event_step": 4,
+      "visible_step": 4,
+      "bindings": {
+        "fact": 37
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 5,
+    "refs": [
+      45,
+      46
+    ],
+    "details": {
+      "event_step": 5,
+      "visible_step": 5,
+      "bindings": {
+        "fact": 45
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 6,
+    "refs": [
+      54,
+      55
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 54
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 7,
+    "refs": [
+      65,
+      66
+    ],
+    "details": {
+      "event_step": 7,
+      "visible_step": 7,
+      "bindings": {
+        "fact": 65
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 8,
+    "refs": [
+      73,
+      74
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 73
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "violated",
+    "t": 9,
+    "refs": [
+      84,
+      85
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 84
+      },
+      "reason": "explicit_contract_mismatch"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "violated",
+    "t": 10,
+    "refs": [
+      92,
+      93
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 92
+      },
+      "reason": "explicit_contract_mismatch"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 11,
+    "refs": [
+      100,
+      101
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 100
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 12,
+    "refs": [
+      108,
+      109
+    ],
+    "details": {
+      "event_step": 12,
+      "visible_step": 12,
+      "bindings": {
+        "fact": 108
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 13,
+    "refs": [
+      121,
+      122
+    ],
+    "details": {
+      "event_step": 13,
+      "visible_step": 13,
+      "bindings": {
+        "fact": 121
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 14,
+    "refs": [
+      134,
+      135
+    ],
+    "details": {
+      "event_step": 14,
+      "visible_step": 14,
+      "bindings": {
+        "fact": 134
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 15,
+    "refs": [
+      144,
+      145
+    ],
+    "details": {
+      "event_step": 15,
+      "visible_step": 15,
+      "bindings": {
+        "fact": 144
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 16,
+    "refs": [
+      156,
+      157
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 156
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 17,
+    "refs": [
+      165,
+      166
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 165
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 18,
+    "refs": [
+      175,
+      176
+    ],
+    "details": {
+      "event_step": 18,
+      "visible_step": 18,
+      "bindings": {
+        "fact": 175
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 19,
+    "refs": [
+      184,
+      185
+    ],
+    "details": {
+      "event_step": 19,
+      "visible_step": 19,
+      "bindings": {
+        "fact": 184
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 20,
+    "refs": [
+      197,
+      198
+    ],
+    "details": {
+      "event_step": 20,
+      "visible_step": 20,
+      "bindings": {
+        "fact": 197
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 21,
+    "refs": [
+      208,
+      209
+    ],
+    "details": {
+      "event_step": 21,
+      "visible_step": 21,
+      "bindings": {
+        "fact": 208
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 22,
+    "refs": [
+      218,
+      219
+    ],
+    "details": {
+      "event_step": 22,
+      "visible_step": 22,
+      "bindings": {
+        "fact": 218
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 23,
+    "refs": [
+      228,
+      229
+    ],
+    "details": {
+      "event_step": 23,
+      "visible_step": 23,
+      "bindings": {
+        "fact": 228
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 24,
+    "refs": [
+      240,
+      241
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 240
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 25,
+    "refs": [
+      251,
+      252
+    ],
+    "details": {
+      "event_step": 25,
+      "visible_step": 25,
+      "bindings": {
+        "fact": 251
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 26,
+    "refs": [
+      261,
+      262
+    ],
+    "details": {
+      "event_step": 26,
+      "visible_step": 26,
+      "bindings": {
+        "fact": 261
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 27,
+    "refs": [
+      272,
+      273
+    ],
+    "details": {
+      "event_step": 27,
+      "visible_step": 27,
+      "bindings": {
+        "fact": 272
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 28,
+    "refs": [
+      285,
+      286
+    ],
+    "details": {
+      "event_step": 28,
+      "visible_step": 28,
+      "bindings": {
+        "fact": 285
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 29,
+    "refs": [
+      296,
+      297
+    ],
+    "details": {
+      "event_step": 29,
+      "visible_step": 29,
+      "bindings": {
+        "fact": 296
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "decision.applicability/v1",
+    "state": "satisfied",
+    "t": 30,
+    "refs": [
+      307,
+      308
+    ],
+    "details": {
+      "event_step": 30,
+      "visible_step": 30,
+      "bindings": {
+        "fact": 307
+      },
+      "reason": "parser_contract_satisfied_only"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 2,
+    "refs": [
+      16,
+      18
+    ],
+    "details": {
+      "event_step": 1,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 16
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "violated",
+    "t": 3,
+    "refs": [
+      23,
+      25
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 23
+      },
+      "reason": "explicit_no_effect_not_responsibility_judgment"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "violated",
+    "t": 4,
+    "refs": [
+      30,
+      32
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 4,
+      "bindings": {
+        "fact": 30
+      },
+      "reason": "explicit_no_effect_not_responsibility_judgment"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 5,
+    "refs": [
+      37,
+      39,
+      40
+    ],
+    "details": {
+      "event_step": 4,
+      "visible_step": 5,
+      "bindings": {
+        "fact": 37
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      45,
+      47,
+      48
+    ],
+    "details": {
+      "event_step": 5,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 45
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 7,
+    "refs": [
+      54,
+      56,
+      57,
+      58,
+      59,
+      60
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 7,
+      "bindings": {
+        "fact": 54
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 8,
+    "refs": [
+      65,
+      67,
+      68
+    ],
+    "details": {
+      "event_step": 7,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 65
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      73,
+      75,
+      76,
+      77,
+      78,
+      79
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 73
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "violated",
+    "t": 10,
+    "refs": [
+      84,
+      86
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 84
+      },
+      "reason": "explicit_no_effect_not_responsibility_judgment"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "violated",
+    "t": 11,
+    "refs": [
+      92,
+      94
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 92
+      },
+      "reason": "explicit_no_effect_not_responsibility_judgment"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 12,
+    "refs": [
+      100,
+      102,
+      103
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 12,
+      "bindings": {
+        "fact": 100
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 13,
+    "refs": [
+      108,
+      110,
+      111,
+      112,
+      113,
+      114,
+      115,
+      116
+    ],
+    "details": {
+      "event_step": 12,
+      "visible_step": 13,
+      "bindings": {
+        "fact": 108
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 14,
+    "refs": [
+      121,
+      123,
+      124,
+      125,
+      126,
+      127,
+      128,
+      129
+    ],
+    "details": {
+      "event_step": 13,
+      "visible_step": 14,
+      "bindings": {
+        "fact": 121
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 15,
+    "refs": [
+      134,
+      136,
+      137,
+      138,
+      139
+    ],
+    "details": {
+      "event_step": 14,
+      "visible_step": 15,
+      "bindings": {
+        "fact": 134
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 16,
+    "refs": [
+      144,
+      146,
+      147,
+      148,
+      149,
+      150
+    ],
+    "details": {
+      "event_step": 15,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 144
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 17,
+    "refs": [
+      156,
+      158,
+      159
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 156
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 18,
+    "refs": [
+      165,
+      168,
+      169,
+      170
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 18,
+      "bindings": {
+        "fact": 165
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 19,
+    "refs": [
+      175,
+      177,
+      178,
+      179
+    ],
+    "details": {
+      "event_step": 18,
+      "visible_step": 19,
+      "bindings": {
+        "fact": 175
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 20,
+    "refs": [
+      184,
+      186,
+      187,
+      188,
+      189,
+      190,
+      191,
+      192
+    ],
+    "details": {
+      "event_step": 19,
+      "visible_step": 20,
+      "bindings": {
+        "fact": 184
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 21,
+    "refs": [
+      197,
+      199,
+      200,
+      201,
+      202,
+      203
+    ],
+    "details": {
+      "event_step": 20,
+      "visible_step": 21,
+      "bindings": {
+        "fact": 197
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 22,
+    "refs": [
+      208,
+      210,
+      211,
+      212,
+      213
+    ],
+    "details": {
+      "event_step": 21,
+      "visible_step": 22,
+      "bindings": {
+        "fact": 208
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 23,
+    "refs": [
+      218,
+      220,
+      221,
+      222,
+      223
+    ],
+    "details": {
+      "event_step": 22,
+      "visible_step": 23,
+      "bindings": {
+        "fact": 218
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 24,
+    "refs": [
+      228,
+      230,
+      231,
+      232,
+      233,
+      234
+    ],
+    "details": {
+      "event_step": 23,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 228
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 25,
+    "refs": [
+      240,
+      242,
+      243,
+      244,
+      245,
+      246
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 25,
+      "bindings": {
+        "fact": 240
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 26,
+    "refs": [
+      251,
+      253,
+      254,
+      255,
+      256
+    ],
+    "details": {
+      "event_step": 25,
+      "visible_step": 26,
+      "bindings": {
+        "fact": 251
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 27,
+    "refs": [
+      261,
+      263,
+      264,
+      265,
+      266,
+      267
+    ],
+    "details": {
+      "event_step": 26,
+      "visible_step": 27,
+      "bindings": {
+        "fact": 261
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 28,
+    "refs": [
+      272,
+      274,
+      275,
+      276,
+      277,
+      278,
+      279,
+      280
+    ],
+    "details": {
+      "event_step": 27,
+      "visible_step": 28,
+      "bindings": {
+        "fact": 272
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 29,
+    "refs": [
+      285,
+      287,
+      288,
+      289,
+      290,
+      291
+    ],
+    "details": {
+      "event_step": 28,
+      "visible_step": 29,
+      "bindings": {
+        "fact": 285
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 30,
+    "refs": [
+      296,
+      298,
+      299,
+      300,
+      301,
+      302
+    ],
+    "details": {
+      "event_step": 29,
+      "visible_step": 30,
+      "bindings": {
+        "fact": 296
+      },
+      "reason": "missing_expected_effect_model"
+    }
+  },
+  {
+    "rule": "execution.result/v1",
+    "state": "unknown",
+    "t": 30,
+    "refs": [
+      307
+    ],
+    "details": {
+      "event_step": 30,
+      "visible_step": 30,
+      "bindings": {
+        "fact": 307
+      },
+      "reason": "missing_feedback"
+    }
+  },
+  {
+    "rule": "completion.consistency/v1",
+    "state": "unknown",
+    "t": null,
+    "refs": [],
+    "details": {
+      "bindings": {},
+      "reason": "missing_completion_assertion"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 2,
+    "refs": [
+      16
+    ],
+    "details": {
+      "event_step": 1,
+      "visible_step": 2,
+      "bindings": {
+        "fact": 16
+      },
+      "reason": "missing_previous_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 3,
+    "refs": [
+      23
+    ],
+    "details": {
+      "event_step": 2,
+      "visible_step": 3,
+      "bindings": {
+        "fact": 23
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 4,
+    "refs": [
+      30
+    ],
+    "details": {
+      "event_step": 3,
+      "visible_step": 4,
+      "bindings": {
+        "fact": 30
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 5,
+    "refs": [
+      37
+    ],
+    "details": {
+      "event_step": 4,
+      "visible_step": 5,
+      "bindings": {
+        "fact": 37
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 6,
+    "refs": [
+      45
+    ],
+    "details": {
+      "event_step": 5,
+      "visible_step": 6,
+      "bindings": {
+        "fact": 45
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 7,
+    "refs": [
+      54
+    ],
+    "details": {
+      "event_step": 6,
+      "visible_step": 7,
+      "bindings": {
+        "fact": 54
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 8,
+    "refs": [
+      65
+    ],
+    "details": {
+      "event_step": 7,
+      "visible_step": 8,
+      "bindings": {
+        "fact": 65
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 9,
+    "refs": [
+      73
+    ],
+    "details": {
+      "event_step": 8,
+      "visible_step": 9,
+      "bindings": {
+        "fact": 73
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 10,
+    "refs": [
+      84
+    ],
+    "details": {
+      "event_step": 9,
+      "visible_step": 10,
+      "bindings": {
+        "fact": 84
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 11,
+    "refs": [
+      92
+    ],
+    "details": {
+      "event_step": 10,
+      "visible_step": 11,
+      "bindings": {
+        "fact": 92
+      },
+      "reason": "missing_retry_exception_information"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 12,
+    "refs": [
+      100
+    ],
+    "details": {
+      "event_step": 11,
+      "visible_step": 12,
+      "bindings": {
+        "fact": 100
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 13,
+    "refs": [
+      108
+    ],
+    "details": {
+      "event_step": 12,
+      "visible_step": 13,
+      "bindings": {
+        "fact": 108
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 14,
+    "refs": [
+      121
+    ],
+    "details": {
+      "event_step": 13,
+      "visible_step": 14,
+      "bindings": {
+        "fact": 121
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 15,
+    "refs": [
+      134
+    ],
+    "details": {
+      "event_step": 14,
+      "visible_step": 15,
+      "bindings": {
+        "fact": 134
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 16,
+    "refs": [
+      144
+    ],
+    "details": {
+      "event_step": 15,
+      "visible_step": 16,
+      "bindings": {
+        "fact": 144
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 17,
+    "refs": [
+      156
+    ],
+    "details": {
+      "event_step": 16,
+      "visible_step": 17,
+      "bindings": {
+        "fact": 156
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 18,
+    "refs": [
+      165
+    ],
+    "details": {
+      "event_step": 17,
+      "visible_step": 18,
+      "bindings": {
+        "fact": 165
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 19,
+    "refs": [
+      175
+    ],
+    "details": {
+      "event_step": 18,
+      "visible_step": 19,
+      "bindings": {
+        "fact": 175
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 20,
+    "refs": [
+      184
+    ],
+    "details": {
+      "event_step": 19,
+      "visible_step": 20,
+      "bindings": {
+        "fact": 184
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 21,
+    "refs": [
+      197
+    ],
+    "details": {
+      "event_step": 20,
+      "visible_step": 21,
+      "bindings": {
+        "fact": 197
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 22,
+    "refs": [
+      208
+    ],
+    "details": {
+      "event_step": 21,
+      "visible_step": 22,
+      "bindings": {
+        "fact": 208
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 23,
+    "refs": [
+      218
+    ],
+    "details": {
+      "event_step": 22,
+      "visible_step": 23,
+      "bindings": {
+        "fact": 218
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 24,
+    "refs": [
+      228
+    ],
+    "details": {
+      "event_step": 23,
+      "visible_step": 24,
+      "bindings": {
+        "fact": 228
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 25,
+    "refs": [
+      240
+    ],
+    "details": {
+      "event_step": 24,
+      "visible_step": 25,
+      "bindings": {
+        "fact": 240
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 26,
+    "refs": [
+      251
+    ],
+    "details": {
+      "event_step": 25,
+      "visible_step": 26,
+      "bindings": {
+        "fact": 251
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 27,
+    "refs": [
+      261
+    ],
+    "details": {
+      "event_step": 26,
+      "visible_step": 27,
+      "bindings": {
+        "fact": 261
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 28,
+    "refs": [
+      272
+    ],
+    "details": {
+      "event_step": 27,
+      "visible_step": 28,
+      "bindings": {
+        "fact": 272
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 29,
+    "refs": [
+      285
+    ],
+    "details": {
+      "event_step": 28,
+      "visible_step": 29,
+      "bindings": {
+        "fact": 285
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 30,
+    "refs": [
+      296
+    ],
+    "details": {
+      "event_step": 29,
+      "visible_step": 30,
+      "bindings": {
+        "fact": 296
+      },
+      "reason": "non_equivalent_action"
+    }
+  },
+  {
+    "rule": "progress.efficiency/v1",
+    "state": "unknown",
+    "t": 30,
+    "refs": [
+      307
+    ],
+    "details": {
+      "event_step": 30,
+      "visible_step": 30,
+      "bindings": {
+        "fact": 307
+      },
+      "reason": "missing_feedback"
+    }
+  }
+]

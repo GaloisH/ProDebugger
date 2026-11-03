@@ -1,0 +1,47 @@
+import {esc} from "./util.js?v=27bf1baa85";
+import {parseRoute, runsHref} from "./routes.js?v=27bf1baa85";
+import {mountHome} from "./pages/home.js?v=insights-20261103";
+import {mountRuns} from "./pages/runs.js?v=27bf1baa85";
+import {mountChat} from "./pages/chat.js?v=27bf1baa85";
+import {mountWorkbench} from "./pages/workbench.js?v=insights-20261103";
+import {mountQuery} from "./pages/query.js?v=signs-79eb29e";
+import {initTheme, setThemePage} from "./theme.js?v=27bf1baa85";
+
+const app = document.getElementById("app");
+const crumbs = document.getElementById("crumbs");
+const nav = document.getElementById("site-nav");
+let current = null;
+
+function setCrumbs(route) {
+  nav.querySelectorAll("a").forEach(a => a.setAttribute("aria-current", String(a.dataset.page === (route.page === "case" ? "runs" : route.page))));
+  if (route.page === "query") {
+    crumbs.innerHTML = route.ref ? `<span class="sep">/</span><span class="current" title="${esc(route.ref[1])}">${esc(route.ref[1])}</span>` : "";
+    return;
+  }
+  if (route.page === "chat") {
+    crumbs.innerHTML = route.ref ? `<span class="sep">/</span><span class="current" title="${esc(route.ref[2])}">${esc(route.ref[2])}</span>` : "";
+    return;
+  }
+  if (route.page !== "case") { crumbs.innerHTML = ""; return; }
+  const [source, group, trajectory] = route.ref;
+  crumbs.innerHTML = `<span class="sep">/</span><a href="${runsHref(group)}">${source === "sessions" ? "session" : "run"} · ${esc(group)}</a><span class="sep">/</span><span class="current" title="${esc(trajectory)}">${esc(trajectory)}</span>`;
+}
+
+function render() {
+  if (/^#\/?\?/.test(location.hash)) { location.replace("#/runs" + location.hash.replace(/^#\/?/, "")); return; }
+  const route = parseRoute();
+  document.body.classList.toggle("page-home", route.page === "home");
+  document.body.classList.toggle("page-query", route.page === "query");
+  setThemePage(route.page === "home", route.page === "query" ? "dark" : null);
+  setCrumbs(route);
+  const key = route.page === "case" ? route.ref.join("/") : route.page;
+  if (current && current.key === key && current.update) { current.update(route); return; }
+  current?.unmount?.();
+  app.innerHTML = "";
+  const mount = {case: mountWorkbench, query: mountQuery, chat: mountChat, runs: mountRuns, home: mountHome}[route.page];
+  current = {key, ...mount(app, route)};
+}
+
+window.addEventListener("hashchange", render);
+initTheme();
+render();

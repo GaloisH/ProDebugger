@@ -1,0 +1,1 @@
+# The public schema files use only the Python standard library (3.10+).

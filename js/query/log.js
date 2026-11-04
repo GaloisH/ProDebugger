@@ -1,5 +1,5 @@
 import {esc} from "../util.js?v=27bf1baa85";
-import {SLOT_LABEL} from "./model.js?v=signs-79eb29e";
+import {SLOT_LABEL} from "./model.js?v=signs-82";
 import {faultText} from "./narrate.js?v=23f9bfd6b4";
 
 const SLOT_ORDER = ["obs", "mem", "refl", "plan", "act", "chk"];
@@ -30,7 +30,7 @@ export function mountLog(root, scene, stage) {
   }
   root.insertAdjacentHTML("beforeend", `
     <aside class="qg-log" aria-label="Original log" hidden>
-      <header><span class="lg-kicker">Original log</span><h3>${esc(scene.meta.task || "")}</h3><button class="lg-close" type="button" title="Close" aria-label="Close">×</button></header>
+      <header><button class="lg-fold" type="button" aria-expanded="false" title="Show or fold the original log"><span class="lg-kicker">Original log</span><i aria-hidden="true">▸</i></button><h3>${esc(scene.meta.task || "")}</h3><button class="lg-close" type="button" title="Close" aria-label="Close">×</button></header>
       <div class="lg-card" hidden></div>
       <ol class="lg-steps">${rows.join("")}</ol>
     </aside>`);
@@ -73,7 +73,9 @@ export function mountLog(root, scene, stage) {
     const li = list.querySelector(`.lg-step[data-step="${s}"]`);
     if (!li) return;
     li.classList.remove("is-fold");
-    li.scrollIntoView({block: "center", behavior: "smooth"});
+    const top = Math.max(0, list.scrollTop + li.getBoundingClientRect().top - list.getBoundingClientRect().top - (list.clientHeight - Math.min(li.offsetHeight, list.clientHeight)) / 2);
+    list.scrollTo({top, behavior: "smooth"});
+    setTimeout(() => { if (Math.abs(list.scrollTop - top) > 4 && list.scrollHeight - list.clientHeight > top - 4) list.scrollTop = top; }, 700);
     if (flash) { li.classList.remove("is-flash"); void li.offsetWidth; li.classList.add("is-flash"); }
     const fids = [...li.querySelectorAll(".lg-mod")].flatMap(m => m.dataset.fids.split(",").map(Number));
     stage.markFacts([{fids, color: focusColor, label: null}]);
@@ -85,16 +87,29 @@ export function mountLog(root, scene, stage) {
     const g = e.target.closest("[data-lg-goto]");
     if (g) goTo(Number(g.dataset.lgGoto));
     if (e.target.closest(".lg-close")) api.hide();
+    if (e.target.closest(".lg-fold")) fold(!panel.classList.contains("lg-folded"));
   });
   panel.addEventListener("mouseover", e => {
     const m = e.target.closest(".lg-mod");
     if (m) stage.markFacts([{fids: m.dataset.fids.split(",").map(Number), color: focusColor, label: null}]);
   });
-  panel.addEventListener("mouseleave", () => stage.markFacts([]));
+  panel.addEventListener("mouseleave", () => api.idle ? api.idle() : stage.markFacts([]));
+
+  function fold(on) {
+    panel.classList.toggle("lg-folded", on);
+    const b = panel.querySelector(".lg-fold");
+    b.setAttribute("aria-expanded", String(!on));
+    b.querySelector("i").textContent = on ? "▸" : "▾";
+    if (!on && current) requestAnimationFrame(() => goTo(current.scrollTo, false));
+    if (on) api.idle ? api.idle() : stage.markFacts([]);
+  }
 
   const api = {
+    idle: null,
+    goTo,
     get open() { return !panel.hidden; },
     show(log) {
+      if (panel.hidden) fold(true);
       panel.hidden = false;
       root.classList.add("has-log");
       if (current !== log) {
@@ -118,7 +133,7 @@ export function mountLog(root, scene, stage) {
         });
       }
       renderCard(log);
-      requestAnimationFrame(() => goTo(log.scrollTo, false));
+      if (!panel.classList.contains("lg-folded")) requestAnimationFrame(() => goTo(log.scrollTo, false));
     },
     hide() {
       if (panel.hidden) return;

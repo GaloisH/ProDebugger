@@ -17,7 +17,7 @@ async function readJsonl(ref, name) {
 }
 
 export async function loadQueryScene(ref) {
-  const [record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries, input] = await Promise.all([
+  const [record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries, input, chain] = await Promise.all([
     getJSON(ref, "canonical_record.json"),
     getJSON(ref, "evidences.json", {}),
     getJSON(ref, "route_candidates.json", []),
@@ -27,9 +27,10 @@ export async function loadQueryScene(ref) {
     readJsonl(ref, "tool_calls.jsonl"),
     readJsonl(ref, "trace_queries.jsonl"),
     getJSON(ref, "input.json", null),
+    getJSON(ref, "causal_chain.json", null),
   ]);
   const scene = buildQueryScene({record, evidences, routeCandidates, result, managerPlan, goalMap, toolCalls, traceQueries});
-  scene.source = {input, goalMap, result, managerPlan};
+  scene.source = {input, goalMap, result, managerPlan, chain};
   return scene;
 }
 
@@ -123,6 +124,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
   const facts = (record.facts || []).map(f => ({
     id: `f${f.fid}`, type: "fact", fid: f.fid, t: f.t, slot: f.slot, side: f.side, rel: f.rel,
     args: (f.args || []).map(entityKey), value: f.value, basis: f.basis || [], span: f.span || "",
+    purpose: f.purpose ? entityKey(f.purpose) : null,
   }));
   const factById = new Map(facts.map(f => [f.fid, f]));
   const steps = Math.max(1, ...facts.map(f => f.t));
@@ -335,6 +337,7 @@ export function buildQueryScene({record, evidences, routeCandidates, result, man
   return {
     meta: {tid: record.trajectory_id, task: record.task, taskType: record.task_type, steps,
            relations: record.relations || {}, kinds},
+    intentions: record.intentions || {},
     facts, factById, entities, goals, evidence, windows, lanes: [...lanes.values()], candidates, root, events,
     goalMap: goalMap || null, rules: (managerPlan?.decision_rules || []).map(r => ({id: r.rule_id, agent: r.conditions?.[0]?.agent_id || "", conds: (r.conditions || []).map(c => ({agent: c.agent_id, outcome: c.outcome})), outcome: r.conditions?.[0]?.outcome || "", finding: r.conditions?.[0]?.finding || "", conclusion: r.conclusion || "", caveat: r.caveat || ""})),
   };

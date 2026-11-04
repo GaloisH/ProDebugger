@@ -1,7 +1,7 @@
 import {cap, faultText, question, stepList, suspicion} from "./narrate.js?v=23f9bfd6b4";
-import {SIGNAL_LABEL} from "./model.js?v=signs-79eb29e";
-import {buildShots} from "./shots.js?v=p12-1";
-import {applyCopy} from "./copy.js?v=copy-5";
+import {SIGNAL_LABEL} from "./model.js?v=signs-82";
+import {buildShots} from "./shots.js?v=chain-5";
+import {applyCopy} from "./copy.js?v=chain-5";
 
 export const ACT_NAME = {START: "START", PARSE: "PARSE", MAP: "MAP", ROUTE: "ROUTE", MANAGER: "MANAGER", TRACE: "TRACE", SUBMIT: "SUBMIT"};
 const ACT_ORDER = ["START", "PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"];

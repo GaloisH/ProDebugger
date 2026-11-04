@@ -58,6 +58,7 @@ export function createTour(scene, model, layout) {
       out.frame.focus = new Set([beat.shot.cloud]);
       const ev = scene.events[beat.i];
       out.camera = {target: P(beat.shot.cloud), yaw: null, pitch: 0.3, dist: beat.shot.cloud === "core" ? 18 : 11};
+      if (beat.shot.aim?.length) out.camera = {aim: beat.shot.aim, cloud: beat.shot.cloud, yaw: 0.35 + 0.32 * (beat.chain?.at ?? 0), pitch: 0.34, dist: 18};
       out.frame.appear = new Map();
       return out;
     }

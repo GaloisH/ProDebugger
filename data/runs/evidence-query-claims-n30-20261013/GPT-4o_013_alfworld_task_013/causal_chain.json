@@ -1,0 +1,32 @@
+{
+  "facts": {
+    "task":    {"fids": [0],        "label": "Needs a spraybottle",   "at": "the task"},
+    "sees":    {"fids": [128],      "label": "Sees a soapbottle",     "at": "step 14 · world"},
+    "guess":   {"fids": [130],      "label": "“Could be the one”",    "at": "step 14 · memory"},
+    "plan":    {"fids": [133],      "label": "Take it to finish",     "at": "step 14 · plan"},
+    "holds":   {"fids": [137, 136], "label": "It is a soapbottle",    "at": "step 15 · world"},
+    "admits":  {"fids": [142],      "label": "“Picked up wrong”",     "at": "step 15 · reflection"},
+    "relapse": {"fids": [164, 152], "label": "Place it anyway",       "at": "steps 16–17"},
+    "fail":    {"fids": [169, 167], "label": "Goal not met",          "at": "steps 17–18"}
+  },
+  "steps": [
+    {"id": "n1", "title": "Not the needed item", "sub": "needs ≠ sees", "from": ["task", "sees"],
+     "because": "The task asks for a spraybottle, and the cabinet at step 14 holds a soapbottle.",
+     "so": "What the agent has found is not what the task needs."},
+    {"id": "n2", "title": "A guess became a plan", "sub": "wrong identity relied on", "from": ["n1", "guess", "plan"],
+     "because": "Its memory only says the soapbottle could be the spraybottle, yet its plan takes it to finish the task.",
+     "so": "From step 14 on, a wrong identity drives what the agent decides."},
+    {"id": "n3", "title": "Acted on the guess", "sub": "the plan is carried out", "from": ["n2", "holds"],
+     "because": "The agent does what that plan says, and at step 15 the world confirms it now holds a soapbottle.",
+     "so": "Step 14's plan was not just a passing thought: the run followed it."},
+    {"id": "n4", "title": "The fix didn't hold", "sub": "the same premise returns", "from": ["admits", "relapse"],
+     "because": "At step 15 it admits it picked up the wrong item, yet by steps 16–17 it calls the soapbottle relevant again and plans to place it.",
+     "so": "The correction never took effect."},
+    {"id": "n5", "title": "Step 17 only repeats 14", "sub": "the rival is ruled out", "from": ["n4", "n2"],
+     "because": "Step 17's plan rests on the very premise step 14 created and the failed fix left in place.",
+     "so": "Step 17 repeats the mistake rather than making a new one; step 14 stays its origin."}
+  ],
+  "verdict": {"title": "Root cause: step 14 plan", "sub": "explains the failure", "from": ["n3", "n5"], "explains": ["fail"],
+    "because": "Step 14's plan committed to the wrong item, and everything after it only carried that commitment on.",
+    "so": "That is the root cause, and it is exactly why the soapbottle ends up on the countertop and the goal check says not met."}
+}

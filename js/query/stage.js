@@ -1,7 +1,7 @@
 import {ballPoint, cloudRadius, PITCH, TIERS} from "./layout.js?v=23f9bfd6b4";
-import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js?v=signs-79eb29e";
+import {factLabel, factRoles, ROLE_ORDER} from "./clusters.js?v=signs-80";
 
-const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim", "issue", "cand"];
+const TOKENS = ["void", "ink", "ink-hi", "ink-dim", "line", "line-hi", "focus", "label", "label-dim", "issue", "cand", "th-env", "th-agent", "sig-goal"];
 const PHASE_TOKENS = {PARSE: "parse", MAP: "map", ROUTE: "route", MANAGER: "manager", TRACE: "trace", SUBMIT: "submit"};
 const readColors = () => {
   const css = getComputedStyle(document.documentElement);
@@ -39,6 +39,7 @@ export function createStage(canvas, scene, model, layout) {
   let targets = [];
   let journey = null;
   let markOf = new Map(), marks = [], badgeAt = [];
+  let links = null;
   let rot = false;
   let W = 0, H = 0, dpr = 1, raf = 0, last = 0, onFrame = null, B = null;
   const listeners = {hover: [], select: [], manual: [], view: [], journey: [], back: [], details: []};
@@ -54,6 +55,10 @@ export function createStage(canvas, scene, model, layout) {
     return best < 0 ? null : ROLE_ORDER[best];
   }
   const phaseColor = c => colors.phase[c.phaseKey] || colors.label;
+  const shotColor = fid => {
+    const slot = scene.factById.get(fid)?.slot;
+    return slot === "obs" ? colors["th-env"] : slot === "chk" ? colors["sig-goal"] : colors["th-agent"];
+  };
   const groupOf = new Map(clusters.map(c => [c.id, new Map(c.groups.flatMap((g, gi) => g.fids.map(fid => [fid, gi])))]));
   const backbone = new Set();
   for (let c = byId.get("root"); c; ) {
@@ -197,6 +202,10 @@ export function createStage(canvas, scene, model, layout) {
     if (named && view.group === gi) return named.includes(p.fid) ? factSlot(c, gi, named.indexOf(p.fid), named.length) : radialPoint(c, gi, k, g.fids.length, p.fid);
     if (view.group === gi && k < MAX_FACTS) return factSlot(c, gi, k, g.fids.length);
     return radialPoint(c, gi, k, g.fids.length, p.fid);
+  }
+  function shotOn(c) {
+    if (!frame.shot || frame.shot.cloud !== c.id) return null;
+    return view.cluster === c.id && !view.byTour ? null : frame.shot;
   }
   function hubTarget(c, j) {
     const gi = hubGroup.get(c.id)[j];
@@ -348,7 +357,7 @@ export function createStage(canvas, scene, model, layout) {
   }
   function drawManager() {
     const lanes = clusters.filter(c => c.kind === "lane" && frame.visible.has(c.id));
-    if (!lanes.length || frame.mini || journey || view.cluster || frame.filter?.phases?.has("TRACE")) return;
+    if (!lanes.length || frame.mini || frame.proof || journey || view.cluster || frame.filter?.phases?.has("TRACE")) return;
     const p = project(managerPoint());
     if (!p) return;
     const color = colors.phase.MANAGER, rules = scene.rules || [];
@@ -391,7 +400,7 @@ export function createStage(canvas, scene, model, layout) {
     stroke(l.color, 0.9, 1);
     ctx.beginPath(); ctx.moveTo(l.s.x + 6, l.s.y); ctx.lineTo(x, y + H / 2); ctx.stroke();
     ctx.globalAlpha = 0.96; ctx.fillStyle = colors.void; ctx.fillRect(x, y, W, H);
-    stroke(colors.focus, 1, 1); ctx.strokeRect(x + 0.5, y + 0.5, W - 1, H - 1);
+    stroke(l.color, 1, 1); ctx.strokeRect(x + 0.5, y + 0.5, W - 1, H - 1);
     ctx.globalAlpha = 1; ctx.textAlign = "left";
     ctx.fillStyle = colors.focus; ctx.font = `600 12px ${MONO}`; ctx.fillText("ONE FACT", x + 12, y + 19);
     rows.forEach(([k, v], i) => {
@@ -406,28 +415,34 @@ export function createStage(canvas, scene, model, layout) {
   function drawShotLabels(list) {
     if (!list.length) return;
     list.sort((a, b) => a.s.y - b.s.y);
-    const ROW = 28, x0 = Math.max(...list.map(l => l.s.x)) + (list.some(l => !l.open) ? 34 : 18);
+    const ROW = 32, x0 = Math.max(...list.map(l => l.s.x)) + (list.some(l => !l.open) ? 34 : 18);
     let y = -Infinity;
     for (const l of list) {
       if (l.card) { drawCard(l); continue; }
+      if (!l.text) continue;
       y = Math.max(l.s.y, y + ROW);
       const x = l.open && list.length > 1 ? x0 : Math.max(x0, l.s.x + 18);
       stroke(l.color, 0.8, 1);
-      ctx.beginPath(); ctx.moveTo(l.s.x + 6, l.s.y); ctx.lineTo(x - 6, y - 4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(l.s.x + 6, l.s.y); ctx.lineTo(x - 8, y - 5); ctx.stroke();
       ctx.textAlign = "left";
       ctx.font = `15px ${SANS}`;
-      const w = ctx.measureText(l.text).width;
-      const over = pointer && pointer.x >= x - 4 && pointer.x <= x + w + 4 && pointer.y >= y - 17 && pointer.y <= y + 7;
-      ctx.globalAlpha = 1; ctx.fillStyle = colors.void;
-      ctx.fillRect(x - 4, y - 17, w + 8, 24);
-      ctx.fillStyle = colors["ink-hi"];
+      const tw = ctx.measureText(l.text).width;
+      const warn = l.warn ? `  ${l.warn}` : "";
+      const w = tw + (warn ? ctx.measureText(warn).width : 0);
+      const bx = x - 8, by = y - 18, bw = w + 16, bh = 26;
+      const over = pointer && pointer.x >= bx && pointer.x <= bx + bw && pointer.y >= by && pointer.y <= by + bh;
+      ctx.globalAlpha = 1; ctx.fillStyle = colors.void; ctx.fillRect(bx, by, bw, bh);
+      ctx.globalAlpha = over ? 0.2 : 0.12; ctx.fillStyle = l.color; ctx.fillRect(bx, by, bw, bh);
+      stroke(l.color, over ? 1 : 0.85, 1); ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+      ctx.globalAlpha = 1; ctx.fillStyle = colors["ink-hi"];
       ctx.fillText(l.text, x, y);
-      placed.push([x - 4, y - 17, w + 8, 24]);
+      if (warn) { ctx.fillStyle = colors["sig-goal"]; ctx.fillText(warn, x + tw, y); }
+      placed.push([bx, by, bw, bh]);
       if (over) {
         ctx.font = `12px ${MONO}`;
         const sw = ctx.measureText(l.sub).width;
-        ctx.fillStyle = colors.void; ctx.fillRect(x - 4, y + 7, sw + 8, 18);
-        ctx.fillStyle = colors["label-dim"]; ctx.fillText(l.sub, x, y + 20);
+        ctx.fillStyle = colors.void; ctx.fillRect(bx, by + bh + 2, sw + 16, 18);
+        ctx.fillStyle = colors["label-dim"]; ctx.fillText(l.sub, x, by + bh + 15);
       }
     }
   }
@@ -445,7 +460,7 @@ export function createStage(canvas, scene, model, layout) {
   function hudInsets() {
     const box = canvas.getBoundingClientRect(), page = canvas.closest(".qg");
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
-    const panel = rect(".qg-log:not([hidden])") || rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)") || rect(".qg-sd-say:not([hidden])");
+    const panel = rect(".qg-log:not([hidden])") || rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-chain:not([hidden])") || rect(".qg-legend:not(.is-collapsed)") || rect(".qg-sd-say:not([hidden])");
     const head = rect(".qg > header"), foot = rect(".qg-foot");
     const ruler = rot || frame.mini ? 0 : 170;
     const left = Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0);
@@ -518,7 +533,7 @@ export function createStage(canvas, scene, model, layout) {
     const g = {yaw: base.yaw ?? cam.yaw, pitch: base.pitch ?? cam.pitch};
     return fitPoints(g, [...frame.phase.members].map(id => layout.pos.get(id)).filter(Boolean), wide => wide ? [60, 120] : [120, 60], 3, 180);
   }
-  function fitPoints(g, pts, room, pad = 2, rightRoom = 0) {
+  function fitPoints(g, pts, room, pad = 2, rightRoom = 0, near = 16) {
     const frame = camFrame(g), R = screenRight(frame), D = screenDown(frame);
     const xs = pts.map(p => dot(p, R)), ys = pts.map(p => dot(p, D));
     const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
@@ -526,12 +541,17 @@ export function createStage(canvas, scene, model, layout) {
     const [rw, rh] = room(x1 - x0 >= y1 - y0);
     const freeW = Math.max(200, W - left - right - rw - rightRoom), freeH = Math.max(160, H - top - bottom - rh);
     const focal = H / (2 * Math.tan(cam.fov / 2));
-    const dist = Math.max(16, 1.2 * focal * Math.max((x1 - x0 + pad) / freeW, (y1 - y0 + pad) / freeH));
+    const dist = Math.max(near, 1.2 * focal * Math.max((x1 - x0 + pad) / freeW, (y1 - y0 + pad) / freeH));
     const px = dist / focal;
     const mid = scale(pts.reduce(add, [0, 0, 0]), 1 / pts.length);
     const at = add(mid, add(scale(R, (x0 + x1) / 2 - dot(mid, R)), scale(D, (y0 + y1) / 2 - dot(mid, D))));
     const ox = (left - right - rightRoom) / 2 * px, oy = (top - bottom) / 2 * px;
     return {...g, dist, target: add(at, add(scale(R, -ox), scale(D, -oy)))};
+  }
+  function aimGoal(g) {
+    const ps = (inst.get(g.cloud) || []).filter(q => q.cur && g.aim.includes(q.fid)).map(q => q.cur);
+    if (!ps.length) return tourShot({target: layout.pos.get(g.cloud), yaw: g.yaw, pitch: g.pitch, dist: g.dist});
+    return fitPoints({yaw: g.yaw ?? cam.yaw, pitch: g.pitch}, ps, () => [60, 90], 1.5, 560, 7);
   }
   function journeyPoint(s) {
     return inst.get(s.id)?.find(q => q.fid === journey.fid)?.cur || layout.pos.get(s.id);
@@ -889,6 +909,51 @@ export function createStage(canvas, scene, model, layout) {
     }
     badgeAt = [];
   }
+  function drawLinks(now) {
+    if (!links || frame.mini || view.cluster) return;
+    const core = new Map((inst.get("core") || []).filter(q => q.cur).map(q => [q.fid, q.cur]));
+    const up = (layout.radius.get("core") || 4) * 0.5, pos = new Map();
+    for (const n of links) {
+      const ps = [...n.fids.map(f => core.get(f)), ...n.from.map(id => pos.get(id))].filter(Boolean);
+      if (ps.length) pos.set(n.id, add(scale(ps.reduce(add, [0, 0, 0]), 1 / ps.length), [0, up * (n.verdict ? 1.7 : 1), 0]));
+    }
+    const ease = g => 1 - Math.pow(1 - g, 3);
+    for (const n of links) {
+      const P = pos.has(n.id) && project(pos.get(n.id));
+      if (!P) continue;
+      const g = n.born ? Math.max(0, Math.min(1, (now - n.born) / 750)) : 1, e = ease(g);
+      const color = n.verdict ? colors.focus : n.now ? colors.phase.SUBMIT : colors["line-hi"];
+      const a = n.now || n.verdict ? 0.95 : 0.45;
+      const grow = (S, dash) => {
+        if (!S) return;
+        stroke(color, a, n.now ? 1.6 : 1.1, dash);
+        ctx.beginPath(); ctx.moveTo(S.x, S.y); ctx.lineTo(S.x + (P.x - S.x) * e, S.y + (P.y - S.y) * e); ctx.stroke();
+        ctx.setLineDash([]);
+      };
+      n.fids.forEach(f => grow(core.has(f) && project(core.get(f))));
+      n.from.forEach(id => grow(pos.has(id) && project(pos.get(id)), [4, 3]));
+      if (e < 0.55) continue;
+      if (n.verdict && g >= 1) for (const f of n.back || []) {
+        const S = core.has(f) && project(core.get(f));
+        if (!S) continue;
+        stroke(colors.focus, 0.8, 1.2, [5, 4]);
+        ctx.beginPath(); ctx.moveTo(P.x, P.y); ctx.lineTo(S.x, S.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.globalAlpha = Math.min(1, (e - 0.55) / 0.3) * (n.now || n.verdict ? 1 : 0.7);
+      ctx.fillStyle = color;
+      diamond(P.x, P.y, n.verdict ? 7 : n.now ? 6 : 4, true);
+      if (g < 1 && (n.now || n.verdict)) { stroke(color, (1 - g) * 0.9, 1.2); ctx.beginPath(); ctx.arc(P.x, P.y, 8 + 18 * g, 0, Math.PI * 2); ctx.stroke(); }
+      if (n.now || n.verdict) {
+        ctx.font = `600 13px ${SANS}`; ctx.textAlign = "left";
+        const w = ctx.measureText(n.title).width, x = P.x + 12, y = P.y - 10;
+        ctx.globalAlpha = 0.92; ctx.fillStyle = colors.void; ctx.fillRect(x - 5, y - 14, w + 10, 20);
+        ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.fillText(n.title, x, y);
+        placed.push([x - 5, y - 14, w + 10, 20]);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
   function diamond(x, y, r, fill) {
     ctx.beginPath(); ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y); ctx.closePath();
     fill ? ctx.fill() : ctx.stroke();
@@ -903,7 +968,7 @@ export function createStage(canvas, scene, model, layout) {
     }
     B = basis();
     if (!manual) {
-      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.phase?.members.size ? phaseGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.fit ? fitGoal(tourGoal) : tourShot(tourGoal);
+      goal = view.cluster ? expansionGoal() : journey ? journeyGoal() : frame.phase?.members.size ? phaseGoal() : frame.chain?.size > 1 ? chainGoal() : tourGoal.aim ? aimGoal(tourGoal) : tourGoal.fit ? fitGoal(tourGoal) : tourShot(tourGoal);
       const k = 1 - Math.exp(-dt * 2.4);
       if (goal.yaw != null) cam.yaw += angleDelta(cam.yaw, goal.yaw) * k;
       if (goal.pitch != null) cam.pitch += (goal.pitch - cam.pitch) * k;
@@ -1008,7 +1073,7 @@ export function createStage(canvas, scene, model, layout) {
         }
         const plain = isOpen ? 1 : focus || view.selected === c.id || lead ? POINT_LIFT : POINT_DIM;
         const sparse = c.kind === "core" && !isOpen && !focus ? Math.max(1, Math.ceil(c.fids.length / CORE_POINTS)) : 1;
-        const shot = frame.shot && frame.shot.cloud === c.id ? frame.shot : null;
+        const shot = shotOn(c);
         if ((!journey || isOpen) && sparse === 1) drawStructure(c, alpha * plain, isOpen, m);
         if (sparse > 1 && pc) {
           stroke(colors["line-hi"], 0.35 * fade, 1, [2, 4]);
@@ -1022,7 +1087,8 @@ export function createStage(canvas, scene, model, layout) {
           if (!s) continue;
           const inGroup = isOpen && (view.list || view.group === gmap.get(p.fid));
           const named = shot?.labels.get(p.fid);
-          if (named) shotLabels.push({s, ...named, color: phaseColor(c), open: isOpen});
+          const pinned = !shot && frame.shot?.cloud === c.id && frame.shot.labels.has(p.fid);
+          if (named) shotLabels.push({s, ...named, color: shotColor(p.fid), open: isOpen});
           const role = roleOf(p.fid);
           const traveller = journey?.fid === p.fid;
           const mk = markOf.get(p.fid);
@@ -1039,7 +1105,7 @@ export function createStage(canvas, scene, model, layout) {
             ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1; ctx.setLineDash([]);
             ctx.strokeRect(s.x - sz / 2 + 0.5, s.y - sz / 2 + 0.5, sz - 1, sz - 1);
           } else ctx.fillRect(s.x - sz / 2, s.y - sz / 2, sz, sz);
-          if (named) { stroke(phaseColor(c), 1, 1); ctx.strokeRect(s.x - 5, s.y - 5, 10, 10); }
+          if (named || pinned) { stroke(shotColor(p.fid), 1, 1); ctx.strokeRect(s.x - 5, s.y - 5, 10, 10); }
           if (inspected) {
             stroke(colors.focus, .95, 1);
             ctx.strokeRect(s.x - size / 2 - 2, s.y - size / 2 - 2, size + 4, size + 4);
@@ -1050,7 +1116,15 @@ export function createStage(canvas, scene, model, layout) {
             ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid || inspected ? colors["ink-hi"] : colors.label;
             ctx.font = `13.5px ${MONO}`;
             ctx.textAlign = "left";
-            ctx.fillText(factLabel(scene.factById.get(p.fid)), s.x + 9, s.y + 4);
+            const text = factLabel(scene.factById.get(p.fid));
+            if (pinned) {
+              const w = ctx.measureText(text).width, bx = s.x + 3, by = s.y - 10, bw = w + 12, bh = 19;
+              ctx.fillStyle = colors.void; ctx.fillRect(bx, by, bw, bh);
+              ctx.globalAlpha = 0.14; ctx.fillStyle = shotColor(p.fid); ctx.fillRect(bx, by, bw, bh);
+              ctx.globalAlpha = 1; stroke(shotColor(p.fid), 0.9, 1); ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+              ctx.fillStyle = colors["ink-hi"];
+            }
+            ctx.fillText(text, s.x + 9, s.y + 4);
           }
         }
       } else if (pc) {
@@ -1076,7 +1150,7 @@ export function createStage(canvas, scene, model, layout) {
       labelled.push({c, pc, sr, focus, alpha, isOpen});
     }
 
-    const openShot = open && frame.shot?.cloud === open.id ? frame.shot : null;
+    const openShot = open ? shotOn(open) : null;
     if (open && frame.filled.has(open.id) && !view.list) {
       open.groups.forEach((g, gi) => {
         const p = project(groupCenter(open, gi));
@@ -1094,7 +1168,10 @@ export function createStage(canvas, scene, model, layout) {
           ctx.fillText(shotName || g.key, p.x + r + 5, p.y - 1);
           ctx.fillStyle = colors["label-dim"];
           ctx.font = `13px ${MONO}`;
-          ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 15);
+          const countText = `${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`;
+          ctx.fillText(countText, p.x + r + 5, p.y + 15);
+          const beatHere = !openShot && frame.shot?.cloud === open.id ? g.fids.filter(fid => frame.shot.labels.has(fid)).length : 0;
+          if (beatHere) { const cw = ctx.measureText(countText).width; ctx.fillStyle = colors.focus; ctx.fillText(` · ${beatHere} in this beat`, p.x + r + 5 + cw, p.y + 15); }
           if (hot) { ctx.fillStyle = colors.focus; ctx.font = `14px ${SANS}`; ctx.fillText("click to list its facts", p.x + r + 5, p.y + 32); }
         } else if (openShot) {
           ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = phaseColor(open); ctx.font = `600 16px ${SANS}`;
@@ -1119,7 +1196,7 @@ export function createStage(canvas, scene, model, layout) {
       const hot = hover?.kind === "cluster" && hover.cluster === c;
       if (isOpen) {
         const r = layout.radius.get(c.id) * pc.s + 6;
-        if (frame.shot?.cloud === c.id) continue;
+        if (shotOn(c)) continue;
         brackets(pc.x, pc.y, r, phaseColor(c));
         tag(pc.x, pc.y, r, clusterTitle(c), c.detail, phaseColor(c), 1, 0, null, true);
         continue;
@@ -1147,6 +1224,7 @@ export function createStage(canvas, scene, model, layout) {
       }
     }
     for (const c of hubsLater) hubLabels(c, fade);
+    drawLinks(now);
     drawShotLabels(shotLabels);
     if (openShot?.ghost && frame.filled.has(open.id)) drawGhost(open, openShot.ghost);
     drawManager();
@@ -1281,6 +1359,7 @@ export function createStage(canvas, scene, model, layout) {
     highlightChainEdge(k) { chainHi = k; },
     get journey() { return journey; },
     selectFact(fid) { view.fact = fid; },
+    setLinks(list) { links = list?.length ? list : null; },
     markFacts(list) { marks = list || []; markOf = new Map(marks.flatMap(m => m.fids.map(fid => [fid, m]))); },
     highlightEvidence(fids) { evidenceHighlight = new Set(fids); },
     get view() { return view; },

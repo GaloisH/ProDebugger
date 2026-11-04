@@ -1,5 +1,5 @@
 import {esc} from "../util.js?v=27bf1baa85";
-import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=signs-79eb29e";
+import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=signs-82";
 import {agentWords, cap, faultText, goalText, question, statusText, stepList, VERDICT_WORD} from "./narrate.js?v=23f9bfd6b4";
 
 const SLOT_ORDER = ["obs", "mem", "refl", "plan", "act", "chk"];
@@ -734,6 +734,38 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
     <section class="qg-sd-pop" aria-label="Stage details" hidden><header><span class="qg-sd-ph"></span><h3></h3><button class="qg-sd-close" type="button" title="Close (Esc)" aria-label="Close">×</button></header><p class="qg-sd-lead"></p><div class="qg-sd-body"></div></section>
     <aside class="qg-sd-rail" aria-label="What this stage produced" hidden><div class="qg-sd-railbody"></div></aside>`);
   const say = root.querySelector(".qg-sd-say"), pop = root.querySelector(".qg-sd-pop"), rail = root.querySelector(".qg-sd-rail");
+  root.insertAdjacentHTML("beforeend", `<div class="ci-logic-pop" role="tooltip" hidden></div>`);
+  const logicPop = root.querySelector(".ci-logic-pop");
+  let logicBtn = null;
+  const logicHtml = expr => {
+    const [ifs, then] = String(expr).split(/\s+⇒\s+/);
+    const ops = t => esc(t).replace(/(∧|≠|≈|∈|∀|∅|=)/g, `<i class="lg-op">$1</i>`).replace(/@(\d+)/g, `<sub class="lg-at">@$1</sub>`);
+    const outs = (then || "").split(/(?=✗)/).map(x => x.trim()).filter(Boolean).map(x => `<b class="lg-x">${esc(x)}</b>`).join("");
+    return `<span class="lg-if">${ops(ifs)}</span>${outs ? `<span class="lg-then"><i class="lg-op">⇒</i>${outs}</span>` : ""}`;
+  };
+  function closeLogic() {
+    if (!logicBtn) return;
+    logicBtn.setAttribute("aria-expanded", "false");
+    logicBtn = null; logicPop.hidden = true;
+  }
+  function openLogic(btn) {
+    closeLogic();
+    logicBtn = btn; btn.setAttribute("aria-expanded", "true");
+    const box = btn.closest(".ci"), cap = btn.closest(".qg-caption");
+    logicPop.dataset.phase = cap?.dataset.phase || "";
+    logicPop.innerHTML = logicHtml(btn.dataset.logic);
+    logicPop.hidden = false;
+    const r = box.getBoundingClientRect(), w = logicPop.offsetWidth, h = logicPop.offsetHeight;
+    logicPop.style.left = `${Math.max(12, Math.min(r.left, innerWidth - w - 12))}px`;
+    logicPop.style.top = `${Math.max(12, r.top - h - 8)}px`;
+  }
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".ci-why");
+    if (btn) { e.stopPropagation(); btn === logicBtn ? closeLogic() : openLogic(btn); return; }
+    if (!e.target.closest(".ci-logic-pop")) closeLogic();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeLogic(); });
+  addEventListener("resize", closeLogic);
   const focusColor = getComputedStyle(root).getPropertyValue("--qg-focus").trim() || "#e0b867";
   let phase = null, open = false, flyTimer = 0;
 
@@ -860,6 +892,11 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
       box.classList.toggle("has-result", !!c);
       box.querySelector(".qg-cap-title").innerHTML = `${c ? `<span class="sd-qtag" data-kind="${beat.round ? "ROUND" : c.kind}">${esc(KIND_TEXT[c.kind] || c.kind)}</span>` : ""}<span>${inline(beat.title || "")}</span>`;
       box.querySelector(".qg-cap-text").innerHTML = `${beat.say ? `<span class="qg-cap-say">${blocks(beat.say)}</span>` : ""}${c ? `<span class="sd-qres">${c.line}</span>` : ""}`;
+      closeLogic();
+      const items = box.querySelectorAll(".qg-cap-say > .ci");
+      (beat.logic || []).forEach((expr, k) => {
+        if (expr && items[k]) items[k].insertAdjacentHTML("beforeend", `<button class="ci-why" type="button" aria-expanded="false" title="Show the rule as logic" data-logic="${esc(expr)}">&gt;</button>`);
+      });
     },
     caption(ev) {
       const c = caption(ev), box = root.querySelector(".qg-caption");

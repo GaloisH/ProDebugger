@@ -1,6 +1,6 @@
-import {SIGNAL_LABEL} from "./model.js?v=signs-79eb29e";
+import {SIGNAL_LABEL} from "./model.js?v=signs-82";
 import {faultText, question, suspicion} from "./narrate.js?v=23f9bfd6b4";
-import {plainName} from "./shots.js?v=p12-1";
+import {actionText, neededType, plainName, servesText, typeOfIn} from "./shots.js?v=chain-5";
 
 export const SIGNAL_RULE = {
   no_new_task_evidence: "Every step should learn something new about the goal",
@@ -46,6 +46,93 @@ export function applyCopy(beats, scene, model) {
   const root = scene.root;
   const rules = scene.rules || [];
   const ruleNo = id => rules.findIndex(r => r.id === id) + 1;
+  const lastCheck = t => facts.filter(f => f.rel === "satisfied" && f.t > 0 && f.t <= t).sort((a, b) => b.t - a.t)[0] || null;
+  const doneClaim = t => {
+    const f = facts.find(x => x.t === t && x.slot === "refl");
+    const parts = String(f?.span || "").split(/\n|(?<=[.?!])\s+/).map(x => x.replace(/^-\s*/, "").trim());
+    const hit = parts.find(x => !x.endsWith("?") && /\b(complet|achiev|accomplish|done|finish)/i.test(x));
+    return hit ? clip(hit.replace(/[“”"]/g, "'").replace(/\s+·\s+/g, ", "), 64).replace(/[.!]+$/, "") : null;
+  };
+  function goalRow(t, sigs) {
+    const has = s => sigs.includes(s);
+    const act = facts.find(f => f.t === t && f.slot === "act");
+    const chk = lastCheck(t), unmet = chk?.value === false, open = chk && chk.value == null;
+    const check = chk ? `satisfied(goal)@${chk.t} = ${chk.value == null ? "unknown" : String(chk.value)}` : null;
+    const still = unmet ? ", yet the goal check is still not met" : open ? ", yet no goal check ever confirms it" : "";
+    if (has("constraint_substitution") && act?.args.length >= 2) {
+      const [o, d] = act.args, ty = typeOf(o), swapped = need && ty && ty !== need;
+      const parts = [`${act.rel}(${plainName(o)}, ${plainName(d)})@${t}`];
+      if (swapped) parts.push(`type(${plainName(o)}) = ${ty} ≠ ${need}`);
+      if (has("wrong_task_decision") && check) parts.push(check);
+      const why = ["✗ swaps a goal constraint", has("wrong_task_decision") ? "✗ decision misses the goal" : null].filter(Boolean);
+      return {say: `step ${t}: puts ${plainName(o)} on ${plainName(d)}${swapped ? `, but the task asks for ${an(need)}` : ""}`,
+              expr: `${parts.join(" ∧ ")} ⇒ ${why.join("  ")}`};
+    }
+    if (has("contradicted_completion") || has("claims_task_complete")) {
+      const q = doneClaim(t);
+      return {say: `step ${t}: ${q ? `says “${q}”` : "claims the task is done"}${still}`,
+              expr: `claim(done)@${t}${check ? ` ∧ ${check}` : ""} ⇒ ✗ ${has("contradicted_completion") ? "claim contradicts the record" : "claims done without proof"}`};
+    }
+    if (has("wrong_task_decision") && act) {
+      return {say: `step ${t}: commits to “${clip(act.span || act.value, 40)}”${still}`,
+              expr: `${act.rel}(${act.args.map(plainName).join(", ")})@${t}${check ? ` ∧ ${check}` : ""} ⇒ ✗ decision misses the goal`};
+    }
+    return {say: `step ${t}: “${SIGNAL_RULE[sigs[0]]}”`, expr: null};
+  }
+  const SIGN_SHORT = {
+    no_new_task_evidence: "no progress toward the goal", schema_repetition: "keeps making the same kind of move",
+    repeated_action: "repeats an action word for word", near_duplicate_action: "nearly repeats an earlier action",
+    unbound_intention: "plan names no concrete target", invalid_action: "command the environment refuses",
+    no_effect: "action changes nothing", failed_precondition: "acts before its preconditions hold",
+    missing_effect: "expected effect never shows up", terminal_cutoff: "run ends before the goal is met",
+    alignment_violation: "action does not carry out the plan",
+  };
+  const actAt = t => facts.find(f => f.t === t && f.slot === "act") || null;
+  const actText = t => { const a = actAt(t); return a ? clip(String(a.span || a.value || a.rel).trim().replace(/^'(.*)'$/, "$1").replace(/[“”"]/g, "'"), 40) : null; };
+  const an = w => `${/^[aeiou]/i.test(w) ? "an" : "a"} ${w}`;
+  const stepsList = xs => xs.length > 4 ? `${xs.slice(0, 3).join(", ")} +${xs.length - 3}` : xs.join(", ");
+  const longestRun = xs => {
+    const s = [...new Set(xs)].sort((a, b) => a - b);
+    let best = [s[0], s[0]], at = s[0];
+    for (let k = 1; k <= s.length; k++) {
+      if (k < s.length && s[k] === s[k - 1] + 1) continue;
+      if (s[k - 1] - at > best[1] - best[0]) best = [at, s[k - 1]];
+      at = s[k];
+    }
+    return best;
+  };
+  function spinRow(s, hits) {
+    const n = hits.length, why = `✗ ${SIGN_SHORT[s] || SIGNAL_LABEL[s] || s}`;
+    const of = n > 1 ? `, 1 of ${n} such steps` : "";
+    if (!n) return {say: `${SIGNAL_LABEL[s] || s}: “${SIGNAL_RULE[s] || s}”`, expr: null};
+    if (s === "no_new_task_evidence") {
+      const [a, z] = longestRun(hits.map(h => h.step)), about = need ? ` about the ${need}` : " about the goal";
+      return a === z
+        ? {say: `step ${a}: learns nothing new${about}${of}`, expr: `new_evidence(${a}) = false ⇒ ${why}`}
+        : {say: `steps ${a}–${z}: ${z - a + 1} steps in a row learn nothing new${about}`, expr: `∀t ∈ [${a}, ${z}]: new_evidence(t) = false ⇒ ${why}`};
+    }
+    if (s === "repeated_action" || s === "near_duplicate_action" || s === "schema_repetition") {
+      const h = hits.reduce((m, x) => x.prior.length > m.prior.length ? x : m, hits[0]), act = actAt(h.step), text = actText(h.step);
+      const prior = h.prior.slice().sort((a, b) => a - b);
+      if (!prior.length || !act) return {say: `step ${h.step}: ${text ? `“${text}” ` : ""}${SIGN_SHORT[s]}${of}`, expr: `${s}(act@${h.step}) ⇒ ${why}`};
+      if (s === "schema_repetition") return {
+        say: `step ${h.step}: “${text}” is the same kind of move as ${prior.length} earlier step${prior.length === 1 ? "" : "s"}`,
+        expr: `kind(act@${h.step}) = kind(act@{${stepsList(prior)}}) = ${act.rel} ⇒ ${why}`};
+      const op = s === "repeated_action" ? "=" : "≈";
+      return {
+        say: `step ${h.step}: “${text}” again, ${s === "repeated_action" ? "word for word " : "almost "}as at step${prior.length === 1 ? "" : "s"} ${nums(prior)}`,
+        expr: `act@${h.step} ${op} ${prior.length > 4 ? `act@{${stepsList(prior)}}` : prior.map(p => `act@${p}`).join(` ${op} `)} ⇒ ${why}`};
+    }
+    const t = hits[0].step, text = actText(t), chk = lastCheck(t);
+    switch (s) {
+      case "unbound_intention": return {say: `step ${t}: the plan names no concrete target${of}`, expr: `target(plan@${t}) = ∅ ⇒ ${why}`};
+      case "invalid_action": return {say: `step ${t}: ${text ? `“${text}”` : "the command"} is refused by the environment${of}`, expr: `accepted(act@${t}) = false ⇒ ${why}`};
+      case "no_effect": return {say: `step ${t}: ${text ? `“${text}”` : "the action"} changes nothing${of}`, expr: `effect(act@${t}) = ∅ ⇒ ${why}`};
+      case "terminal_cutoff": return {say: `step ${t}: the run ends while the goal is ${chk?.value === false ? "still not met" : "still unconfirmed"}`,
+        expr: `end@${t}${chk ? ` ∧ satisfied(goal)@${chk.t} = ${chk.value == null ? "unknown" : String(chk.value)}` : ""} ⇒ ${why}`};
+      default: return {say: `step ${t}: ${text ? `“${text}”, ` : ""}${SIGN_SHORT[s] || SIGNAL_LABEL[s] || s}${of}`, expr: `${s}(act@${t}) ⇒ ${why}`};
+    }
+  }
   const goalBreaks = new Set(beats.filter(b => b.round).flatMap(b => GOAL_SIGNS.flatMap(s => (b.round.hitMap.get(s) || []).map(h => h.step))));
   const firstRound = beats.find(b => b.round);
   const clues = scene.windows.reduce((n, w) => n + w.fids.length, 0);
@@ -81,28 +168,53 @@ export function applyCopy(beats, scene, model) {
       let title, line;
       if (lockTale) {
         title = `Round ${r.n} · ${where}: ${typeOf(thing) || plainName(thing)} placed at ${failed.t} = taken at ${w0.step}`;
-        const take = actsOn(thing).find(f => f.t === w0.step);
-        line = `step ${w0.step}: ${clip(take.span || take.value, 40)} · step ${failed.t}: ${clip(placedAtFail.span || placedAtFail.value, 40)}`;
+        const take = actsOn(thing).find(f => f.t === w0.step), ty = typeOf(thing), wrong = need && ty && ty !== need;
+        const [, dest] = placedAtFail.args, src = take.args[1];
+        line = `step ${w0.step}: takes ${plainName(thing)}${src ? ` from ${plainName(src)}` : ""}${wrong ? `, ${an(ty)}, not the ${need} the task needs` : ""}`
+          + ` · step ${failed.t}: puts that same ${plainName(thing)} on ${plainName(dest)}`;
+        const chk = lastCheck(failed.t);
+        b.logic = [
+          `${take.rel}(${take.args.map(plainName).join(", ")})@${w0.step}${wrong ? ` ∧ type(${plainName(thing)}) = ${ty} ≠ ${need}` : ""} ⇒ ✗ takes an object the task did not ask for`,
+          `${placedAtFail.rel}(${placedAtFail.args.map(plainName).join(", ")})@${failed.t} ∧ obj(${placedAtFail.rel}@${failed.t}) = obj(${take.rel}@${w0.step})${chk ? ` ∧ satisfied(goal)@${chk.t} = ${chk.value == null ? "unknown" : String(chk.value)}` : ""} ⇒ ✗ the wrong object reaches the goal`,
+        ];
       } else if (goal.length) {
         title = `Round ${r.n} · ${where}: goal rules break at ${nums(goal.map(g => g.step))}`;
-        line = goal.filter((g, k) => goal.findIndex(x => x.step === g.step) === k).map(g => `step ${g.step}: “${SIGNAL_RULE[g.s]}”`).join(" · ");
+        const rows = [...new Set(goal.map(g => g.step))].map(t => goalRow(t, goal.filter(g => g.step === t).map(g => g.s)));
+        line = rows.map(x => x.say).join(" · ");
+        b.logic = rows.map(x => x.expr);
       } else {
         title = `Round ${r.n} · ${where}: only circling signs`;
-        line = spin.length ? `${spin.slice(0, 2).map(([s, n]) => `${SIGNAL_LABEL[s] || s} ${n}`).join(" · ")}${r.cls === "contrast" && goalBreaks.size ? ` → the goal breaks only at ${nums([...goalBreaks])}` : ` · rule most broken: “${SIGNAL_RULE[spin[0][0]] || spin[0][0]}”`}` : "Trouble signs: none";
+        const picked = spin.map(([s]) => s).filter(s => s !== "near_duplicate_action" || !spin.some(([x]) => x === "repeated_action")).slice(0, 2);
+        const rows = picked.map(s => spinRow(s, r.hitMap.get(s) || []));
+        if (r.cls === "contrast" && goalBreaks.size) rows.push({say: `→ the goal breaks only at ${nums([...goalBreaks])}`, expr: null});
+        line = rows.length ? rows.map(x => x.say).join(" · ") : "Trouble signs: none";
+        b.logic = rows.map(x => x.expr);
       }
       say(b, title, line);
     } else if (b.key === "clues") {
       const w = scene.windows.find(x => x.id === b.shot.cloud);
       const slots = [...new Set(w.fids.map(fact).filter(Boolean).sort((a, c) => a.t - c.t).map(f => ({obs: "observation", mem: "memory", refl: "reflection", plan: "plan", act: "action", chk: "check"})[f.slot]))];
-      say(b, `Step ${w.step} in the agent's own words`, `Top to bottom: ${slots.join(" → ")}`);
+      const act = w.fids.map(fact).find(f => f?.slot === "act");
+      const plan = w.fids.map(fact).find(f => f?.slot === "plan");
+      const obj = act?.args.find(a => !a.startsWith("agent:"));
+      const got = obj ? typeOfIn(scene, obj) : null, want = neededType(scene);
+      const serves = servesText(plan?.purpose && scene.intentions[plan.purpose], scene);
+      const verb = act ? act.rel.replace(/_/g, " ").replace(/(s|sh|ch|x)$/, "$1e") + "s" : null;
+      if (act && got && want && got !== want) {
+        say(b, `Step ${w.step}: ${verb} a ${got} for a goal that needs a ${want}`,
+            `world: ${plainName(obj)} is a ${got} · goal: needs a ${want}${serves ? ` · plan says it ${serves}` : ""}`);
+      } else if (act) {
+        say(b, `Step ${w.step}: ${clip(actionText(act), 56)}`, `${slots.join(" → ")}${serves ? ` · plan says it ${serves}` : ""}`);
+      } else say(b, `Step ${w.step}: ROUTE flags the agent's ${list(slots)}`, `${w.fids.length} clue fact${w.fids.length === 1 ? "" : "s"} · no action at this step`);
     } else if (b.key === "rests") {
       const l = scene.lanes.find(x => x.id === b.shot.cloud);
       const kept = [...new Set([...b.shot.keep].map(fid => fact(fid)?.t))];
       say(b, `Evidence: steps ${nums(kept)}`, `${l.steps.length} steps read · the rest fade out`);
     } else if (b.key === "log") {
       say(b, `In the log: step ${root.step} ${root.module}`, `“${clip(root.quote, 110).replace(/[.!?]+$/, "")}”${failed ? ` · fails at step ${failed.t}` : ""}`);
-    } else if (b.key === "journey") {
-      say(b, "The root fact, from record to verdict", "Each numbered stop is a stage that read, flagged, searched or judged it");
+    } else if (b.key === "chain") {
+      const n = b.chain.data.nodes[b.chain.at], so = n.so.replace(/\.$/, "");
+      say(b, n.title, `${n.because.replace(/\.$/, "").replace(/\s+[·→]\s+/g, ", ")} → so ${so[0].toLowerCase()}${so.slice(1).replace(/\s+[·→]\s+/g, ", ")}`);
     } else if (b.key === "closed") {
       const type = thing ? typeOf(thing) : null;
       say(b, "Case closed", type && need && type !== need && failed

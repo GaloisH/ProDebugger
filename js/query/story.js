@@ -1,5 +1,5 @@
 import {agentWords, cap, faultText, goalText, question, statusText, stepList, suspicion} from "./narrate.js?v=23f9bfd6b4";
-import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=signs-79eb29e";
+import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=signs-82";
 
 const GOAL = new Set(["constraint_substitution", "wrong_task_decision", "claims_task_complete", "contradicted_completion"]);
 const INVALID = new Set(["invalid_action", "no_effect", "failed_precondition", "missing_effect"]);

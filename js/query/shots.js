@@ -1,5 +1,6 @@
-import {SLOT_LABEL} from "./model.js?v=signs-79eb29e";
+import {SLOT_LABEL} from "./model.js?v=signs-82";
 import {agentWords, faultText, stepList} from "./narrate.js?v=23f9bfd6b4";
+import {buildChain} from "./chain.js?v=chain-5";
 
 const SLOT_ORDER = ["obs", "mem", "refl", "plan", "act", "chk"];
 const SOURCE = {obs: "world", chk: "check", act: "action", mem: "memory", refl: "reflection", plan: "plan"};
@@ -52,6 +53,45 @@ function keySentence(f, goalWords) {
 }
 
 const labelsOf = (fids, scene, goalWords) => new Map(fids.map(fid => [fid, factWords(scene.factById.get(fid), goalWords)]));
+
+export const typeOfIn = (scene, key) => {
+  const f = scene.facts.find(x => x.rel === "has" && x.args[0] === key && x.args[1] === "attribute:object_type");
+  return f ? String(f.args[2]).replace(/^value:/, "") : null;
+};
+export const neededType = scene => scene.goals.flatMap(g => g.constraints).find(c => c.property?.index === "object_type" && typeof c.expected === "string")?.expected || null;
+
+export function actionText(f) {
+  const v = typeof f.value === "string" ? f.value.replace(/^'(.*)'$/, "$1").trim() : "";
+  const verb = f.rel.replace(/_/g, " ");
+  if (!v) return `${verb} ${f.args.filter(a => !a.startsWith("agent:")).map(plainName).join(", ")}`.trim();
+  return v.toLowerCase().startsWith(verb) ? v : `${verb} “${v}”`;
+}
+
+export function servesText(it, scene) {
+  const reqs = (it?.serves || []).map(r => String(r.index || r).replace(/^req:/, ""));
+  if (!reqs.length) return "";
+  return scene.goals.length <= 1 ? "serves the goal" : `serves ${reqs.map(r => r.replace(/_/g, " ")).join(", ")}`;
+}
+
+export function windowWords(f, scene) {
+  const need = neededType(scene);
+  const clash = keys => {
+    for (const k of keys) { const t = typeOfIn(scene, k); if (need && t && t !== need) return `world: a ${t} ≠ needed ${need}`; }
+    return null;
+  };
+  const head = `S${f.t} · ${SOURCE[f.slot] || f.slot} · `;
+  if (f.slot === "act") return {text: clip(head + actionText(f), 80), sub: dslLine(f)};
+  if (f.slot === "plan") {
+    const it = f.purpose && scene.intentions[f.purpose];
+    const objs = [...(it?.objects || []), ...(it?.parameters || []).filter(x => x.value_type === "entity").map(x => x.value)]
+      .map(o => typeof o === "string" ? o : `${o.kind}:${o.index}`).filter((o, k, all) => all.indexOf(o) === k);
+    const what = it?.verb ? `${it.verb}${objs.length ? ` ${objs.slice(0, 2).map(plainName).join(" from ")}` : ""}` : "its next move";
+    const serves = servesText(it, scene);
+    return {text: clip(`${head}${what}${serves ? ` → ${serves}` : ""}`, 80), sub: dslLine(f), warn: clash(objs.slice(0, 1))};
+  }
+  if (f.slot === "obs" || f.slot === "chk") return factWords(f);
+  return {text: "", sub: dslLine(f)};
+}
 
 export function buildShots(scene, model) {
   const {factById} = scene;
@@ -150,7 +190,7 @@ export function buildShots(scene, model) {
         add(i, {
           key: "clues", title: `Read the clues at step ${w.step}`,
           text: `The window holds ${list.length} clue fact${list.length === 1 ? "" : "s"}${slots.length > 1 ? `, the agent's ${slots.slice(0, -1).join(", ")} and ${slots[slots.length - 1]}` : ""}, in the order they were written. Read them top to bottom: this is what ROUTE suspects.`,
-          shot: {cloud: id, open: "list", labels: labelsOf(list.slice(0, 8).map(f => f.fid), scene, goalWords), names: new Map(), keep: null},
+          shot: {cloud: id, open: "list", labels: new Map(list.slice(0, 8).map(f => [f.fid, windowWords(f, scene)])), names: new Map(), keep: null},
         });
       }
     } else if (ev.name === "submit" && scene.root) {
@@ -160,18 +200,27 @@ export function buildShots(scene, model) {
       const quotes = [r.quote, ...scene.windows.flatMap(w => w.fids.map(fact).filter(f => f && ["mem", "refl", "plan"].includes(f.slot)).map(f => keySentence(f, goalWords).replace(/^…|…$/g, "")))].filter(Boolean);
       const log = {focus: [...new Set([...clueSteps, r.step, ...(failed ? [failed.t] : [])])].sort((a, b) => a - b), root: r.step, rootSlot: rf?.slot || null,
                    clues: clueSteps, failed: failed?.t ?? null, cited: [...cited].sort((a, b) => a - b), quotes};
-      add(i, {
-        key: "log", title: `Find it in the original log: step ${r.step}`,
-        text: `Back in the agent's own log, the verdict points at one line: at step ${r.step} the ${r.module} says “${clip(r.quote, 120).replace(/[.!?]+$/, "")}”.${failed ? ` The failure only shows ${failed.t - r.step} step${failed.t - r.step === 1 ? "" : "s"} later, when the goal check at step ${failed.t} says not met.` : ""}`,
-        log: {...log, scrollTo: r.step},
-        focus: ["root"],
-      });
-      add(i, {
-        key: "journey", title: "Follow the root fact up the tower",
-        text: `The same line, followed from the record to the verdict: each numbered stop is a step of the debugger that read it, flagged it, searched for it or judged it.`,
-        log: {...log, scrollTo: r.step}, journey: r.fid,
-        focus: [],
-      });
+      const chain = buildChain(scene);
+      if (chain) {
+        const used = new Set();
+        chain.nodes.forEach((n, k) => {
+          const at = n.own.length ? n.own : [...new Set((n.from || []).flatMap(id => chain.byId.get(id)?.own || []))];
+          const aim = n.verdict ? [...new Set([...chain.nodes.flatMap(x => x.own).filter(id => chain.facts.get(id)?.fids.includes(r.fid)), ...(n.explains || [])])] : at;
+          const labels = new Map();
+          for (const id of aim) {
+            const f = chain.facts.get(id);
+            f?.fids.forEach((fid, j) => labels.set(fid, j ? {text: "", sub: ""} : {text: `${f.label} · ${f.at}`, sub: factWords(fact(fid), goalWords).sub}));
+          }
+          aim.forEach(id => chain.facts.get(id)?.fids.forEach(fid => used.add(fid)));
+          add(i, {
+            key: "chain", title: n.title, text: `${n.because} So ${n.so[0].toLowerCase()}${n.so.slice(1)}`,
+            log: {...log, scrollTo: chain.facts.get(aim[0])?.fids.map(fact).find(Boolean)?.t ?? r.step, folded: true},
+            chain: {data: chain, at: k},
+            shot: {cloud: "core", open: null, labels, names: new Map(), keep: new Set(used), aim: [...labels.keys()]},
+            focus: [],
+          });
+        });
+      }
       add(i, {
         key: "closed", title: "Case closed",
         text: `${need && typeOf(thing) ? `The task needed a ${need}; the agent took a ${typeOf(thing)}. ` : ""}The root cause is step ${r.step}'s ${r.module}${r.faultClass ? `, which ${faultText(r.faultClass)}` : ""}${r.rule?.id ? `, decided by a rule the manager fixed before the evidence came in` : ""}. Click any part of the verdict to see it in the log.`,

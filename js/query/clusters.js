@@ -1,5 +1,5 @@
 import {short} from "../util.js?v=27bf1baa85";
-import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=signs-79eb29e";
+import {SIGNAL_LABEL, SLOT_LABEL} from "./model.js?v=signs-82";
 import {agentWords, cap, factName, faultText, sayEnd, sayStop, START_SAY, statusText, VERDICT_WORD} from "./narrate.js?v=23f9bfd6b4";
 
 const MAX_GROUPS = 12;

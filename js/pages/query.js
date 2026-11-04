@@ -1,16 +1,17 @@
 import {esc, short, loader} from "../util.js?v=27bf1baa85";
 import {caseHref, queryHref} from "../routes.js?v=27bf1baa85";
-import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js?v=signs-79eb29e";
+import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js?v=signs-82";
 import {agentWords} from "../query/narrate.js?v=23f9bfd6b4";
-import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} from "../query/clusters.js?v=signs-79eb29e";
+import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} from "../query/clusters.js?v=signs-80";
 import {layoutClusters, TIERS} from "../query/layout.js?v=23f9bfd6b4";
-import {createStage, clusterTitle} from "../query/stage.js?v=copy-6";
-import {createTour, readSeconds} from "../query/tour.js?v=loop-1";
-import {buildBeats} from "../query/beats.js?v=copy-5";
-import {mountLog} from "../query/log.js?v=loop-1";
-import {buildStory} from "../query/story.js?v=signs-79eb29e";
-import {createDetails} from "../query/details.js?v=cap-3";
-import {mountOverviewNarrative} from "../query/overview.js?v=signs-79eb29e";
+import {createStage, clusterTitle} from "../query/stage.js?v=chain-7";
+import {createTour, readSeconds} from "../query/tour.js?v=chain-1";
+import {buildBeats} from "../query/beats.js?v=chain-5";
+import {mountLog} from "../query/log.js?v=chain-2";
+import {mountChain} from "../query/chainview.js?v=chain-3";
+import {buildStory} from "../query/story.js?v=signs-80";
+import {createDetails} from "../query/details.js?v=cap-7";
+import {mountOverviewNarrative} from "../query/overview.js?v=signs-80";
 
 const GROUP = "evidence-query-claims-n30-20261013";
 const CASES = [
@@ -58,6 +59,7 @@ export function mountQuery(app, route) {
     const details = createDetails(root, scene, model, stage, {onOpen: () => setPlaying(false)});
     narrative = mountOverviewNarrative(root, scene, model, stage);
     const log = mountLog(root, scene, stage);
+    const chainView = mountChain(root, {onPick: k => { const at = tourBeats.findIndex(b => b.chain?.at === k); if (at >= 0) go(at); }});
     ui.on("beat", beat => { details.show(beat.phase); details.captionBeat(beat); });
 
     stage.start(dt => {
@@ -80,12 +82,8 @@ export function mountQuery(app, route) {
       }
       if (!overview) ui.setProgress(state.b, state.p);
       state.t += dt;
-      if (!overview && tourBeats[state.b].journey != null && stage.journey) {
-        const k = Math.min(stage.journey.stops.length - 1, Math.floor(state.t / 2.4));
-        if (k !== state.stop) { state.stop = k; stage.focusStop(k); }
-      }
       const out = overview ? frameAt(last, 1, true) : frameAt.beat(tourBeats[state.b], Math.min(1, state.t / 1.2 * 0.3));
-      if (!overview) { out.frame.sources = true; out.frame.tour = true; }
+      if (!overview) { out.frame.sources = true; out.frame.tour = true; out.frame.proof = !!tourBeats[state.b].chain; }
       Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: state.phase, filter: state.filter, labelAll: overview});
       if (overview) { out.frame.focus = new Set(); out.camera = OVERVIEW_CAM[state.view]; }
       return out;
@@ -97,6 +95,8 @@ export function mountQuery(app, route) {
       stage.follow();
       stage.release();
       log.hide();
+      chainView.hide();
+      stage.setLinks(null);
       state.chain = null;
       setPhase(null);
       details.close();
@@ -115,12 +115,15 @@ export function mountQuery(app, route) {
       const beat = tourBeats[state.b];
       stage.tourView(beat.shot || null);
       if (beat.log) log.show(beat.log); else log.hide();
-      state.stop = -1;
-      if (beat.journey != null) {
-        const j = journeyOf(scene, model, beat.journey);
-        stage.setJourney(j);
-        state.dur = Math.max(state.dur, j.stops.length * 2.4 + 2);
-      } else if (stage.journey && state.mode === "tour") stage.setJourney(null);
+      if (beat.chain) { chainView.show(beat.chain.data, beat.chain.at); state.dur = Math.max(state.dur, 9); } else chainView.hide();
+      if (beat.chain) {
+        const {data, at} = beat.chain, fidsOf = ids => ids.flatMap(id => data.facts.get(id)?.fids || []);
+        stage.setLinks(data.nodes.slice(0, at + 1).map((n, k) => ({
+          id: n.id, title: n.title, verdict: !!n.verdict, now: k === at, born: k === at ? performance.now() : 0,
+          fids: fidsOf(n.own), from: (n.from || []).filter(id => !data.facts.has(id)), back: n.verdict ? fidsOf(n.explains || []) : [],
+        })));
+      } else stage.setLinks(null);
+      if (stage.journey && state.mode === "tour") stage.setJourney(null);
     };
     const toggle = () => {
       if (!state.playing && state.b === lastBeat && state.p >= 1) go(0);
@@ -162,7 +165,7 @@ export function mountQuery(app, route) {
     ui.on("journeyRole", (role, tab) => !tab && stage.journey && ui.journeyRole === role ? stage.setJourney(null) : follow(role));
     ui.on("journeyFact", (fid, role) => follow(role || roles.reach(fid), fid));
     ui.on("cta", () => follow(ctaOf(roles).role));
-    stage.on("journey", j => { if (state.mode === "tour" && tourBeats[state.b]?.journey != null) return; ui.journey(j); });
+    stage.on("journey", j => ui.journey(j));
     ui.on("speed", s => { state.speed = s; });
     ui.on("follow", () => { stage.follow(); stage.release(); });
     ui.on("jump", i => { stage.follow(); go(tour.beatOf(i)); setPlaying(false); });

@@ -1,7 +1,6 @@
-const DURATION = {compile: 4, view: 2.4, view_evidence: 2.4, route_cases: 4, plan_trace: 3.5, query_logs: 4, assess: 3.5, submit: 5};
-export const eventDuration = ev => ev.error ? 1.4 : ev.phase === "MAP" ? 3 : DURATION[ev.name] || 3;
-
 const ramp = (x, a, b) => Math.max(0, Math.min(1, (x - a) / (b - a)));
+
+export const readSeconds = words => Math.max(4, words * 0.35);
 
 export function createTour(scene, model, layout) {
   const {clusters} = model;
@@ -18,6 +17,11 @@ export function createTour(scene, model, layout) {
 
   function camera(ev, focus) {
     const id = focus[0];
+    if (ev.phase === "ROUTE" && focus.length > 1) {
+      const ps = focus.map(P), mid = [0, 1, 2].map(k => ps.reduce((n, p) => n + p[k], 0) / ps.length);
+      const spread = Math.max(...ps.map(p => Math.hypot(p[0] - mid[0], p[1] - mid[1], p[2] - mid[2])));
+      return {target: mid, yaw: null, pitch: 0.32, dist: Math.max(24, spread * 3 + 16)};
+    }
     switch (ev.phase) {
       case "PARSE": return {target: [0, 1.5, 0], yaw: 0.55, pitch: 0.3, dist: 26};
       case "MAP": case "ROUTE":
@@ -29,7 +33,7 @@ export function createTour(scene, model, layout) {
     }
   }
 
-  return function frameAt(i, p, all = false) {
+  function frameAt(i, p, all = false) {
     const ev = scene.events[i];
     const visible = new Set(), filled = new Set(), appear = new Map();
     for (const c of clusters) {
@@ -40,5 +44,38 @@ export function createTour(scene, model, layout) {
     }
     const focus = focusOf(ev);
     return {frame: {visible, filled, appear, focus: new Set(focus)}, camera: camera(ev, focus)};
-  };
+  }
+
+  function frameAtBeat(beat, p) {
+    if (beat.i < 0) {
+      const mid = (layout.top + layout.bottom) / 2;
+      return {frame: {visible: new Set(), filled: new Set(), appear: new Map(), focus: new Set(), allFloors: true},
+              camera: {target: [0, mid, 0], yaw: 0.55, pitch: 0.3, dist: 30 + (layout.top - layout.bottom) * 1.1}};
+    }
+    const out = frameAt(beat.i, 1);
+    out.frame.shot = beat.shot || null;
+    if (beat.shot) {
+      out.frame.focus = new Set([beat.shot.cloud]);
+      const ev = scene.events[beat.i];
+      out.camera = {target: P(beat.shot.cloud), yaw: null, pitch: 0.3, dist: beat.shot.cloud === "core" ? 18 : 11};
+      out.frame.appear = new Map();
+      return out;
+    }
+    if (beat.log) {
+      out.frame.focus = new Set(beat.focus);
+      out.frame.appear = new Map();
+      out.camera = {fit: true, target: [0, 7, 0], yaw: 0.55, pitch: 0.32, dist: 56};
+      return out;
+    }
+    const mine = new Set(beat.events);
+    out.frame.appear = new Map(clusters.filter(c => mine.has(c.event) && c.kind !== "core" && out.frame.visible.has(c.id)).map(c => [c.id, ramp(p, 0, 0.3)]));
+    if (beat.events.length > 1) {
+      const focus = [...new Set(beat.events.flatMap(k => focusOf(scene.events[k])))];
+      out.frame.focus = new Set(focus);
+      out.camera = camera(scene.events[beat.i], focus);
+    }
+    return out;
+  }
+
+  return Object.assign(frameAt, {beat: frameAtBeat});
 }

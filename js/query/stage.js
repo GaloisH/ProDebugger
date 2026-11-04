@@ -11,6 +11,7 @@ const readColors = () => {
     phase: Object.fromEntries(Object.entries(PHASE_TOKENS).map(([k, t]) => [k, read(`--${t}`)])),
   };
 };
+const AGENT_SLOTS = new Set(["mem", "refl", "plan", "act"]);
 const MAX_FACTS = 26;     // facts listed when a group opens; the inspector has the rest
 const FACT_GAP = 0.5;     // world units between fact rows
 const POINT_DIM = 0.32;   // brightness of plain points in a cloud nobody is looking at
@@ -33,7 +34,7 @@ export function createStage(canvas, scene, model, layout) {
   let goal = {...cam, target: [...cam.target]};
   let tourGoal = goal, manual = false;
   let frame = {visible: new Set(["core"]), filled: new Set(["core"]), focus: new Set(), appear: new Map(), chain: null, labelAll: false, filter: null};
-  const view = {cluster: null, group: null, basis: null, fact: null, selected: null};
+  const view = {cluster: null, group: null, basis: null, fact: null, selected: null, list: false, byTour: false};
   let hover = null;
   let targets = [];
   let journey = null;
@@ -161,6 +162,20 @@ export function createStage(canvas, scene, model, layout) {
     groupPlans.set(c.id, pts);
     return pts;
   }
+  const SLOT_RANK = {obs: 0, mem: 1, refl: 2, plan: 3, act: 4, chk: 5};
+  const LIST_GAP = 1.15;
+  const listOrders = new Map();
+  function listOrder(c) {
+    if (!listOrders.has(c.id)) listOrders.set(c.id, [...c.fids].sort((a, b) => {
+      const x = scene.factById.get(a), y = scene.factById.get(b);
+      return x.t - y.t || SLOT_RANK[x.slot] - SLOT_RANK[y.slot] || a - b;
+    }));
+    return listOrders.get(c.id);
+  }
+  function listSlot(c, k, n) {
+    const right = screenRight(view.basis), down = screenDown(view.basis);
+    return add(layout.pos.get(c.id), add(scale(right, -1.2), scale(down, (k - (n - 1) / 2) * LIST_GAP)));
+  }
   function factSlot(c, gi, k, n) {
     const gc = groupCenter(c, gi), right = screenRight(view.basis), down = screenDown(view.basis);
     const top = (Math.min(n, MAX_FACTS) - 1) / 2 * FACT_GAP;
@@ -175,8 +190,11 @@ export function createStage(canvas, scene, model, layout) {
   function targetOf(c, p) {
     const center = layout.pos.get(c.id), R = layout.radius.get(c.id) * sizeOf(c), shape = layout.shape.get(c.id);
     if (view.cluster !== c.id) return add(center, scale(shape ? shape.fact.get(p.fid) : ballPoint(p.k), R));
+    if (view.list) { const order = listOrder(c); return listSlot(c, order.indexOf(p.fid), order.length); }
     const gi = groupOf.get(c.id).get(p.fid), g = c.groups[gi];
     const k = g.fids.indexOf(p.fid);
+    const named = view.byTour && frame.shot?.cloud === c.id && frame.shot.labels.size ? [...frame.shot.labels.keys()] : null;
+    if (named && view.group === gi) return named.includes(p.fid) ? factSlot(c, gi, named.indexOf(p.fid), named.length) : radialPoint(c, gi, k, g.fids.length, p.fid);
     if (view.group === gi && k < MAX_FACTS) return factSlot(c, gi, k, g.fids.length);
     return radialPoint(c, gi, k, g.fids.length, p.fid);
   }
@@ -276,8 +294,146 @@ export function createStage(canvas, scene, model, layout) {
     });
   }
 
+  const stepsOf = new Map();
+  function stepStrip(c, cx, y, alpha) {
+    if (!stepsOf.has(c.id)) stepsOf.set(c.id, new Set(c.fids.map(fid => scene.factById.get(fid)?.t)));
+    const n = scene.meta.steps, cw = 4, W = n * cw, x0 = cx - W / 2, at = stepsOf.get(c.id);
+    const wins = new Set(scene.windows.map(w => w.step));
+    for (let t = 1; t <= n; t++) {
+      ctx.globalAlpha = alpha * (at.has(t) ? 0.95 : 0.25);
+      ctx.fillStyle = at.has(t) ? colors.phase.ROUTE : colors["line-hi"];
+      ctx.fillRect(x0 + (t - 1) * cw, y, cw - 1, 5);
+      if (wins.has(t) && frame.visible.has(scene.windows.find(w => w.step === t)?.id)) { ctx.globalAlpha = alpha; ctx.fillStyle = colors.issue || colors.focus; ctx.fillRect(x0 + (t - 1) * cw, y + 6, cw - 1, 2); }
+    }
+    ctx.globalAlpha = alpha * 0.8; ctx.fillStyle = colors["label-dim"]; ctx.font = `10px ${MONO}`;
+    ctx.textAlign = "right"; ctx.fillText("1", x0 - 3, y + 5);
+    ctx.textAlign = "left"; ctx.fillText(String(n), x0 + W + 3, y + 5);
+    placed.push([x0 - 10, y - 2, W + 24, 12]);
+  }
+  function drawGoal(c, pc, alpha) {
+    const color = colors.phase.MAP, goals = scene.goals;
+    const bad = goals.some(g => scene.facts.some(f => f.rel === "satisfied" && f.value === false && f.args.includes(g.key)));
+    ctx.globalAlpha = alpha; ctx.fillStyle = colors.void; stroke(color, alpha, 1.5);
+    ctx.beginPath(); ctx.moveTo(pc.x, pc.y - 10); ctx.lineTo(pc.x + 10, pc.y); ctx.lineTo(pc.x, pc.y + 10); ctx.lineTo(pc.x - 10, pc.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (bad) { ctx.fillStyle = color; ctx.font = `600 12px ${SANS}`; ctx.textAlign = "center"; ctx.fillText("✗", pc.x, pc.y + 4); }
+    const cons = goals.flatMap(g => g.constraints).filter(k => typeof k.expected === "string" || typeof k.expected === "number").slice(0, 4);
+    cons.forEach((k, i) => {
+      const a = Math.PI * (0.75 + 0.5 * (cons.length === 1 ? 0.5 : i / (cons.length - 1)));
+      const x = pc.x + Math.cos(a) * -34, y = pc.y + Math.sin(a) * 30 - 6;
+      stroke(color, alpha * 0.8, 1);
+      ctx.beginPath(); ctx.moveTo(pc.x - 8, pc.y); ctx.lineTo(x + 4, y); ctx.stroke();
+      ctx.globalAlpha = alpha; ctx.fillStyle = colors.label; ctx.font = `12px ${MONO}`; ctx.textAlign = "right";
+      ctx.fillText(`${String(k.property?.index || "").replace(/_/g, " ")} = ${k.expected}`, x, y + 4);
+    });
+    ctx.textAlign = "left";
+  }
+  function drawGhost(c, g) {
+    const R = groupRing(c);
+    const p = project(add(layout.pos.get(c.id), add(scale(screenRight(view.basis), -R * 1.05), scale(screenDown(view.basis), -R * 0.75))));
+    if (!p) return;
+    const color = colors.phase.MAP, r = 20;
+    stroke(color, 0.95, 1.5, [4, 4]);
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.textAlign = "left";
+    ctx.globalAlpha = 1; ctx.fillStyle = color; ctx.font = `600 16px ${SANS}`;
+    ctx.fillText(g.name, p.x + r + 8, p.y - 2);
+    ctx.fillStyle = colors["label-dim"]; ctx.font = `12px ${MONO}`;
+    ctx.fillText(g.note, p.x + r + 8, p.y + 14);
+    placed.push([p.x - r, p.y - r, r * 2 + 260, r * 2]);
+  }
+  function managerPoint() {
+    const a = TIERS.find(t => t.tier === 2), b = TIERS.find(t => t.tier === 3);
+    return [0, (a.y + b.y) / 2, 0];
+  }
+  function drawManager() {
+    const lanes = clusters.filter(c => c.kind === "lane" && frame.visible.has(c.id));
+    if (!lanes.length || frame.mini || journey || view.cluster || frame.filter?.phases?.has("TRACE")) return;
+    const p = project(managerPoint());
+    if (!p) return;
+    const color = colors.phase.MANAGER, rules = scene.rules || [];
+    const decided = frame.visible.has("root") ? scene.root?.rule?.id || null : null;
+    const lit = frame.focus.has(lanes[0].id) && scene.events[lanes[0].event]?.name === "plan_trace" || decided;
+    if (frame.tour && !lit) return;
+    const q = String(lanes[0].ref.question || "").split(/(?<=[.?!])\s+/)[0];
+    const words = q.split(/\s+/), lines = [];
+    for (const w of words) { const last = lines[lines.length - 1]; if (last && (last + " " + w).length <= 48) lines[lines.length - 1] = `${last} ${w}`; else lines.push(w); if (lines.length > 2) break; }
+    if (lines.length > 2) { lines.length = 2; lines[1] = lines[1].replace(/\s*\S*$/, "") + "…"; }
+    const W = 340, H = 30 + lines.length * 18 + rules.length * 22 + 8;
+    const x = p.x + 26, y = p.y + 34;
+    const a = lit ? 1 : 0.7;
+    stroke(color, 0.7 * a, 1);
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(x, y); ctx.stroke();
+    ctx.globalAlpha = 0.94; ctx.fillStyle = colors.void; ctx.fillRect(x, y, W, H);
+    stroke(color, a, 1); ctx.strokeRect(x + 0.5, y + 0.5, W - 1, H - 1);
+    ctx.textAlign = "left"; ctx.globalAlpha = a;
+    ctx.fillStyle = color; ctx.font = `600 12px ${MONO}`;
+    ctx.fillText(`MANAGER · ${lanes.length === 1 ? "1 question" : `${lanes.length} questions`} · ${rules.length} rules`, x + 10, y + 17);
+    ctx.fillStyle = colors["ink-hi"]; ctx.font = `14px ${SANS}`;
+    lines.forEach((l, k) => ctx.fillText(k === 0 ? `“${l}` : `${l}${k === lines.length - 1 ? "”" : ""}`, x + 10, y + 36 + k * 18));
+    rules.forEach((r, k) => {
+      const ry = y + 30 + lines.length * 18 + k * 22, on = decided === r.id, off = decided && !on;
+      stroke(on ? colors.focus : colors["line-hi"], on ? 1 : 0.6 * a, 1);
+      ctx.strokeRect(x + 10.5, ry + 0.5, W - 21, 18);
+      if (on) { ctx.globalAlpha = 0.18; ctx.fillStyle = colors.focus; ctx.fillRect(x + 11, ry + 1, W - 22, 17); }
+      ctx.globalAlpha = off ? 0.45 : a;
+      ctx.fillStyle = on ? colors.focus : colors.label; ctx.font = `${on ? 600 : 400} 12px ${MONO}`;
+      const t = `rule ${k + 1} · ${String(r.id).replace(/_/g, " ")}${on ? "  ✓ applied" : ""}`;
+      ctx.fillText(t, x + 18, ry + 13);
+      if (off) { stroke(colors.label, 0.5, 1); ctx.beginPath(); ctx.moveTo(x + 18, ry + 9); ctx.lineTo(x + 18 + ctx.measureText(t).width, ry + 9); ctx.stroke(); }
+    });
+    ctx.globalAlpha = 1;
+    placed.push([x, y, W, H]);
+  }
+  function drawCard(l) {
+    const rows = l.card, W = 430, H = 30 + rows.length * 22;
+    const x = l.s.x + 60, y = Math.max(90, l.s.y - H / 2);
+    stroke(l.color, 0.9, 1);
+    ctx.beginPath(); ctx.moveTo(l.s.x + 6, l.s.y); ctx.lineTo(x, y + H / 2); ctx.stroke();
+    ctx.globalAlpha = 0.96; ctx.fillStyle = colors.void; ctx.fillRect(x, y, W, H);
+    stroke(colors.focus, 1, 1); ctx.strokeRect(x + 0.5, y + 0.5, W - 1, H - 1);
+    ctx.globalAlpha = 1; ctx.textAlign = "left";
+    ctx.fillStyle = colors.focus; ctx.font = `600 12px ${MONO}`; ctx.fillText("ONE FACT", x + 12, y + 19);
+    rows.forEach(([k, v], i) => {
+      const ry = y + 42 + i * 22;
+      ctx.fillStyle = colors["label-dim"]; ctx.font = `12px ${MONO}`; ctx.fillText(k, x + 12, ry);
+      ctx.fillStyle = colors["ink-hi"]; ctx.font = `14px ${k === "original" ? SANS : MONO}`;
+      let t = String(v); while (ctx.measureText(t).width > W - 120 && t.length > 8) t = t.slice(0, -2);
+      ctx.fillText(t === String(v) ? t : t + "…", x + 104, ry);
+    });
+    placed.push([x, y, W, H]);
+  }
+  function drawShotLabels(list) {
+    if (!list.length) return;
+    list.sort((a, b) => a.s.y - b.s.y);
+    const ROW = 28, x0 = Math.max(...list.map(l => l.s.x)) + (list.some(l => !l.open) ? 34 : 18);
+    let y = -Infinity;
+    for (const l of list) {
+      if (l.card) { drawCard(l); continue; }
+      y = Math.max(l.s.y, y + ROW);
+      const x = l.open && list.length > 1 ? x0 : Math.max(x0, l.s.x + 18);
+      stroke(l.color, 0.8, 1);
+      ctx.beginPath(); ctx.moveTo(l.s.x + 6, l.s.y); ctx.lineTo(x - 6, y - 4); ctx.stroke();
+      ctx.textAlign = "left";
+      ctx.font = `15px ${SANS}`;
+      const w = ctx.measureText(l.text).width;
+      const over = pointer && pointer.x >= x - 4 && pointer.x <= x + w + 4 && pointer.y >= y - 17 && pointer.y <= y + 7;
+      ctx.globalAlpha = 1; ctx.fillStyle = colors.void;
+      ctx.fillRect(x - 4, y - 17, w + 8, 24);
+      ctx.fillStyle = colors["ink-hi"];
+      ctx.fillText(l.text, x, y);
+      placed.push([x - 4, y - 17, w + 8, 24]);
+      if (over) {
+        ctx.font = `12px ${MONO}`;
+        const sw = ctx.measureText(l.sub).width;
+        ctx.fillStyle = colors.void; ctx.fillRect(x - 4, y + 7, sw + 8, 18);
+        ctx.fillStyle = colors["label-dim"]; ctx.fillText(l.sub, x, y + 20);
+      }
+    }
+  }
   function expansionGoal() {
     const c = byId.get(view.cluster);
+    if (view.list) return {target: add(layout.pos.get(c.id), scale(screenRight(view.basis), 3.2)), yaw: cam.yaw, pitch: cam.pitch, dist: Math.max(12, c.fids.length * LIST_GAP * 1.9 + 6)};
     if (view.group != null) {
       const g = c.groups[view.group];
       const t = add(groupCenter(c, view.group), scale(screenRight(view.basis), 2.6));
@@ -289,7 +445,7 @@ export function createStage(canvas, scene, model, layout) {
   function hudInsets() {
     const box = canvas.getBoundingClientRect(), page = canvas.closest(".qg");
     const rect = sel => { const r = page?.querySelector(sel)?.getBoundingClientRect(); return r && r.width ? r : null; };
-    const panel = rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)");
+    const panel = rect(".qg-log:not([hidden])") || rect(".qg-inspect:not([hidden]):not(.is-collapsed)"), legend = rect(".qg-legend:not(.is-collapsed)") || rect(".qg-sd-say:not([hidden])");
     const head = rect(".qg > header"), foot = rect(".qg-foot");
     const ruler = rot || frame.mini ? 0 : 170;
     const left = Math.max(rot ? 16 : ruler, legend ? legend.right - box.left + 12 : 0);
@@ -489,7 +645,7 @@ export function createStage(canvas, scene, model, layout) {
 
   function setView(cluster, group = null) {
     if (cluster && cluster !== view.cluster) view.basis = {r: [...B.r], u: [...B.u]};
-    view.cluster = cluster; view.group = group;
+    view.cluster = cluster; view.group = group; view.list = false; view.byTour = false;
     manual = false; emit("manual", false);
     emit("view", {cluster: cluster ? byId.get(cluster) : null, group});
   }
@@ -553,10 +709,16 @@ export function createStage(canvas, scene, model, layout) {
     }
   }
 
+  function withManager(list, shown) {
+    if (!frame.allFloors && !shown.some(c => c.kind === "lane")) return list;
+    const k = list.findIndex(t => t.tier === 3);
+    const m = {tier: "M", phase: "MANAGER", label: "Questions and rules", y: managerPoint()[1]};
+    return k < 0 ? [...list, m] : [...list.slice(0, k), m, ...list.slice(k)];
+  }
   function ruler(shown, current) {
     if (rot) return rulerAcross(shown, current);
     const x = 18, top = 96, bottom = H - 150;
-    const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
+    const tiers = withManager(TIERS.filter(t => frame.allFloors || shown.some(c => c.tier === t.tier)), shown)
       .map(t => ({t, y: project([0, t.y, 0])?.y})).filter(r => r.y != null)
       .map(r => ({...r, y: Math.max(top, Math.min(bottom, r.y))}));
     if (!tiers.length) return;
@@ -589,7 +751,7 @@ export function createStage(canvas, scene, model, layout) {
   function rulerAcross(shown, current) {
     const {left, right, bottom} = hudInsets();
     const y = H - bottom + 22, x0 = left + 8, x1 = W - right - 8;
-    const tiers = TIERS.filter(t => shown.some(c => c.tier === t.tier))
+    const tiers = withManager(TIERS.filter(t => frame.allFloors || shown.some(c => c.tier === t.tier)), shown)
       .map(t => ({t, x: project([0, t.y, 0])?.x})).filter(r => r.x != null)
       .map(r => ({...r, x: Math.max(x0, Math.min(x1 - 140, r.x))}));
     if (!tiers.length) return;
@@ -759,7 +921,7 @@ export function createStage(canvas, scene, model, layout) {
 
     const hiddenPhase = frame.filter?.phases;
     const shown = clusters.filter(c => frame.visible.has(c.id) && !hiddenPhase?.has(c.phaseKey));
-    const tierUsed = new Set(shown.map(c => c.tier));
+    const tierUsed = new Set(frame.allFloors ? TIERS.map(t => t.tier) : shown.map(c => c.tier));
     const floors = TIERS.filter(t => tierUsed.has(t.tier));
     floors.forEach((t, k) => {
       const next = floors[k + 1];
@@ -814,7 +976,9 @@ export function createStage(canvas, scene, model, layout) {
     }
 
     ctx.setLineDash([]);
-    const labelled = [];
+    const labelled = [], shotLabels = [];
+    const flash = new Map();
+    for (const [id, a] of frame.appear) if (a < 1 && byId.get(id)?.kind === "query") for (const fid of byId.get(id).fids) flash.set(fid, Math.max(flash.get(fid) || 0, 1 - a));
     for (const c of shown) {
       const appear = frame.appear.get(c.id) ?? 1;
       const center = layout.pos.get(c.id), pc = project(center);
@@ -827,6 +991,12 @@ export function createStage(canvas, scene, model, layout) {
       const onWay = journey && journey.stops.some(s => s.id === c.id);
       const alpha = (open && !isOpen ? 0.07 : journey && !isOpen ? (onWay ? 0.45 : 0.08) : outside ? 0.13 : focus || isOpen || frame.chain || lead || inPhase ? 1 : c.kind === "core" ? 0.5 : c.error ? 0.3 : 0.6)
         * appear * (pc && !isOpen ? fog(pc.z) : 1);
+      if (c.kind === "query" && c.phase === "MAP" && !isOpen && pc) {
+        drawGoal(c, pc, alpha);
+        targets.push({kind: "cluster", cluster: c, x: pc.x, y: pc.y, r: 22});
+        labelled.push({c, pc, sr: 18, focus, alpha, isOpen});
+        continue;
+      }
       if (frame.filled.has(c.id)) {
         if (inst.get(c.id).length !== c.fids.length) inst.set(c.id, c.fids.map((fid, k) => ({fid, k, cur: null})));
         const gmap = groupOf.get(c.id);
@@ -838,6 +1008,7 @@ export function createStage(canvas, scene, model, layout) {
         }
         const plain = isOpen ? 1 : focus || view.selected === c.id || lead ? POINT_LIFT : POINT_DIM;
         const sparse = c.kind === "core" && !isOpen && !focus ? Math.max(1, Math.ceil(c.fids.length / CORE_POINTS)) : 1;
+        const shot = frame.shot && frame.shot.cloud === c.id ? frame.shot : null;
         if ((!journey || isOpen) && sparse === 1) drawStructure(c, alpha * plain, isOpen, m);
         if (sparse > 1 && pc) {
           stroke(colors["line-hi"], 0.35 * fade, 1, [2, 4]);
@@ -845,26 +1016,35 @@ export function createStage(canvas, scene, model, layout) {
           ctx.setLineDash([]);
         }
         for (const p of inst.get(c.id)) {
-          if (sparse > 1 && p.k % sparse && !roleOf(p.fid) && journey?.fid !== p.fid && !markOf.has(p.fid) && !(frame.labelAll && evidenceHighlight.has(p.fid))) continue;
+          const lit = c.kind === "core" ? flash.get(p.fid) || 0 : 0;
+          if (sparse > 1 && p.k % sparse && !lit && !roleOf(p.fid) && journey?.fid !== p.fid && !markOf.has(p.fid) && !(frame.labelAll && evidenceHighlight.has(p.fid))) continue;
           const s = project(p.cur);
           if (!s) continue;
-          const inGroup = isOpen && view.group === gmap.get(p.fid);
+          const inGroup = isOpen && (view.list || view.group === gmap.get(p.fid));
+          const named = shot?.labels.get(p.fid);
+          if (named) shotLabels.push({s, ...named, color: phaseColor(c), open: isOpen});
           const role = roleOf(p.fid);
           const traveller = journey?.fid === p.fid;
           const mk = markOf.get(p.fid);
           const inspected = frame.labelAll && evidenceHighlight.has(p.fid);
           const size = mk ? 5 : traveller ? 6 : Math.max(role ? 3 : 1.3, Math.min(inGroup || role ? 4 : 2.6, s.s * (role ? 0.12 : 0.085)));
-          ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role || mk ? 1 : plain);
+          ctx.globalAlpha = (isOpen && view.group != null && !inGroup ? alpha * 0.35 : alpha) * (role || mk ? 1 : plain) * (shot?.keep && !shot.keep.has(p.fid) ? 0.12 : 1);
           if (mk) { ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * appear); if (!open) badgeAt.push({mk, x: s.x, y: s.y, z: s.z, focus}); }
           if (role && !(open && !isOpen)) ctx.globalAlpha = Math.max(ctx.globalAlpha, (journey ? 0.5 : 0.95) * appear);
           if (traveller || inspected) ctx.globalAlpha = 1;
           ctx.fillStyle = mk ? mk.color : role ? roleColor[role] : focus || isOpen ? colors["ink-hi"] : c.kind === "core" ? colors["ink-dim"] : colors.ink;
-          ctx.fillRect(s.x - size / 2, s.y - size / 2, size, size);
+          if (lit) { ctx.globalAlpha = Math.max(ctx.globalAlpha, 0.95 * lit); ctx.fillStyle = colors.focus; }
+          const sz = lit ? Math.max(size, 3.5) : size;
+          if (frame.sources && AGENT_SLOTS.has(scene.factById.get(p.fid)?.slot) && sz >= 2.4) {
+            ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1; ctx.setLineDash([]);
+            ctx.strokeRect(s.x - sz / 2 + 0.5, s.y - sz / 2 + 0.5, sz - 1, sz - 1);
+          } else ctx.fillRect(s.x - sz / 2, s.y - sz / 2, sz, sz);
+          if (named) { stroke(phaseColor(c), 1, 1); ctx.strokeRect(s.x - 5, s.y - 5, 10, 10); }
           if (inspected) {
             stroke(colors.focus, .95, 1);
             ctx.strokeRect(s.x - size / 2 - 2, s.y - size / 2 - 2, size + 4, size + 4);
           }
-          if (inGroup && c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS) {
+          if (inGroup && !shot && (view.list || c.groups[view.group].fids.indexOf(p.fid) < MAX_FACTS)) {
             targets.push({kind: "fact", cluster: c, fid: p.fid, x: s.x, y: s.y, r: 7});
             ctx.globalAlpha = 1;
             ctx.fillStyle = view.fact === p.fid || hover?.fid === p.fid || inspected ? colors["ink-hi"] : colors.label;
@@ -892,26 +1072,33 @@ export function createStage(canvas, scene, model, layout) {
         ctx.beginPath(); ctx.moveTo(pc.x - 4, pc.y - 4); ctx.lineTo(pc.x + 4, pc.y + 4); ctx.moveTo(pc.x + 4, pc.y - 4); ctx.lineTo(pc.x - 4, pc.y + 4); ctx.stroke();
       }
       if (!isOpen) targets.push({kind: "cluster", cluster: c, x: pc.x, y: pc.y, r: frame.labelAll ? Math.max(16,sr+3) : sr+3});
+      if (c.kind === "query" && focus && !frame.labelAll && !frame.mini && !open && !journey) stepStrip(c, pc.x, pc.y + sr + 10, alpha);
       labelled.push({c, pc, sr, focus, alpha, isOpen});
     }
 
-    if (open && frame.filled.has(open.id)) {
+    const openShot = open && frame.shot?.cloud === open.id ? frame.shot : null;
+    if (open && frame.filled.has(open.id) && !view.list) {
       open.groups.forEach((g, gi) => {
         const p = project(groupCenter(open, gi));
         if (!p) return;
         const r = Math.max(6, (radialExtent(g.fids.length) + 0.12) * p.s + 3);
         const on = view.group === gi, hot = hover?.kind === "group" && hover.gi === gi;
         brackets(p.x, p.y, r, on || hot ? phaseColor(open) : colors["line-hi"], 1);
+        const shotName = openShot ? openShot.names.get(g.key) : null;
+        if (openShot && !shotName) { targets.push({kind: "group", cluster: open, gi, x: p.x, y: p.y, r: r + 4}); return; }
         if (!on) {
           ctx.globalAlpha = view.group != null ? 0.5 : 1;
           ctx.textAlign = "left";
           ctx.fillStyle = hot ? phaseColor(open) : colors.label;
           ctx.font = `15px ${MONO}`;
-          ctx.fillText(g.key, p.x + r + 5, p.y - 1);
+          ctx.fillText(shotName || g.key, p.x + r + 5, p.y - 1);
           ctx.fillStyle = colors["label-dim"];
           ctx.font = `13px ${MONO}`;
           ctx.fillText(`${g.fids.length} fact${g.fids.length === 1 ? "" : "s"}`, p.x + r + 5, p.y + 15);
           if (hot) { ctx.fillStyle = colors.focus; ctx.font = `14px ${SANS}`; ctx.fillText("click to list its facts", p.x + r + 5, p.y + 32); }
+        } else if (openShot) {
+          ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = phaseColor(open); ctx.font = `600 16px ${SANS}`;
+          ctx.fillText(shotName, p.x - r, p.y - r - 8);
         } else if (g.fids.length > MAX_FACTS) {
           const q = project(factSlot(open, gi, MAX_FACTS, g.fids.length));
           if (q) { ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.fillStyle = colors["label-dim"]; ctx.font = `13px ${MONO}`; ctx.fillText(`+${g.fids.length - MAX_FACTS} more in the inspector`, q.x + 9, q.y + 4); }
@@ -932,6 +1119,7 @@ export function createStage(canvas, scene, model, layout) {
       const hot = hover?.kind === "cluster" && hover.cluster === c;
       if (isOpen) {
         const r = layout.radius.get(c.id) * pc.s + 6;
+        if (frame.shot?.cloud === c.id) continue;
         brackets(pc.x, pc.y, r, phaseColor(c));
         tag(pc.x, pc.y, r, clusterTitle(c), c.detail, phaseColor(c), 1, 0, null, true);
         continue;
@@ -951,7 +1139,7 @@ export function createStage(canvas, scene, model, layout) {
       if (outside && !hot) continue;
       const lead = frame.labelAll && !frame.chain && !frame.phase && backbone.has(c.id);
       const quietAll = frame.labelAll && !frame.chain && !frame.phase && backbone.size;
-      const named = frame.mini ? focus || hot || selected : quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
+      const named = frame.mini || frame.tour ? focus || hot || selected : quietAll ? lead || focus || hot || selected : c.kind !== "query" || focus || hot || selected || lead || inPhase || (frame.chain && frame.chain.has(c.id));
       if (!named && quietAll) continue;
       if (named) {
         const side = !frame.labelAll || frame.chain || frame.phase ? 0 : lead ? 1 : c.kind !== "query" ? -1 : 0;
@@ -959,6 +1147,9 @@ export function createStage(canvas, scene, model, layout) {
       }
     }
     for (const c of hubsLater) hubLabels(c, fade);
+    drawShotLabels(shotLabels);
+    if (openShot?.ghost && frame.filled.has(open.id)) drawGhost(open, openShot.ghost);
+    drawManager();
     if (journey) drawJourney();
     ctx.globalAlpha = 1;
     raf = requestAnimationFrame(draw);
@@ -976,11 +1167,12 @@ export function createStage(canvas, scene, model, layout) {
     return best;
   }
 
-  let drag = null;
+  let drag = null, pointer = null;
   const takeOver = () => { if (!manual) { manual = true; emit("manual", true); } };
   const onDown = e => { drag = {x: e.clientX, y: e.clientY, yaw: cam.yaw, pitch: cam.pitch, target: [...cam.target], pan: e.button === 2 || e.shiftKey, moved: false}; canvas.setPointerCapture(e.pointerId); };
   const onMove = e => {
     const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    pointer = {x, y};
     if (drag) {
       const sx = e.clientX - drag.x, sy = e.clientY - drag.y;
       if (!drag.moved && Math.abs(sx) + Math.abs(sy) > 3) { drag.moved = true; takeOver(); }
@@ -1024,6 +1216,22 @@ export function createStage(canvas, scene, model, layout) {
     const c = byId.get(id);
     emit("select", group == null ? {kind: "cluster", cluster: c, opened: true} : {kind: "group", cluster: c, gi: group});
   }
+  function tourView(shot) {
+    if (!shot?.open) {
+      if (view.byTour) { setView(null); view.selected = null; }
+      return;
+    }
+    const c = byId.get(shot.cloud);
+    if (!c) return;
+    const gi = shot.open === "entities" || shot.open === "list" ? null : c.groups.findIndex(g => g.key === shot.open);
+    if (view.byTour && view.cluster === c.id && view.list === (shot.open === "list") && view.group === (gi < 0 ? null : gi)) return;
+    view.selected = null; view.fact = null;
+    if (view.cluster !== c.id) setView(null);
+    setView(c.id, gi == null || gi < 0 ? null : gi);
+    view.list = shot.open === "list";
+    view.byTour = true;
+    emit("view", {cluster: c, group: view.group, byTour: true});
+  }
   function setJourney(j) {
     journey = j ? {...j, focus: null} : null;
     view.selected = null; view.fact = null;
@@ -1046,7 +1254,7 @@ export function createStage(canvas, scene, model, layout) {
     else emit("back");
   }
   const onWheel = e => { e.preventDefault(); takeOver(); cam.dist = Math.max(5, Math.min(110, cam.dist * Math.exp(e.deltaY * 0.001))); };
-  const onLeave = () => { hover = null; emit("hover", null); };
+  const onLeave = () => { hover = null; pointer = null; emit("hover", null); };
   const noMenu = e => e.preventDefault();
   canvas.addEventListener("pointerdown", onDown);
   canvas.addEventListener("pointermove", onMove);
@@ -1065,6 +1273,7 @@ export function createStage(canvas, scene, model, layout) {
     release() { manual = false; emit("manual", false); },
     clearHover() { if (hover) { hover = null; canvas.style.cursor = "grab"; emit("hover", null); } },
     open,
+    tourView,
     select,
     back,
     setJourney,

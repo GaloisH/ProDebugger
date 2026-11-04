@@ -273,15 +273,24 @@ body.page-query .app { padding: 0; }
 .qg-play { color: var(--qg-focus); }
 .qg-follow { color: var(--qg-focus); border-color: var(--qg-focus); font-family: var(--mono); font-size: .83rem; letter-spacing: .06em; }
 .qg-speed { font-family: var(--mono); font-size: .75rem; }
-.qg-count { flex: none; min-width: 3.6rem; text-align: right; font-family: var(--mono); font-size: .75rem; color: var(--qg-label-dim); }
-.qg-track { position: relative; flex: 1; display: flex; gap: 2px; height: 1.4rem; align-items: center; }
+.qg-count { flex: none; min-width: 9.4rem; text-align: right; font-family: var(--mono); font-size: .75rem; color: var(--qg-label-dim); }
+.qg-track { position: relative; flex: 1; display: flex; gap: 6px; height: 2.2rem; align-items: flex-end; padding-bottom: .45rem; }
+/* One segment per act, named above its cells; the prologue's segment is a single unnamed cell. */
+.qg-act { flex-basis: 0; min-width: 1.4rem; display: flex; flex-direction: column; gap: .25rem; }
+.qg-act > em { font-style: normal; font-family: var(--mono); font-size: .66rem; letter-spacing: .06em; line-height: 1; color: color-mix(in srgb, var(--ph, var(--qg-label-dim)) 70%, var(--qg-label-dim)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qg-act-cells { display: flex; gap: 2px; }
+.qg-act-cells .qg-tick { flex: 1 1 0; }
+[data-phase="START"] { --ph: var(--qg-label); }
+.qg-next-btn { flex: none; align-self: center; padding: .55rem 1rem; border: 1px solid var(--ph, var(--qg-focus)); border-radius: 2px; background: none; color: var(--text-hi); font-family: var(--mono); font-size: .9rem; cursor: pointer; }
+.qg-next-btn:hover { background: color-mix(in srgb, var(--ph, var(--qg-focus)) 20%, transparent); }
+.qg.at-end .qg-next-btn { display: none; }
 .qg-tick { flex-basis: 0; height: 6px; padding: 0; border: 0; background: color-mix(in srgb, var(--ph) 22%, var(--qg-line)); cursor: pointer; }
 .qg-tick.done { background: color-mix(in srgb, var(--ph) 55%, var(--qg-line)); }
 .qg-tick.now { background: var(--ph); }
 .qg-tick[data-error] { background: none; border: 1px solid var(--qg-line-hi); }
 .qg:not(.is-overview) .qg-tick[data-error] { display: none; }
 .qg-tick:hover { background: var(--qg-label-dim); }
-.qg-head-mark { position: absolute; top: 2px; bottom: 2px; width: 1px; background: var(--text-hi); pointer-events: none; }
+.qg-head-mark { position: absolute; bottom: calc(.45rem - 4px); height: 14px; width: 1px; background: var(--text-hi); pointer-events: none; }
 
 .qg-error { max-width: 36rem; margin: 6rem auto; }
 
@@ -1008,7 +1017,7 @@ body.page-query .app { padding: 0; }
 .qg-caption.is-rich .sd-sig, .qg-caption.is-rich .sd-hit, .qg-caption.is-rich .sd-chip { font-size: .84rem; }
 .sd-stepno { font-family: var(--mono); font-weight: 500; color: var(--qg-focus); }
 .sd-qtag[data-kind="COMPILE"] { --kind: var(--parse); }
-.sd-qtag[data-kind="WINDOW"] { --kind: var(--route); }
+.sd-qtag[data-kind="WINDOW"], .sd-qtag[data-kind="ROUND"] { --kind: var(--route); }
 .sd-qtag[data-kind="PLAN"] { --kind: var(--manager); }
 .sd-qtag[data-kind="SEARCH"], .sd-qtag[data-kind="ASSESS"] { --kind: var(--trace); }
 .sd-qtag[data-kind="ROOT"] { --kind: var(--qg-sig-goal); background: var(--qg-sig-goal); color: var(--qg-void); font-weight: 600; }
@@ -1082,3 +1091,94 @@ body.page-query .app { padding: 0; }
 .sd-fix { display: grid; grid-template-columns: auto 1fr; gap: .7rem; align-items: baseline; margin-top: .3rem; padding: .5rem .7rem; border: 1px solid color-mix(in srgb, var(--submit) 55%, transparent); border-left: 3px solid var(--submit); background: color-mix(in srgb, var(--submit) 7%, transparent); }
 .sd-fix .sd-fix-tag { background: var(--submit); }
 .qg-sd-body .sd-fix p { margin: 0; color: var(--text-hi); }
+
+/* Tour caption: the beat's one cause line over the call's result line. */
+.qg-caption.is-rich .qg-cap-say { display: block; font-size: 1.05rem; line-height: 1.45; color: var(--text-hi); }
+/* Less text by default: the call's result line shows on hovering the caption, above it, so the
+   footer keeps its height; the "Next ·" line and the stage sentence beside the tower are off. */
+.qg:not(.is-overview) .qg-cap-next { display: none !important; }
+.qg:not(.is-overview) .qg-sd-say > p { display: none; }
+/* The Tour's last beat: three ways on. */
+.qg-outro { display: none; flex-direction: column; gap: .35rem; align-self: center; }
+.qg.at-outro:not(.is-overview) .qg-outro { display: flex; }
+.qg.at-outro .qg-cta { display: none; }
+.qg-outro button { padding: .45rem .8rem; border: 1px solid var(--qg-line-hi); border-radius: 2px; background: none; color: var(--text-hi); font-family: var(--mono); font-size: .82rem; text-align: left; cursor: pointer; }
+.qg-outro button:first-child { border-color: var(--qg-focus); color: var(--qg-focus); }
+.qg-outro button:hover { background: color-mix(in srgb, var(--qg-focus) 14%, transparent); }
+
+/* The original log beside the tower (the Tour's closing beats). */
+.qg-log { position: absolute; z-index: 3; right: 1.2rem; top: 9.4rem; bottom: calc(var(--qg-foot-h, 9rem) + 1.6rem); width: min(40%, 40rem); display: flex; flex-direction: column;
+  border: 1px solid var(--qg-line-hi); border-top: 2px solid var(--submit); background: color-mix(in srgb, var(--qg-panel) 97%, black); box-shadow: 0 18px 50px #0009; }
+.qg-log[hidden] { display: none; }
+.qg-log header { display: grid; grid-template-columns: 1fr auto; gap: .1rem .6rem; padding: .7rem .9rem .55rem; border-bottom: 1px solid var(--qg-line); }
+.qg-log .lg-kicker { font-family: var(--mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--submit); }
+.qg-log h3 { grid-column: 1; margin: 0; font-size: 1rem; font-weight: 500; color: var(--text-hi); }
+.qg-log .lg-close { grid-row: 1 / span 2; grid-column: 2; align-self: start; border: 0; background: none; color: var(--qg-label); font-size: 1.3rem; cursor: pointer; }
+.lg-card { margin: .6rem .9rem 0; padding: .6rem .75rem; border: 1px solid var(--qg-focus); background: color-mix(in srgb, var(--qg-focus) 7%, transparent); }
+.lg-card[hidden] { display: none; }
+.lg-card h4 { margin: 0 0 .35rem; font-family: var(--mono); font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--qg-focus); }
+.lg-card dl { margin: 0; display: grid; gap: .28rem; }
+.lg-card dl > div { display: grid; grid-template-columns: 8.4rem 1fr; gap: .6rem; }
+.lg-card dt { font-size: .82rem; color: var(--qg-label-dim); }
+.lg-card dd { margin: 0; font-size: .9rem; line-height: 1.4; color: var(--text-hi); }
+.lg-card dd button { margin: 0 .25rem .15rem 0; padding: .05rem .4rem; border: 1px solid var(--qg-line-hi); border-radius: 2px; background: none; color: var(--qg-focus); font-family: var(--mono); font-size: .8rem; cursor: pointer; }
+.lg-card dd button:hover { border-color: var(--qg-focus); }
+.lg-steps { flex: 1; min-height: 0; overflow-y: auto; margin: .5rem 0 0; padding: 0 .9rem .8rem; list-style: none; }
+.lg-step { border-left: 2px solid transparent; margin: 0 0 .15rem; padding-left: .55rem; }
+.lg-step.is-marked { border-left-color: var(--qg-line-hi); }
+.lg-step:has(.lg-tag.is-root) { border-left-color: var(--qg-focus); }
+.lg-step:has(.lg-tag.is-fail) { border-left-color: var(--qg-sig-goal); }
+.lg-step.is-flash { animation: lg-flash 1.2s ease-out; }
+@keyframes lg-flash { from { background: color-mix(in srgb, var(--qg-focus) 22%, transparent); } to { background: transparent; } }
+.lg-head { display: flex; align-items: baseline; gap: .5rem; width: 100%; padding: .3rem 0; border: 0; background: none; color: var(--qg-label); text-align: left; cursor: pointer; }
+.lg-head b { flex: none; min-width: 3.6rem; font-family: var(--mono); font-size: .8rem; font-weight: 500; color: var(--qg-label); }
+.lg-head em { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-style: normal; font-family: var(--mono); font-size: .8rem; color: var(--qg-label-dim); }
+.lg-step:not(.is-fold) .lg-head em { visibility: hidden; }
+.lg-tags { display: contents; }
+.lg-tag { flex: none; padding: 0 .35rem; font-style: normal; font-family: var(--mono); font-size: .7rem; border: 1px solid currentColor; border-radius: 2px; }
+.lg-tag.is-clue { color: var(--qg-issue); }
+.lg-tag.is-root { color: var(--qg-focus); }
+.lg-tag.is-fail { color: var(--qg-sig-goal); }
+.lg-tag.is-cited { color: var(--qg-cand); }
+.lg-mod { display: grid; grid-template-columns: 5.6rem 1fr; gap: .5rem; padding: .2rem 0 .3rem; }
+.lg-step.is-fold .lg-mod { display: none; }
+.lg-mod > span { font-family: var(--mono); font-size: .72rem; padding-top: .15rem; color: var(--qg-label-dim); }
+.lg-mod[data-src="world"] > span { color: var(--qg-th-env, var(--qg-label-dim)); }
+.lg-mod p { margin: 0; font-size: .88rem; line-height: 1.45; color: var(--qg-label); }
+.lg-mod:hover p { color: var(--text-hi); }
+.lg-mod.is-root { outline: 1px solid var(--qg-focus); outline-offset: 2px; }
+.lg-mod.is-root > span { color: var(--qg-focus); }
+.lg-mod mark { padding: 0 .1rem; background: color-mix(in srgb, var(--qg-focus) 28%, transparent); color: var(--text-hi); }
+.qg.has-log .qg-inspect, .qg.has-log .qg-hovercard { visibility: hidden; }
+
+/* Tour caption, less and steadier: no sentence panel beside the tower, no result tag, a fixed
+   height so the tower does not move between beats, the act's question as a small eyebrow. */
+.qg:not(.is-overview):not(.is-story) .qg-sd-say { display: none !important; }
+.qg:not(.is-overview) .qg-caption .sd-qtag { display: none; }
+/* The caption as a card: rounded, a steady minimum height (it grows only for a long beat), the
+   title bold, the line cut into rounded blocks, the call's result bar in a well under them. */
+.qg:not(.is-overview):not(.is-story) .qg-caption { min-height: 10.4rem; overflow: visible; align-items: center; border-radius: 10px; padding: .8rem 1.1rem; }
+.qg:not(.is-overview) .qg-caption > div:not(.qg-outro) { flex: 1; align-self: stretch; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.qg:not(.is-overview) .qg-cap-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qg:not(.is-overview) .qg-caption .qg-cap-text { display: flex !important; flex-direction: column; gap: .5rem; margin-top: .5rem; overflow: visible; -webkit-line-clamp: unset; line-clamp: none; }
+.qg:not(.is-overview) .qg-caption .qg-cap-say { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .4rem; font-size: 1rem; line-height: 1.35; color: var(--qg-label); }
+/* A block is inline text in a rounded box: words wrap as a sentence, never one word per column;
+   a long sentence takes the full width. */
+.qg-caption .ci { display: inline-block; max-width: 100%; padding: .22rem .6rem; line-height: 1.45; border-radius: 7px; border: 1px solid color-mix(in srgb, var(--ph, var(--qg-line-hi)) 35%, transparent); background: color-mix(in srgb, var(--ph, var(--qg-line-hi)) 9%, transparent); }
+.qg-caption .ci-k { color: var(--ph, var(--qg-label)); font-weight: 600; margin-right: .35rem; }
+.qg-caption .ci-n { color: var(--text-hi); font-weight: 600; font-family: var(--mono); font-size: .95em; }
+.qg-caption .ci-q { color: var(--text-hi); font-style: italic; quotes: "“" "”"; }
+.qg-caption .ci-ar { font-style: normal; color: var(--qg-label-dim); }
+.qg-caption .ci-out { border-color: var(--qg-focus); background: color-mix(in srgb, var(--qg-focus) 14%, transparent); color: var(--text-hi); font-weight: 500; }
+.qg:not(.is-overview) .qg-caption.is-rich .sd-qres { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .55rem; padding: .35rem .6rem; border-radius: 7px; border: 1px solid var(--qg-line); background: color-mix(in srgb, var(--qg-void) 55%, transparent); font-size: .9rem; }
+.qg-cap-q { margin: 0 0 .25rem !important; font-family: var(--mono); font-size: .78rem !important; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ph, var(--qg-label-dim)); }
+.qg-cap-q:empty { display: none; }
+/* The stage popup's button, in the amber it had beside the tower. */
+.qg-more-btn { flex: none; align-self: center; display: inline-flex; align-items: center; gap: .45rem; padding: .5rem .9rem; border: 0; border-radius: 6px;
+  background: var(--qg-focus); color: var(--qg-void); font-family: var(--mono); font-size: .86rem; font-weight: 600; letter-spacing: .04em; cursor: pointer; transition: transform .15s, background .15s; }
+.qg-more-btn::after { content: "→"; transition: transform .15s; }
+.qg-more-btn:hover { background: var(--text-hi); transform: translateY(-1px); }
+.qg-more-btn:hover::after { transform: translateX(3px); }
+.qg-more-btn[hidden], .qg.is-overview .qg-more-btn { display: none; }
+/* The last beat: room for the case in one sentence beside the three ways on. */
+.qg.at-outro .qg-more-btn { display: none; }

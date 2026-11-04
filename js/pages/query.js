@@ -4,10 +4,12 @@ import {loadQueryScene, factRepr, SLOT_LABEL} from "../query/model.js?v=signs-79
 import {agentWords} from "../query/narrate.js?v=23f9bfd6b4";
 import {buildClusters, chainPath, factLabel, journeyOf, phaseFocus, roleFacts} from "../query/clusters.js?v=signs-79eb29e";
 import {layoutClusters, TIERS} from "../query/layout.js?v=23f9bfd6b4";
-import {createStage, clusterTitle} from "../query/stage.js?v=signs-79eb29e";
-import {createTour, eventDuration} from "../query/tour.js?v=23f9bfd6b4";
+import {createStage, clusterTitle} from "../query/stage.js?v=copy-6";
+import {createTour, readSeconds} from "../query/tour.js?v=loop-1";
+import {buildBeats} from "../query/beats.js?v=copy-5";
+import {mountLog} from "../query/log.js?v=loop-1";
 import {buildStory} from "../query/story.js?v=signs-79eb29e";
-import {createDetails} from "../query/details.js?v=signs-79eb29e";
+import {createDetails} from "../query/details.js?v=cap-3";
 import {mountOverviewNarrative} from "../query/overview.js?v=signs-79eb29e";
 
 const GROUP = "evidence-query-claims-n30-20261013";
@@ -44,25 +46,19 @@ export function mountQuery(app, route) {
     const layout = layoutClusters(model);
     const roles = roleFacts(model.clusters);
     const story = buildStory(scene, model);
-    root.innerHTML = template(scene, model, ref, roles, story);
+    const tour = buildBeats(scene, model);
+    const tourBeats = tour.beats, lastBeat = tourBeats.length - 1;
+    root.innerHTML = template(scene, model, ref, roles, story, tour);
     stage = createStage(root.querySelector(".qg-canvas"), scene, model, layout);
     const frameAt = createTour(scene, model, layout);
     const last = scene.events.length - 1;
-    const plays = scene.events.map((e, i) => i).filter(i => !scene.events[i].error);
-    const playable = (i, d = 0) => {
-      i = Math.max(0, Math.min(last, i));
-      if (!scene.events[i].error) return i;
-      const after = plays.find(k => k > i), before = plays.findLast(k => k < i);
-      return d < 0 ? before ?? after : after ?? before;
-    };
-    const lastPlay = plays[plays.length - 1];
-    const state = {i: 0, p: 0, playing: true, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
+    const state = {b: 0, p: 0, t: 0, dur: 4, playing: false, speed: 1, mode: "tour", view: "front", chain: null, phase: null,
                    filter: {phases: new Set()}, row: story.rows.length - 1};
-    const ui = bindUi(root, scene, model, stage, roles, ref, story);
+    const ui = bindUi(root, scene, model, stage, roles, ref, story, tour);
     const details = createDetails(root, scene, model, stage, {onOpen: () => setPlaying(false)});
     narrative = mountOverviewNarrative(root, scene, model, stage);
-    ui.on("event", (ph, i) => { details.show(ph); details.caption(scene.events[i]); });
-    ui.setEvent(state.i);
+    const log = mountLog(root, scene, stage);
+    ui.on("beat", beat => { details.show(beat.phase); details.captionBeat(beat); });
 
     stage.start(dt => {
       if (state.mode === "story") {
@@ -76,14 +72,20 @@ export function mountQuery(app, route) {
       }
       const overview = state.mode === "overview";
       if (!overview && state.playing) {
-        state.p += dt * state.speed / eventDuration(scene.events[state.i]);
+        state.p += dt * state.speed / state.dur;
         if (state.p >= 1) {
-          if (state.i < lastPlay) { state.i = playable(state.i + 1, 1); state.p = 0; stage.clearHover(); ui.setEvent(state.i); }
+          if (state.b < lastBeat) go(state.b + 1);
           else { state.p = 1; setPlaying(false); }
         }
       }
-      if (!overview) ui.setProgress(state.i, state.p);
-      const out = overview ? frameAt(last, 1, true) : frameAt(state.i, state.p);
+      if (!overview) ui.setProgress(state.b, state.p);
+      state.t += dt;
+      if (!overview && tourBeats[state.b].journey != null && stage.journey) {
+        const k = Math.min(stage.journey.stops.length - 1, Math.floor(state.t / 2.4));
+        if (k !== state.stop) { state.stop = k; stage.focusStop(k); }
+      }
+      const out = overview ? frameAt(last, 1, true) : frameAt.beat(tourBeats[state.b], Math.min(1, state.t / 1.2 * 0.3));
+      if (!overview) { out.frame.sources = true; out.frame.tour = true; }
       Object.assign(out.frame, {chain: state.chain?.chain || null, chainEdges: state.chain?.edges, phase: state.phase, filter: state.filter, labelAll: overview});
       if (overview) { out.frame.focus = new Set(); out.camera = OVERVIEW_CAM[state.view]; }
       return out;
@@ -94,27 +96,41 @@ export function mountQuery(app, route) {
       history.replaceState(null, "", location.hash.split("?")[0] + (mode === "tour" ? "" : `?mode=${mode}`));
       stage.follow();
       stage.release();
+      log.hide();
       state.chain = null;
       setPhase(null);
       details.close();
       ui.setMode(mode, state.view);
       narrative.mode(mode);
       if (mode !== "tour") setPlaying(false);
-      else { go(0); setPlaying(true); }
+      else { go(0); setPlaying(false); }
       if (mode === "story") setRow(0);
     };
 
     const setPlaying = on => { state.playing = on; ui.setPlaying(on); };
-    const go = (i, p = 0, d = 0) => { stage.clearHover(); state.i = playable(i, d); state.p = p; ui.setEvent(state.i); };
+    const go = (b, p = 0) => {
+      stage.clearHover();
+      state.b = Math.max(0, Math.min(lastBeat, b)); state.p = p; state.t = 0;
+      state.dur = readSeconds(ui.showTourBeat(state.b));
+      const beat = tourBeats[state.b];
+      stage.tourView(beat.shot || null);
+      if (beat.log) log.show(beat.log); else log.hide();
+      state.stop = -1;
+      if (beat.journey != null) {
+        const j = journeyOf(scene, model, beat.journey);
+        stage.setJourney(j);
+        state.dur = Math.max(state.dur, j.stops.length * 2.4 + 2);
+      } else if (stage.journey && state.mode === "tour") stage.setJourney(null);
+    };
     const toggle = () => {
-      if (!state.playing && state.i === lastPlay && state.p >= 1) go(0);
+      if (!state.playing && state.b === lastBeat && state.p >= 1) go(0);
       if (!state.playing && stage.view.cluster) stage.follow();
       setPlaying(!state.playing);
     };
     ui.on("play", toggle);
-    ui.on("step", d => go(state.i + d, 0, d));
-    const pick = i => { stage.select(scene.events[i].cluster || "core"); narrative.event(i); };
-    ui.on("seek", i => state.mode === "overview" ? pick(i) : go(i, 0.5));
+    ui.on("step", d => go(state.b + d));
+    const pick = b => { const beat = tourBeats[b], i = Math.max(0, beat.i); stage.select(beat.focus[0] || scene.events[i].cluster || "core"); narrative.event(i); };
+    ui.on("seek", b => state.mode === "overview" ? pick(b) : go(b));
     const setPhase = ph => {
       state.phase = ph ? phaseFocus(model, ph) : null;
       ui.setPhase(state.phase, state.mode === "overview");
@@ -129,8 +145,8 @@ export function mountQuery(app, route) {
         setPhase(again ? null : ph);
         return;
       }
-      const i = scene.events.findIndex(e => e.phase === ph && !e.error);
-      if (i >= 0) go(i);
+      const k = tourBeats.findIndex(b => b.phase === ph);
+      if (k >= 0) go(k);
     });
     ui.on("endPhase", () => setPhase(null));
     stage.on("back", () => state.phase && setPhase(null));
@@ -146,10 +162,10 @@ export function mountQuery(app, route) {
     ui.on("journeyRole", (role, tab) => !tab && stage.journey && ui.journeyRole === role ? stage.setJourney(null) : follow(role));
     ui.on("journeyFact", (fid, role) => follow(role || roles.reach(fid), fid));
     ui.on("cta", () => follow(ctaOf(roles).role));
-    stage.on("journey", j => ui.journey(j));
+    stage.on("journey", j => { if (state.mode === "tour" && tourBeats[state.b]?.journey != null) return; ui.journey(j); });
     ui.on("speed", s => { state.speed = s; });
     ui.on("follow", () => { stage.follow(); stage.release(); });
-    ui.on("jump", i => { stage.follow(); go(i, 0.5); setPlaying(false); });
+    ui.on("jump", i => { stage.follow(); go(tour.beatOf(i)); setPlaying(false); });
     stage.on("select", sel => {
       if (state.mode === "story" && sel?.kind === "cluster") {
         const hit = rowOf(sel.cluster.id);
@@ -190,8 +206,8 @@ export function mountQuery(app, route) {
         const k = j.focus == null ? (e.key === "ArrowRight" ? 0 : j.stops.length - 1) : j.focus + (e.key === "ArrowRight" ? 1 : -1);
         stage.focusStop(k < 0 || k >= j.stops.length ? null : k);
       } else if (e.key === " ") { e.preventDefault(); toggle(); }
-      else if (e.key === "ArrowRight") go(state.i + 1, 0, 1);
-      else if (e.key === "ArrowLeft") go(state.i - 1, 0, -1);
+      else if (e.key === "ArrowRight") go(state.b + 1);
+      else if (e.key === "ArrowLeft") go(state.b - 1);
       else if (e.key === "Escape") stage.back();
     };
     document.addEventListener("keydown", keyHandler);
@@ -242,6 +258,8 @@ export function mountQuery(app, route) {
       }
       return null;
     };
+    go(0);
+    ui.setPlaying(false);
     const asked = route.query?.get("mode");
     if (asked === "overview" || asked === "story") setMode(asked);
   }).catch(error => {
@@ -405,10 +423,11 @@ ${r.answer}`)}">
     </aside>`;
 }
 
-function template(scene, model, ref, roles, story) {
+function template(scene, model, ref, roles, story, tour) {
   const cta = ctaOf(roles);
   const n = k => model.clusters.filter(c => c.kind === k).length;
-  const ticks = scene.events.map((e, i) => `<button class="qg-tick" data-i="${i}" data-phase="${e.phase}" style="flex-grow:${eventDuration(e)}" title="${esc(`${e.phase} · ${e.title}`)}"${e.error ? " data-error" : ""}></button>`).join("");
+  const ticks = tour.acts.map(a => `<div class="qg-act" data-phase="${a.name}" style="flex-grow:${a.beats.length}"><em>${a.name === "START" ? "" : a.name}</em><span class="qg-act-cells">${a.beats.map(k => { const b = tour.beats[k];
+    return `<button class="qg-tick" data-b="${k}" data-phase="${b.phase}" title="${esc(`${b.act === "START" ? "Start" : b.act} · ${b.title}`)}"></button>`; }).join("")}</span></div>`).join("");
   const rels = Object.keys(scene.meta.relations).length;
   return `
     <canvas class="qg-canvas" aria-label="Query graph"></canvas>
@@ -459,12 +478,15 @@ function template(scene, model, ref, roles, story) {
     <div class="qg-tip" hidden></div>
     <div class="qg-hovercard" hidden></div>
     <footer class="qg-foot">
-      <div class="qg-caption"><span class="qg-chip"></span><div><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p><p class="qg-cap-next"></p></div><p class="qg-cap-full"></p>
-        ${cta ? `<button class="qg-cta" data-act="cta" title="Draw this fact's way from the record to the verdict">▶ Follow the ${esc(cta.name)}</button>` : ""}</div>
+      <div class="qg-caption"><span class="qg-chip"></span><div><p class="qg-cap-q"></p><strong class="qg-cap-title"></strong><p class="qg-cap-text"></p><p class="qg-cap-next"></p></div><p class="qg-cap-full"></p>
+        ${cta ? `<button class="qg-cta" data-act="cta" title="Draw this fact's way from the record to the verdict">▶ Follow the ${esc(cta.name)}</button>` : ""}
+        <button class="qg-more-btn" data-act="details" title="How this stage did it, step by step">More details</button>
+        <button class="qg-next-btn" data-act="next" title="Next beat (→)">Next ›</button>
+        <div class="qg-outro"><button data-mode="overview">Explore every cloud</button><button data-mode="story">Read it as a case board</button><button data-act="cases">Try another case</button></div></div>
       <div class="qg-bar">
-        <button class="qg-btn" data-act="prev" title="Previous call (←)" aria-label="Previous call">‹</button>
-        <button class="qg-btn qg-play" data-act="play" title="Play / pause (space)" aria-label="Play or pause">❚❚</button>
-        <button class="qg-btn" data-act="next" title="Next call (→)" aria-label="Next call">›</button>
+        <button class="qg-btn" data-act="prev" title="Previous beat (←)" aria-label="Previous beat">‹</button>
+        <button class="qg-btn qg-play" data-act="play" title="Play / pause (space)" aria-label="Play or pause">▶</button>
+        <button class="qg-btn" data-act="next" title="Next beat (→)" aria-label="Next beat">›</button>
         <div class="qg-track">${ticks}<span class="qg-head-mark"></span></div>
         <span class="qg-count"></span>
         <button class="qg-btn qg-speed" data-act="speed" title="Playback speed">1×</button>
@@ -473,7 +495,7 @@ function template(scene, model, ref, roles, story) {
     </footer>`;
 }
 
-function bindUi(root, scene, model, stage, roles, ref, story) {
+function bindUi(root, scene, model, stage, roles, ref, story, tour) {
   const $ = s => root.querySelector(s);
   function placeStory() {
     const head = $(".qg-head"), board = $(".qg-board");
@@ -631,6 +653,8 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
       b.textContent = `${s}×`;
       handlers.speed?.(s);
     } else if (act === "prev" || act === "next") handlers.step?.(act === "prev" ? -1 : 1);
+    else if (act === "cases") { const sel = $(".qg-case"); sel?.focus(); sel?.showPicker?.(); }
+    else if (act === "details") $(".qg-sd-more")?.click();
     else if (act) handlers[act]?.();
     const mode = e.target.closest("[data-mode]");
     if (mode) handlers.mode?.(mode.dataset.mode);
@@ -652,7 +676,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
     const row = e.target.closest(".qg-sb-row, .qg-card-ev");
     if (row) handlers.row?.(Number(row.dataset.row));
     const tick = e.target.closest(".qg-tick");
-    if (tick) handlers.seek?.(Number(tick.dataset.i));
+    if (tick) handlers.seek?.(Number(tick.dataset.b));
     const ph = e.target.closest(".qg-phases [data-phase]");
     if (ph) handlers.phase?.(ph.dataset.phase);
     const jump = e.target.closest("[data-jump]");
@@ -668,6 +692,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
 
   function showEvent(i) {
     const ev = scene.events[i];
+    if (!ev) return;
     const c = model.byId.get(ev.cluster || "core");
     if (!c) { inspect.hidden = true; return; }
     showCluster(c, ev);
@@ -807,38 +832,45 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
 
   return {
     on(name, fn) { handlers[name] = fn; },
-    setEvent(i) {
-      current = i;
-      const ev = scene.events[i];
-      ticks.forEach((t, k) => { t.classList.toggle("done", k < i); t.classList.toggle("now", k === i); });
-      const cur = PHASES.indexOf(ev.phase);
+    showTourBeat(b) {
+      current = b;
+      const beat = tour.beats[b];
+      const ev = beat.i >= 0 ? scene.events[beat.i] : null;
+      ticks.forEach((t, k) => { t.classList.toggle("done", k < b); t.classList.toggle("now", k === b); });
+      const cur = PHASES.indexOf(beat.phase);
       root.querySelectorAll(".qg-phases button").forEach(b => {
         const k = PHASES.indexOf(b.dataset.phase);
         b.classList.toggle("now", k === cur); b.classList.toggle("done", k < cur);
       });
       const chip = $(".qg-caption .qg-chip");
-      chip.textContent = ev.phase;
-      chip.dataset.phase = ev.phase;
-      $(".qg-cap-title").textContent = ev.title || "";
-      $(".qg-cap-text").textContent = ev.caption || "";
-      const next = scene.events.slice(i + 1).find(e => !e.error);
-      $(".qg-cap-next").textContent = next ? `Next · ${next.phase} · ${next.title || ""}` : "End of the tour · switch to Overview to explore every cloud";
-      $(".qg-caption").dataset.phase = ev.phase;
-      clampCaption();
+      chip.textContent = beat.phase;
+      chip.dataset.phase = beat.phase;
+      $(".qg-cap-q").textContent = beat.question || "";
+      $(".qg-more-btn").hidden = !["PARSE", "MAP", "ROUTE", "MANAGER", "TRACE", "SUBMIT"].includes(beat.phase);
+      $(".qg-cap-title").textContent = beat.title || "";
+      $(".qg-cap-text").textContent = beat.text || "";
+      const next = tour.beats[b + 1];
+      $(".qg-cap-next").textContent = next ? `Next · ${next.act} · ${next.title || ""}` : "End of the tour · switch to Overview to explore every cloud";
+      $(".qg-caption").dataset.phase = beat.phase;
       root.classList.toggle("at-end", !next);
-      const played = scene.events.filter(e => !e.error);
-      $(".qg-count").textContent = `${String(played.indexOf(ev) + 1).padStart(2, "0")} / ${played.length}`;
-      if (!stage.view.cluster) showEvent(i);
-      handlers.event?.(ev.phase, i);
+      root.classList.toggle("at-outro", !!beat.outro);
+      const acts = tour.acts.length - 1, act = tour.acts[beat.actNo];
+      $(".qg-count").textContent = beat.act === "START" ? `Start · ${acts} acts` : `Act ${beat.actNo}/${acts} · ${beat.act}${act.beats.length > 1 ? ` ${beat.beatNo + 1}/${act.beats.length}` : ""}`;
+      if (!stage.view.cluster && ev) showEvent(beat.i);
+      handlers.beat?.(beat);
+      clampCaption();
+      return ($(".qg-cap-title").innerText + " " + $(".qg-cap-text").innerText).split(/\s+/).filter(Boolean).length;
     },
-    setProgress(i, p) {
-      const t = ticks[i];
-      if (t) $(".qg-head-mark").style.left = `${t.offsetLeft + t.offsetWidth * p}px`;
+    setProgress(b, p) {
+      const t = ticks[b];
+      if (!t) return;
+      const box = t.getBoundingClientRect(), track = $(".qg-track").getBoundingClientRect();
+      $(".qg-head-mark").style.left = `${box.left - track.left + box.width * p}px`;
     },
     setPlaying(on) { $(".qg-play").textContent = on ? "❚❚" : "▶"; },
     syncFollow() {
       const b = $(".qg-follow");
-      b.hidden = !(stage.view.cluster || stage.manual || stage.journey || (root.classList.contains("is-overview") && stage.view.selected));
+      b.hidden = !((stage.view.cluster && !stage.view.byTour) || stage.manual || stage.journey || (root.classList.contains("is-overview") && stage.view.selected));
       b.textContent = root.classList.contains("is-overview") ? "Reset view" : "Follow tour";
     },
     setMode(mode, view) {
@@ -861,7 +893,7 @@ function bindUi(root, scene, model, stage, roles, ref, story) {
         clampCaption();
         $(".qg-count").textContent = `${scene.events.length} calls`;
         showCluster(model.byId.get("root") || model.byId.get("core"));
-      } else this.setEvent(current);
+      } else this.showTourBeat(current);
       this.syncFollow();
     },
     setFilter(filter) {

@@ -191,7 +191,7 @@ export function buildDetails(scene, model) {
       : `<span class="sd-sig" data-sev="${signalSeverity(s)}">${esc(SIGNAL_LABEL[s])} <b>×${n}</b></span>`;
   }).join("");
   const hitsOf = list => { const got = new Set(list); const h = scene.windows.map(w => ({w, n: w.fids.filter(f => got.has(f)).length})).filter(x => x.n); return h.length ? h : null; };
-  const hitChips = hit => (hit || []).map(h => `<span class="sd-hit" data-goto="step:${h.w.step}" title="returned ${h.n} of the window's ${h.w.fids.length} clue facts">→ ${esc(h.w.caseId)} · ${h.n}/${h.w.fids.length}</span>`).join("");
+  const hitChips = hit => (hit || []).map(h => `<span class="sd-hit" data-goto="step:${h.w.step}" title="returned ${h.n} of the window's ${h.w.fids.length} clue facts">→ ${h.n} of ${h.w.fids.length} clues at step ${h.w.step}</span>`).join("");
   const num = (n, unit) => `<b class="sd-qn">${n}</b><span class="sd-k">${unit}</span>`;
   const stepNo = html => html.replace(/\bsteps? \d+(?:[–-]\d+)?/g, m => `<b class="sd-stepno">${m}</b>`);
 
@@ -672,12 +672,12 @@ export function buildDetails(scene, model) {
         const ws = scene.windows.filter(w => ev.windows.includes(w.id));
         return {kind: "WINDOW", title, line: `${miniStrip(new Set())}${ws.map(w => {
           const a = w.fids.map(f => scene.factById.get(f)).find(f => f?.slot === "act");
-          return `<span class="sd-hit" data-goto="step:${w.step}">${esc(w.caseId)} · step ${w.step}</span>${num(w.fids.length, "clue facts")}${a ? `<span class="sd-quote">“${mark(clip(a.span, 60))}”</span>` : ""}`;
+          return `<span class="sd-hit" data-goto="step:${w.step}">suspect · step ${w.step}</span>${num(w.fids.length, "clue facts")}${a ? `<span class="sd-quote">“${mark(clip(a.span, 60))}”</span>` : ""}`;
         }).join("")}`};
       }
       case "plan_trace": {
         const ls = scene.lanes.filter(l => ev.lanes.includes(l.id));
-        return {kind: "PLAN", title, line: `${ls.map(l => `<span class="sd-chip is-hot"><b>${esc(l.agent)}</b><em>← ${esc(l.anchor)} · step ${l.step}</em></span>`).join("")}${scene.rules.length ? num(scene.rules.length, "decision rules") : ""}`};
+        return {kind: "PLAN", title, line: `${ls.map(l => `<span class="sd-chip is-hot" title="${esc(l.question)}"><b>step ${l.step}</b><em>${esc(question(l, 60))}</em></span>`).join("")}${scene.rules.length ? num(scene.rules.length, "decision rules") : ""}`};
       }
       case "query_logs":
         return {kind: "SEARCH", title, line: `${miniStrip(new Set(lane?.steps || []))}${num(lane?.rows.length ?? 0, "rows")}${num(lane?.steps.length ?? 0, "steps")}`};
@@ -687,18 +687,46 @@ export function buildDetails(scene, model) {
       }
       case "submit":
         return root
-          ? {kind: "ROOT", title, line: `${miniStrip(new Set([root.step]), "root")}<span class="sd-cand is-bad">step ${root.step} · ${esc(root.module)}</span><span class="sd-k">${esc(faultText(root.faultClass))}</span>${root.rule?.id ? `<span class="sd-chip"><em>rule</em> <b>${esc(root.rule.id.replace(/_/g, " "))}</b></span>` : ""}<span class="sd-state${root.accepted ? " is-ok" : ""}">${root.accepted ? "accepted" : esc(root.status || "not accepted")}</span>`}
+          ? {kind: "ROOT", title, line: `${miniStrip(new Set([root.step]), "root")}<span class="sd-cand is-bad">step ${root.step} · ${esc(root.module)}</span><span class="sd-k">${esc(faultText(root.faultClass))}</span>${root.rule?.id ? `<span class="sd-chip" title="${esc(root.rule.conclusion || "")}"><em>rule ${scene.rules.findIndex(r => r.id === root.rule.id) + 1} of ${scene.rules.length}</em> <b>${esc(root.rule.id.replace(/_/g, " "))}</b></span>` : ""}<span class="sd-state${root.accepted ? " is-ok" : ""}">${root.accepted ? "accepted" : esc(root.status || "not accepted")}</span>`}
           : {kind: "ROOT", title, line: `<span class="sd-k">no root cause</span>`};
       default:
         return {kind: ev.phase, title, line: `<span class="sd-k">${esc(clip(ev.caption, 160))}</span>`};
     }
   }
 
-  return {phases: out, mark, entFacts, caption};
+  function roundCaption(beat) {
+    const r = beat.round;
+    return {kind: beat.kind, title: stepNo(mark(beat.title)),
+            line: `${miniStrip(stepsOf(r.fids))}${num(r.fids.length, "facts")}${num(beat.events.length, beat.events.length === 1 ? "query" : "queries")}${signalPills(r.signals, r.hitMap)}${hitChips(hitsOf(r.fids))}`};
+  }
+
+  return {phases: out, mark, entFacts, caption, roundCaption};
 }
 
+const KIND_TEXT = {COMPILE: "RECORD", GOAL: "GOAL", SCAN: "SCAN", AUDIT: "AUDIT", INSPECT: "INSPECT", WINDOW: "SUSPECT", PLAN: "QUESTION", SEARCH: "SEARCH", ASSESS: "VERDICT", ROOT: "ROOT CAUSE"};
+
 export function createDetails(root, scene, model, stage, {onOpen} = {}) {
-  const {phases, mark, entFacts, caption} = buildDetails(scene, model);
+  const {phases, mark, entFacts, caption, roundCaption} = buildDetails(scene, model);
+  const TOKEN = /(\bsteps? \d+(?:[–-]\d+)?(?:(?:, | and )\d+(?:[–-]\d+)?)*|(?<![-#\w])\d+(?:\.\d+)?(?![\w;-]))/gi;
+  const inline = text => {
+    let inEnt = 0;
+    const html = mark(String(text)).split(/(<[^>]+>)/).map(part => {
+      if (part.startsWith("<")) { if (/^<b class="qg-ent"/.test(part)) inEnt++; else if (part === "</b>" && inEnt) inEnt--; return part; }
+      if (inEnt) return part;
+      return part.replace(TOKEN, m => /^steps? /i.test(m) ? `<b class="sd-stepno">${m}</b>` : `<b class="ci-n">${m}</b>`);
+    }).join("");
+    return html.replace(/“([^”]*)”/g, `<q class="ci-q">$1</q>`);
+  };
+  const block = item => {
+    const m = item.match(/^([A-Za-z][\w' ]{0,24}): (.+)$/);
+    return `<span class="ci">${m ? `<b class="ci-k">${esc(m[1])}</b>${inline(m[2])}` : inline(item)}</span>`;
+  };
+  const blocks = text => String(text).split(/\s+·\s+/).map(item => {
+    const arrows = item.split(/\s+→\s+/);
+    if (arrows.length === 2) return `${block(arrows[0])}<i class="ci-ar">→</i><span class="ci ci-out">${inline(arrows[1])}</span>`;
+    if (arrows.length > 2) return `<span class="ci">${arrows.map(inline).join(`<i class="ci-ar">→</i>`)}</span>`;
+    return block(item);
+  }).join("");
   const h1 = root.querySelector(".qg-title h1");
   if (h1) h1.innerHTML = mark(scene.meta.task || scene.meta.tid);
   root.insertAdjacentHTML("beforeend", `
@@ -823,6 +851,16 @@ export function createDetails(root, scene, model, stage, {onOpen} = {}) {
       if (open && phases[ph]?.fly) fly();
     },
     close() { if (open) setOpen(false); },
+    captionBeat(beat) {
+      const box = root.querySelector(".qg-caption");
+      if (!box) return;
+      const own = beat.i >= 0 && beat.events.length > 0;
+      const c = own ? (beat.round ? roundCaption(beat) : caption(scene.events[beat.i])) : null;
+      box.classList.add("is-rich");
+      box.classList.toggle("has-result", !!c);
+      box.querySelector(".qg-cap-title").innerHTML = `${c ? `<span class="sd-qtag" data-kind="${beat.round ? "ROUND" : c.kind}">${esc(KIND_TEXT[c.kind] || c.kind)}</span>` : ""}<span>${inline(beat.title || "")}</span>`;
+      box.querySelector(".qg-cap-text").innerHTML = `${beat.say ? `<span class="qg-cap-say">${blocks(beat.say)}</span>` : ""}${c ? `<span class="sd-qres">${c.line}</span>` : ""}`;
+    },
     caption(ev) {
       const c = caption(ev), box = root.querySelector(".qg-caption");
       if (!box) return;

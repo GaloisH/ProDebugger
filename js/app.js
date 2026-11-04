@@ -4,7 +4,7 @@ import {mountHome} from "./pages/home.js?v=insights-20261103";
 import {mountRuns} from "./pages/runs.js?v=27bf1baa85";
 import {mountChat} from "./pages/chat.js?v=27bf1baa85";
 import {mountWorkbench} from "./pages/workbench.js?v=insights-20261103";
-import {mountQuery} from "./pages/query.js?v=signs-79eb29e";
+import {mountQuery} from "./pages/query.js?v=cap-3";
 import {initTheme, setThemePage} from "./theme.js?v=27bf1baa85";
 
 const app = document.getElementById("app");
